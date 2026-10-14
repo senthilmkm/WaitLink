@@ -41,6 +41,13 @@
         ]
       }
     ],
+    "redirects": [
+      {
+        "source": "/waitarchitecture.html",
+        "destination": "/waitlinkarchitecture.html",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "**",

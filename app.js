@@ -2859,6 +2859,7 @@ function applyUserRole(user) {
   const dropdownUserEmail = document.getElementById("dropdown-user-email");
   const itemSuperAdmin = document.getElementById("item-superadmin");
   const itemSettings = document.getElementById("item-settings");
+  const itemArchitecture = document.getElementById("item-architecture");
   const itemAuthActionLabel = document.getElementById("item-auth-action-label");
   const superAdminTab = document.getElementById("tab-superadmin");
   const deskTab = document.getElementById("tab-desk");
@@ -2902,6 +2903,11 @@ function applyUserRole(user) {
       else itemSettings.classList.add("hidden");
     }
 
+    if (itemArchitecture) {
+      if (isSuper) itemArchitecture.classList.remove("hidden");
+      else itemArchitecture.classList.add("hidden");
+    }
+
     if (settingsBtn) {
       if (isSuper) settingsBtn.classList.remove("hidden");
       else settingsBtn.classList.add("hidden");
@@ -2926,6 +2932,7 @@ function applyUserRole(user) {
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
+    if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
 
     if (itemAuthActionLabel) {
@@ -2941,6 +2948,7 @@ function applyUserRole(user) {
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
+    if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
 
     if (itemAuthActionLabel) {

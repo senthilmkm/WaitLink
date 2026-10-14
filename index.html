@@ -134,6 +134,9 @@
             <button class="dropdown-item hidden" id="item-settings" onclick="openSettingsModal(); closeAllDropdowns();">
               <span>⚙️ Platform Settings</span>
             </button>
+            <a href="waitlinkarchitecture.html" target="_blank" class="dropdown-item hidden" id="item-architecture" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;" onclick="closeAllDropdowns();">
+              <span>🏛️ System Architecture</span>
+            </a>
             
             <div class="dropdown-divider"></div>
 
@@ -1014,8 +1017,15 @@
           <h1 class="shop-title">👑 WaitLink Platform SuperAdmin</h1>
           <p class="shop-subtitle">Logged in as: <strong style="color: #6366f1;" id="superadmin-email-label">senthil930@gmail.com</strong> &bull; Master SaaS Management</p>
         </div>
-        <div class="mode-badge-toggle owner-active">
-          <span>Role:</span> <strong>SuperAdmin 👑</strong>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="waitlinkarchitecture.html" target="_blank" class="btn btn-secondary btn-sm" style="border-color: #6366f1; color: #c7d2fe; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; font-weight: 700; text-decoration: none; background: rgba(99, 102, 241, 0.15);">
+            <span>🏛️</span>
+            <span>Architecture Blueprint</span>
+            <span style="font-size: 0.68rem; background: rgba(99, 102, 241, 0.3); color: #fff; padding: 2px 6px; border-radius: 9999px;">Admin Only</span>
+          </a>
+          <div class="mode-badge-toggle owner-active">
+            <span>Role:</span> <strong>SuperAdmin 👑</strong>
+          </div>
         </div>
       </div>
 
@@ -1279,7 +1289,6 @@ Dedicated Support Manager
           <div class="footer-col">
             <h4>Resources</h4>
             <ul class="footer-links-list">
-              <li><a href="waitlinkarchitecture.html">Architecture & Blueprint</a></li>
               <li><a href="comparison.html">Comparison Matrix</a></li>
               <li><a href="help.html">Help Center</a></li>
               <li><a href="faq.html">FAQ</a></li>
