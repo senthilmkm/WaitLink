@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email == 'senthil930@gmail.com';
+    }
+
+    // Public read for customers viewing live queue status
+    match /shops/{shopId} {
+      allow read: if true;
+      allow write: if true; // Allow shop registration and queue updates
+    }
+
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

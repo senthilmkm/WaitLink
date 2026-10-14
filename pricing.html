@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing & Plans — WaitLink Walk-In SaaS</title>
+  <meta name="description" content="Transparent pricing plans for single shops and multi-location walk-in chains.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="index.html" class="brand" style="text-decoration: none;">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </a>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Launch App</a>
+        <a href="index.html?action=create" class="btn btn-accent btn-sm-header">⚡ + Create Shop</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 1100px; padding: 3rem 1.5rem;">
+    
+    <div class="landing-hero" style="padding: 1rem 0 3rem 0; text-align: center;">
+      <div class="hero-badge">💎 TRANSPARENT PRICING</div>
+      <h1 class="hero-title">Simple Plans Built for Local Shops.</h1>
+      <p class="hero-subtitle" style="margin: 0 auto; max-width: 650px;">
+        Zero hidden hardware costs, zero app store fees, and zero long-term contracts. Cancel anytime with 1-click.
+      </p>
+    </div>
+
+    <!-- Pricing Cards Grid -->
+    <div id="pricing-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; margin-bottom: 3rem;">
+      
+      <!-- Tier 1: Free Starter -->
+      <div class="card" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">Starter</span>
+          <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Free Forever</h3>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$0 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</p>
+          <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">
+            <li>✓ 1 Shop Location</li>
+            <li>✓ Up to 100 Monthly Check-ins</li>
+            <li>✓ Printable Window QR Poster</li>
+            <li>✓ 1-Tap Front Desk Control</li>
+            <li>✓ Basic Wait Time Estimator</li>
+          </ul>
+        </div>
+        <a href="index.html?action=create" class="btn btn-secondary" style="text-align: center;">Get Started Free</a>
+      </div>
+
+      <!-- Tier 2: Pro Business (Featured) -->
+      <div class="card" style="padding: 2.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+        <div style="position: absolute; top: -14px; right: 24px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">Most Popular</div>
+        <div>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">Pro Business</span>
+          <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Standard Shop</h3>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$15 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Everything you need to eliminate walk-away losses and track owner analytics.</p>
+          <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: #fff; font-size: 0.9rem;">
+            <li>✓ Unlimited Monthly Check-ins</li>
+            <li>✓ Custom Logo Branding & Colors</li>
+            <li>✓ Owner Business Intelligence Dashboard</li>
+            <li>✓ Peak Rush Window & Walk-Away Analytics</li>
+            <li>✓ Multi-Device Front Desk Sync</li>
+            <li>✓ Priority Cloud Firestore Latency</li>
+          </ul>
+        </div>
+        <a href="index.html?action=create" class="btn btn-accent" style="text-align: center;">Start 14-Day Free Trial</a>
+      </div>
+
+      <!-- Tier 3: Multi-Location Enterprise -->
+      <div class="card" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-emerald); text-transform: uppercase; letter-spacing: 0.05em;">Enterprise</span>
+          <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Multi-Location</h3>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$49 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">For chains, franchise barber networks, and regional medical centers.</p>
+          <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">
+            <li>✓ Unlimited Locations & Staff Accounts</li>
+            <li>✓ Multi-Tenant SuperAdmin Access</li>
+            <li>✓ Custom Domain CNAME Routing</li>
+            <li>✓ Dedicated Support Manager</li>
+            <li>✓ 99.99% Cloud SLA</li>
+          </ul>
+        </div>
+        <a href="contact.html" class="btn btn-secondary" style="text-align: center;">Contact Sales</a>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-logo-icon">⏳</span>
+            <span class="footer-brand-title">WaitLink</span>
+          </div>
+          <p class="footer-tagline">Zero-friction queue management SaaS.</p>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Company</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="about.html" style="color: var(--text-muted); text-decoration: none;">About Us</a></li>
+            <li><a href="contact.html" style="color: var(--text-muted); text-decoration: none;">Contact Page</a></li>
+            <li><a href="pricing.html" style="color: var(--primary); text-decoration: none;">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Legal</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a></li>
+            <li><a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a></li>
+            <li><a href="cookies.html" style="color: var(--text-muted); text-decoration: none;">Cookie Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Resources</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="help.html" style="color: var(--text-muted); text-decoration: none;">Help Center</a></li>
+            <li><a href="faq.html" style="color: var(--text-muted); text-decoration: none;">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom-bar" style="margin-top: 2rem;">
+        <div>&copy; 2026 WaitLink Cloud Sync. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const DEFAULT_CONFIG = {
+      projectId: "waitlink-app-8821",
+      apiKey: "AIzaSyCXKhwN-ah8GX8knAipTF8QcPD5iTtODDE"
+    };
+
+    function renderPricingTiers(tiers) {
+      if (!Array.isArray(tiers) || tiers.length === 0) return;
+      const grid = document.getElementById("pricing-grid");
+      if (!grid) return;
+
+      grid.innerHTML = tiers.map((tier, idx) => {
+        const isFeatured = tier.isPopular;
+        const bg = isFeatured ? 'rgba(6, 182, 212, 0.08)' : 'var(--bg-card)';
+        const border = isFeatured ? '2px solid var(--primary)' : '1px solid var(--border-color)';
+        const badgeColor = idx === 2 ? 'var(--accent-emerald)' : 'var(--primary)';
+        const btnClass = isFeatured ? 'btn btn-accent' : 'btn btn-secondary';
+        const btnText = idx === 0 ? 'Get Started Free' : (idx === 1 ? 'Start 14-Day Free Trial' : 'Contact Sales');
+        const btnLink = idx === 2 ? 'contact.html' : 'index.html?action=create';
+
+        const activeFeatures = (tier.features || []).filter(f => {
+          if (typeof f === "object" && f !== null) {
+            return f.enabled !== false;
+          }
+          const text = String(f || "").trim();
+          return !text.startsWith("[x]") && !text.startsWith("[X]") && !text.startsWith("OFF:") && !text.startsWith("~");
+        });
+
+        const featuresHtml = activeFeatures.map(f => {
+          const text = (typeof f === "object" && f !== null) ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, "");
+          return `<li style="display: flex; align-items: center; gap: 0.4rem;"><span style="color: var(--primary); font-weight: 700; font-size: 0.9rem;">✓</span> <span>${text}</span></li>`;
+        }).join("");
+
+        return `
+          <div class="card" style="padding: 2.25rem; background: ${bg}; border: ${border}; border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+            ${isFeatured ? '<div style="position: absolute; top: -14px; right: 24px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">Most Popular</div>' : ''}
+            <div>
+              <span style="font-size: 0.8rem; font-weight: 700; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.05em;">${tier.badge || 'Plan'}</span>
+              <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">${tier.title || ''}</h3>
+              <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">${tier.price || '$0'} <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">${tier.desc || ''}</p>
+              <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: #fff; font-size: 0.9rem;">
+                ${featuresHtml}
+              </ul>
+            </div>
+            <a href="${btnLink}" class="${btnClass}" style="text-align: center;">${btnText}</a>
+          </div>
+        `;
+      }).join("");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Render Local Storage immediately
+      const saved = localStorage.getItem("waitlink_pricing_tiers");
+      if (saved) {
+        try { renderPricingTiers(JSON.parse(saved)); } catch (e) {}
+      }
+
+      // 2. Fetch Live Cloud Pricing Doc from Firestore
+      if (window.firebase) {
+        try {
+          if (!firebase.apps.length) firebase.initializeApp(DEFAULT_CONFIG);
+          const db = firebase.firestore();
+          db.collection("settings").doc("pricing_config").get().then(doc => {
+            if (doc.exists && doc.data().tiers) {
+              const tiers = doc.data().tiers;
+              localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(tiers));
+              renderPricingTiers(tiers);
+            }
+          }).catch(console.warn);
+        } catch(e) {}
+      }
+    });
+  </script>
+
+
+</body>
+</html>

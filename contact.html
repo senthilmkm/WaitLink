@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us — WaitLink Customer Support</title>
+  <meta name="description" content="Get in touch with WaitLink customer support and executive team.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="index.html" class="brand" style="text-decoration: none;">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </a>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Launch App</a>
+        <a href="pricing.html" class="btn btn-accent btn-sm-header">⚡ View Pricing</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 800px; padding: 3rem 1.5rem;">
+    
+    <div class="landing-hero" style="padding: 1rem 0 2rem 0; text-align: center;">
+      <div class="hero-badge">💬 24/7 SUPPORT & HELP</div>
+      <h1 class="hero-title">Contact WaitLink Team</h1>
+      <p class="hero-subtitle" style="margin: 0 auto; max-width: 600px;">
+        Have a feature request, question, or need setup assistance for your shop? Our team responds within 2 hours.
+      </p>
+    </div>
+
+    <!-- Contact Card Form -->
+    <div class="card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="color: #fff; font-size: 1.5rem;">Send Message to Support</h2>
+          <p style="color: var(--text-muted); font-size: 0.875rem;">Messages are routed directly to WaitLink Customer Support.</p>
+        </div>
+        <span class="status-pill"><span class="pulse-dot"></span> Live Route Connected</span>
+      </div>
+
+      <form id="contact-form" onsubmit="handleContactSubmit(event)">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="contact-name">Your Full Name</label>
+            <input type="text" id="contact-name" placeholder="e.g. Marcus S." required>
+          </div>
+          <div class="form-group">
+            <label for="contact-email">Email Address</label>
+            <input type="email" id="contact-email" placeholder="e.g. owner@barber.com" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <div class="form-grid-2">
+            <div>
+              <label for="contact-shop">Shop / Business Name (Optional)</label>
+              <input type="text" id="contact-shop" placeholder="e.g. Apex Barber Studio">
+            </div>
+            <div>
+              <label for="contact-subject">Topic / Subject</label>
+              <select id="contact-subject" style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                <option value="general">General Inquiry</option>
+                <option value="setup">Shop Setup & QR Printing</option>
+                <option value="pricing">Custom Pricing / Enterprise</option>
+                <option value="technical">Technical Support</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="contact-message">Your Message</label>
+          <textarea id="contact-message" rows="5" placeholder="Tell us how we can help your walk-in business..." required style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm); font-family: inherit; resize: vertical;"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1.5rem;" id="contact-btn">
+          🚀 Send Message to Customer Support
+        </button>
+      </form>
+
+      <div id="contact-success" class="hidden" style="text-align: center; padding: 2rem 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+        <h3 style="color: #fff; font-size: 1.5rem; margin-bottom: 0.5rem;">Message Delivered Successfully!</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 500px; margin: 0 auto 1.5rem auto;">
+          Thank you! Your inquiry has been received by our support team. We will reply to your email address shortly.
+        </p>
+        <a href="index.html" class="btn btn-secondary">Return to Application &rarr;</a>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-logo-icon">⏳</span>
+            <span class="footer-brand-title">WaitLink</span>
+          </div>
+          <p class="footer-tagline">Zero-friction queue management SaaS.</p>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Company</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="about.html" style="color: var(--text-muted); text-decoration: none;">About Us</a></li>
+            <li><a href="contact.html" style="color: var(--primary); text-decoration: none;">Contact Page</a></li>
+            <li><a href="pricing.html" style="color: var(--text-muted); text-decoration: none;">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Legal</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a></li>
+            <li><a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a></li>
+            <li><a href="cookies.html" style="color: var(--text-muted); text-decoration: none;">Cookie Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Resources</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="help.html" style="color: var(--text-muted); text-decoration: none;">Help Center</a></li>
+            <li><a href="faq.html" style="color: var(--text-muted); text-decoration: none;">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom-bar" style="margin-top: 2rem;">
+        <div>&copy; 2026 WaitLink Cloud Sync. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const DEFAULT_CONFIG = {
+      projectId: "waitlink-app-8821",
+      apiKey: "AIzaSyCXKhwN-ah8GX8knAipTF8QcPD5iTtODDE"
+    };
+
+    let db = null;
+    if (window.firebase) {
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(DEFAULT_CONFIG);
+        db = firebase.firestore();
+      } catch(e) {}
+    }
+
+    async function handleContactSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById("contact-name").value.trim();
+      const email = document.getElementById("contact-email").value.trim();
+      const shop = document.getElementById("contact-shop").value.trim();
+      const subject = document.getElementById("contact-subject").value;
+      const message = document.getElementById("contact-message").value.trim();
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>⏳ Sending Message...</span>';
+      }
+
+      const payload = {
+        name,
+        email,
+        shop: shop || "N/A",
+        subject,
+        message,
+        recipient: "senthil930@gmail.com",
+        sentAt: Date.now()
+      };
+
+      if (db) {
+        try {
+          await db.collection("contact_messages").add(payload);
+        } catch(err) {
+          console.warn("Firestore contact message error:", err);
+        }
+      }
+
+      // Transition smoothly to success state without triggering external mailto client popup
+      document.getElementById("contact-form").classList.add("hidden");
+      document.getElementById("contact-success").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>

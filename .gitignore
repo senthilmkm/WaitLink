@@ -1,0 +1,15 @@
+# Environment & Credentials
+.env
+*.env
+stripe_credentials.json
+*.secret
+secrets/
+config.secrets.js
+*.secrets.js
+
+# Node modules & temporary files
+node_modules/
+npm-debug.log*
+scratch/
+.DS_Store
+.firebase/

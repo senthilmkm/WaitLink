@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequently Asked Questions — WaitLink</title>
+  <meta name="description" content="Comprehensive questions and answers about WaitLink walk-in wait time tracker, Stripe billing, multi-location management, and lobby posters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="index.html" class="brand" style="text-decoration: none;">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </a>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Return to App</a>
+        <a href="contact.html" class="btn btn-accent btn-sm-header">💬 Ask Support</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 920px; padding: 3rem 1.5rem;">
+    
+    <div class="landing-hero" style="padding: 1rem 0 2.5rem 0; text-align: center;">
+      <div class="hero-badge">❓ FREQUENTLY ASKED QUESTIONS</div>
+      <h1 class="hero-title">Got Questions? We've Got Answers.</h1>
+      <p class="hero-subtitle" style="margin: 0 auto; max-width: 650px;">
+        Everything you need to know about setting up WaitLink for your business, Stripe subscription plans, and customer queue management.
+      </p>
+    </div>
+
+    <!-- FAQ Accordion -->
+    <div class="faq-accordion" style="margin-bottom: 3rem;">
+      
+      <div class="faq-item active">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Do walk-in customers need to download an app or create an account?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>No! Customers simply point their phone camera at your lobby window poster QR code. They are taken directly to your live shop waitlist page on their mobile web browser where they can view their position and track wait time in real time—zero app downloads, passwords, or registration required.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>How do front desk staff call next waiting customers?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Front desk staff open the <strong>Front Desk</strong> view on any tablet, iPad, PC, or smartphone. When a chair opens up, tapping <strong>"SERVE NOW"</strong> or <strong>"SERVE NEXT"</strong> updates the queue instantaneously across all staff monitors and customer screens in real time via Google Cloud Firestore. If the customer provided their mobile phone number during check-in, WaitLink automatically dispatches a turn-ready SMS text message directly to their device containing their live digital ticket link.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Does WaitLink send automated SMS notifications with customer ticket links?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. WaitLink connects to an enterprise Twilio SMS gateway. When staff tap <strong>"SERVE NOW"</strong>, an automated text message is dispatched to the customer's mobile number. The SMS contains their direct ticket tracking link (e.g., <code>https://waitlink.app?s=yourshop&view=public&ticket=id</code>), allowing customers to see their live visit status, service details, and greeting instructions without downloading any mobile app. Shop owners can also customize the message wording and template tags in Shop Settings.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>What subscription plans are available for WaitLink?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink offers 3 flexible pricing tiers:
+            <ul>
+              <li><strong>Starter Tier (Free):</strong> $0/month forever. Full basic queue functionality for single shops.</li>
+              <li><strong>Pro Business Tier ($15/month):</strong> Includes custom shop branding/logo upload, promotional date-window banners, CSV data exports, and audio chime alerts.</li>
+              <li><strong>Enterprise Tier ($49/month):</strong> Includes multi-location directory management, priority SuperAdmin support, custom SLA guarantees, and advanced business intelligence analytics.</li>
+            </ul>
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>How are payments and plan upgrades handled?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>All subscription payments, upgrades, and downgrades are processed securely through <strong>Stripe Direct Checkout API</strong>. When upgrading or switching plans, Stripe automatically manages billing cycles and prorated charge credits. You can manage your active subscription directly from your user profile dropdown menu at any time.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Can I manage multiple business locations under one account?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes! Signed-in shop owners can create and switch between multiple shop waitlists using the top <strong>MY SHOPS</strong> dropdown selector. Each shop retains its own independent queue, visit history log, and shareable QR poster link.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>How fast can I print a storefront QR window poster?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>In less than 10 seconds! Navigate to <strong>Share & Tools ▾ &rarr; Window QR Poster</strong> in the header menu. WaitLink automatically renders a high-resolution 8.5" x 11" printable poster with your shop logo, business name, and dynamic QR code ready for immediate printing.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Can business owners track walk-away loss and staff performance?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. The <strong>Business Owner Analytics</strong> dashboard computes Walk-Away Loss % (customer cancellations), Peak Rush Hours, Staff Turnaround Speed (visits/hour), and Peak Wait Times automatically based on actual completed visits.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>What happens if internet connectivity drops temporarily?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink includes client-side HTML5 LocalStorage caching. If network drops, queue actions are cached safely on your device and sync seamlessly with Google Cloud Firestore as soon as internet connection is restored.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Need More Help Banner -->
+    <div class="card" style="padding: 2rem; text-align: center; background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-lg);">
+      <h3 style="color: #fff; font-size: 1.35rem; margin-bottom: 0.5rem;">Still have questions?</h3>
+      <p style="color: var(--text-muted); margin-bottom: 1.25rem;">Our support team is available to help you set up your walk-in queue tracker.</p>
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="contact.html" class="btn btn-primary">💬 Contact Support</a>
+        <a href="help.html" class="btn btn-secondary">📚 Visit Help Center</a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-logo-icon">⏳</span>
+            <span class="footer-brand-title">WaitLink</span>
+          </div>
+          <p class="footer-tagline">Zero-friction queue management SaaS.</p>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Company</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="about.html" style="color: var(--text-muted); text-decoration: none;">About Us</a></li>
+            <li><a href="contact.html" style="color: var(--text-muted); text-decoration: none;">Contact Page</a></li>
+            <li><a href="pricing.html" style="color: var(--text-muted); text-decoration: none;">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Legal</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a></li>
+            <li><a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a></li>
+            <li><a href="cookies.html" style="color: var(--text-muted); text-decoration: none;">Cookie Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Resources</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="help.html" style="color: var(--text-muted); text-decoration: none;">Help Center</a></li>
+            <li><a href="faq.html" style="color: var(--primary); text-decoration: none;">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom-bar" style="margin-top: 2rem;">
+        <div>&copy; 2026 WaitLink Cloud Sync. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function toggleFaq(btn) {
+      const item = btn.closest(".faq-item");
+      if (!item) return;
+      const isExpanded = item.classList.contains("active");
+      document.querySelectorAll(".faq-item").forEach(el => el.classList.remove("active"));
+      if (!isExpanded) {
+        item.classList.add("active");
+      }
+    }
+  </script>
+</body>
+</html>

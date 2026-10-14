@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaitLink — Live Walk-in Wait Time Tracker</title>
+  <meta name="description" content="1-tap check-in and live public wait time publishing for walk-in shops.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Style -->
+  <link rel="stylesheet" href="style.css">
+  <!-- QRCode.js (Local Bundle) -->
+  <script src="qrcode.min.js"></script>
+  <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-firestore-compat.js"></script>
+  <script src="firebase-auth-compat.js"></script>
+  <!-- Stripe.js SDK -->
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header no-print">
+    <div class="header-container">
+      
+      <!-- Zone 1: Brand & Active Shop Badge -->
+      <div class="header-left">
+        <div class="brand" onclick="switchView('home')" title="Go to WaitLink Home">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </div>
+
+        <!-- Active Shop Chip & Switcher Dropdown (Only visible for authenticated owners) -->
+        <div class="dropdown-wrapper shop-chip-wrapper hidden" id="shop-chip-container">
+          <button class="shop-chip-btn dropdown-trigger" onclick="toggleDropdown(event, 'shop-dropdown')">
+            <span class="shop-chip-icon">💈</span>
+            <span class="shop-chip-name" id="header-shop-name">Main St Barbers</span>
+            <span class="shop-chip-arrow">▾</span>
+          </button>
+          <div id="shop-dropdown" class="dropdown-menu hidden">
+            <div class="dropdown-header-title">Active Shop</div>
+            <button class="dropdown-item active-shop-item" onclick="switchView('desk'); closeAllDropdowns();">
+              <span>📋 <strong id="menu-current-shop">Main St Barbers</strong> (Front Desk)</span>
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" onclick="openCreateShopModal(); closeAllDropdowns();">
+              <span>⚡ + Create New Shop Waitlist</span>
+            </button>
+            <button class="dropdown-item" onclick="launchDemoMode(); closeAllDropdowns();">
+              <span>🎮 Try Main St Barbers Demo</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone 2: Navigation Chips -->
+      <nav class="mode-tabs">
+        <button class="tab-btn active" id="tab-home" onclick="switchView('home')">
+          🏠 Home
+        </button>
+        <button class="tab-btn hidden" id="tab-desk" onclick="switchView('desk')">
+          📋 Front Desk
+        </button>
+        <button class="tab-btn hidden" id="tab-owner" onclick="switchView('owner')">
+          📊 Owner Analytics
+        </button>
+      </nav>
+
+      <!-- Zone 3: Primary Actions & Unified Account/Tools Menu -->
+      <div class="header-actions">
+        
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle-btn" class="btn btn-secondary btn-sm-header" onclick="toggleThemeMode()" title="Toggle Dark / Light Theme" style="padding: 0.35rem 0.65rem; font-size: 0.95rem;">
+          🌙
+        </button>
+
+        <!-- Upgrade Primary Action -->
+        <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
+          💎 Upgrade
+        </button>
+
+        <!-- Create Shop Primary Action -->
+        <button class="btn btn-accent btn-sm-header" onclick="openCreateShopModal()">
+          ⚡ + Create Shop
+        </button>
+
+        <!-- Unified Account & Tools Dropdown -->
+        <div class="dropdown-wrapper" id="account-dropdown-container">
+          <button class="btn btn-secondary auth-btn-pill" id="auth-btn" onclick="handleAuthButtonClick(event)">
+            <span id="auth-btn-label">🔑 Sign In</span>
+          </button>
+          <div id="account-dropdown" class="dropdown-menu dropdown-menu-right hidden">
+            
+            <div class="dropdown-user-info">
+              <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <span id="dropdown-user-email">Guest User</span>
+                <span id="dropdown-tier-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.15rem 0.5rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem; width: fit-content;">
+                  <span class="pulse-dot"></span> Starter Plan
+                </span>
+              </div>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <div class="dropdown-section-title">🔗 SHARE & TOOLS</div>
+            <button class="dropdown-item" onclick="toggleThemeMode(); closeAllDropdowns();">
+              <span id="menu-theme-label">☀️ Light Mode</span>
+            </button>
+            <button class="dropdown-item" id="dropdown-item-subscription" onclick="openUpgradeModal(); closeAllDropdowns();">
+              <span id="dropdown-item-subscription-label">🚀 Upgrade Subscription</span>
+            </button>
+            <button class="dropdown-item" onclick="switchView('public'); closeAllDropdowns();">
+              <span>📲 Public Customer View</span>
+            </button>
+            <button class="dropdown-item" onclick="switchView('poster'); closeAllDropdowns();">
+              <span>🖨️ Window QR Poster</span>
+            </button>
+            <button class="dropdown-item" onclick="copyPublicLink(); closeAllDropdowns();">
+              <span>📋 Copy Shareable Link</span>
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <div class="dropdown-section-title">🎮 SANDBOX & HELP</div>
+            <button class="dropdown-item" onclick="launchDemoMode(); closeAllDropdowns();">
+              <span>🎮 Main St Barbers Demo</span>
+            </button>
+            <button class="dropdown-item hidden" id="item-superadmin" onclick="switchView('superadmin'); closeAllDropdowns();">
+              <span>👑 SuperAdmin Directory</span>
+            </button>
+            <button class="dropdown-item hidden" id="item-settings" onclick="openSettingsModal(); closeAllDropdowns();">
+              <span>⚙️ Platform Settings</span>
+            </button>
+            
+            <div class="dropdown-divider"></div>
+
+            <button class="dropdown-item" id="item-auth-action" onclick="handleAccountDropdownAction()">
+              <span id="item-auth-action-label">🔑 Sign In / Register</span>
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Demo Mode Announcement Banner -->
+  <div id="demo-mode-banner" class="demo-mode-banner hidden">
+    <div class="demo-banner-content">
+      <span class="demo-badge">🎮 LIVE DEMO SANDBOX</span>
+      <span>You are exploring <strong>Main St Barbers</strong>. Test checking in, calling customers, or scanning the lobby QR code!</span>
+    </div>
+    <div class="demo-banner-actions">
+      <button class="btn btn-sm btn-accent" onclick="openCreateShopModal()">⚡ Create Free Shop Waitlist &rarr;</button>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <main class="main-content">
+
+    <!-- VIEW 0: PRODUCT OVERVIEW & LANDING HERO -->
+    <section id="view-home" class="view-panel active">
+      
+      <!-- Hero Header Section -->
+      <div class="landing-hero">
+        
+        <!-- Active Subscription Banner on Home Screen -->
+        <div id="home-active-subscription-banner" class="hidden" style="margin-bottom: 1.5rem; padding: 0.85rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.25rem;" id="home-tier-icon">💎</span>
+            <div style="text-align: left;">
+              <div style="font-size: 0.725rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">YOUR ACTIVE PLAN</div>
+              <div style="font-size: 1.05rem; font-weight: 800; color: #fff;" id="home-tier-title">Starter Tier (Free)</div>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="openUpgradeModal()" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">Manage Plan ⚙️</button>
+        </div>
+
+        <div class="hero-badge">🚀 Zero-Friction Walk-In Queue SaaS</div>
+        <h1 class="hero-title">Eliminate Walk-Away Customer Loss During Peak Rushes.</h1>
+        <p class="hero-subtitle">
+          The 1-tap live waitlist tracker for barbershops, clinics, salons, and cafes. No app downloads or account creation required for customers.
+        </p>
+
+        <!-- Rich Hero Launcher Cards -->
+        <div class="hero-cta-cards">
+          
+          <div class="hero-card hero-card-demo" onclick="launchDemoMode()">
+            <div class="hero-card-icon">🎮</div>
+            <div class="hero-card-body">
+              <h3>Try Live Demo Sandbox</h3>
+              <p>Instantly explore Main St Barbers. Test checking in walk-in customers, calling them from the front desk, and inspecting real-time owner metrics.</p>
+              <span class="btn-hero-action">Launch Interactive Demo &rarr;</span>
+            </div>
+          </div>
+
+          <div class="hero-card hero-card-create" onclick="openCreateShopModal()">
+            <div class="hero-card-icon">⚡</div>
+            <div class="hero-card-body">
+              <h3>Create Your Free Shop Queue</h3>
+              <p>Set up your shop (e.g. Apex Barber Studio, City Clinic) and get your unique live queue URL and printable window QR poster in 10 seconds.</p>
+              <span class="btn-hero-action btn-accent-action">Launch Shop Waitlist &rarr;</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- How It Works Step-by-Step -->
+      <div class="how-it-works-card">
+        <h3>How WaitLink Works in 4 Easy Steps</h3>
+        <div class="steps-grid">
+          <div class="step-item">
+            <span class="step-num">1</span>
+            <h4>Set Up Shop Profile</h4>
+            <p>Set up your shop name, custom link slug, and optional logo in 10 seconds.</p>
+          </div>
+          <div class="step-item">
+            <span class="step-num">2</span>
+            <h4>Print Window Poster</h4>
+            <p>Generate & print your shop's high-resolution QR poster for your entrance window.</p>
+          </div>
+          <div class="step-item">
+            <span class="step-num">3</span>
+            <h4>Customers Scan & Wait</h4>
+            <p>Walk-ins scan the QR code to check in on their phone browser & track live wait times.</p>
+          </div>
+          <div class="step-item">
+            <span class="step-num">4</span>
+            <h4>Staff Call 1-Tap</h4>
+            <p>Front desk staff call the next customer with 1-tap real-time sync across all devices!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Core Features Section -->
+      <div class="landing-features-section">
+        <div class="section-title-center">
+          <h2>Built for Maximum Lobby Conversion & Zero Friction</h2>
+          <p>Keep your waiting area calm and give walk-in customers total peace of mind.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📲</div>
+            <h3>1. Zero-Barrier QR Check-In</h3>
+            <p>Customers scan your lobby poster, type their name, and immediately view their live line position on their phone browser. Zero app downloads or SMS hassle.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>3. Owner Business Intelligence</h3>
+            <p>Track Walk-Away Loss % (cancellations), Peak Rush Windows, Staff Handling Speed (Visits/Hr), and Lobby Load metrics to optimize business revenue.</p>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2.5rem;">
+          <a href="comparison.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-weight: 600; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+            <span>🚀 View Feature & Value Comparison Matrix</span>
+            <span style="font-size: 1.1rem;">→</span>
+          </a>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 1: DESK OPERATOR MODE -->
+    <section id="view-desk" class="view-panel hidden">
+      
+      <!-- Top Overview Bar -->
+      <div class="shop-banner">
+        <div>
+          <h1 class="shop-title" id="desk-shop-name">Main St Barbers</h1>
+          <p class="shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
+        </div>
+        <div class="mode-badge-toggle" onclick="switchView('owner')" title="Click to switch mode">
+          <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
+        </div>
+      </div>
+
+      <!-- Quick Add Check-In Card -->
+      <div class="card checkin-card">
+        <form id="checkin-form" onsubmit="handleCheckIn(event)">
+          <div class="input-group">
+            <span class="input-icon">👤</span>
+            <input type="text" id="customer-name-input" placeholder="Enter customer name or initials (e.g. Marcus S.)" autocomplete="off" required autofocus>
+            <button type="submit" class="btn btn-primary btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Check In
+            </button>
+          </div>
+
+          <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem;">
+              <span style="font-size: 0.85rem;">📱</span>
+              <input type="tel" id="desk-customer-phone" placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)" style="width: 100%; border: none; background: transparent; color: #fff; font-size: 0.85rem; outline: none;">
+            </div>
+            <!-- Desk Service Selector (Populated dynamically when enabled) -->
+            <div id="desk-service-selector-container" class="hidden" style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Service:</span>
+              <select id="desk-service-select" style="width: 100%; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 0.85rem;">
+                <option value="">-- Select Service (Optional) --</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="metrics-grid">
+        <div class="metric-card highlight">
+          <div class="metric-label">Estimated Wait</div>
+          <div class="metric-value" id="metric-est-wait">~ 20m</div>
+          <div class="metric-caption">Live public estimate</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Currently Waiting</div>
+          <div class="metric-value" id="metric-waiting-count">0</div>
+          <div class="metric-caption">People in queue</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Served Today</div>
+          <div class="metric-value" id="metric-served-count">0</div>
+          <div class="metric-caption">Completed visits</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg Turnaround</div>
+          <div class="metric-value" id="metric-avg-wait">--</div>
+          <div class="metric-caption">Based on calls today</div>
+        </div>
+      </div>
+
+      <!-- Active Queue Section -->
+      <div class="section-header">
+        <h2>Active Waiting Queue</h2>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <!-- 1-Tap View Mode Switcher Toggle -->
+          <div class="view-mode-toggle-group">
+            <button class="view-toggle-btn active" id="btn-view-grid" onclick="setQueueViewMode('grid')" title="Standard Multi-Column Grid View">
+              ⣿ Grid View
+            </button>
+            <button class="view-toggle-btn" id="btn-view-stage" onclick="setQueueViewMode('stage')" title="Interactive 3D Stage Rotator View">
+              🎴 3D Stage Mode
+            </button>
+          </div>
+
+          <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
+            🔔 Sound Alerts: ON
+          </button>
+          <span class="count-pill" id="queue-badge">0 Waiting</span>
+        </div>
+      </div>
+
+      <div id="queue-list" class="queue-grid">
+        <!-- Empty state default -->
+        <div class="empty-state">
+          <div class="empty-icon">🛋️</div>
+          <h3>No one in line right now</h3>
+          <p>Enter a customer's name above and tap <strong>Check In</strong> to start tracking wait time.</p>
+        </div>
+      </div>
+
+      <!-- Recent Activity Feed -->
+      <div class="section-header activity-header">
+        <h2>📋 Customer Visit History Log</h2>
+        <button class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV</button>
+      </div>
+
+      <div class="history-toolbar">
+        <div class="history-filter-group">
+          <select id="history-date-filter" class="filter-select" onchange="onDeskFilterChange()">
+            <option value="all" selected>All Dates</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="custom">Pick Specific Date...</option>
+          </select>
+          <input type="date" id="history-date-picker" class="filter-date-input hidden" onchange="onDeskFilterChange()">
+          <input type="text" id="history-search-input" class="filter-search-input" placeholder="🔍 Search customer..." oninput="onDeskFilterChange()">
+        </div>
+      </div>
+
+      <div class="card history-card">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Checked In</th>
+              <th>Called Timestamp</th>
+              <th>Cancelled Timestamp</th>
+              <th>Wait Duration</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr class="empty-row"><td colspan="7">No customer visit logs found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Front Desk History Pagination -->
+      <div class="pagination-container" id="desk-history-pagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; padding: 0.5rem 0.25rem;">
+        <div class="pagination-info" id="desk-pagination-info" style="font-size: 0.82rem; color: var(--text-muted);">Showing 1-20 of 0 visits</div>
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
+          <button class="btn btn-secondary btn-sm" id="desk-prev-page-btn" onclick="changeDeskPage(-1)" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" disabled>&laquo; Prev</button>
+          <span id="desk-page-num-display" style="font-size: 0.82rem; font-weight: 600; color: var(--text-main); min-width: 70px; text-align: center;">Page 1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="desk-next-page-btn" onclick="changeDeskPage(1)" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" disabled>Next &raquo;</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 2: BUSINESS OWNER MODE -->
+    <section id="view-owner" class="view-panel hidden">
+      <div class="shop-banner owner-banner">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <h1 class="shop-title" id="owner-shop-name" style="margin: 0;">Main St Barbers</h1>
+            <span class="status-pill-lg" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Your shop queue is automatically backed up and synchronized in real time across all staff devices, front desk tablets, and customer QR code screens.">
+              <span class="pulse-dot"></span> <span id="firestore-status-label">Cloud Live Sync Connected</span>
+            </span>
+          </div>
+          <p class="shop-subtitle" style="margin-top: 0.25rem;">Business Owner Dashboard &bull; Analytics, Link & Subscription Management</p>
+        </div>
+        <div class="mode-badge-toggle owner-active" onclick="switchView('desk')" title="Click to switch back to Front Desk">
+          <span>Active Mode:</span> <strong>Business Owner ⇆</strong>
+        </div>
+      </div>
+
+      <!-- Owner Quick Overview Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card highlight" style="position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="metric-label">Subscription Plan</div>
+            <button class="btn-text-sm" onclick="openUpgradeModal()" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
+          </div>
+          <div class="metric-value" id="owner-plan-value" style="color: #10b981; font-size: 1.4rem;">$0 / month</div>
+          <div class="metric-caption" id="owner-plan-caption">Starter Tier (Free) &bull; Free Forever</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Visits Today</div>
+          <div class="metric-value" id="owner-served-today">0</div>
+          <div class="metric-caption">Completed walk-ins</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Peak Wait Time Today</div>
+          <div class="metric-value" id="owner-peak-wait">--</div>
+          <div class="metric-caption">Highest wait recorded</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg Turnaround Time</div>
+          <div class="metric-value" id="owner-avg-turnaround">--</div>
+          <div class="metric-caption">Based on completed visits</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Walk-Away Loss (Cancellations)</div>
+          <div class="metric-value" id="owner-cancellations" style="color: var(--accent-rose);">0 (0%)</div>
+          <div class="metric-caption">Cancelled walk-ins today</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Peak Rush Window</div>
+          <div class="metric-value" id="owner-peak-hour">--</div>
+          <div class="metric-caption">Highest traffic hour</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Staff Speed (Throughput)</div>
+          <div class="metric-value" id="owner-throughput">--</div>
+          <div class="metric-caption">Visits served per hour</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Active Lobby Load</div>
+          <div class="metric-value" id="owner-lobby-count">0</div>
+          <div class="metric-caption">Currently waiting in line</div>
+        </div>
+      </div>
+
+      <!-- Business Owner Settings & Branding Container -->
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>⚙️</span> Shop Settings & Branding Profile
+            </h3>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">Customize your shop details, branding logo, customer service menu & published URL</p>
+          </div>
+          <span style="font-size: 0.78rem; color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; font-weight: 600;">
+            🌐 Multi-Device Cloud Sync Active
+          </span>
+        </div>
+        
+        <div class="card-body">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem;">
+            
+            <!-- Column 1: Business Details & Promotions -->
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+              <div class="form-group">
+                <label for="owner-input-shopname">Business Name</label>
+                <input type="text" id="owner-input-shopname" value="Main St Barbers">
+              </div>
+              
+              <div class="form-group">
+                <label for="owner-input-slug">Shareable Link Slug</label>
+                <div class="slug-input-wrapper">
+                  <span class="slug-prefix">waitlink.app?s=</span>
+                  <input type="text" id="owner-input-slug" value="main-st-barbers">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="owner-input-address">Business Address (Optional)</label>
+                <input type="text" id="owner-input-address" placeholder="e.g. 123 Main St, Suite 4B, New York">
+              </div>
+
+              <div class="form-group">
+                <label for="owner-input-phone">Business Phone Number (Optional)</label>
+                <input type="text" id="owner-input-phone" placeholder="e.g. (555) 234-5678">
+              </div>
+
+              <div class="form-group">
+                <label for="owner-input-email">Shop Owner Email Address (Optional)</label>
+                <input type="email" id="owner-input-email" placeholder="e.g. owner@waitlink.app">
+              </div>
+
+              <div class="form-group">
+                <label for="owner-input-hours">Today's Store Hours (Optional)</label>
+                <input type="text" id="owner-input-hours" placeholder="e.g. 9:00 AM - 7:00 PM (Open Today)">
+              </div>
+
+              <!-- Promotional Offer Box -->
+              <div class="card" style="padding: 1rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
+                <div class="form-group" style="width: 100%;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                    <label for="owner-input-promo" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
+                      🎁 Promotional Offer Details (Optional)
+                    </label>
+                    <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below.">ℹ️</span>
+                  </div>
+                  <input type="text" id="owner-input-promo" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; box-sizing: border-box; display: block; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.65rem;">
+                  <div class="form-group">
+                    <label for="owner-input-promo-start" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window Start</label>
+                    <input type="date" id="owner-input-promo-start" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  </div>
+                  <div class="form-group">
+                    <label for="owner-input-promo-end" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window End</label>
+                    <input type="date" id="owner-input-promo-end" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Twilio SMS Settings Panel (Enterprise Gateway Managed) -->
+              <div class="card" style="padding: 1.1rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                  <strong style="color: #10b981; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                    📲 Twilio SMS Customer Notifications
+                  </strong>
+                  <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <input type="checkbox" id="twilio-enable-checkbox" checked onchange="onTwilioToggleChange()" style="accent-color: #10b981; cursor: pointer;"> Enable Twilio SMS
+                  </label>
+                </div>
+                
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.75rem 0; line-height: 1.4;">
+                  Automatically send instant text messages containing their live ticket tracking link to walk-in customers when Front Desk staff tap <strong>📞 SERVE NOW</strong>.
+                </p>
+
+                <!-- Platform Managed Credentials Notice Badge -->
+                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.6); padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); margin-bottom: 0.75rem;">
+                  <span style="font-size: 0.75rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                    🔒 Centralized Platform Twilio Gateway Configured & Active
+                  </span>
+                  <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 4px;">Protected & Encrypted</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; opacity: 0.7;">
+                  <div class="form-group">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Account SID</label>
+                    <input type="password" id="twilio-account-sid" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(4px); user-select: none;" title="Encrypted Platform Twilio Account SID">
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Auth Token</label>
+                    <input type="password" id="twilio-auth-token" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(0.4px);">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.6rem; align-items: flex-end;">
+                  <div class="form-group">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Sender Phone Number (SMS-Enabled)</label>
+                    <input type="text" id="twilio-from-phone" value="+1 (803) 902-7464" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #10b981; font-weight: 600; border-color: rgba(255,255,255,0.1);" title="Twilio Registered Sender Phone Number">
+                  </div>
+                  <div class="form-group">
+                    <button type="button" id="btn-send-test-sms" class="btn btn-secondary btn-sm" onclick="sendTestSmsUI()" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.5rem; font-weight: 700; font-size: 0.8rem; background: rgba(16, 185, 129, 0.1);">
+                      ⚡ Send Test SMS to Business Phone
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Custom Serve Now SMS Message Template -->
+                <div class="form-group" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                    <label for="twilio-serve-now-template" style="font-size: 0.8rem; font-weight: 600; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
+                      💬 "Serve Now" Customer SMS Text Template
+                    </label>
+                    <button type="button" class="btn-text" onclick="resetServeNowTemplateDefault()" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: underline; padding: 0;" title="Reset back to default template">
+                      ↺ Reset to Default
+                    </button>
+                  </div>
+                  <textarea id="twilio-serve-now-template" rows="2" style="font-size: 0.82rem; padding: 0.5rem 0.65rem; width: 100%; line-height: 1.4; resize: vertical;" placeholder="Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}" oninput="updateServeNowTemplatePreview()"></textarea>
+                  
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem;">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                      <span>Insert tags:</span>
+                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{name}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; cursor: pointer;">{name}</button>
+                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{shop}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(6,182,212,0.15); color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); border-radius: 4px; cursor: pointer;">{shop}</button>
+                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{service}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); border-radius: 4px; cursor: pointer;">{service}</button>
+                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{link}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 4px; cursor: pointer;" title="Insert live ticket tracking link tag">{link} (Ticket Link)</button>
+                    </div>
+                  </div>
+
+                  <!-- Live Customer SMS Preview Box -->
+                  <div style="margin-top: 0.5rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+                      📱 Customer Phone Preview:
+                    </div>
+                    <div id="twilio-template-live-preview" style="font-size: 0.78rem; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                      Hi Alex! Your turn at Main St Barbers is ready now. Please proceed to the front desk. View your ticket: https://waitlink.app?s=main-st-barbers&view=public&ticket=sample-101
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 2: Logo Branding & Service Menu -->
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+              <div class="form-group">
+                <label for="owner-file-logo">Custom Shop Logo (Upload File or Image URL)</label>
+                <div class="logo-upload-container">
+                  <input type="file" id="owner-file-logo" accept="image/png, image/jpeg, image/webp" onchange="handleLogoFileUpload(event)" style="display: none;">
+                  <button type="button" class="btn btn-secondary" style="width: 100%; gap: 0.5rem;" onclick="document.getElementById('owner-file-logo').click()">
+                    📷 Upload Logo Image (PNG, JPG, WEBP)
+                  </button>
+                  <div class="logo-preview-box" id="logo-preview-box" style="margin-top: 0.6rem; display: none; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <img id="logo-preview-img" src="" alt="Logo Preview" style="max-height: 50px; max-width: 90px; object-fit: contain;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); flex: 1;">Logo Attached</span>
+                    <button type="button" class="btn-text" style="color: var(--accent-rose); font-weight: 600;" onclick="removeShopLogo()">✕ Remove</button>
+                  </div>
+                </div>
+                <input type="url" id="owner-input-logourl" placeholder="Or paste Image URL (https://...)" style="margin-top: 0.5rem;">
+                <small class="form-hint">Max file size: 2 MB. PNG, JPG, WEBP. Auto-sanitized and optimized for window posters, mobile cards & desk header.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="owner-input-baseline">Default Service Time (Minutes)</label>
+                <input type="number" id="owner-input-baseline" value="20" min="5" max="120">
+              </div>
+
+              <!-- Shop Services Manager -->
+              <div class="form-group" style="padding: 1rem; background: rgba(6, 182, 212, 0.06); border: 1px dashed rgba(6, 182, 212, 0.3); border-radius: var(--radius-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                  <div>
+                    <label style="font-weight: 700; color: #fff; font-size: 0.95rem; margin: 0;">✂️ Customer Service Menu</label>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Allow customers or desk staff to select specific services during check-in.</div>
+                  </div>
+                  <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                    <input type="checkbox" id="owner-toggle-services" onchange="toggleOwnerServicesSection(this.checked)">
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+
+                <div id="owner-services-manager-body" class="hidden" style="margin-top: 0.75rem;">
+                  <div style="font-size: 0.8rem; font-weight: 600; color: #06b6d4; margin-bottom: 0.5rem;">Add New Service Option:</div>
+                  <div style="display: flex; gap: 0.4rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
+                    <input type="text" id="new-service-emoji" placeholder="Emoji (💈)" style="width: 70px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;">
+                    <input type="text" id="new-service-name" placeholder="Service Name (e.g. Haircut & Beard)" style="flex: 1; min-width: 140px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;">
+                    <input type="number" id="new-service-duration" placeholder="Mins (30)" style="width: 85px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;" min="5" max="240">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addNewOwnerService()" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; font-weight: 700;">+ Add</button>
+                  </div>
+
+                  <div id="owner-services-list" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <!-- Dynamic list of services rendered via JS -->
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; pt: 1rem; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="font-size: 0.8rem; color: var(--text-subtle); display: flex; align-items: center; gap: 0.35rem;">
+              <span>🌐</span> <span>Queue data is synchronized live across all devices & Firestore.</span>
+            </div>
+            <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;" onclick="saveOwnerSettings()">
+              Save Shop Profile & Branding
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shop Marketing & Distribution Kit -->
+      <div class="card" style="margin-top: 1.5rem; margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="color: #fff; margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span>📣</span> Shop Marketing & Distribution Kit
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.2rem 0 0 0;">Drive walk-in customer traffic by publishing your live waitlist link on Google Maps, Instagram & your storefront.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+          
+          <!-- Link 1: Google Business Profile -->
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">📍 GOOGLE MAPS / BUSINESS PROFILE</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Add to your Google Business Profile as your official "Check Wait Time" link.</div>
+            <button class="btn btn-secondary btn-sm" onclick="copyPublicLink()" style="width: 100%;">🔗 Copy Google Maps Link</button>
+          </div>
+
+          <!-- Link 2: Instagram / Facebook Bio -->
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: #ec4899; font-weight: 700; text-transform: uppercase;">📸 INSTAGRAM / SOCIAL BIO</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Paste in your Instagram bio link ("Tap to view today's live wait time").</div>
+            <button class="btn btn-secondary btn-sm" onclick="copyPublicLink()" style="width: 100%; border-color: rgba(236, 72, 153, 0.4); color: #ec4899;">📸 Copy Instagram Bio Link</button>
+          </div>
+
+          <!-- Link 3: Storefront QR Poster -->
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: #10b981; font-weight: 700; text-transform: uppercase;">🖨️ WINDOW QR POSTER</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Print a high-resolution 8.5" x 11" QR poster for your front window or desk.</div>
+            <button class="btn btn-primary btn-sm" onclick="switchView('poster')" style="width: 100%;">🖨️ Open Printable QR Poster</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Customer Visit History Log (Business Owner View) -->
+      <div class="section-header activity-header">
+        <h2>📊 Customer Visit History Log</h2>
+        <button class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV</button>
+      </div>
+
+      <div class="history-toolbar">
+        <div class="history-filter-group">
+          <select id="owner-history-date-filter" class="filter-select" onchange="onOwnerFilterChange()">
+            <option value="all" selected>All Dates</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="custom">Pick Specific Date...</option>
+          </select>
+          <input type="date" id="owner-history-date-picker" class="filter-date-input hidden" onchange="onOwnerFilterChange()">
+          <input type="text" id="owner-history-search-input" class="filter-search-input" placeholder="🔍 Search customer..." oninput="onOwnerFilterChange()">
+        </div>
+        <button class="btn-text" onclick="clearDailyHistory()">Reset Today's Analytics</button>
+      </div>
+
+      <div class="card history-card">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Checked In</th>
+              <th>Called Timestamp</th>
+              <th>Cancelled Timestamp</th>
+              <th>Wait Duration</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="owner-history-tbody">
+            <tr class="empty-row"><td colspan="7">No customer visit logs found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Business Owner History Pagination -->
+      <div class="pagination-container" id="owner-history-pagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; padding: 0.5rem 0.25rem;">
+        <div class="pagination-info" id="owner-pagination-info" style="font-size: 0.82rem; color: var(--text-muted);">Showing 1-20 of 0 visits</div>
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
+          <button class="btn btn-secondary btn-sm" id="owner-prev-page-btn" onclick="changeOwnerPage(-1)" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" disabled>&laquo; Prev</button>
+          <span id="owner-page-num-display" style="font-size: 0.82rem; font-weight: 600; color: var(--text-main); min-width: 70px; text-align: center;">Page 1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="owner-next-page-btn" onclick="changeOwnerPage(1)" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" disabled>Next &raquo;</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 3: PUBLIC LINK VIEW (CUSTOMER VIEW SIMULATOR) -->
+    <section id="view-public" class="view-panel hidden">
+      <div class="public-preview-container" style="max-width: 540px; margin: 0 auto; padding: 1rem 0.5rem 3rem 0.5rem;">
+        
+        <!-- Mobile Public Header Bar with Verification Seal -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.1rem;">⏳</span>
+            <span style="font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 1rem; color: #fff;">WaitLink</span>
+          </div>
+          <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.3rem;">
+            <span>🛡️</span> Verified Shop
+          </span>
+        </div>
+
+        <!-- Main Public Card -->
+        <div class="public-card">
+          <div class="public-header">
+            <img id="public-shop-logo" class="public-logo-img hidden" alt="Shop Logo">
+            <div class="shop-badge">LIVE WALK-IN QUEUE</div>
+            <h1 class="public-shop-name" id="public-shop-name">Main St Barbers</h1>
+            
+            <!-- Address, Phone & Store Hours Contact Bar -->
+            <div class="public-contact-bar" id="public-contact-bar"></div>
+            
+            <!-- Store Hours Banner -->
+            <div id="public-hours-box" style="margin-top: 0.6rem; font-size: 0.85rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.08); padding: 0.35rem 0.8rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.2);">
+              <span>🕒 Today's Store Hours:</span>
+              <span id="public-hours-text">9:00 AM - 7:00 PM (Open Now 🟢)</span>
+            </div>
+          </div>
+
+          <!-- Active Promotional Banner -->
+          <div id="public-promo-banner" class="promo-banner hidden"></div>
+
+          <!-- Active Customer Ticket Card (Spotlight at Top for Ticket Holders) -->
+          <div id="public-active-ticket-card" class="hidden" style="margin: 1.25rem 0 1rem 0; padding: 1.5rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 2px solid #10b981; border-radius: var(--radius-md); text-align: center;">
+            <div id="ticket-badge-display" style="font-size: 0.75rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">✅ YOU ARE IN LINE</div>
+            <h2 id="ticket-customer-name" style="color: #fff; font-size: 1.5rem; margin: 0.3rem 0 0.1rem 0;">Senthil K.</h2>
+            <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0;" id="ticket-position-display">Position #1</div>
+            <p id="ticket-subtitle-display" style="font-size: 0.85rem; color: var(--text-muted); margin: 0.2rem 0 0.6rem 0;">Please stay near the lobby</p>
+
+            <p style="font-size: 0.85rem; color: var(--text-main); margin: 0.6rem 0 0.6rem 0;">Timer Started &bull; <span id="ticket-timer-display" style="color: #06b6d4; font-weight: 700;">Waited 00:00</span></p>
+
+            <!-- Running Late Action Container -->
+            <div id="ticket-running-late-container" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: var(--radius-sm); text-align: center;">
+              <div id="running-late-title" style="font-size: 0.82rem; color: #f59e0b; font-weight: 600; margin-bottom: 0.45rem;">
+                🏃 Running Late? Notify front desk:
+              </div>
+              
+              <div id="running-late-chips" style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(5)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+5 mins</button>
+                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(10)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+10 mins</button>
+                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(15)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+15 mins</button>
+              </div>
+              
+              <div id="running-late-locked-msg" class="hidden" style="font-size: 0.82rem; color: #fbbf24; font-weight: 700; background: rgba(245, 158, 11, 0.15); padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid rgba(245, 158, 11, 0.3);">
+                🕒 Front Desk Notified: Running Late (~<span id="reported-late-mins">10</span>m)
+              </div>
+
+              <div id="running-late-gated-msg" class="hidden" style="font-size: 0.78rem; color: var(--text-muted);">
+                ℹ️ Running late notification unlocks when you are #1 or #2 in line.
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 0.8rem;">
+              <button class="btn btn-secondary btn-sm" onclick="copyMyTicketLink()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+                🔗 Copy My Ticket Link
+              </button>
+              <button class="btn-text-sm" onclick="cancelMyTicket()" style="font-size: 0.8rem; color: var(--text-muted);">
+                Leave Line
+              </button>
+            </div>
+          </div>
+
+          <!-- General Estimated Wait for New Walk-Ins -->
+          <div class="public-timer-box" id="public-timer-box">
+            <div class="timer-label">Estimated Wait for New Walk-ins</div>
+            <div class="timer-display" id="public-wait-display">~ 20 MINS</div>
+            <div class="queue-status-text" id="public-queue-summary">0 people currently waiting in line</div>
+          </div>
+
+          <!-- Customer Self Check-In CTA Button -->
+          <div id="public-join-btn-container" style="margin: 1.25rem 0 0.5rem 0;">
+            <button class="btn btn-accent btn-lg" onclick="toggleInlineCheckInForm(true)" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              <span>🎟️ Join Queue Now</span>
+              <span>&rarr;</span>
+            </button>
+          </div>
+
+          <!-- Inline Expanding Check-In Form -->
+          <div id="public-inline-checkin-card" class="hidden" style="margin: 1.25rem 0 0.5rem 0; padding: 1.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-md); text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+              <h3 style="color: #fff; font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                <span>🎟️</span> Join Walk-In Line
+              </h3>
+              <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.8rem;" onclick="toggleInlineCheckInForm(false)">✕ Close</button>
+            </div>
+
+            <form id="public-inline-form" onsubmit="handlePublicInlineCheckIn(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
+                  Your Name or Initials *
+                </label>
+                <input type="text" id="inline-customer-name" placeholder="e.g. Senthil K." required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
+                  Mobile Phone Number (Optional)
+                </label>
+                <input type="tel" id="inline-customer-phone" placeholder="e.g. (555) 234-5678" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.35;">
+                  📲 <strong>SMS Disclosure:</strong> Providing your mobile number opts you in to receive a 1-time SMS text message with your live ticket link when your turn is ready. Standard msg & data rates may apply. Reply STOP to cancel.
+                </div>
+              </div>
+
+              <!-- Public Service Chips (Populated dynamically when enabled) -->
+              <div id="public-service-chips-container" class="hidden">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
+                  Select Service (Optional)
+                </label>
+                <div id="public-service-chips" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                  <!-- Dynamic Service Chips rendered via JS -->
+                </div>
+              </div>
+
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); padding: 0.6rem; font-size: 0.78rem; color: #10b981;">
+                ⚡ Your wait timer starts <strong>immediately</strong> upon clicking Confirm.
+              </div>
+
+              <button type="submit" class="btn btn-accent btn-lg" style="width: 100%; padding: 0.85rem; font-weight: 700; font-size: 1rem;">
+                Confirm & Join Line Now &rarr;
+              </button>
+            </form>
+          </div>
+
+          <!-- Trust & Security Verification Box -->
+          <div class="public-info-box" style="margin-top: 1.25rem;">
+            <div class="info-row">
+              <span class="info-icon">🔒</span>
+              <span><strong>Privacy Protected:</strong> Customer names are kept confidential and never shown publicly.</span>
+            </div>
+            <div class="info-row">
+              <span class="info-icon">⚡</span>
+              <span><strong>Real-Time Sync:</strong> Syncs instantly with front desk staff tablets and lobby TV displays.</span>
+            </div>
+            <div class="info-row">
+              <span class="info-icon">🛡️</span>
+              <span><strong>Zero App Download:</strong> 100% web browser native — no password or app install required.</span>
+            </div>
+          </div>
+
+          <!-- Page Refresh & Sync Bar -->
+          <div class="public-footer">
+            <span id="public-last-updated">Updated just now</span>
+            <button class="btn-text-sm" onclick="renderAll()">↻ Refresh</button>
+          </div>
+        </div>
+
+        <!-- Official Public Footer & Legal Trust Seal -->
+        <footer style="margin-top: 2rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 0;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; color: var(--text-main);">
+            <span>🔒 256-Bit SSL Encrypted</span>
+            <span>&bull;</span>
+            <span id="public-footer-shop-name">Main St Barbers</span>
+          </div>
+          <div style="display: flex; justify-content: center; gap: 1.25rem; flex-wrap: wrap;">
+            <a href="privacy.html" target="_blank" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a>
+            <a href="terms.html" target="_blank" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a>
+            <a href="contact.html" target="_blank" style="color: var(--text-muted); text-decoration: none;">Support Portal</a>
+          </div>
+          <div>&copy; 2026 WaitLink Cloud Sync &bull; Official Digital Queue Partner</div>
+        </footer>
+
+      </div>
+    </section>
+
+    <!-- VIEW 4: PRINTABLE WINDOW POSTER -->
+    <section id="view-poster" class="view-panel hidden">
+      <div class="poster-actions no-print">
+        <button class="btn btn-primary btn-lg" onclick="window.print()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          Print Window Poster
+        </button>
+        <p class="hint-text">Designed to print cleanly on 8.5" x 11" paper for your front desk or window.</p>
+      </div>
+
+      <!-- Printable Poster Content -->
+      <div class="printable-poster" id="printable-area">
+        <div class="poster-header">
+          <img id="poster-shop-logo" class="poster-logo-img hidden" alt="Shop Logo">
+          <div class="poster-icon">⏳</div>
+          <h1 id="poster-shop-name">MAIN ST BARBERS</h1>
+          <div class="poster-tagline">WALK-INS WELCOME</div>
+        </div>
+
+        <div class="poster-body">
+          <h2 class="poster-callout">Check Our Live Wait Time Before You Walk In!</h2>
+          <p class="poster-instruction">Scan this QR code with your phone camera to see today's live average wait time:</p>
+
+          <div class="qr-container">
+            <div id="qrcode-box"></div>
+          </div>
+
+          <div class="poster-url-display">
+            <span>Or visit:</span>
+            <strong id="poster-url-text">waitlink.app/s/main-st-barbers</strong>
+          </div>
+        </div>
+
+        <div class="poster-footer">
+          <p>Powered by <strong>WaitLink</strong> &bull; Zero App Download Required</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: SUPERADMIN PLATFORM DASHBOARD (senthil930@gmail.com ONLY) -->
+    <section id="view-superadmin" class="view-panel hidden">
+      <div class="shop-banner owner-banner">
+        <div>
+          <h1 class="shop-title">👑 WaitLink Platform SuperAdmin</h1>
+          <p class="shop-subtitle">Logged in as: <strong style="color: #6366f1;" id="superadmin-email-label">senthil930@gmail.com</strong> &bull; Master SaaS Management</p>
+        </div>
+        <div class="mode-badge-toggle owner-active">
+          <span>Role:</span> <strong>SuperAdmin 👑</strong>
+        </div>
+      </div>
+
+      <!-- SuperAdmin Platform Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card highlight">
+          <div class="metric-label">Registered Shops</div>
+          <div class="metric-value" id="superadmin-total-shops">1</div>
+          <div class="metric-caption">Active tenants on platform</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Monthly SaaS MRR</div>
+          <div class="metric-value" id="superadmin-mrr-val" style="color: #10b981; font-size: 1.4rem;">$30 / mo</div>
+          <div class="metric-caption" id="superadmin-mrr-cap">Calculated across active tenant subscriptions</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Google Cloud Project</div>
+          <div class="metric-value" style="font-size: 1.2rem; margin: 0.6rem 0;">waitlink-app-8821</div>
+          <div class="metric-caption">Firestore Native Database</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Platform Role</div>
+          <div class="metric-value" style="font-size: 1.2rem; color: #6366f1; margin: 0.6rem 0;">SuperAdmin</div>
+          <div class="metric-caption">Full System Privileges</div>
+        </div>
+      </div>
+
+      <!-- SuperAdmin Section Navigation Sub-Tabs -->
+      <div class="mode-tabs" style="margin-bottom: 1.5rem;">
+        <button class="tab-btn active" id="supertab-shops" onclick="switchSuperTab('shops')">
+          🏢 Master Shops Directory
+        </button>
+        <button class="tab-btn" id="supertab-pricing" onclick="switchSuperTab('pricing')">
+          💎 Pricing Config & Tiers
+        </button>
+        <button class="tab-btn" id="supertab-support" onclick="switchSuperTab('support')">
+          📩 Support Inquiries Inbox
+        </button>
+      </div>
+
+      <!-- SuperPanel 1: Master Tenant Shop Directory -->
+      <div id="superpanel-shops">
+        <div class="section-header">
+          <h2>Master Multi-Tenant Shop Directory</h2>
+          <button class="btn btn-primary btn-sm" onclick="openOnboardingModal()">+ Register New Shop</button>
+        </div>
+
+        <div class="card history-card">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Shop Name</th>
+                <th>Slug / URL</th>
+                <th>Owner Email</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="superadmin-shops-tbody">
+              <tr>
+                <td><strong>Main St Barbers</strong></td>
+                <td><code>waitlink.app?view=public</code></td>
+                <td>senthil930@gmail.com</td>
+                <td><span class="status-tag called">$5 / mo</span></td>
+                <td><span class="status-pill"><span class="pulse-dot"></span> Active</span></td>
+                <td>
+                  <div class="actions-cell">
+                    <button class="btn-text-sm" onclick="inspectShop('main-st-barbers')">Inspect Desk</button>
+                    <button class="btn-text-sm" onclick="openSettingsForShop('main-st-barbers')">Settings ⚙️</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SuperPanel 2: Pricing Models Config Editor -->
+      <div id="superpanel-pricing" class="hidden">
+        <div class="section-header">
+          <h2>💎 Configure SaaS Pricing Models & Tiers</h2>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="openPricingAuditModal()">📜 View Pricing Audit Log</button>
+            <button class="btn btn-primary btn-sm" onclick="savePricingConfig()">💾 Save & Publish Pricing Tiers</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+          
+          <!-- Tier 1 Form -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <h3 style="color: var(--primary); font-size: 1.15rem; margin-bottom: 1rem;">Tier 1: Starter</h3>
+            <div class="form-group">
+              <label>Badge Title</label>
+              <input type="text" id="pricing-t1-badge" value="Starter">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Plan Name</label>
+              <input type="text" id="pricing-t1-title" value="Free Forever">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Monthly Price Display</label>
+              <input type="text" id="pricing-t1-price" value="$0">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Description</label>
+              <textarea id="pricing-t1-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</textarea>
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+                <label style="margin: 0;">Feature List Toggles</label>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.75rem;" onclick="restoreDefaultTierFeatures('t1')">🔄 Restore Defaults</button>
+                  <button type="button" class="btn-text-sm" style="color: var(--primary); font-size: 0.75rem;" onclick="addAdminFeatureItem('t1')">+ Add Feature</button>
+                </div>
+              </div>
+              <div id="pricing-t1-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+              <textarea id="pricing-t1-features" class="hidden" rows="5">1 Shop Location
+Up to 100 Monthly Check-ins
+Printable Window QR Poster
+1-Tap Front Desk Control
+Basic Wait Time Estimator</textarea>
+            </div>
+          </div>
+
+          <!-- Tier 2 Form -->
+          <div class="card" style="padding: 1.5rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <h3 style="color: var(--primary); font-size: 1.15rem; margin: 0;">Tier 2: Pro Business</h3>
+              <label style="font-size: 0.8rem; color: #fff; display: inline-flex; align-items: center; gap: 0.3rem;"><input type="checkbox" id="pricing-t2-popular" checked> Most Popular</label>
+            </div>
+            <div class="form-group">
+              <label>Badge Title</label>
+              <input type="text" id="pricing-t2-badge" value="Pro Business">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Plan Name</label>
+              <input type="text" id="pricing-t2-title" value="Standard Shop">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Monthly Price Display</label>
+              <input type="text" id="pricing-t2-price" value="$15">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Description</label>
+              <textarea id="pricing-t2-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Everything you need to eliminate walk-away losses and track owner analytics.</textarea>
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+                <label style="margin: 0;">Feature List Toggles</label>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.75rem;" onclick="restoreDefaultTierFeatures('t2')">🔄 Restore Defaults</button>
+                  <button type="button" class="btn-text-sm" style="color: var(--primary); font-size: 0.75rem;" onclick="addAdminFeatureItem('t2')">+ Add Feature</button>
+                </div>
+              </div>
+              <div id="pricing-t2-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+              <textarea id="pricing-t2-features" class="hidden" rows="5">Unlimited Monthly Check-ins
+Custom Logo Branding & Colors
+Owner Business Intelligence Dashboard
+Peak Rush Window & Walk-Away Analytics
+Multi-Device Front Desk Sync
+Priority Cloud Firestore Latency</textarea>
+            </div>
+          </div>
+
+          <!-- Tier 3 Form -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <h3 style="color: var(--accent-emerald); font-size: 1.15rem; margin-bottom: 1rem;">Tier 3: Enterprise</h3>
+            <div class="form-group">
+              <label>Badge Title</label>
+              <input type="text" id="pricing-t3-badge" value="Enterprise">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Plan Name</label>
+              <input type="text" id="pricing-t3-title" value="Multi-Location">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Monthly Price Display</label>
+              <input type="text" id="pricing-t3-price" value="$49">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Description</label>
+              <textarea id="pricing-t3-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">For chains, franchise barber networks, and regional medical centers.</textarea>
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+                <label style="margin: 0;">Feature List Toggles</label>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.75rem;" onclick="restoreDefaultTierFeatures('t3')">🔄 Restore Defaults</button>
+                  <button type="button" class="btn-text-sm" style="color: var(--primary); font-size: 0.75rem;" onclick="addAdminFeatureItem('t3')">+ Add Feature</button>
+                </div>
+              </div>
+              <div id="pricing-t3-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+              <textarea id="pricing-t3-features" class="hidden" rows="5">Unlimited Locations & Staff Accounts
+Multi-Tenant SuperAdmin Access
+Custom Domain CNAME Routing
+Dedicated Support Manager
+99.99% Cloud SLA</textarea>
+            </div>
+          </div>
+
+        </div>
+
+        <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1.5rem;" onclick="savePricingConfig()">
+          💾 Save & Publish All Pricing Tiers to Cloud
+        </button>
+      </div>
+
+      <!-- SuperPanel 3: Customer Support Inquiries Inbox -->
+      <div id="superpanel-support" class="hidden">
+        <div class="section-header">
+          <h2>📩 Customer Support Inquiries Inbox</h2>
+          <button class="btn btn-secondary btn-sm" onclick="loadSupportInquiries()">🔄 Refresh Messages</button>
+        </div>
+        <div id="support-inquiries-list" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading support inquiries...</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Global Persistent WaitLink Application Footer -->
+    <footer class="landing-footer" id="global-app-footer">
+      <div class="footer-container">
+        
+        <div class="footer-top-grid">
+          
+          <!-- Brand Column -->
+          <div class="footer-col footer-col-brand">
+            <div class="footer-brand">
+              <span class="footer-logo-icon">⏳</span>
+              <span class="footer-brand-title">WaitLink</span>
+            </div>
+            <p class="footer-tagline">
+              Zero-friction, web-based wait time tracking for walk-in barbershops, clinics, salons, and cafes.
+            </p>
+          </div>
+
+          <!-- Column 1: Company -->
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul class="footer-links-list">
+              <li><a href="about.html">About Us</a></li>
+              <li><a href="contact.html">Contact Page</a></li>
+              <li><a href="pricing.html">Pricing</a></li>
+            </ul>
+          </div>
+
+          <!-- Column 2: Legal -->
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <ul class="footer-links-list">
+              <li><a href="privacy.html">Privacy Policy</a></li>
+              <li><a href="terms.html">Terms of Service</a></li>
+              <li><a href="cookies.html">Cookie Policy</a></li>
+            </ul>
+          </div>
+
+          <!-- Column 3: Resources -->
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <ul class="footer-links-list">
+              <li><a href="help.html">Help Center</a></li>
+              <li><a href="faq.html">FAQ</a></li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Bottom Meta & Legal Bar -->
+        <div class="footer-bottom-bar">
+          <div class="footer-copyright">
+            &copy; 2026 WaitLink Cloud Sync. Built for Walk-In Businesses.
+          </div>
+        </div>
+
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- Pricing Audit Log Modal (SuperAdmin Only) -->
+  <div id="pricing-audit-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 680px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2>📜 Pricing Config Historical Audit Log</h2>
+        <button class="close-btn" onclick="closePricingAuditModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 1.25rem;">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Historical audit trail tracking all SaaS pricing tier edits, feature strikethroughs, price updates, and timestamps.
+        </p>
+        <div id="audit-log-list" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">No historical pricing changes recorded yet.</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button class="btn btn-secondary btn-sm" onclick="clearPricingAuditLogs()">Clear Audit History</button>
+        <button class="btn btn-primary btn-sm" onclick="closePricingAuditModal()">Close Audit Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal (SuperAdmin Only) -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>👑 Platform Settings (SuperAdmin)</h2>
+        <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="form-group">
+          <label for="setting-shop-name">Business / Shop Name</label>
+          <input type="text" id="setting-shop-name" value="Main St Barbers">
+        </div>
+
+        <div class="form-group">
+          <label for="setting-slug">Public Link Slug</label>
+          <div class="slug-input-wrapper">
+            <span class="slug-prefix">waitlink.app?s=</span>
+            <input type="text" id="setting-slug" value="main-st-barbers">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="setting-base-wait">Baseline Fallback Wait Time (Minutes)</label>
+          <input type="number" id="setting-base-wait" value="20" min="1" max="180">
+          <small class="form-hint">Used when starting fresh each day before 3+ calls are completed.</small>
+        </div>
+
+        <div class="form-divider">Google Cloud Firestore Configuration</div>
+
+        <div class="form-group">
+          <label for="setting-firebase-config">Firestore Config (JSON)</label>
+          <textarea id="setting-firebase-config" rows="4" placeholder='{"apiKey": "AIzaSy...", "projectId": "waitlink-prod", ...}'></textarea>
+          <small class="form-hint">Leave blank to use default waitlink-app-8821 project.</small>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Save Platform Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication Modal (Firebase Auth) -->
+  <div id="auth-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="auth-modal-title">🔑 Sign In to WaitLink</h2>
+        <button class="close-btn" onclick="closeAuthModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Google Quick Login Button -->
+        <button class="btn btn-secondary" style="width: 100%; gap: 0.75rem; font-weight: 600; padding: 0.8rem;" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.98 0 12s.46 3.84 1.26 5.42l4.02-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+          Continue with Google
+        </button>
+
+        <div class="form-divider" style="text-align: center; color: var(--text-subtle); margin: 1rem 0;">OR USE EMAIL</div>
+
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+          <div class="form-group">
+            <label for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" placeholder="e.g. senthil930@gmail.com or owner@barber.com" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" placeholder="••••••••" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;" id="auth-submit-btn">
+            Sign In
+          </button>
+        </form>
+
+        <div class="auth-switch-hint" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+          <span id="auth-switch-text">New Business Owner?</span>
+          <button class="btn-text" style="color: var(--primary); font-weight: 600;" onclick="toggleAuthMode()" id="auth-toggle-btn">Create Shop Account</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Email Input Prompt Modal -->
+  <div id="email-prompt-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2>✉️ Enter Business Email</h2>
+        <button class="close-btn" onclick="closeEmailPromptModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Sign in with your email address to access your shop dashboard:</p>
+        <form id="email-prompt-form" onsubmit="handleEmailPromptSubmit(event)">
+          <div class="form-group">
+            <label for="prompt-email-input">Email Address</label>
+            <input type="email" id="prompt-email-input" value="senthil930@gmail.com" placeholder="e.g. senthil930@gmail.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">
+            Sign In & Access Dashboard 🚀
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Onboarding Setup Wizard Modal (For New Business Owners) -->
+  <div id="onboarding-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🚀 Register Your Business on WaitLink</h2>
+        <button class="close-btn" onclick="closeOnboardingModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Set up your walk-in shop in 30 seconds:</p>
+
+        <form id="onboarding-form" onsubmit="handleOnboardingSubmit(event)">
+          <div class="form-group">
+            <label for="onboard-shopname">Business Name</label>
+            <input type="text" id="onboard-shopname" placeholder="e.g. Apex Barber Studio" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-slug">Choose Your Shareable Link Slug</label>
+            <div class="slug-input-wrapper">
+              <span class="slug-prefix">waitlink.app?s=</span>
+              <input type="text" id="onboard-slug" placeholder="apex-barber" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-plan">Subscription Plan Tier</label>
+            <select id="onboard-plan" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+              <option value="starter" data-price="0" data-title="Starter Tier">Starter Tier — Free Forever ($0/mo)</option>
+              <option value="pro" data-price="15" data-title="Pro Business Tier" selected>Pro Business Tier — Standard Shop ($15/mo)</option>
+              <option value="enterprise" data-price="49" data-title="Enterprise Tier">Enterprise Tier — Multi-Location ($49/mo)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-address">Business Address (Optional)</label>
+            <input type="text" id="onboard-address" placeholder="e.g. 123 Main St, Suite 4B, New York">
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-phone">Business Phone Number (Optional)</label>
+            <input type="text" id="onboard-phone" placeholder="e.g. (555) 234-5678">
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-owner-email">Shop Owner Email Address (Optional)</label>
+            <input type="email" id="onboard-owner-email" placeholder="e.g. owner@mybarbershop.com">
+            <small class="form-hint" style="font-size: 0.75rem; color: var(--text-subtle);">Used to send your shop links, owner portal key, and registration confirmation email.</small>
+          </div>
+
+          <!-- Promotional Offer Box with Info Icon Tooltip -->
+          <div class="card" style="margin-top: 1rem; padding: 1.25rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
+            <div class="form-group">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                <label for="onboard-promo-text" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
+                  🎁 Promotional Offer Details (Optional)
+                </label>
+                <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below.">ℹ️</span>
+              </div>
+              <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+              <div class="form-group">
+                <label for="onboard-promo-start" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window Start</label>
+                <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+              </div>
+              <div class="form-group">
+                <label for="onboard-promo-end" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window End</label>
+                <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="onboard-baseline">Average Turnaround Baseline (Minutes)</label>
+            <input type="number" id="onboard-baseline" value="20" min="5" max="120" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;">
+            Launch Shop & Generate QR Code 🎉
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Upgrade & Paywall Modal -->
+  <div id="upgrade-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 720px; padding: 2rem;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+        <div>
+          <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.6rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">💎 WAITLINK SUBSCRIPTION</span>
+          <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 0.4rem; color: #fff;">Upgrade Your Shop Subscription</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">Power your shop growth with custom branding, active promo offers, and multi-location management.</p>
+        </div>
+        <button class="btn-icon" onclick="closeUpgradeModal()" title="Close Modal">✕</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        
+        <!-- Starter Tier -->
+        <div class="card" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-subtle); font-weight: 600;">FREE FOREVER</span>
+            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Starter</h3>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.8rem;">$0 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+            <ul style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+              <li>✓ Live Walk-In Queue</li>
+              <li>✓ Printable Window QR Poster</li>
+              <li>✓ Shareable Customer Link</li>
+            </ul>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="tier-btn-starter" onclick="selectUpgradeTier('starter')" style="width: 100%; margin-top: 1.25rem;">Select Starter ($0)</button>
+        </div>
+
+        <!-- Pro Business Tier (Recommended) -->
+        <div class="card" style="padding: 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%); border: 2px solid var(--primary); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <span style="position: absolute; top: -11px; right: 12px; background: var(--primary); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; text-transform: uppercase;">POPULAR</span>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">STANDARD SHOP</span>
+            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Pro Business</h3>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 0.8rem;">$15 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+            <ul style="font-size: 0.8rem; color: var(--text-main); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+              <li>✓ Everything in Starter</li>
+              <li>✓ 📷 Custom Shop Logo Branding</li>
+              <li>✓ 🎁 Promotional Offer Banners</li>
+              <li>✓ 📥 Unlimited CSV History Export</li>
+              <li>✓ ⚡ Priority Cloud Synchronization</li>
+            </ul>
+          </div>
+          <button class="btn btn-primary btn-sm" id="tier-btn-pro" onclick="selectUpgradeTier('pro')" style="width: 100%; margin-top: 1.25rem;">🚀 Upgrade to Pro ($15/mo)</button>
+        </div>
+
+        <!-- Enterprise Tier -->
+        <div class="card" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <span style="font-size: 0.75rem; color: #6366f1; font-weight: 600;">MULTI-LOCATION</span>
+            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Enterprise</h3>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-bottom: 0.8rem;">$49 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+            <ul style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+              <li>✓ Everything in Pro Business</li>
+              <li>✓ 🏢 Multi-Location Shops</li>
+              <li>✓ 🔗 Custom Domain Slugs</li>
+              <li>✓ 👑 Dedicated Admin Priority Support</li>
+            </ul>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="tier-btn-enterprise" onclick="selectUpgradeTier('enterprise')" style="width: 100%; margin-top: 1.25rem; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">👑 Upgrade to Enterprise ($49/mo)</button>
+        </div>
+
+      </div>
+
+      <!-- Stripe Trust & Security Guarantee Badge -->
+      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.775rem; color: var(--text-muted);">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1rem;">🔒</span>
+          <span><strong>256-Bit SSL Encryption</strong> • 100% Secure Checkout Powered by <strong>Stripe</strong></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <span>✓ Cancel Anytime</span>
+          <span>✓ Instant Activation</span>
+        </div>
+      </div>
+      
+      <div id="stripe-checkout-status-msg" class="hidden" style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; color: #10b981; font-size: 0.85rem; text-align: center;">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Customer Self-Service Check-In Modal -->
+  <div id="modal-customer-checkin" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 440px; padding: 1.5rem;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🎟️</span>
+            <span>Join Walk-In Queue</span>
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;" id="public-checkin-shop-subtitle">
+            Checking in at Main St Barbers
+          </p>
+        </div>
+        <button class="btn-icon" onclick="closePublicCheckInModal()" title="Close Modal">✕</button>
+      </div>
+
+      <form id="public-checkin-form" onsubmit="handlePublicSelfCheckIn(event)" style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
+            Your Name or Initials *
+          </label>
+          <input type="text" id="public-customer-name" placeholder="e.g. Senthil K." required style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
+            Mobile Phone Number (Optional)
+          </label>
+          <input type="tel" id="public-customer-phone" placeholder="e.g. (555) 234-5678" style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">Used only to send an SMS text message with your live ticket link when the front desk calls your turn.</p>
+        </div>
+
+        <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-sm); padding: 0.75rem; font-size: 0.8rem; color: var(--text-main);">
+          ⚡ Your wait time timer starts <strong>immediately upon tapping submit</strong>.
+        </div>
+
+        <button type="submit" class="btn btn-accent btn-lg" style="width: 100%; padding: 0.9rem; font-weight: 700; font-size: 1rem; margin-top: 0.5rem;">
+          Confirm & Join Line Now &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Support Inquiry Reply Modal (SuperAdmin Only) -->
+  <div id="modal-support-reply" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 520px; padding: 1.5rem;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+            <span>💬</span>
+            <span id="reply-modal-title">Reply to Support Inquiry</span>
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;" id="reply-recipient-label">
+            To: Customer Support Recipient
+          </p>
+        </div>
+        <button class="btn-icon" onclick="closeSupportReplyModal()" title="Close Modal">✕</button>
+      </div>
+
+      <form id="support-reply-form" onsubmit="handleSendSupportReply(event)" style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="reply-msg-id">
+        <input type="hidden" id="reply-recipient-email">
+
+        <div style="background: var(--bg-input); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-muted);" id="reply-original-snippet">
+          Original Message...
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
+            Your Official Support Response
+          </label>
+          <textarea id="reply-message-text" rows="5" placeholder="Type your response to the shop owner / customer here..." required style="width: 100%; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 0.95rem; resize: vertical; font-family: inherit;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeSupportReplyModal()">Cancel</button>
+          <button type="submit" id="btn-submit-support-reply" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-weight: 700;">
+            🚀 Send Response & Mark Resolved
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Registration Successful & Shop Onboarding Complete Modal -->
+  <div id="modal-registration-success" class="modal-backdrop hidden" onclick="if(event.target === this) closeRegistrationSuccessModal()">
+    <div class="modal-card" style="max-width: 620px; padding: 2rem 1.75rem; border: 1px solid rgba(16, 185, 129, 0.5); box-shadow: 0 30px 70px rgba(0,0,0,0.9); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto;">
+      <button class="close-btn" onclick="closeRegistrationSuccessModal()" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.25rem; opacity: 0.7;" title="Close Modal">✕</button>
+      
+      <!-- Celebration Header -->
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 3rem; margin-bottom: 0.2rem; filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.5));">🎉🚀</div>
+        <h3 style="font-size: 1.6rem; color: #fff; margin: 0; font-family: var(--font-family-heading);" id="reg-success-shop-name">Shop Onboarding Complete!</h3>
+        <p style="font-size: 0.88rem; color: #10b981; margin: 0.35rem 0 0 0; font-weight: 600;" id="reg-success-email-notice">Your live queue & public check-in page are active</p>
+      </div>
+
+      <!-- Live Customer QR Code Preview Box -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem; text-align: center;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <span>📱</span> Lobby QR Code (Scan to Test End-User Check-In)
+        </div>
+        <div id="reg-success-qr-box" style="background: #fff; padding: 0.75rem; border-radius: 12px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+          <!-- QR Code Image dynamically injected here -->
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+          Print or display this QR code at your front desk for instant customer check-in.
+        </div>
+      </div>
+
+      <!-- Links & Access Grid -->
+      <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--text-light);">
+        <div style="border-bottom: 1px dashed rgba(255,255,255,0.12); padding-bottom: 0.65rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">📧 Registered Email:</span>
+          <strong id="reg-success-email-val" style="color: #fff; font-family: monospace; font-size: 0.88rem;">owner@waitlink.app</strong>
+        </div>
+
+        <!-- Links List -->
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <div style="font-size: 0.82rem;">
+              <div style="font-weight: 700; color: #c084fc;">📱 Public Customer Check-In Page (End User Link)</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);" id="reg-link-public-text">waitlink.app?s=...&view=public</div>
+            </div>
+            <a id="reg-link-public-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; border-color: rgba(168, 85, 247, 0.4); color: #c084fc; font-weight: 700;">Open Customer View ↗</a>
+          </div>
+
+          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <div style="font-size: 0.82rem;">
+              <div style="font-weight: 700; color: #10b981;">💈 Front Desk Controller</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);" id="reg-link-desk-text">waitlink.app?s=...&view=desk</div>
+            </div>
+            <a id="reg-link-desk-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981; font-weight: 700;">Open Desk Panel ↗</a>
+          </div>
+
+          <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <div style="font-size: 0.82rem;">
+              <div style="font-weight: 700; color: #06b6d4;">🔑 Owner Admin Portal</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);" id="reg-link-owner-text">waitlink.app?s=...&view=owner</div>
+            </div>
+            <a id="reg-link-owner-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; font-weight: 700;">Open Admin ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- What Would You Like To Do Next? Customization Shortcuts -->
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.65rem;">
+          🛠️ What would you like to configure next?
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 0.65rem;">
+          <button type="button" class="btn btn-secondary" onclick="goToConfigSection('services')" style="padding: 0.75rem; font-size: 0.82rem; font-weight: 600; text-align: left; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(6, 182, 212, 0.35); color: #06b6d4;">
+            <span>✂️</span> Add Shop Services & Prices
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="goToConfigSection('branding')" style="padding: 0.75rem; font-size: 0.82rem; font-weight: 600; text-align: left; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(168, 85, 247, 0.35); color: #c084fc;">
+            <span>📢</span> Set Up Promo Banner & Logo
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+        <a id="reg-success-mailto-btn" href="mailto:" class="btn btn-primary btn-lg" style="width: 100%; font-weight: 700; padding: 0.8rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; border-radius: var(--radius-md);">
+          <span>✉️ Send Registration Email Confirmation</span>
+        </a>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+          <button type="button" class="btn btn-secondary" onclick="copyRegistrationEmailDetails()" style="font-size: 0.82rem; padding: 0.65rem;">
+            📋 Copy All Links
+          </button>
+          <button type="button" class="btn btn-accent" onclick="closeRegistrationSuccessModal()" style="font-size: 0.85rem; padding: 0.65rem; font-weight: 700;">
+            🏠 Owner Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Customer Lifecycle Audit Trail Modal (Shop Owner View Only) -->
+  <div id="modal-customer-audit-trail" class="modal-backdrop hidden" onclick="if(event.target === this) closeCustomerAuditModal()">
+    <div class="modal-card" style="max-width: 580px; padding: 1.85rem 1.6rem; border: 1px solid rgba(6, 182, 212, 0.45); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9); position: relative; animation: slideUp 0.25s ease;">
+      <button class="close-btn" onclick="closeCustomerAuditModal()" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.25rem; opacity: 0.7;" title="Close Modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div style="font-size: 2.2rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.35rem 0.65rem; border-radius: var(--radius-md);">🕵️</div>
+        <div>
+          <h3 style="font-size: 1.35rem; color: #fff; margin: 0; font-family: var(--font-family-heading);" id="audit-modal-customer-name">Customer Name</h3>
+          <p style="font-size: 0.82rem; color: #06b6d4; margin: 0.2rem 0 0 0; font-weight: 600;" id="audit-modal-subtitle">Complete Lifecycle Activity Audit Log</p>
+        </div>
+      </div>
+
+      <!-- Customer Summary Header Info Card -->
+      <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.82rem;">
+        <div>
+          <span style="color: var(--text-muted);">Current Status:</span>
+          <div id="audit-modal-status" style="font-weight: 700; margin-top: 0.2rem;">--</div>
+        </div>
+        <div>
+          <span style="color: var(--text-muted);">Total Wait Time:</span>
+          <div id="audit-modal-waited" style="font-weight: 700; color: #fff; margin-top: 0.2rem;">--</div>
+        </div>
+        <div>
+          <span style="color: var(--text-muted);">Contact Phone:</span>
+          <div id="audit-modal-phone" style="font-weight: 600; color: var(--text-light); margin-top: 0.2rem;">--</div>
+        </div>
+        <div>
+          <span style="color: var(--text-muted);">Total Recorded Activities:</span>
+          <div id="audit-modal-count" style="font-weight: 700; color: #06b6d4; margin-top: 0.2rem;">0 Events</div>
+        </div>
+      </div>
+
+      <!-- Chronological Vertical Timeline Container -->
+      <div style="max-height: 360px; overflow-y: auto; padding-right: 0.4rem;" id="audit-modal-timeline-container">
+        <!-- Timeline items dynamically rendered here -->
+      </div>
+
+      <div style="margin-top: 1.25rem; text-align: right;">
+        <button class="btn btn-secondary" onclick="closeCustomerAuditModal()" style="font-size: 0.88rem; padding: 0.6rem 1.5rem;">Close Audit Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Local Secrets (Excluded from Git) -->
+  <script src="config.secrets.js" onerror="console.info('config.secrets.js not found - using environment/defaults')"></script>
+  <!-- Main JS -->
+  <script src="app.js?v=2.4"></script>
+</body>
+</html>
