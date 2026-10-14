@@ -1755,14 +1755,14 @@ function renderQueue() {
         </div>
 
         <div class="queue-item-actions">
-          <button class="btn btn-call ${isNextUp ? 'btn-hero' : ''}" onclick="callCustomer('${item.id}')" title="Serve customer and dispatch turn-ready SMS with live ticket link">
+          <button class="btn btn-call ${isNextUp ? 'btn-hero' : ''}" onclick="callCustomer('${escapeHtml(item.id)}')" title="Serve customer and dispatch turn-ready SMS with live ticket link">
             ⏱️ SERVE ${isNextUp ? 'NOW' : 'NEXT'}
           </button>
           ${showMoveToEnd ? `
-          <button class="btn btn-requeue" onclick="requeueActiveCustomerToEnd('${item.id}')" title="Move customer to end of active line">
+          <button class="btn btn-requeue" onclick="requeueActiveCustomerToEnd('${escapeHtml(item.id)}')" title="Move customer to end of active line">
             ⬇️ Move to End
           </button>` : ''}
-          <button class="btn btn-cancel" onclick="cancelCustomer('${item.id}')">
+          <button class="btn btn-cancel" onclick="cancelCustomer('${escapeHtml(item.id)}')">
             ✕ Cancel
           </button>
         </div>
@@ -3041,16 +3041,6 @@ function toggleAuthMode() {
   }
 }
 
-function quickLoginSuperAdmin() {
-  const user = { email: SUPERADMIN_EMAIL };
-  state.user = user;
-  sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
-  applyUserRole(user);
-  closeAuthModal();
-  switchView("superadmin");
-  showToast("👑 Unlocked SuperAdmin mode as senthil930@gmail.com!");
-}
-
 function openEmailPromptModal() {
   closeAuthModal();
   const modal = document.getElementById("email-prompt-modal");
@@ -3507,7 +3497,13 @@ function switchSuperTab(tabKey) {
 
 // Utility: Escape HTML
 function escapeHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /* ==========================================================================
@@ -3917,6 +3913,22 @@ function initStripePaymentEngine() {
   const paidTier = urlParams.get("tier");
   
   if (paymentStatus === "success") {
+    // Security Guard: Prevent unauthenticated URL tampering.
+    // Only the authenticated shop owner or SuperAdmin can process payment return callbacks.
+    const isOwner = state.user && (
+      state.userRole === "SuperAdmin" || 
+      (state.config.ownerEmail && state.user.email && state.config.ownerEmail.toLowerCase() === state.user.email.toLowerCase())
+    );
+
+    if (!isOwner) {
+      console.warn("Security Alert: Unauthenticated payment callback detected and ignored.");
+      try {
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } catch (e) {}
+      return;
+    }
+
     let title = paidTier === "enterprise" ? "Enterprise Tier" : "Pro Business Tier";
     let price = paidTier === "enterprise" ? 49 : 15;
 
@@ -3934,7 +3946,7 @@ function initStripePaymentEngine() {
       }, { merge: true }).catch(console.warn);
     }
 
-    showToast(`🎉 Payment Successful! Upgraded to ${title} ($${price}/mo).`);
+    showToast(`🎉 Payment Confirmed! Upgraded to ${title} ($${price}/mo).`);
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);

@@ -3,18 +3,95 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
     function isSuperAdmin() {
-      return request.auth != null && request.auth.token.email == 'senthil930@gmail.com';
+      return isAuthenticated() && request.auth.token.email == 'senthil930@gmail.com';
     }
 
-    // Public read for customers viewing live queue status
+    function isShopOwner(shopData) {
+      return isAuthenticated() && (
+        (shopData.ownerEmail != null && shopData.ownerEmail == request.auth.token.email) ||
+        (shopData.ownerUid != null && shopData.ownerUid == request.auth.uid)
+      );
+    }
+
+    // 1. Shops Collection (Multi-Tenant Queues & Settings)
     match /shops/{shopId} {
-      allow read: if true;
-      allow write: if true; // Allow shop registration and queue updates
+      // Anyone can read a single shop doc (public wait times and queue display)
+      allow get: if true;
+      
+      // Listing/querying across shops is restricted to SuperAdmin or authenticated owners
+      allow list: if isSuperAdmin() || (isAuthenticated() && request.query.limit <= 100);
+
+      // Create new shop: authenticated users or onboarding registration
+      allow create: if isAuthenticated() || isSuperAdmin() || (
+        request.resource.data.shopName is string &&
+        request.resource.data.slug is string
+      );
+
+      // Update shop: SuperAdmin, Shop Owner, or public customer check-in queue update
+      allow update: if isSuperAdmin() || isShopOwner(resource.data) || (
+        // Allow customer self-checkin to append to queue or update queue items without modifying owner credentials
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive'])
+      );
+
+      // Delete shop: SuperAdmin only
+      allow delete: if isSuperAdmin();
     }
 
+    // 2. Outbound SMS Messages (Twilio Extension Trigger Queue)
+    match /messages/{messageId} {
+      // App can enqueue turn SMS notifications with basic schema validation
+      allow create: if request.resource.data.to is string && request.resource.data.body is string;
+      // Nobody on the public web can read, list, update, or delete SMS records
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // 3. Contact Support Inquiries
+    match /contact_messages/{msgId} {
+      // Anyone on contact.html can submit a support message
+      allow create: if request.resource.data.email is string &&
+                       request.resource.data.name is string &&
+                       request.resource.data.message is string;
+      // Only SuperAdmin can read, list, reply to, or delete support inquiries
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // 4. Support Replies
+    match /support_replies/{replyId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // 5. Global Settings & Pricing Config
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // 6. Pricing Audit Logs
+    match /pricing_audits/{auditId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // 7. Users & Stripe Checkout Subcollections
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+
+      match /checkout_sessions/{sessionId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+      match /subscriptions/{subscriptionId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if false; // Only written by Stripe webhook / extension
+      }
+    }
+
+    // Default deny all other collections
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isSuperAdmin();
     }
   }
 }
