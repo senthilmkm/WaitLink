@@ -2748,7 +2748,7 @@ function initAuth() {
         const email = result.user.email || "";
         if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
           switchView("superadmin");
-          showToast(`👑 Welcome SuperAdmin (${email})`);
+          showToast("👑 Welcome Platform Administrator");
         } else {
           switchView("owner");
           showToast(`💈 Welcome ${result.user.displayName || email}!`);
@@ -2880,12 +2880,15 @@ function applyUserRole(user) {
     if (ownerTab) ownerTab.classList.remove("hidden");
 
     if (authBtnLabel) {
-      const roleIcon = isSuper ? "👑" : "👤";
-      authBtnLabel.innerHTML = `<span>${roleIcon} ${escapeHtml(email)} ▾</span>`;
+      if (isSuper) {
+        authBtnLabel.innerHTML = `<span>👑 Admin ▾</span>`;
+      } else {
+        authBtnLabel.innerHTML = `<span>👤 ${escapeHtml(email)} ▾</span>`;
+      }
     }
 
     if (dropdownUserEmail) {
-      dropdownUserEmail.textContent = `${isSuper ? '👑 SuperAdmin' : '💈 Shop Owner'}: ${email}`;
+      dropdownUserEmail.textContent = isSuper ? "👑 Platform Administrator" : `💈 Shop Owner: ${email}`;
     }
 
     if (superAdminTab) {
@@ -2919,7 +2922,7 @@ function applyUserRole(user) {
 
     if (isSuper) {
       const superAdminEmailLabel = document.getElementById("superadmin-email-label");
-      if (superAdminEmailLabel) superAdminEmailLabel.textContent = email;
+      if (superAdminEmailLabel) superAdminEmailLabel.textContent = "Platform Administrator";
       loadSuperAdminShops();
     }
   } else if (state.isDemoMode) {
@@ -3063,7 +3066,7 @@ function closeEmailPromptModal() {
 function handleEmailPromptSubmit(event) {
   event.preventDefault();
   const input = document.getElementById("prompt-email-input");
-  const email = input ? input.value.trim() : "senthil930@gmail.com";
+  const email = input ? input.value.trim() : "";
   if (!email) return;
 
   const user = { email: email };
@@ -3074,7 +3077,7 @@ function handleEmailPromptSubmit(event) {
 
   if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
     switchView("superadmin");
-    showToast(`👑 Welcome SuperAdmin (${email})`);
+    showToast("👑 Welcome Platform Administrator");
   } else {
     if (isRegistering) {
       openOnboardingModal();
@@ -3443,7 +3446,7 @@ function renderSuperAdminShopsTable() {
 
   const defaultShops = [
     { id: "main-st-barbers", name: "Main St Barbers", slug: "main-st-barbers", ownerEmail: "owner@waitlink.app", planTitle: "Pro Business Tier", planPrice: 15 },
-    { id: "snailclinic", name: "Senthil Nail clinic", slug: "snailclinic", ownerEmail: "senthil930@gmail.com", planTitle: "Starter Tier (Free)", planPrice: 0 }
+    { id: "snailclinic", name: "Senthil Nail clinic", slug: "snailclinic", ownerEmail: "owner@snailclinic.com", planTitle: "Starter Tier (Free)", planPrice: 0 }
   ];
 
   const shops = (state.registeredShops && state.registeredShops.length > 0) ? state.registeredShops : defaultShops;
