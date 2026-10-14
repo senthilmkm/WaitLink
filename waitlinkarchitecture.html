@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaitLink — Comprehensive Architecture, Process Flows & Developer Manual</title>
+  <meta name="description" content="Complete architectural blueprint, role-based process flows, Google Cloud Firestore data models, deployment CLI commands, and competitor comparison matrix for WaitLink SaaS.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --code-bg: #0b1120;
+      --code-border: rgba(255, 255, 255, 0.1);
+      --code-color: #38bdf8;
+    }
+
+    .doc-nav-sticky {
+      position: sticky;
+      top: 70px;
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.65rem 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .doc-nav-scroll {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .doc-nav-scroll::-webkit-scrollbar { display: none; }
+
+    .doc-pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .doc-pill:hover {
+      color: #fff;
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .section-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 2.25rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.85rem;
+    }
+
+    .section-num {
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      color: #042f2e;
+      font-weight: 800;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .section-heading {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .flow-step-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .flow-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+      margin-bottom: 0.5rem;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+      position: relative;
+    }
+
+    .code-copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .code-copy-btn:hover {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border-color: #10b981;
+    }
+
+    .kpi-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+
+    .kpi-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .kpi-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #10b981;
+      font-family: var(--font-family-heading);
+    }
+
+    .kpi-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.2rem;
+    }
+
+    .url-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+    .url-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: rgba(30, 41, 59, 0.8);
+      color: #cbd5e1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .url-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+    }
+    .url-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #e2e8f0;
+    }
+
+    @media (max-width: 768px) {
+      .section-card { padding: 1.5rem 1rem; }
+      .section-heading { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="index.html" class="brand" style="text-decoration: none;">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </a>
+        <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700; margin-left: 0.5rem;">
+          SYSTEM BLUEPRINT
+        </span>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Return to App</a>
+        <a href="comparison.html" class="btn btn-secondary btn-sm-header">⚖️ Comparison</a>
+        <a href="contact.html" class="btn btn-accent btn-sm-header">💬 Developer Support</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Sub-Navigation Quick Jump Bar -->
+  <div class="doc-nav-sticky">
+    <div class="doc-nav-scroll">
+      <a href="#purpose" class="doc-pill">🎯 Purpose & Value</a>
+      <a href="#features" class="doc-pill">✨ Core Features</a>
+      <a href="#roles" class="doc-pill">🔄 Role Workflows</a>
+      <a href="#architecture" class="doc-pill">🏗️ System Architecture</a>
+      <a href="#security" class="doc-pill">🔒 Security & Rules</a>
+      <a href="#developer" class="doc-pill">🚀 Deploy & CLI</a>
+      <a href="#urls" class="doc-pill">🌐 Public URLs</a>
+      <a href="#comparison" class="doc-pill">⚖️ Competitor Matrix</a>
+    </div>
+  </div>
+
+  <main class="main-content" style="max-width: 1200px; padding: 0 1.5rem 3rem 1.5rem; margin: 0 auto;">
+    
+    <!-- Hero Header -->
+    <div style="text-align: center; margin-bottom: 2.5rem;">
+      <div style="display: inline-block; padding: 6px 18px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 9999px; color: #06b6d4; font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">
+        🏛️ ARCHITECTURAL SPECIFICATION & DEVELOPER MANUAL
+      </div>
+      <h1 style="font-size: clamp(2rem, 5vw + 0.5rem, 3rem); font-weight: 800; background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; letter-spacing: -1px;">
+        WaitLink Architecture & Technical Blueprint
+      </h1>
+      <p style="color: #94a3b8; max-width: 780px; margin: 0 auto; font-size: 1.1rem; line-height: 1.6;">
+        The definitive guide to WaitLink’s cloud synchronization, real-time Firestore database schema, Twilio SMS messaging engine, role-based workflows, developer deployment commands, and competitive industry benchmark.
+      </p>
+    </div>
+
+    <!-- Quick Metrics Highlight Bar -->
+    <div class="kpi-stat-grid">
+      <div class="kpi-card">
+        <div class="kpi-val">&lt; 2s</div>
+        <div class="kpi-lbl">QR Check-In Velocity</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">100%</div>
+        <div class="kpi-lbl">Zero App Installs Needed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">&lt; 500ms</div>
+        <div class="kpi-lbl">Firestore Real-time Sync</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">1-Tap</div>
+        <div class="kpi-lbl">SERVE NOW SMS + Link</div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: PURPOSE -->
+    <section id="purpose" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">01</span>
+        <h2 class="section-heading">Purpose of WaitLink & The Problem Solved</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; line-height: 1.6; color: #cbd5e1;">
+        <div>
+          <h3 style="color: #f43f5e; font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            ⚠️ The Walk-Away Revenue Loss Crisis
+          </h3>
+          <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">
+            Walk-in service businesses (barbershops, urgent care clinics, pet groomers, auto service bays, DMV offices) lose up to <strong>30% of peak rush revenue</strong> simply because prospective customers look at a crowded waiting room and walk away without ever checking in.
+          </p>
+          <p style="font-size: 0.95rem;">
+            Traditional solutions fail because they require <strong>costly iPad kiosks</strong> ($800+), cumbersome native app downloads with accounts and passwords, or expensive enterprise contracts with $300/mo minimums.
+          </p>
+        </div>
+
+        <div>
+          <h3 style="color: #10b981; font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            💡 The Zero-Barrier WaitLink Solution
+          </h3>
+          <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">
+            WaitLink replaces physical buzzers and kiosks with a simple, high-resolution <strong>printable Window QR Poster</strong>. Customers scan the flyer with their native mobile phone camera, enter their name and optional mobile number in 2 seconds, and immediately track their live spot in line with a real-time ticking clock.
+          </p>
+          <p style="font-size: 0.95rem;">
+            When their turn is ready, front desk staff tap <strong>"SERVE NOW"</strong>, and WaitLink automatically dispatches an instant transactional SMS with their <strong>direct live ticket link</strong>, enabling customers to step outside, grab coffee, and return exactly when called.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: FEATURES -->
+    <section id="features" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">02</span>
+        <h2 class="section-heading">Platform Features & Operational Capabilities</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+        
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">⏱️</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">1-Tap "SERVE NOW" Control</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Front desk staff manage incoming visitors on any device (tablet, smartphone, PC). One tap instantly updates the cloud queue, advances waiting counters, and triggers customer notifications.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📲</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Turn-Ready SMS with Ticket Link</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Integrated with enterprise Twilio SMS gateway. Dispatches personalized texts containing the customer's direct tracking URL (<code style="color: #38bdf8;">https://waitlink.app?s=slug&view=public&ticket=id</code>).
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🖨️</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">8.5"x11" Printable Window Poster</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Generates high-resolution vector printable flyers with custom shop logo, business name, and dynamic QR code ready to print directly onto cardstock and hang on storefront glass.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🔄</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">3D Stage Rotator & Grid Views</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Front desk staff can switch dynamically between a high-efficiency Compact Grid view and a carousel-style 3D Stage Rotator designed for fast stylus navigation on iPads.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📊</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Business Intelligence & Audit Trail</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Automatically calculates Walk-Away Loss % (cancellations), Peak Rush Windows, Staff Throughput (Visits/Hr), Average Wait Time, and provides 11-column CSV export logs.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🏢</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Multi-Tenant Shop Management</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Shop owners can create, configure, and switch between multiple locations under a single account. Each store has an independent URL slug, queue, services menu, and QR poster.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 3: ROLE WORKFLOWS -->
+    <section id="roles" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">03</span>
+        <h2 class="section-heading">Process Flows by Role (End-to-End)</h2>
+      </div>
+
+      <!-- Role 1: Customer -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #38bdf8; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          👤 1. Customer End-User Journey
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 1: Scan</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Arrive & Point Camera</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Customer approaches storefront and points mobile phone camera at the WaitLink Window Poster QR code. Opens directly in mobile Safari/Chrome.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 2: Check-In</span>
+            <strong style="color: #fff; font-size: 0.95rem;">2-Second Self Check-In</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Types name/initials, chooses desired service chip (e.g. Haircut 20m), and enters optional mobile number with CTIA/TCPA SMS consent disclosure.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 3: Track</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Live Dynamic Ticket</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Receives a personal live ticket showing real-time ticking wait timer, position in line (e.g., #3 in line), and a "🕒 Running Late" action button.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 4: Turn Ready</span>
+            <strong style="color: #fff; font-size: 0.95rem;">SMS Notification Delivered</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              When desk calls, receives instant SMS: <em>"Hi Alex! Your turn at Main St Barbers is ready now. View ticket: waitlink.app?s=...&ticket=..."</em>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 2: Front Desk Staff -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #10b981; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          💈 2. Front Desk Staff Workflow
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 1: Mount</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Open Desk Console</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Staff open <code style="color: #38bdf8;">?s=slug&view=desk</code> on reception iPad or phone. Real-time Firestore snapshot listener populates active line.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 2: Monitor</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Queue Tickers & Triage</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Monitors ticking elapsed time for each customer, late flags, and selected service tags. Can tap phone links to launch universal phone dialer.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 3: Call</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Tap "SERVE NOW"</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              When service bay or barber chair opens up, staff tap "SERVE NOW". App calculates wait metrics, ends timer, and dispatches turn SMS automatically.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 4: Re-Queue</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Line Flexibility</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              If a customer stepped away, staff tap "⬇️ Move to End" to requeue them without losing their historical check-in record, or cancel with 1-click.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 3: Shop Owner -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #c084fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          🔑 3. Shop Owner Administration Flow
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Step 1: Setup</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Shop Onboarding</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Signs in via Google Auth or email. Claims unique storefront slug (e.g., <code style="color: #c084fc;">main-st-barbers</code>), uploads custom logo, sets base wait time.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Step 2: Customize</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Services & SMS Templates</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Configures service catalog with estimated durations. Customizes the "SERVE NOW" SMS template using tags: <code style="color: #c084fc;">{name}</code>, <code style="color: #c084fc;">{shop}</code>, <code style="color: #c084fc;">{link}</code>.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Step 3: Intelligence</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Analytics & Audit Logs</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Tracks walk-away cancellation loss percentages, peak customer rush hours, and staff visits per hour. Exports comprehensive 11-column CSV audit files.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Step 4: Billing</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Stripe Subscription Control</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Upgrades seamlessly between Free Starter, Pro ($15/mo), and Enterprise ($49/mo) plans through 100% secure Stripe Checkout integrations.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 4: SuperAdmin -->
+      <div>
+        <h3 style="color: #f59e0b; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          👑 4. SuperAdmin Platform Governance Flow
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 1: Auth</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Cryptographic Auth</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Locked to verified Firebase email <code style="color: #f59e0b;">senthil930@gmail.com</code> with Firestore security rule validation on every request.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 2: Directory</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Multi-Tenant Directory</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Inspects all registered businesses across the database, monitoring active queue lengths, shop configurations, and active plans.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 3: Pricing</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Dynamic Pricing Manager</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Live configurator updates feature checklists and prices across pricing tables and checkout modals. Records immutable audit logs in Firestore.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 4: Support</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Support Inquiry Center</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Reads incoming support inquiries from <code style="color: #f59e0b;">contact.html</code>, writes replies, and triggers direct email dispatch to the user.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 4: ARCHITECTURE -->
+    <section id="architecture" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">04</span>
+        <h2 class="section-heading">Cloud & Data Architecture Blueprint</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+        WaitLink uses an ultra-responsive, serverless micro-architecture designed for sub-second UI updates, real-time multi-device synchronization, and zero local hardware dependencies.
+      </p>
+
+      <!-- Data Model Schema Table -->
+      <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 0.75rem;">📦 Google Cloud Firestore Collection Model</h3>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
+        <table class="url-table" style="min-width: 750px;">
+          <thead>
+            <tr>
+              <th>Firestore Collection</th>
+              <th>Document Path</th>
+              <th>Primary Fields / Schema</th>
+              <th>Access Permissions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color: #10b981;">shops</strong></td>
+              <td><code>/shops/{slug}</code></td>
+              <td><code>shopName, slug, queue[], history[], services[], twilio{}, planTitle, ownerEmail</code></td>
+              <td>Public Read single doc &bull; Owner/Admin Write &bull; Customer atomic queue append</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #38bdf8;">messages</strong></td>
+              <td><code>/messages/{msgId}</code></td>
+              <td><code>to, from, body, ticketId, ticketUrl, shopSlug, triggerType, createdAt, status</code></td>
+              <td>Write-only from app &bull; Read/Executed by Twilio Extension / Cloud Functions</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #c084fc;">contact_messages</strong></td>
+              <td><code>/contact_messages/{id}</code></td>
+              <td><code>name, email, subject, message, sentAt, status</code></td>
+              <td>Public Create via contact page &bull; SuperAdmin Read/Delete/Reply</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #f59e0b;">support_replies</strong></td>
+              <td><code>/support_replies/{id}</code></td>
+              <td><code>inquiryId, recipientEmail, replyText, sentAt, sender</code></td>
+              <td>SuperAdmin Read/Write Only</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #60a5fa;">settings</strong></td>
+              <td><code>/settings/pricing_config</code></td>
+              <td><code>tiers: { t1[], t2[], t3[] }, updatedAt</code></td>
+              <td>Public Read &bull; SuperAdmin Write Only</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #f43f5e;">pricing_audits</strong></td>
+              <td><code>/pricing_audits/{auditId}</code></td>
+              <td><code>author, timestamp, changes[], previousState, newState</code></td>
+              <td>SuperAdmin Read/Write Only</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #a78bfa;">users</strong></td>
+              <td><code>/users/{uid}/checkout_sessions</code></td>
+              <td><code>price, mode, success_url, cancel_url, sessionId</code></td>
+              <td>Authenticated User (UID Match) &bull; Stripe Extension Read/Write</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- SECTION 5: SECURITY -->
+    <section id="security" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">05</span>
+        <h2 class="section-heading">Security Architecture & Rules Enforcement</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+        <div>
+          <h3 style="color: #10b981; font-size: 1.15rem; margin-bottom: 0.5rem;">🛡️ Firestore Security Rules Isolation</h3>
+          <p style="margin-bottom: 0.75rem;">
+            WaitLink eliminates open wildcard access. Access is strictly constrained by authentication state and role:
+          </p>
+          <ul style="padding-left: 1.25rem; margin: 0; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><strong>No Open Scraping:</strong> Direct <code style="color: #38bdf8;">allow list</code> queries across the entire <code style="color: #38bdf8;">/shops</code> collection are blocked for unauthenticated users.</li>
+            <li><strong>Customer Check-In Safeguard:</strong> Unauthenticated customer check-ins are restricted to updating only the <code style="color: #10b981;">queue</code> and <code style="color: #10b981;">stats</code> fields via <code style="color: #10b981;">affectedKeys().hasOnly(...)</code>. Customers cannot overwrite owner email, settings, or plans.</li>
+            <li><strong>SMS & Inquiry Protection:</strong> Outbound SMS and contact inquiry tables are blocked from public reads.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="color: #06b6d4; font-size: 1.15rem; margin-bottom: 0.5rem;">🔑 Git & Secrets Management Architecture</h3>
+          <p style="margin-bottom: 0.75rem;">
+            Credentials and operational API keys are permanently decoupled from Git:
+          </p>
+          <ul style="padding-left: 1.25rem; margin: 0; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><code style="color: #06b6d4;">config.secrets.js</code> holds local credentials and is excluded via <code style="color: #f43f5e;">.gitignore</code> and <code style="color: #f43f5e;">firebase.json</code>.</li>
+            <li><code style="color: #06b6d4;">config.secrets.example.js</code> is tracked in Git as a placeholder template.</li>
+            <li>Source files (<code style="color: #38bdf8;">app.js</code>, <code style="color: #38bdf8;">index.html</code>) use the dynamic <code style="color: #10b981;">window.WAITLINK_SECRETS</code> loader with zero hardcoded secret strings.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: DEVELOPER CLI -->
+    <section id="developer" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">06</span>
+        <h2 class="section-heading">Developer CLI & Deployment Commands</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1rem;">
+        Copy and execute these commands directly in your terminal for maintenance, deployments, and testing:
+      </p>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">1. Full Production Deployment (Hosting + Version Pruning)</strong>
+          <span style="font-size: 0.75rem; color: #10b981;">Primary Deploy Workflow</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npm run deploy
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">2. Deploy Cloud Firestore Security Rules Only</strong>
+          <span style="font-size: 0.75rem; color: #38bdf8;">Database Security Release</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npx firebase-tools deploy --only firestore:rules --project waitlink-app-8821
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">3. Deploy Firebase Hosting Files Only</strong>
+          <span style="font-size: 0.75rem; color: #c084fc;">CDN Static Assets</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npx firebase-tools deploy --only hosting --project waitlink-app-8821
+        </div>
+      </div>
+
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">4. Run Automatic Hosting Version Pruning Script</strong>
+          <span style="font-size: 0.75rem; color: #f59e0b;">Keep 5 Most Recent Versions</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+node scripts/prune-firebase-versions.js
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: PUBLIC URLS -->
+    <section id="urls" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">07</span>
+        <h2 class="section-heading">Public URLs & Search Engine Indexing Directory</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1rem;">
+        All public-facing routes deployed on <strong style="color: #fff;">waitlink.app</strong>, registered in <code style="color: #38bdf8;">sitemap.xml</code> and submitted to Google Search Console:
+      </p>
+
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+        <table class="url-table" style="min-width: 700px;">
+          <thead>
+            <tr>
+              <th>Web Page</th>
+              <th>Production URL</th>
+              <th>SEO Priority</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Homepage</strong></td>
+              <td><a href="https://waitlink.app/" target="_blank" style="color: #10b981;">https://waitlink.app/</a></td>
+              <td><span style="color: #10b981; font-weight: 700;">1.0 (Daily)</span></td>
+              <td>Main SaaS landing page with QR check-in demo and live queue ticker</td>
+            </tr>
+            <tr>
+              <td><strong>Pricing</strong></td>
+              <td><a href="https://waitlink.app/pricing.html" target="_blank" style="color: #38bdf8;">https://waitlink.app/pricing.html</a></td>
+              <td><span style="color: #38bdf8; font-weight: 700;">0.9 (Weekly)</span></td>
+              <td>Transparent tier comparison: Free Starter, Pro ($15), Enterprise ($49)</td>
+            </tr>
+            <tr>
+              <td><strong>Comparison Matrix</strong></td>
+              <td><a href="https://waitlink.app/comparison.html" target="_blank" style="color: #38bdf8;">https://waitlink.app/comparison.html</a></td>
+              <td><span style="color: #38bdf8; font-weight: 700;">0.9 (Weekly)</span></td>
+              <td>Head-to-head comparison vs Waitwhile, Waitlist Me, QLess, Qminder</td>
+            </tr>
+            <tr>
+              <td><strong>About Us</strong></td>
+              <td><a href="https://waitlink.app/about.html" target="_blank" style="color: #c084fc;">https://waitlink.app/about.html</a></td>
+              <td>0.8 (Monthly)</td>
+              <td>Our mission, local business revenue optimization, and team story</td>
+            </tr>
+            <tr>
+              <td><strong>FAQ</strong></td>
+              <td><a href="https://waitlink.app/faq.html" target="_blank" style="color: #c084fc;">https://waitlink.app/faq.html</a></td>
+              <td>0.8 (Weekly)</td>
+              <td>Detailed answers on SMS delivery, hardware requirements, Stripe billing</td>
+            </tr>
+            <tr>
+              <td><strong>Help Center</strong></td>
+              <td><a href="https://waitlink.app/help.html" target="_blank" style="color: #c084fc;">https://waitlink.app/help.html</a></td>
+              <td>0.8 (Weekly)</td>
+              <td>Step-by-step guides for window flyers, front desk iPads, and owner settings</td>
+            </tr>
+            <tr>
+              <td><strong>Contact Page</strong></td>
+              <td><a href="https://waitlink.app/contact.html" target="_blank" style="color: #f59e0b;">https://waitlink.app/contact.html</a></td>
+              <td>0.7 (Monthly)</td>
+              <td>Direct inquiry form connected to Cloud Firestore support inbox</td>
+            </tr>
+            <tr>
+              <td><strong>Architecture Blueprint</strong></td>
+              <td><a href="https://waitlink.app/waitlinkarchitecture.html" target="_blank" style="color: #06b6d4;">https://waitlink.app/waitlinkarchitecture.html</a></td>
+              <td>0.8 (Monthly)</td>
+              <td>Comprehensive technical blueprint, process flows & developer manual</td>
+            </tr>
+            <tr>
+              <td><strong>Privacy Policy</strong></td>
+              <td><a href="https://waitlink.app/privacy.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/privacy.html</a></td>
+              <td>0.4 (Monthly)</td>
+              <td>TCPA & CTIA compliant cellular mobile SMS text messaging disclosures</td>
+            </tr>
+            <tr>
+              <td><strong>Terms of Service</strong></td>
+              <td><a href="https://waitlink.app/terms.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/terms.html</a></td>
+              <td>0.4 (Monthly)</td>
+              <td>Software as a service subscription and user licensing agreement</td>
+            </tr>
+            <tr>
+              <td><strong>Cookie Policy</strong></td>
+              <td><a href="https://waitlink.app/cookies.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/cookies.html</a></td>
+              <td>0.3 (Monthly)</td>
+              <td>Client-side HTML5 LocalStorage caching and analytics disclosure</td>
+            </tr>
+            <tr>
+              <td><strong>XML Sitemap</strong></td>
+              <td><a href="https://waitlink.app/sitemap.xml" target="_blank" style="color: #10b981;">https://waitlink.app/sitemap.xml</a></td>
+              <td>Search Index</td>
+              <td>Google Search Console indexable XML feed</td>
+            </tr>
+            <tr>
+              <td><strong>Robots Directives</strong></td>
+              <td><a href="https://waitlink.app/robots.txt" target="_blank" style="color: #10b981;">https://waitlink.app/robots.txt</a></td>
+              <td>Crawler Index</td>
+              <td>Search crawler permissions and sitemap pointer</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 8: COMPARISON MATRIX -->
+    <section id="comparison" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">08</span>
+        <h2 class="section-heading">Competitive Comparison Matrix (WaitLink vs Industry)</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.25rem;">
+        Comprehensive benchmarking comparing WaitLink against traditional queue management systems:
+      </p>
+
+      <div class="matrix-table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);">
+        <table class="comparison-table" style="width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; color: #e2e8f0; font-size: 0.92rem;">
+          <thead>
+            <tr style="background: rgba(30, 41, 59, 0.9);">
+              <th style="padding: 1.1rem 1rem; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 28%; font-weight: 700; color: #f8fafc;">Feature / Capability</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 2px solid #10b981; background: rgba(16, 185, 129, 0.15); width: 20%; font-weight: 800; color: #10b981; font-size: 1.1rem; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                🚀 WaitLink
+                <div style="font-size: 0.72rem; font-weight: 500; color: #a7f3d0; margin-top: 2px;">Built for Speed & Value</div>
+              </th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitwhile</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitlist Me</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">QLess</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Qminder</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Category 1 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                1. Setup & Customer Friction
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">App Download Required</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">❌ None (Web Instant)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">⚠️ App Often Preferred</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Account Setup Time</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">⚡ Under 2 Minutes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">30+ Mins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">15+ Mins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">Days / Onboarding Call</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">30+ Mins</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Hardware Requirements</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">📱 Any Phone/Browser</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Tablet Kiosk</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Tablet Kiosk</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Custom Hardware</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">iPad Kiosk</td>
+            </tr>
+
+            <!-- Category 2 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                2. Core Queue & Customer Experience
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Live Queue Tracker (Customer Phone)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Real-Time Sync</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">⚠️ SMS Link Only</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">⚠️ Basic SMS</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Lobby Digital TV Display Mode</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Included Free</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Enterprise Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Twilio SMS Integration</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Built-in Toggle & Compliance</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+            </tr>
+
+            <!-- Category 3 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                3. Analytics & Operational Intelligence
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Walk-Away Loss % Analytics</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Instant KPI Dashboard</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Higher Tier Only</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">❌ No</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Enterprise Tier</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Custom Reports</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Customer Lifecycle CSV Audit Export</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ 11-Column Detailed Audit</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Basic CSV</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Basic CSV</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Enterprise SQL</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Limited Export</td>
+            </tr>
+
+            <!-- Category 4 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                4. Pricing & Value
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 1rem 1rem; font-weight: 700;">Starting Price</td>
+              <td style="padding: 1rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.12); font-weight: 800; color: #10b981; font-size: 1.05rem; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">💎 High Value / Free Start</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $199 / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $49 / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$100+ / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$299+ / mo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Call to Action Banner -->
+    <div style="margin-top: 1rem; padding: 2.5rem; text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px;">
+      <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Explore the Live WaitLink Platform</h2>
+      <p style="color: #cbd5e1; margin-bottom: 20px;">Experience 1-tap queue control, real-time wait times, and automated SMS turn notifications.</p>
+      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <a href="index.html" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">🚀 Open WaitLink Application</a>
+        <a href="https://github.com/senthilmkm/WaitLink" target="_blank" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">⭐ View on GitHub</a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- App Footer -->
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-logo-icon">⏳</span>
+            <span class="footer-brand-title">WaitLink</span>
+          </div>
+          <p class="footer-tagline">Zero-friction queue management SaaS.</p>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Company</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="about.html" style="color: var(--text-muted); text-decoration: none;">About Us</a></li>
+            <li><a href="contact.html" style="color: var(--text-muted); text-decoration: none;">Contact Page</a></li>
+            <li><a href="pricing.html" style="color: var(--text-muted); text-decoration: none;">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Legal</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a></li>
+            <li><a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a></li>
+            <li><a href="cookies.html" style="color: var(--text-muted); text-decoration: none;">Cookie Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Resources & Tech</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="waitlinkarchitecture.html" style="color: #10b981; text-decoration: none; font-weight: 600;">System Architecture</a></li>
+            <li><a href="comparison.html" style="color: var(--text-muted); text-decoration: none;">Comparison Matrix</a></li>
+            <li><a href="help.html" style="color: var(--text-muted); text-decoration: none;">Help Center</a></li>
+            <li><a href="faq.html" style="color: var(--text-muted); text-decoration: none;">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom-bar" style="margin-top: 2rem;">
+        <div>&copy; 2026 WaitLink Cloud Sync. All rights reserved. &bull; <a href="https://github.com/senthilmkm/WaitLink" target="_blank" style="color: #10b981; text-decoration: none;">Open Source Repository on GitHub</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function copyCode(btn) {
+      const parent = btn.parentElement;
+      const codeText = parent.innerText.replace('Copy', '').trim();
+      navigator.clipboard.writeText(codeText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
