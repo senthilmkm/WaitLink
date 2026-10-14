@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Direct sitemap reference for Google Search Console and crawlers
+Sitemap: https://waitlink.app/sitemap.xml
