@@ -18,6 +18,44 @@ service cloud.firestore {
       );
     }
 
+    // Public Customer Queue Action Validator (Prevents malicious array wipes & overwrites)
+    function isValidPublicShopUpdate() {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      let hasValidKeys = affectedKeys.hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive']);
+
+      let prevQ = ('queue' in resource.data && resource.data.queue is list) ? resource.data.queue.size() : 0;
+      let newQ = ('queue' in request.resource.data && request.resource.data.queue is list) ? request.resource.data.queue.size() : 0;
+      let prevH = ('history' in resource.data && resource.data.history is list) ? resource.data.history.size() : 0;
+      let newH = ('history' in request.resource.data && request.resource.data.history is list) ? request.resource.data.history.size() : 0;
+
+      let isCheckIn = newQ == prevQ + 1 && newH == prevH;
+      let isSelfCancel = newQ == prevQ - 1 && newH == prevH + 1;
+      let isLateOrStatusUpdate = newQ == prevQ && newH == prevH;
+
+      return hasValidKeys &&
+             ('queue' in request.resource.data && request.resource.data.queue is list) &&
+             ('history' in request.resource.data && request.resource.data.history is list) &&
+             newQ <= 500 &&
+             (newQ + newH >= prevQ + prevH) &&
+             (isCheckIn || isSelfCancel || isLateOrStatusUpdate) &&
+             (
+               !isCheckIn || (
+                 request.resource.data.queue[newQ - 1] is map &&
+                 request.resource.data.queue[newQ - 1].id is string &&
+                 request.resource.data.queue[newQ - 1].customerName is string &&
+                 request.resource.data.queue[newQ - 1].customerName.size() >= 1 &&
+                 request.resource.data.queue[newQ - 1].customerName.size() <= 100 &&
+                 request.resource.data.queue[newQ - 1].checkedInAt is number &&
+                 (prevQ == 0 || request.resource.data.queue[0].id == resource.data.queue[0].id)
+               )
+             ) &&
+             (
+               !isLateOrStatusUpdate || (
+                 prevQ == 0 || request.resource.data.queue[0].id == resource.data.queue[0].id
+               )
+             );
+    }
+
     // 1. Shops Collection (Multi-Tenant Queues & Settings)
     match /shops/{shopId} {
       // Anyone can read a single shop doc (public wait times and queue display)
@@ -34,7 +72,7 @@ service cloud.firestore {
         (!('planPrice' in request.resource.data) || request.resource.data.planPrice == 0)
       );
 
-      // Update shop: SuperAdmin, Shop Owner (locked from changing pricing), or public customer check-in
+      // Update shop: SuperAdmin, Shop Owner (locked from changing pricing), or validated public customer check-in
       allow update: if isSuperAdmin() || (
         isShopOwner(resource.data) &&
         // Shop owners cannot directly alter planPrice, planTitle, or Stripe credentials from the client SDK
@@ -42,8 +80,9 @@ service cloud.firestore {
           'planPrice', 'planTitle', 'subscriptionStatus', 'stripeCustomerId', 'stripeSessionId'
         ])
       ) || (
-        // Allow customer self-checkin to append to queue or update queue items without modifying owner credentials
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive'])
+        // Restrict public customer self-checkin, self-cancel, and delay reporting
+        // Hardens against malicious queue wiping or array overwriting (P0 Security)
+        isValidPublicShopUpdate()
       );
 
       // Delete shop: SuperAdmin only

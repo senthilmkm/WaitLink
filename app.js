@@ -753,27 +753,41 @@ function saveData() {
   localStorage.setItem(historyKey, JSON.stringify(state.history));
 
   if (db && state.config.slug) {
-    db.collection("shops").doc(state.config.slug).set({
-      shopName: state.config.shopName,
-      slug: state.config.slug,
-      address: state.config.address || "",
-      phone: state.config.phone || "",
-      ownerEmail: state.config.ownerEmail || (state.user ? state.user.email : ""),
-      promoText: state.config.promoText || "",
-      promoStart: state.config.promoStart || "",
-      promoEnd: state.config.promoEnd || "",
-      hours: state.config.hours || "9:00 AM - 7:00 PM",
-      estBaseWaitMin: state.config.estBaseWaitMin || 20,
-      enableServices: !!state.config.enableServices,
-      services: state.config.services || [],
-      logoUrl: state.config.logoUrl || "",
-      queue: state.queue,
-      history: state.history,
-      updatedAt: Date.now()
-    }, { merge: true }).catch(err => {
-      console.warn("Firestore save warning:", err);
-      showToast("⚠️ Cloud Sync Warning: Saved locally. Sync pending.");
-    });
+    const isOwner = state.user && state.config.ownerEmail && (state.user.email.toLowerCase() === state.config.ownerEmail.toLowerCase());
+    const isSuper = isSuperAdmin();
+
+    if (isOwner || isSuper) {
+      db.collection("shops").doc(state.config.slug).set({
+        shopName: state.config.shopName,
+        slug: state.config.slug,
+        address: state.config.address || "",
+        phone: state.config.phone || "",
+        ownerEmail: state.config.ownerEmail || (state.user ? state.user.email : ""),
+        promoText: state.config.promoText || "",
+        promoStart: state.config.promoStart || "",
+        promoEnd: state.config.promoEnd || "",
+        hours: state.config.hours || "9:00 AM - 7:00 PM",
+        estBaseWaitMin: state.config.estBaseWaitMin || 20,
+        enableServices: !!state.config.enableServices,
+        services: state.config.services || [],
+        logoUrl: state.config.logoUrl || "",
+        queue: state.queue,
+        history: state.history,
+        updatedAt: Date.now()
+      }, { merge: true }).catch(err => {
+        console.warn("Firestore save warning:", err);
+        showToast("⚠️ Cloud Sync Warning: Saved locally. Sync pending.");
+      });
+    } else {
+      // Unauthenticated public actions: strictly update queue and history only
+      db.collection("shops").doc(state.config.slug).update({
+        queue: state.queue,
+        history: state.history,
+        updatedAt: Date.now()
+      }).catch(err => {
+        console.warn("Firestore public queue sync note:", err);
+      });
+    }
   }
 }
 
