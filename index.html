@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=3.2">
+  <link rel="stylesheet" href="style.css?v=3.3">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -1691,12 +1691,12 @@ Dedicated Support Manager
 
   <!-- Shop Onboarding Setup Wizard Modal (For New Business Owners) -->
   <div id="onboarding-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div class="modal-header">
+    <div class="modal-card onboarding-modal-card">
+      <div class="modal-header onboarding-modal-header">
         <h2>🚀 Register Your Business on WaitLink</h2>
         <button class="close-btn" onclick="closeOnboardingModal()">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body onboarding-modal-body">
         <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Set up your walk-in shop in 30 seconds:</p>
 
         <form id="onboarding-form" onsubmit="handleOnboardingSubmit(event)">
@@ -2189,6 +2189,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=4.1"></script>
+  <script src="app.js?v=4.2"></script>
 </body>
 </html>

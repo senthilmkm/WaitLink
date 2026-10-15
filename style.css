@@ -1481,7 +1481,67 @@ html[data-theme="light"] .app-header {
   gap: 1.25rem;
   margin: auto;
   max-height: calc(100vh - 2rem);
-  max-height: calc(100dvh - 2rem);
+}
+
+/* Shop Onboarding Wizard Modal Dedicated Responsive Layout */
+.onboarding-modal-card {
+  max-width: 560px !important;
+  width: 92% !important;
+  max-height: min(90vh, 90dvh) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95), 0 0 40px rgba(6, 182, 212, 0.15) !important;
+  border: 1px solid rgba(6, 182, 212, 0.35) !important;
+  margin: auto !important;
+  position: relative !important;
+  background: var(--bg-card) !important;
+  gap: 0 !important;
+}
+
+.onboarding-modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 1.25rem 1.75rem !important;
+  background: #0f172a !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  flex-shrink: 0 !important;
+}
+
+.onboarding-modal-header h2 {
+  font-size: 1.25rem !important;
+  margin: 0 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.onboarding-modal-body {
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  padding: 1.5rem 1.75rem 2rem 1.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.onboarding-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.onboarding-modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.onboarding-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+.onboarding-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 /* Subscription Upgrade Modal Dedicated Layout */

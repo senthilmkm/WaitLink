@@ -3428,22 +3428,24 @@ async function isSlugAvailableInCloud(candidateSlug) {
     return { available: false, reason: "reserved" };
   }
 
-  const currentUserEmail = (state.user && state.user.email ? state.user.email : "").toLowerCase();
-
-  // If the logged-in user already owns this shop slug, it is valid for them
-  const isUserOwnExisting = (state.myShops && state.myShops.some(s => s.slug === candidateSlug)) ||
-    (state.registeredShops && state.registeredShops.some(s => s.slug === candidateSlug && (s.ownerEmail || "").toLowerCase() === currentUserEmail));
-  if (isUserOwnExisting) {
-    return { available: true, ownedByCurrent: true };
-  }
-
-  // Check in-memory registered shops directory
+  // Check in-memory registered shops directory across all registered shops (regardless of owner)
   const inMemoryConflict = (state.registeredShops || []).some(s => {
     if (!s) return false;
-    const sSlug = String(s.slug || s.id || "").trim();
-    return sSlug === candidateSlug && (s.ownerEmail || "").toLowerCase() !== currentUserEmail;
+    const sSlug = String(s.slug || "").trim().toLowerCase();
+    const sId = String(s.id || "").trim().toLowerCase();
+    return sSlug === candidateSlug || sId === candidateSlug;
   });
   if (inMemoryConflict) {
+    return { available: false, reason: "taken" };
+  }
+
+  // Also check local user's myShops list to prevent self-collision
+  const inMyShops = (state.myShops || []).some(s => {
+    if (!s) return false;
+    const sSlug = String(s.slug || "").trim().toLowerCase();
+    return sSlug === candidateSlug;
+  });
+  if (inMyShops) {
     return { available: false, reason: "taken" };
   }
 
@@ -3453,22 +3455,12 @@ async function isSlugAvailableInCloud(candidateSlug) {
       // 1. Check exact document ID
       const docSnap = await db.collection("shops").doc(candidateSlug).get();
       if (docSnap.exists) {
-        const d = docSnap.data() || {};
-        const docOwner = (d.ownerEmail || "").toLowerCase();
-        if (docOwner && docOwner === currentUserEmail) {
-          return { available: true, ownedByCurrent: true };
-        }
         return { available: false, reason: "taken" };
       }
 
       // 2. Query slug field
       const querySnap = await db.collection("shops").where("slug", "==", candidateSlug).limit(1).get();
       if (!querySnap.empty) {
-        const d = querySnap.docs[0].data() || {};
-        const docOwner = (d.ownerEmail || "").toLowerCase();
-        if (docOwner && docOwner === currentUserEmail) {
-          return { available: true, ownedByCurrent: true };
-        }
         return { available: false, reason: "taken" };
       }
     } catch (err) {
@@ -4758,7 +4750,7 @@ function handleOnboardingSubmit(event) {
     return;
   }
 
-  const isCollision = !isExistingOwned && state.registeredShops && state.registeredShops.some(s => s.slug === slug && (s.ownerEmail || "").toLowerCase() !== currentEmail);
+  const isCollision = (state.registeredShops || []).some(s => s && (s.slug === slug || s.id === slug));
 
   if (isCollision) {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
