@@ -189,6 +189,19 @@
         }
       }
 
+      // Automatically dispatch email notification to platform admin/owner
+      fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendContactSupportAlert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          shop: shop || "N/A",
+          subject: subject,
+          message: message
+        })
+      }).catch(err => console.warn("Contact support alert email error:", err));
+
       // Transition smoothly to success state without triggering external mailto client popup
       document.getElementById("contact-form").classList.add("hidden");
       document.getElementById("contact-success").classList.remove("hidden");

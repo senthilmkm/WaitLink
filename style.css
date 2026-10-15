@@ -1479,6 +1479,116 @@ html[data-theme="light"] .app-header {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  margin: auto;
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+
+/* Subscription Upgrade Modal Dedicated Layout */
+.upgrade-modal-card {
+  max-width: 960px !important;
+  width: 94% !important;
+  max-height: min(90vh, 90dvh) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95), 0 0 50px rgba(16, 185, 129, 0.2) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  margin: auto !important;
+  position: relative !important;
+  background: var(--bg-card) !important;
+  gap: 0 !important;
+}
+
+.upgrade-modal-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  padding: 1.25rem 1.75rem !important;
+  background: #0f172a !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  flex-shrink: 0 !important;
+}
+
+.upgrade-modal-body {
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  padding: 1.5rem 1.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.25rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.modal-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+  margin-left: 1rem !important;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  transform: scale(1.08) !important;
+}
+
+.modal-close-btn:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* Centered Stripe Processing Animation */
+.upgrade-spinner-container {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upgrade-pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  animation: upgradePulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+.upgrade-spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #10b981;
+  border-right-color: #06b6d4;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes upgradePulse {
+  0% { transform: scale(0.92); opacity: 0.85; }
+  50% { transform: scale(1.18); opacity: 0.15; }
+  100% { transform: scale(0.92); opacity: 0.85; }
 }
 
 .modal-header {
@@ -2120,6 +2230,19 @@ body.drawer-open {
     max-height: 92vh;
     overflow-y: auto;
   }
+  .upgrade-modal-card {
+    width: 96% !important;
+    max-height: 93dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  .upgrade-modal-header {
+    padding: 1rem 1.15rem !important;
+  }
+  .upgrade-modal-body {
+    padding: 1rem 1.15rem !important;
+    gap: 1rem !important;
+  }
   .dropdown-menu {
     max-width: calc(100vw - 20px) !important;
   }
@@ -2626,6 +2749,8 @@ body.drawer-open {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  text-decoration: none;
+  box-sizing: border-box;
   transition: all 0.15s ease;
 }
 
@@ -2923,4 +3048,103 @@ body.drawer-open {
     border-color: rgba(6, 182, 212, 0.6);
   }
 }
+
+/* ==========================================================================
+   PRO / ENTERPRISE PAYWALL FEATURE LOCKDOWN UI
+   ========================================================================== */
+.pro-gated-section {
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.pro-gated-section.locked {
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px dashed rgba(6, 182, 212, 0.4) !important;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.pro-gated-section.locked .pro-lockable-content {
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(40%);
+}
+
+.pro-gated-section.locked input,
+.pro-gated-section.locked textarea,
+.pro-gated-section.locked select,
+.pro-gated-section.locked button:not(.btn-upgrade-action) {
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.pro-locked-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12));
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pro-locked-banner.hidden {
+  display: none !important;
+}
+
+.pro-locked-banner .banner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  line-height: 1.35;
+}
+
+.pro-locked-banner .btn-upgrade-action {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.pro-locked-banner .btn-upgrade-action:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+.badge-pro-pill {
+  font-size: 0.65rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.badge-pro-pill.locked {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.badge-pro-pill.unlocked {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
 

@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /reset-password.html
 
 # Direct sitemap reference for Google Search Console and crawlers
 Sitemap: https://waitlink.app/sitemap.xml

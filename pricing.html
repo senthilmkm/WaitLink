@@ -40,65 +40,238 @@
       </p>
     </div>
 
+    <!-- Active Plan Banner (Only visible if user has an active session/shop) -->
+    <div id="pricing-active-banner" class="hidden" style="margin: -1.5rem auto 2.5rem auto; max-width: 840px; padding: 0.85rem 1.25rem; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="font-size: 1.35rem;">💈</span>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">
+            Active Shop: <strong id="pricing-active-shop-name" style="color: #fff;">Your Shop</strong>
+          </div>
+          <div style="font-size: 1rem; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 0.4rem; margin-top: 2px;">
+            <span class="pulse-dot" style="background: #10b981;"></span>
+            <span id="pricing-active-plan-title">Starter Plan ($0/mo) • Active</span>
+          </div>
+        </div>
+      </div>
+      <a href="index.html" class="btn btn-sm btn-accent" style="padding: 0.45rem 1.1rem; font-size: 0.85rem; font-weight: 700; text-decoration: none;">← Return to App Dashboard</a>
+    </div>
+
     <!-- Pricing Cards Grid -->
-    <div id="pricing-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; margin-bottom: 3rem;">
+    <div id="pricing-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; margin-bottom: 3.5rem;">
       
       <!-- Tier 1: Free Starter -->
-      <div class="card" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+      <div class="card" id="pricing-card-starter" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+        <div id="pricing-badge-starter" class="hidden" style="position: absolute; top: -14px; right: 24px; background: #10b981; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">✓ Your Current Plan</div>
         <div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">Starter</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em;">Starter</span>
           <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Free Forever</h3>
           <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$0 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Perfect for solo barbers or new pop-up clinics testing zero-friction digital queue tracking.</p>
           <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">
-            <li>✓ 1 Shop Location</li>
-            <li>✓ Up to 100 Monthly Check-ins</li>
+            <li><strong style="color: #fff;">✓ 1 Shop Location</strong> (Single Business)</li>
+            <li><strong style="color: #fff;">✓ Up to 100 Monthly Check-ins</strong></li>
             <li>✓ Printable Window QR Poster</li>
-            <li>✓ 1-Tap Front Desk Control</li>
-            <li>✓ Basic Wait Time Estimator</li>
+            <li>✓ 1-Tap Front Desk Queue Control</li>
+            <li>✓ Real-Time Waiting Time Estimator</li>
+            <li>✓ Anonymous Public Wait Page</li>
+            <li>✓ Audible Turn Chimes & Sound Alerts</li>
+            <li style="color: var(--text-subtle); opacity: 0.7;">✕ No Automated SMS Notifications</li>
+            <li style="color: var(--text-subtle); opacity: 0.7;">✕ No Custom Logo Branding</li>
+            <li style="color: var(--text-subtle); opacity: 0.7;">✕ No Business Analytics or CSV Export</li>
           </ul>
         </div>
-        <a href="index.html?action=create" class="btn btn-secondary" style="text-align: center;">Get Started Free</a>
+        <div id="pricing-action-starter">
+          <a href="index.html?action=create" class="btn btn-secondary" style="width: 100%; text-align: center; display: block; text-decoration: none;">Get Started Free</a>
+        </div>
       </div>
 
       <!-- Tier 2: Pro Business (Featured) -->
-      <div class="card" style="padding: 2.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-        <div style="position: absolute; top: -14px; right: 24px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">Most Popular</div>
+      <div class="card" id="pricing-card-pro" style="padding: 2.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+        <div id="pricing-badge-pro" style="position: absolute; top: -14px; right: 24px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">Most Popular</div>
         <div>
           <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">Pro Business</span>
           <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Standard Shop</h3>
-          <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$15 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Everything you need to eliminate walk-away losses and track owner analytics.</p>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #10b981; margin-bottom: 1rem;">$15 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Everything you need to eliminate walk-aways with SMS, custom branding, and owner analytics.</p>
           <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: #fff; font-size: 0.9rem;">
-            <li>✓ Unlimited Monthly Check-ins</li>
-            <li>✓ Custom Logo Branding & Colors</li>
-            <li>✓ Owner Business Intelligence Dashboard</li>
-            <li>✓ Peak Rush Window & Walk-Away Analytics</li>
-            <li>✓ Multi-Device Front Desk Sync</li>
-            <li>✓ Priority Cloud Firestore Latency</li>
+            <li><strong>✓ Everything in Starter</strong></li>
+            <li><strong style="color: #10b981;">✓ 1 Dedicated Shop with Unlimited Check-ins</strong></li>
+            <li><strong style="color: #06b6d4;">✓ 📱 Automated Twilio SMS "Turn Ready" Alerts</strong></li>
+            <li>✓ 📷 Custom Shop Logo & Accent Colors</li>
+            <li>✓ 🎁 Promotional Offer Banners on Public Screen</li>
+            <li>✓ 📊 Owner Business Intelligence & Peak Rush Analytics</li>
+            <li>✓ 📥 Unlimited CSV History Data Export</li>
+            <li>✓ ⚡ Priority Cloud Firestore Latency</li>
           </ul>
         </div>
-        <a href="index.html?action=create" class="btn btn-accent" style="text-align: center;">Start 14-Day Free Trial</a>
+        <div id="pricing-action-pro">
+          <a href="index.html?action=upgrade&tier=pro" class="btn btn-accent" style="width: 100%; text-align: center; display: block; text-decoration: none;">🚀 Upgrade to Pro ($15/mo)</a>
+        </div>
       </div>
 
       <!-- Tier 3: Multi-Location Enterprise -->
-      <div class="card" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+      <div class="card" id="pricing-card-enterprise" style="padding: 2.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+        <div id="pricing-badge-enterprise" class="hidden" style="position: absolute; top: -14px; right: 24px; background: #6366f1; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">ENTERPRISE</div>
         <div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-emerald); text-transform: uppercase; letter-spacing: 0.05em;">Enterprise</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em;">Enterprise</span>
           <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">Multi-Location</h3>
-          <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">$49 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">For chains, franchise barber networks, and regional medical centers.</p>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #6366f1; margin-bottom: 1rem;">$49 <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">For chains, franchise barber networks, multi-location clinics, and regional studios.</p>
           <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">
-            <li>✓ Unlimited Locations & Staff Accounts</li>
-            <li>✓ Multi-Tenant SuperAdmin Access</li>
-            <li>✓ Custom Domain CNAME Routing</li>
-            <li>✓ Dedicated Support Manager</li>
-            <li>✓ 99.99% Cloud SLA</li>
+            <li><strong style="color: #fff;">✓ Everything in Pro Business</strong></li>
+            <li><strong style="color: #6366f1;">✓ 🏢 Multi-Location Network (Unlimited Shops)</strong></li>
+            <li><strong style="color: #fff;">✓ 👥 Multiple Staff Front Desk Accounts</strong></li>
+            <li>✓ 📱 High-Volume Dedicated Twilio SMS</li>
+            <li>✓ 🔗 Custom Domain Slugs & CNAME Routing</li>
+            <li>✓ 👑 Multi-Tenant Platform SuperAdmin Directory</li>
+            <li>✓ 💬 Dedicated Support Manager & 99.99% Cloud SLA</li>
           </ul>
         </div>
-        <a href="contact.html" class="btn btn-secondary" style="text-align: center;">Contact Sales</a>
+        <div id="pricing-action-enterprise">
+          <a href="index.html?action=upgrade&tier=enterprise" class="btn btn-secondary" style="width: 100%; text-align: center; display: block; text-decoration: none; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">👑 Upgrade to Enterprise ($49/mo)</a>
+        </div>
       </div>
 
+    </div>
+
+    <!-- Complete Feature Comparison Matrix Table -->
+    <div class="pricing-matrix-container" style="margin-top: 4rem; padding: 2.5rem 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--primary); background: rgba(6, 182, 212, 0.15); padding: 0.25rem 0.75rem; border-radius: 9999px; text-transform: uppercase;">COMPLETE BREAKDOWN</span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Detailed Tier Feature Matrix</h2>
+        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 650px; margin: 0.4rem auto 0 auto;">Every feature, limit, and tool clearly outlined so you know exactly what is included in each tier.</p>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color);">
+              <th style="padding: 1rem; color: #fff; font-weight: 700; width: 40%;">Feature / Capability</th>
+              <th style="padding: 1rem; color: #10b981; font-weight: 700; text-align: center; width: 20%;">Starter ($0)</th>
+              <th style="padding: 1rem; color: #06b6d4; font-weight: 800; text-align: center; width: 20%; background: rgba(6, 182, 212, 0.08); border-top-left-radius: 8px; border-top-right-radius: 8px;">Pro Business ($15)</th>
+              <th style="padding: 1rem; color: #6366f1; font-weight: 700; text-align: center; width: 20%;">Enterprise ($49)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Section 1: Shop & Operations -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.75rem 1rem; font-weight: 800; color: var(--primary); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.05em;">1. Shop & Operations</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Number of Shop Locations</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">1 Location</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.04);">1 Dedicated Shop</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">Unlimited Locations</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Monthly Walk-In Check-ins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">Up to 100 / mo</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">Unlimited</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">Unlimited</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Live Walk-In Queue & Ticking Timer</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Printable High-Res Window QR Poster</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Anonymous Public Customer Wait Screen</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+            </tr>
+
+            <!-- Section 2: Branding & Customer Communications -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.75rem 1rem; font-weight: 800; color: var(--primary); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.05em;">2. Branding & Communications</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Automated Twilio SMS Customer Alerts</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Included (Standard)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">✓ High-Volume Dedicated</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Custom Shop Logo & Brand Accent Colors</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Promotional Offer Banners on Public Screen</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Custom Shareable URL Slug (waitlink.app?s=slug)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">✓ Custom CNAME Domain</td>
+            </tr>
+
+            <!-- Section 3: Owner Analytics & History -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.75rem 1rem; font-weight: 800; color: var(--primary); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.05em;">3. Analytics & Reporting</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Owner Analytics Dashboard</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">Basic Counters</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Full BI Dashboard</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">✓ Cross-Shop Network BI</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Peak Rush Hour Window & Turnaround Insights</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Walk-Away Cancellation Loss Tracking</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Included</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Unlimited CSV History Export</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-subtle);">—</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.04);">✓ Unlimited</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 700;">✓ Unlimited</td>
+            </tr>
+
+            <!-- Section 4: Accounts, Support & SLA -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.75rem 1rem; font-weight: 800; color: var(--primary); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.05em;">4. Multi-User, Support & SLA</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Staff Front Desk Logins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">1 Device</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.04);">Up to 3 Staff</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">Unlimited Staff</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Support Tier</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">Help Center & FAQs</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.04);">Priority Email Support</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">Dedicated Account Manager</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.85rem 1rem; color: var(--text-main);">Cloud Availability SLA</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">Standard Cloud</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #fff; background: rgba(6, 182, 212, 0.04);">Priority Sync</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981; font-weight: 800;">99.99% Guaranteed SLA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </main>
@@ -149,75 +322,189 @@
       apiKey: "AIzaSyCXKhwN-ah8GX8knAipTF8QcPD5iTtODDE"
     };
 
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function renderPricingTiers(tiers) {
       if (!Array.isArray(tiers) || tiers.length === 0) return;
       const grid = document.getElementById("pricing-grid");
       if (!grid) return;
 
       grid.innerHTML = tiers.map((tier, idx) => {
-        const isFeatured = tier.isPopular;
+        const isFeatured = !!tier.isPopular;
+        const tierId = tier.id || (idx === 0 ? "starter" : (idx === 1 ? "pro" : "enterprise"));
         const bg = isFeatured ? 'rgba(6, 182, 212, 0.08)' : 'var(--bg-card)';
         const border = isFeatured ? '2px solid var(--primary)' : '1px solid var(--border-color)';
-        const badgeColor = idx === 2 ? 'var(--accent-emerald)' : 'var(--primary)';
-        const btnClass = isFeatured ? 'btn btn-accent' : 'btn btn-secondary';
-        const btnText = idx === 0 ? 'Get Started Free' : (idx === 1 ? 'Start 14-Day Free Trial' : 'Contact Sales');
-        const btnLink = idx === 2 ? 'contact.html' : 'index.html?action=create';
+        const badgeColor = idx === 0 ? '#10b981' : (idx === 1 ? 'var(--primary)' : '#6366f1');
+        
+        let btnHtml = '';
+        if (idx === 0) {
+          btnHtml = `<div id="pricing-action-${tierId}"><a href="index.html?action=create" class="btn btn-secondary" style="width: 100%; text-align: center; display: block; text-decoration: none;">Get Started Free</a></div>`;
+        } else if (idx === 1) {
+          btnHtml = `<div id="pricing-action-${tierId}"><a href="index.html?action=upgrade&tier=pro" class="btn btn-accent" style="width: 100%; text-align: center; display: block; text-decoration: none;">🚀 Upgrade to Pro (${tier.price || '$15'}/mo)</a></div>`;
+        } else {
+          btnHtml = `<div id="pricing-action-${tierId}"><a href="index.html?action=upgrade&tier=enterprise" class="btn btn-secondary" style="width: 100%; text-align: center; display: block; text-decoration: none; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">👑 Upgrade to Enterprise (${tier.price || '$49'}/mo)</a></div>`;
+        }
 
-        const activeFeatures = (tier.features || []).filter(f => {
-          if (typeof f === "object" && f !== null) {
-            return f.enabled !== false;
+        const featuresHtml = (tier.features || []).map(f => {
+          const isEnabled = typeof f === 'object' && f !== null ? f.enabled !== false : !String(f).startsWith('[x]');
+          const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
+          if (isEnabled) {
+            return `
+              <li style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.4;">
+                <span style="color: #10b981; font-weight: 800; font-size: 0.95rem; line-height: 1.3;">✓</span> 
+                <span style="color: #fff; line-height: 1.3;">${escapeHtml(text)}</span>
+              </li>
+            `;
+          } else {
+            return `
+              <li style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.4; color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;">
+                <span style="color: #ef4444; font-weight: 800; font-size: 0.95rem; line-height: 1.3; text-decoration: none;">✕</span> 
+                <span style="line-height: 1.3;">${escapeHtml(text)}</span>
+              </li>
+            `;
           }
-          const text = String(f || "").trim();
-          return !text.startsWith("[x]") && !text.startsWith("[X]") && !text.startsWith("OFF:") && !text.startsWith("~");
-        });
-
-        const featuresHtml = activeFeatures.map(f => {
-          const text = (typeof f === "object" && f !== null) ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, "");
-          return `<li style="display: flex; align-items: center; gap: 0.4rem;"><span style="color: var(--primary); font-weight: 700; font-size: 0.9rem;">✓</span> <span>${text}</span></li>`;
         }).join("");
 
         return `
-          <div class="card" style="padding: 2.25rem; background: ${bg}; border: ${border}; border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-            ${isFeatured ? '<div style="position: absolute; top: -14px; right: 24px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">Most Popular</div>' : ''}
+          <div class="card" id="pricing-card-${tierId}" style="padding: 2.25rem; background: ${bg}; border: ${border}; border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+            <div id="pricing-badge-${tierId}" class="${isFeatured ? '' : 'hidden'}" style="position: absolute; top: -14px; right: 24px; background: ${badgeColor}; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase;">
+              ${isFeatured ? 'Most Popular' : ''}
+            </div>
             <div>
-              <span style="font-size: 0.8rem; font-weight: 700; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.05em;">${tier.badge || 'Plan'}</span>
-              <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">${tier.title || ''}</h3>
-              <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">${tier.price || '$0'} <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
-              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">${tier.desc || ''}</p>
-              <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: #fff; font-size: 0.9rem;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(tier.badge || 'Plan')}</span>
+              <h3 style="color: #fff; font-size: 1.75rem; margin: 0.5rem 0;">${escapeHtml(tier.title || '')}</h3>
+              <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">${escapeHtml(tier.price || '$0')} <span style="font-size: 1rem; font-weight: 400; color: var(--text-subtle);">/ month</span></div>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">${escapeHtml(tier.desc || '')}</p>
+              <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem;">
                 ${featuresHtml}
               </ul>
             </div>
-            <a href="${btnLink}" class="${btnClass}" style="text-align: center;">${btnText}</a>
+            ${btnHtml}
           </div>
         `;
       }).join("");
+
+      syncActivePlanHighlight();
+    }
+
+    function syncActivePlanHighlight() {
+      try {
+        const savedConfig = localStorage.getItem("waitlink_config");
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          const planPrice = config.planPrice !== undefined ? config.planPrice : 0;
+          const planTitle = config.planTitle || "Starter Tier (Free)";
+          const shopName = config.shopName || "Your Shop";
+
+          // Show Active Banner
+          const banner = document.getElementById("pricing-active-banner");
+          const shopNameEl = document.getElementById("pricing-active-shop-name");
+          const planTitleEl = document.getElementById("pricing-active-plan-title");
+
+          if (banner && shopNameEl && planTitleEl) {
+            banner.classList.remove("hidden");
+            shopNameEl.textContent = shopName;
+            planTitleEl.innerHTML = `<span class="pulse-dot" style="background:#10b981;"></span> ${planTitle} ($${planPrice}/mo) • Active`;
+          }
+
+          // Highlight Active Card
+          if (planPrice === 0 || planTitle.includes("Starter")) {
+            const card = document.getElementById("pricing-card-starter");
+            const badge = document.getElementById("pricing-badge-starter");
+            const action = document.getElementById("pricing-action-starter");
+            if (card) {
+              card.style.border = "2px solid #10b981";
+              card.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.25)";
+              card.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%)";
+            }
+            if (badge) {
+              badge.classList.remove("hidden");
+              badge.textContent = "✓ YOUR CURRENT PLAN";
+              badge.style.background = "#10b981";
+            }
+            if (action) action.innerHTML = `<div class="btn btn-sm" style="background:#10b981; color:#fff; font-weight:800; width:100%; text-align:center; padding: 0.8rem; border-radius: 8px; cursor:default; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">✓ Currently Active Plan</div>`;
+          } else if (planPrice === 15 || planTitle.includes("Pro")) {
+            const card = document.getElementById("pricing-card-pro");
+            const badge = document.getElementById("pricing-badge-pro");
+            const action = document.getElementById("pricing-action-pro");
+            if (card) {
+              card.style.border = "2px solid #06b6d4";
+              card.style.boxShadow = "0 0 30px rgba(6, 182, 212, 0.28)";
+              card.style.background = "linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)";
+            }
+            if (badge) {
+              badge.classList.remove("hidden");
+              badge.textContent = "✓ YOUR CURRENT PLAN";
+              badge.style.background = "#06b6d4";
+            }
+            if (action) action.innerHTML = `<div class="btn btn-sm" style="background:#06b6d4; color:#fff; font-weight:800; width:100%; text-align:center; padding: 0.8rem; border-radius: 8px; cursor:default; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.35);">✓ Currently Active Plan</div>`;
+          } else if (planPrice === 49 || planTitle.includes("Enterprise")) {
+            const card = document.getElementById("pricing-card-enterprise");
+            const badge = document.getElementById("pricing-badge-enterprise");
+            const action = document.getElementById("pricing-action-enterprise");
+            if (card) {
+              card.style.border = "2px solid #6366f1";
+              card.style.boxShadow = "0 0 30px rgba(99, 102, 241, 0.28)";
+              card.style.background = "linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)";
+            }
+            if (badge) {
+              badge.classList.remove("hidden");
+              badge.textContent = "✓ YOUR CURRENT PLAN";
+              badge.style.background = "#6366f1";
+            }
+            if (action) action.innerHTML = `<div class="btn btn-sm" style="background:#6366f1; color:#fff; font-weight:800; width:100%; text-align:center; padding: 0.8rem; border-radius: 8px; cursor:default; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">✓ Currently Active Plan</div>`;
+          }
+        }
+      } catch (e) {
+        console.warn("Active plan sync error:", e);
+      }
+    }
+
+    // Initialize Firebase and Real-Time Firestore Sync
+    let db = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(DEFAULT_CONFIG);
+        }
+        db = firebase.firestore();
+      }
+    } catch (e) {
+      console.warn("Pricing Firebase init warning:", e);
+    }
+
+    if (db) {
+      db.collection("settings").doc("pricing_config").onSnapshot(doc => {
+        if (doc.exists && doc.data().tiers) {
+          const tiers = doc.data().tiers;
+          localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(tiers));
+          renderPricingTiers(tiers);
+        }
+      }, err => {
+        console.warn("Pricing Firestore realtime snapshot error:", err);
+      });
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // 1. Render Local Storage immediately
-      const saved = localStorage.getItem("waitlink_pricing_tiers");
-      if (saved) {
-        try { renderPricingTiers(JSON.parse(saved)); } catch (e) {}
-      }
-
-      // 2. Fetch Live Cloud Pricing Doc from Firestore
-      if (window.firebase) {
+      // 1. Check local cached pricing tiers first
+      const cachedTiers = localStorage.getItem("waitlink_pricing_tiers");
+      if (cachedTiers) {
         try {
-          if (!firebase.apps.length) firebase.initializeApp(DEFAULT_CONFIG);
-          const db = firebase.firestore();
-          db.collection("settings").doc("pricing_config").get().then(doc => {
-            if (doc.exists && doc.data().tiers) {
-              const tiers = doc.data().tiers;
-              localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(tiers));
-              renderPricingTiers(tiers);
-            }
-          }).catch(console.warn);
-        } catch(e) {}
+          renderPricingTiers(JSON.parse(cachedTiers));
+        } catch (e) {}
+      } else {
+        syncActivePlanHighlight();
       }
     });
   </script>
-
 
 </body>
 </html>

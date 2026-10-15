@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=3.0">
+  <link rel="stylesheet" href="style.css?v=3.1">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -37,20 +37,15 @@
         <div class="dropdown-wrapper shop-chip-wrapper hidden" id="shop-chip-container">
           <button class="shop-chip-btn dropdown-trigger" onclick="toggleDropdown(event, 'shop-dropdown')">
             <span class="shop-chip-icon">💈</span>
-            <span class="shop-chip-name" id="header-shop-name">Main St Barbers</span>
+            <span class="shop-chip-name" id="header-shop-name">My Shop</span>
             <span class="shop-chip-arrow">▾</span>
           </button>
           <div id="shop-dropdown" class="dropdown-menu hidden">
-            <div class="dropdown-header-title">Active Shop</div>
-            <button class="dropdown-item active-shop-item" onclick="switchView('desk'); closeAllDropdowns();">
-              <span>📋 <strong id="menu-current-shop">Main St Barbers</strong> (Front Desk)</span>
-            </button>
+            <div class="dropdown-header-title">MY SHOPS</div>
+            <div style="padding: 10px 14px; font-size: 13px; color: var(--text-muted); font-style: italic;">Loading your shops...</div>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item" onclick="openCreateShopModal(); closeAllDropdowns();">
               <span>⚡ + Create New Shop Waitlist</span>
-            </button>
-            <button class="dropdown-item" onclick="launchDemoMode(); closeAllDropdowns();">
-              <span>🎮 Try Main St Barbers Demo</span>
             </button>
           </div>
         </div>
@@ -83,7 +78,7 @@
         </button>
 
         <!-- Create Shop Primary Action (Desktop) -->
-        <button class="btn btn-accent btn-sm-header desktop-only-action" onclick="openCreateShopModal()">
+        <button id="header-create-shop-btn" class="btn btn-accent btn-sm-header desktop-only-action" onclick="openCreateShopModal()">
           ⚡ + Create Shop
         </button>
 
@@ -124,18 +119,34 @@
 
             <div class="dropdown-divider"></div>
 
-            <div class="dropdown-section-title">🎮 SANDBOX & HELP</div>
-            <button class="dropdown-item" onclick="launchDemoMode(); closeAllDropdowns();">
-              <span>🎮 Main St Barbers Demo</span>
-            </button>
-            <button class="dropdown-item hidden" id="item-superadmin" onclick="switchView('superadmin'); closeAllDropdowns();">
-              <span>👑 SuperAdmin Directory</span>
-            </button>
-            <button class="dropdown-item hidden" id="item-settings" onclick="openSettingsModal(); closeAllDropdowns();">
-              <span>⚙️ Platform Settings</span>
-            </button>
-            <a href="waitlinkarchitecture.html" target="_blank" class="dropdown-item hidden" id="item-architecture" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;" onclick="closeAllDropdowns();">
-              <span>🏛️ System Architecture</span>
+            <!-- SuperAdmin Section (Only displayed for Platform Administrator) -->
+            <div id="section-superadmin" class="hidden">
+              <div class="dropdown-section-title">👑 PLATFORM ADMIN</div>
+              <button class="dropdown-item" id="item-superadmin" onclick="switchView('superadmin'); closeAllDropdowns();">
+                <span>👑 SuperAdmin Directory</span>
+              </button>
+              <button class="dropdown-item" id="item-settings" onclick="openSettingsModal(); closeAllDropdowns();">
+                <span>⚙️ Platform Settings</span>
+              </button>
+              <a href="waitlinkarchitecture.html" target="_blank" class="dropdown-item" id="item-architecture" onclick="closeAllDropdowns();">
+                <span>🏛️ System Architecture</span>
+              </a>
+              <button class="dropdown-item" id="item-main-st-demo" onclick="launchDemoMode(); closeAllDropdowns();">
+                <span>🎮 Main St Barbers Sandbox</span>
+              </button>
+              <div class="dropdown-divider"></div>
+            </div>
+
+            <!-- Help & Support Section (Available to All Users) -->
+            <div class="dropdown-section-title">❓ HELP & SUPPORT</div>
+            <a href="help.html" class="dropdown-item" onclick="closeAllDropdowns();">
+              <span>📘 Help Center & Docs</span>
+            </a>
+            <a href="faq.html" class="dropdown-item" onclick="closeAllDropdowns();">
+              <span>💡 Frequently Asked Questions</span>
+            </a>
+            <a href="contact.html" class="dropdown-item" onclick="closeAllDropdowns();">
+              <span>📩 Contact Support</span>
             </a>
             
             <div class="dropdown-divider"></div>
@@ -219,7 +230,7 @@
         <div class="mobile-drawer-section">
           <div class="mobile-drawer-section-title">QUICK ACTIONS</div>
           <div class="mobile-drawer-actions">
-            <button class="btn btn-accent mobile-action-btn" onclick="openCreateShopModal(); closeMobileNavDrawer();">
+            <button id="mobile-create-shop-btn" class="btn btn-accent mobile-action-btn" onclick="openCreateShopModal(); closeMobileNavDrawer();">
               ⚡ + Create Shop Waitlist
             </button>
             <button class="btn btn-secondary mobile-action-btn mobile-upgrade-btn" onclick="openUpgradeModal(); closeMobileNavDrawer();">
@@ -248,7 +259,7 @@
               <span class="drawer-item-icon">📋</span>
               <span class="drawer-item-label">Copy Shareable Link</span>
             </button>
-            <button class="mobile-drawer-nav-item" onclick="launchDemoMode(); closeMobileNavDrawer();">
+            <button class="mobile-drawer-nav-item hidden" id="mobile-item-main-st-demo" onclick="launchDemoMode(); closeMobileNavDrawer();">
               <span class="drawer-item-icon">🎮</span>
               <span class="drawer-item-label">Main St Barbers Demo</span>
             </button>
@@ -257,8 +268,16 @@
               <span class="drawer-item-label">Pricing Plans</span>
             </a>
             <a href="help.html" class="mobile-drawer-nav-item" onclick="closeMobileNavDrawer();" style="text-decoration: none;">
-              <span class="drawer-item-icon">❓</span>
-              <span class="drawer-item-label">Help & Docs</span>
+              <span class="drawer-item-icon">📘</span>
+              <span class="drawer-item-label">Help Center & Docs</span>
+            </a>
+            <a href="faq.html" class="mobile-drawer-nav-item" onclick="closeMobileNavDrawer();" style="text-decoration: none;">
+              <span class="drawer-item-icon">💡</span>
+              <span class="drawer-item-label">Frequently Asked Questions</span>
+            </a>
+            <a href="contact.html" class="mobile-drawer-nav-item" onclick="closeMobileNavDrawer();" style="text-decoration: none;">
+              <span class="drawer-item-icon">📩</span>
+              <span class="drawer-item-label">Contact Support</span>
             </a>
           </div>
         </div>
@@ -492,7 +511,7 @@
       <!-- Recent Activity Feed -->
       <div class="section-header activity-header">
         <h2>📋 Customer Visit History Log</h2>
-        <button class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV</button>
+        <button id="desk-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV <span id="desk-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
       </div>
 
       <div class="history-toolbar">
@@ -582,26 +601,38 @@
           <div class="metric-value" id="owner-avg-turnaround">--</div>
           <div class="metric-caption">Based on completed visits</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card" id="card-metric-cancellations">
           <div class="metric-label">Walk-Away Loss (Cancellations)</div>
           <div class="metric-value" id="owner-cancellations" style="color: var(--accent-rose);">0 (0%)</div>
-          <div class="metric-caption">Cancelled walk-ins today</div>
+          <div class="metric-caption" id="owner-cancellations-caption">Cancelled walk-ins today</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card" id="card-metric-peakhour">
           <div class="metric-label">Peak Rush Window</div>
           <div class="metric-value" id="owner-peak-hour">--</div>
-          <div class="metric-caption">Highest traffic hour</div>
+          <div class="metric-caption" id="owner-peakhour-caption">Highest traffic hour</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card" id="card-metric-throughput">
           <div class="metric-label">Staff Speed (Throughput)</div>
           <div class="metric-value" id="owner-throughput">--</div>
-          <div class="metric-caption">Visits served per hour</div>
+          <div class="metric-caption" id="owner-throughput-caption">Visits served per hour</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Active Lobby Load</div>
           <div class="metric-value" id="owner-lobby-count">0</div>
           <div class="metric-caption">Currently waiting in line</div>
         </div>
+      </div>
+
+      <!-- Owner Starter Upgrade Callout Banner -->
+      <div id="owner-starter-upgrade-callout" class="hidden" style="margin-top: 1.25rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.12) 100%); border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.6rem;">🚀</span>
+          <div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #fff;">Unlock Pro Business Tier ($15/mo)</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Automate Twilio SMS alerts, upload your custom logo branding, activate promo banners & download unlimited CSV history.</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()" style="font-weight: 700; gap: 0.35rem;">⚡ Upgrade to Pro ($15/mo)</button>
       </div>
 
       <!-- Business Owner Settings & Branding Container -->
@@ -632,7 +663,7 @@
                 <label for="owner-input-slug">Shareable Link Slug</label>
                 <div class="slug-input-wrapper">
                   <span class="slug-prefix">waitlink.app?s=</span>
-                  <input type="text" id="owner-input-slug" value="main-st-barbers">
+                  <input type="text" id="owner-input-slug" value="main-st-barbers" oninput="this.value = slugify(this.value); updateServeNowTemplatePreview();">
                 </div>
               </div>
 
@@ -656,105 +687,130 @@
                 <input type="text" id="owner-input-hours" placeholder="e.g. 9:00 AM - 7:00 PM (Open Today)">
               </div>
 
-              <!-- Promotional Offer Box -->
-              <div class="card" style="padding: 1rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
-                <div class="form-group" style="width: 100%;">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
-                    <label for="owner-input-promo" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
-                      🎁 Promotional Offer Details (Optional)
-                    </label>
-                    <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below.">ℹ️</span>
+              <!-- Promotional Offer Box (Pro Feature Gated) -->
+              <div class="card pro-gated-section" id="owner-promo-card" style="padding: 1rem; border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <div style="font-weight: 700; color: var(--primary); font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.45rem;">
+                    <span>🎁 Promotional Offer Details (Optional)</span>
+                    <span id="promo-badge-pill" class="badge-pro-pill locked">🔒 PRO</span>
                   </div>
-                  <input type="text" id="owner-input-promo" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; box-sizing: border-box; display: block; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below. Requires Pro Business tier ($15/mo).">ℹ️</span>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.65rem;">
-                  <div class="form-group">
-                    <label for="owner-input-promo-start" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window Start</label>
-                    <input type="date" id="owner-input-promo-start" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+
+                <!-- Pro Locked Banner -->
+                <div id="promo-locked-banner" class="pro-locked-banner">
+                  <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Promo banners require Pro Business ($15/mo).</span></span>
+                  <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
+                </div>
+
+                <!-- Lockable Controls -->
+                <div class="pro-lockable-content" id="promo-lockable-content">
+                  <div class="form-group" style="width: 100%;">
+                    <input type="text" id="owner-input-promo" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; box-sizing: border-box; display: block; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
                   </div>
-                  <div class="form-group">
-                    <label for="owner-input-promo-end" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window End</label>
-                    <input type="date" id="owner-input-promo-end" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.65rem;">
+                    <div class="form-group">
+                      <label for="owner-input-promo-start" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window Start</label>
+                      <input type="date" id="owner-input-promo-start" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                    </div>
+                    <div class="form-group">
+                      <label for="owner-input-promo-end" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window End</label>
+                      <input type="date" id="owner-input-promo-end" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Twilio SMS Settings Panel (Enterprise Gateway Managed) -->
-              <div class="card" style="padding: 1.1rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md);">
+              <!-- Twilio SMS Settings Panel (Pro Feature Gated) -->
+              <div class="card pro-gated-section" id="owner-twilio-card" style="padding: 1.1rem; border-radius: var(--radius-md);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                   <strong style="color: #10b981; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
-                    📲 Twilio SMS Customer Notifications
+                    📲 Twilio SMS Customer Notifications <span id="twilio-badge-pill" class="badge-pro-pill locked">🔒 PRO</span>
                   </strong>
-                  <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                  <label id="twilio-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.3);">
                     <input type="checkbox" id="twilio-enable-checkbox" checked onchange="onTwilioToggleChange()" style="accent-color: #10b981; cursor: pointer;"> Enable Twilio SMS
                   </label>
                 </div>
-                
-                <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.75rem 0; line-height: 1.4;">
-                  Automatically send instant text messages containing their live ticket tracking link to walk-in customers when Front Desk staff tap <strong>📞 SERVE NOW</strong>.
-                </p>
 
-                <!-- Platform Managed Credentials Notice Badge -->
-                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.6); padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); margin-bottom: 0.75rem;">
-                  <span style="font-size: 0.75rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
-                    🔒 Centralized Platform Twilio Gateway Configured & Active
-                  </span>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 4px;">Protected & Encrypted</span>
+                <!-- Pro Locked Banner -->
+                <div id="twilio-locked-banner" class="pro-locked-banner">
+                  <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Automated SMS notifications require Pro Business ($15/mo).</span></span>
+                  <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; opacity: 0.7;">
-                  <div class="form-group">
-                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Account SID</label>
-                    <input type="password" id="twilio-account-sid" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(4px); user-select: none;" title="Encrypted Platform Twilio Account SID">
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Auth Token</label>
-                    <input type="password" id="twilio-auth-token" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(0.4px);">
-                  </div>
-                </div>
+                <div class="pro-lockable-content" id="twilio-lockable-content">
+                  <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.75rem 0; line-height: 1.4;">
+                    Automatically send instant text messages containing their live ticket tracking link to walk-in customers when Front Desk staff tap <strong>📞 SERVE NOW</strong>.
+                  </p>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.6rem; align-items: flex-end;">
-                  <div class="form-group">
-                    <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Sender Phone Number (SMS-Enabled)</label>
-                    <input type="text" id="twilio-from-phone" value="+1 (803) 902-7464" style="font-size: 0.82rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #10b981; font-weight: 600; border-color: rgba(255,255,255,0.1);" title="Twilio Registered Sender Phone Number">
+                  <!-- Platform Managed Credentials Notice Badge -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.6); padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.75rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                      🔒 Centralized Platform Twilio Gateway Configured & Active
+                    </span>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 4px;">Protected & Encrypted</span>
                   </div>
-                  <div class="form-group">
-                    <button type="button" id="btn-send-test-sms" class="btn btn-secondary btn-sm" onclick="sendTestSmsUI()" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.5rem; font-weight: 700; font-size: 0.8rem; background: rgba(16, 185, 129, 0.1);">
-                      ⚡ Send Test SMS to Business Phone
-                    </button>
-                  </div>
-                </div>
 
-                <!-- Custom Serve Now SMS Message Template -->
-                <div class="form-group" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-                    <label for="twilio-serve-now-template" style="font-size: 0.8rem; font-weight: 600; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
-                      💬 "Serve Now" Customer SMS Text Template
-                    </label>
-                    <button type="button" class="btn-text" onclick="resetServeNowTemplateDefault()" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: underline; padding: 0;" title="Reset back to default template">
-                      ↺ Reset to Default
-                    </button>
-                  </div>
-                  <textarea id="twilio-serve-now-template" rows="2" style="font-size: 0.82rem; padding: 0.5rem 0.65rem; width: 100%; line-height: 1.4; resize: vertical;" placeholder="Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}" oninput="updateServeNowTemplatePreview()"></textarea>
-                  
-                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem;">
-                    <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                      <span>Insert tags:</span>
-                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{name}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; cursor: pointer;">{name}</button>
-                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{shop}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(6,182,212,0.15); color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); border-radius: 4px; cursor: pointer;">{shop}</button>
-                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{service}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); border-radius: 4px; cursor: pointer;">{service}</button>
-                      <button type="button" class="btn-badge" onclick="insertServeNowTemplateTag('{link}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 4px; cursor: pointer;" title="Insert live ticket tracking link tag">{link} (Ticket Link)</button>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; opacity: 0.7;">
+                    <div class="form-group">
+                      <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Account SID</label>
+                      <input type="password" id="twilio-account-sid" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(4px); user-select: none;" title="Encrypted Platform Twilio Account SID">
+                    </div>
+                    <div class="form-group">
+                      <label style="font-size: 0.75rem; color: var(--text-muted);">Twilio Auth Token</label>
+                      <input type="password" id="twilio-auth-token" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(0.4px);">
                     </div>
                   </div>
 
-                  <!-- Live Customer SMS Preview Box -->
-                  <div style="margin-top: 0.5rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
-                      📱 Customer Phone Preview:
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.6rem; align-items: flex-end;">
+                    <div class="form-group">
+                      <label style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+                        <span>Twilio Sender Phone Number (SMS-Enabled)</span>
+                        <span style="font-size: 0.68rem; color: #10b981; font-weight: 600;">🔒 Platform Locked</span>
+                      </label>
+                      <div style="position: relative; display: flex; align-items: center;">
+                        <input type="text" id="twilio-from-phone" value="+1 (•••) •••-7464" readonly disabled style="font-family: monospace; font-size: 0.85rem; padding: 0.4rem 1.8rem 0.4rem 0.6rem; background: rgba(0,0,0,0.35); color: #10b981; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); cursor: not-allowed; user-select: none; width: 100%; letter-spacing: 0.05em; filter: blur(0.7px);" title="Platform-Managed Twilio Registered Sender Phone (Only last 4 digits displayed for security)">
+                        <span style="position: absolute; right: 8px; font-size: 0.75rem; color: #10b981; pointer-events: none;" title="Protected & Encrypted">🔒</span>
+                      </div>
                     </div>
-                    <div id="twilio-template-live-preview" style="font-size: 0.78rem; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                      Hi Alex! Your turn at Main St Barbers is ready now. Please proceed to the front desk. View your ticket: https://waitlink.app?s=main-st-barbers&view=public&ticket=sample-101
+                    <div class="form-group">
+                      <button type="button" id="btn-send-test-sms" class="btn btn-secondary btn-sm" onclick="sendTestSmsUI()" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.5rem; font-weight: 700; font-size: 0.8rem; background: rgba(16, 185, 129, 0.1);">
+                        ⚡ Send Test SMS to Business Phone
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Custom Serve Now SMS Message Template -->
+                  <div class="form-group" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                      <label for="twilio-serve-now-template" style="font-size: 0.8rem; font-weight: 600; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
+                        💬 "Serve Now" Customer SMS Text Template
+                      </label>
+                      <button type="button" id="btn-reset-sms-tpl" class="btn-text" onclick="resetServeNowTemplateDefault()" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: underline; padding: 0;" title="Reset back to default template">
+                        ↺ Reset to Default
+                      </button>
+                    </div>
+                    <textarea id="twilio-serve-now-template" rows="2" style="font-size: 0.82rem; padding: 0.5rem 0.65rem; width: 100%; line-height: 1.4; resize: vertical;" placeholder="Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}" oninput="updateServeNowTemplatePreview()"></textarea>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem;">
+                      <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                        <span>Insert tags:</span>
+                        <button type="button" class="btn-badge btn-sms-tag" onclick="insertServeNowTemplateTag('{name}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; cursor: pointer;">{name}</button>
+                        <button type="button" class="btn-badge btn-sms-tag" onclick="insertServeNowTemplateTag('{shop}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(6,182,212,0.15); color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); border-radius: 4px; cursor: pointer;">{shop}</button>
+                        <button type="button" class="btn-badge btn-sms-tag" onclick="insertServeNowTemplateTag('{service}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); border-radius: 4px; cursor: pointer;">{service}</button>
+                        <button type="button" class="btn-badge btn-sms-tag" onclick="insertServeNowTemplateTag('{link}')" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 4px; cursor: pointer;" title="Insert live ticket tracking link tag">{link} (Ticket Link)</button>
+                      </div>
+                    </div>
+
+                    <!-- Live Customer SMS Preview Box -->
+                    <div style="margin-top: 0.5rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem;">
+                      <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+                        📱 Customer Phone Preview:
+                      </div>
+                      <div id="twilio-template-live-preview" style="font-size: 0.78rem; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        Hi Alex! Your turn at Main St Barbers is ready now. Please proceed to the front desk. View your ticket: https://waitlink.app?s=main-st-barbers&view=public&ticket=sample-101
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -763,21 +819,38 @@
 
             <!-- Column 2: Logo Branding & Service Menu -->
             <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-              <div class="form-group">
-                <label for="owner-file-logo">Custom Shop Logo (Upload File or Image URL)</label>
-                <div class="logo-upload-container">
-                  <input type="file" id="owner-file-logo" accept="image/png, image/jpeg, image/webp" onchange="handleLogoFileUpload(event)" style="display: none;">
-                  <button type="button" class="btn btn-secondary" style="width: 100%; gap: 0.5rem;" onclick="document.getElementById('owner-file-logo').click()">
-                    📷 Upload Logo Image (PNG, JPG, WEBP)
-                  </button>
-                  <div class="logo-preview-box" id="logo-preview-box" style="margin-top: 0.6rem; display: none; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <img id="logo-preview-img" src="" alt="Logo Preview" style="max-height: 50px; max-width: 90px; object-fit: contain;">
-                    <span style="font-size: 0.8rem; color: var(--text-muted); flex: 1;">Logo Attached</span>
-                    <button type="button" class="btn-text" style="color: var(--accent-rose); font-weight: 600;" onclick="removeShopLogo()">✕ Remove</button>
-                  </div>
+              <!-- Custom Shop Logo Card (Pro Feature Gated) -->
+              <div class="card pro-gated-section" id="owner-logo-card" style="padding: 1rem; border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 700; color: #fff; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.45rem;">
+                    <span>Custom Shop Logo (Upload File or Image URL)</span>
+                    <span id="logo-badge-pill" class="badge-pro-pill locked">🔒 PRO</span>
+                  </span>
+                  <span class="info-tooltip-badge" title="Custom shop logo branding is displayed on public customer waitlist tracking page, window posters, and desk header. Requires Pro Business tier ($15/mo).">ℹ️</span>
                 </div>
-                <input type="url" id="owner-input-logourl" placeholder="Or paste Image URL (https://...)" style="margin-top: 0.5rem;">
-                <small class="form-hint">Max file size: 2 MB. PNG, JPG, WEBP. Auto-sanitized and optimized for window posters, mobile cards & desk header.</small>
+
+                <!-- Pro Locked Banner -->
+                <div id="logo-locked-banner" class="pro-locked-banner">
+                  <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Custom logo branding requires Pro Business ($15/mo).</span></span>
+                  <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
+                </div>
+
+                <!-- Lockable Controls -->
+                <div class="pro-lockable-content" id="logo-lockable-content">
+                  <div class="logo-upload-container">
+                    <input type="file" id="owner-file-logo" accept="image/png, image/jpeg, image/webp" onchange="handleLogoFileUpload(event)" style="display: none;" disabled>
+                    <button type="button" id="owner-btn-upload-logo" class="btn btn-secondary" style="width: 100%; gap: 0.5rem;" onclick="handleLogoUploadButtonClick()">
+                      📷 Upload Logo Image (PNG, JPG, WEBP)
+                    </button>
+                    <div class="logo-preview-box" id="logo-preview-box" style="margin-top: 0.6rem; display: none; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                      <img id="logo-preview-img" src="" alt="Logo Preview" style="max-height: 50px; max-width: 90px; object-fit: contain;">
+                      <span style="font-size: 0.8rem; color: var(--text-muted); flex: 1;">Logo Attached</span>
+                      <button type="button" id="owner-btn-remove-logo" class="btn-text" style="color: var(--accent-rose); font-weight: 600;" onclick="removeShopLogo()">✕ Remove</button>
+                    </div>
+                  </div>
+                  <input type="url" id="owner-input-logourl" placeholder="Or paste Image URL (https://...)" style="margin-top: 0.5rem;">
+                  <small class="form-hint">Max file size: 2 MB. PNG, JPG, WEBP. Auto-sanitized and optimized for window posters, mobile cards & desk header.</small>
+                </div>
               </div>
 
               <div class="form-group">
@@ -816,12 +889,13 @@
             </div>
           </div>
 
-          <div style="margin-top: 1.5rem; pt: 1rem; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-            <div style="font-size: 0.8rem; color: var(--text-subtle); display: flex; align-items: center; gap: 0.35rem;">
+          <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="font-size: 0.85rem; color: var(--text-subtle); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <span>🌐</span> <span>Queue data is synchronized live across all devices & Firestore.</span>
+              <span id="owner-save-status" style="display: none; align-items: center; gap: 0.4rem; padding: 4px 10px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #10b981;"></span>
             </div>
-            <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;" onclick="saveOwnerSettings()">
-              Save Shop Profile & Branding
+            <button id="btn-save-owner-settings" class="btn btn-primary" style="padding: 0.8rem 2.2rem; font-size: 1rem; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; gap: 0.5rem;" onclick="saveOwnerSettings()">
+              <span id="save-btn-icon">💾</span> <span id="save-btn-text">Save Shop Profile & Branding</span>
             </button>
           </div>
         </div>
@@ -867,7 +941,7 @@
       <!-- Customer Visit History Log (Business Owner View) -->
       <div class="section-header activity-header">
         <h2>📊 Customer Visit History Log</h2>
-        <button class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV</button>
+        <button id="owner-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV <span id="owner-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
       </div>
 
       <div class="history-toolbar">
@@ -967,9 +1041,9 @@
               </div>
               
               <div id="running-late-chips" style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
-                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(5)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+5 mins</button>
-                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(10)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+10 mins</button>
-                <button class="btn btn-secondary btn-sm late-chip-btn" onclick="reportRunningLate(15)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+15 mins</button>
+                <button class="btn btn-secondary btn-sm late-chip-btn" id="late-chip-5" onclick="reportRunningLate(5)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+5 mins</button>
+                <button class="btn btn-secondary btn-sm late-chip-btn" id="late-chip-10" onclick="reportRunningLate(10)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+10 mins</button>
+                <button class="btn btn-secondary btn-sm late-chip-btn" id="late-chip-15" onclick="reportRunningLate(15)" style="border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.78rem; padding: 0.3rem 0.65rem;">+15 mins</button>
               </div>
               
               <div id="running-late-locked-msg" class="hidden" style="font-size: 0.82rem; color: #fbbf24; font-weight: 700; background: rgba(245, 158, 11, 0.15); padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid rgba(245, 158, 11, 0.3);">
@@ -1193,7 +1267,10 @@
       <div id="superpanel-shops">
         <div class="section-header">
           <h2>Master Multi-Tenant Shop Directory</h2>
-          <button class="btn btn-primary btn-sm" onclick="openOnboardingModal()">+ Register New Shop</button>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="cleanDuplicateShops()" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08);" title="Scan and purge duplicate shop records with matching name & owner">🧹 Purge Duplicates</button>
+            <button class="btn btn-primary btn-sm" onclick="openOnboardingModal()">+ Register New Shop</button>
+          </div>
         </div>
 
         <div class="card history-card">
@@ -1267,11 +1344,16 @@
                 </div>
               </div>
               <div id="pricing-t1-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
-              <textarea id="pricing-t1-features" class="hidden" rows="5">1 Shop Location
+              <textarea id="pricing-t1-features" class="hidden" rows="10">1 Shop Location
 Up to 100 Monthly Check-ins
 Printable Window QR Poster
 1-Tap Front Desk Control
-Basic Wait Time Estimator</textarea>
+Real-Time Waiting Time Estimator
+Anonymous Public Wait Page
+Audible Turn Chimes & Sound Alerts
+[x] Automated Twilio SMS Notifications
+[x] Custom Shop Logo Branding
+[x] Business Analytics & CSV History Export</textarea>
             </div>
           </div>
 
@@ -1306,12 +1388,18 @@ Basic Wait Time Estimator</textarea>
                 </div>
               </div>
               <div id="pricing-t2-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
-              <textarea id="pricing-t2-features" class="hidden" rows="5">Unlimited Monthly Check-ins
+              <textarea id="pricing-t2-features" class="hidden" rows="12">Everything in Starter
+1 Dedicated Shop with Unlimited Check-ins
+Automated Twilio SMS "Turn Ready" Alerts
 Custom Logo Branding & Colors
+Promotional Offer Banners on Public Screen
 Owner Business Intelligence Dashboard
 Peak Rush Window & Walk-Away Analytics
+Unlimited CSV History Data Export
 Multi-Device Front Desk Sync
-Priority Cloud Firestore Latency</textarea>
+Priority Cloud Firestore Latency
+[x] Multi-Location Network (Unlimited Shops)
+[x] Multiple Staff Front Desk Accounts</textarea>
             </div>
           </div>
 
@@ -1343,9 +1431,11 @@ Priority Cloud Firestore Latency</textarea>
                 </div>
               </div>
               <div id="pricing-t3-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
-              <textarea id="pricing-t3-features" class="hidden" rows="5">Unlimited Locations & Staff Accounts
+              <textarea id="pricing-t3-features" class="hidden" rows="8">Everything in Pro Business
+Unlimited Locations & Staff Accounts
 Multi-Tenant SuperAdmin Access
 Custom Domain CNAME Routing
+High-Volume Dedicated Twilio SMS
 Dedicated Support Manager
 99.99% Cloud SLA</textarea>
             </div>
@@ -1454,6 +1544,42 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- Delete Tenant Shop Confirmation Modal (SuperAdmin Only) -->
+  <div id="delete-shop-modal" class="modal-backdrop hidden" onclick="if(event.target === this) closeDeleteShopModal()">
+    <div class="modal-card" style="max-width: 480px; padding: 2rem; border: 1.5px solid rgba(244, 63, 94, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(244, 63, 94, 0.2);">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.35); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+            🗑️
+          </div>
+          <div>
+            <span style="font-size: 0.725rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.05em;">SUPERADMIN ACTION</span>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-top: 2px;">Delete Tenant Shop</h2>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeDeleteShopModal()" title="Close">&times;</button>
+      </div>
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+        <p style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; margin: 0;">
+          Are you sure you want to permanently delete <strong id="delete-modal-shop-name" style="color: #fff;">Shop Name</strong>?
+        </p>
+
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.825rem; color: #94a3b8;">
+          <div style="margin-bottom: 0.35rem;">URL Slug: <code id="delete-modal-shop-slug" style="color: #f43f5e; font-weight: 700; word-break: break-all;">slug</code></div>
+          <div style="font-size: 0.775rem; color: var(--text-muted);">⚠️ This will purge the shop record and queue history from Google Cloud Firestore. This action cannot be undone.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-secondary" onclick="closeDeleteShopModal()">Cancel</button>
+        <button class="btn" id="delete-shop-confirm-submit-btn" onclick="confirmDeleteShopFromModal()" style="background: #e11d48; color: #fff; font-weight: 700; border: none; padding: 0.65rem 1.25rem; border-radius: 8px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4); cursor: pointer;">
+          🗑️ Yes, Permanently Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal (SuperAdmin Only) -->
   <div id="settings-modal" class="modal-backdrop hidden">
     <div class="modal-card">
@@ -1532,8 +1658,21 @@ Dedicated Support Manager
               <label for="auth-password" style="margin: 0;">Password</label>
               <button type="button" class="btn-text" style="font-size: 0.75rem; color: var(--primary); font-weight: 500;" onclick="toggleForgotPassword()" id="auth-forgot-btn">Forgot Password?</button>
             </div>
-            <input type="password" id="auth-password" placeholder="••••••••" required minlength="6" autocomplete="current-password">
+            <div style="position: relative;">
+              <input type="password" id="auth-password" placeholder="••••••••" required minlength="6" autocomplete="current-password" style="padding-right: 40px;" oninput="onAuthPasswordInput()">
+              <button type="button" class="btn-text" onclick="toggleAuthPasswordVisibility('auth-password', this)" title="Show/Hide password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 1.05rem; color: var(--text-muted); padding: 4px; border: none; background: none; cursor: pointer;">👁️</button>
+            </div>
             <small class="form-hint" id="auth-password-hint" style="font-size: 0.75rem; color: var(--text-subtle); display: none; margin-top: 0.35rem;">Must be at least 6 characters.</small>
+          </div>
+
+          <!-- Confirm Password Group (Exclusively for Registration Mode) -->
+          <div class="form-group" style="margin-top: 0.75rem; display: none;" id="auth-confirm-password-group">
+            <label for="auth-confirm-password" style="display: block; margin-bottom: 0.35rem;">Confirm Password</label>
+            <div style="position: relative;">
+              <input type="password" id="auth-confirm-password" placeholder="••••••••" minlength="6" autocomplete="new-password" style="padding-right: 40px;" oninput="checkAuthPasswordMatch()">
+              <button type="button" class="btn-text" onclick="toggleAuthPasswordVisibility('auth-confirm-password', this)" title="Show/Hide password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 1.05rem; color: var(--text-muted); padding: 4px; border: none; background: none; cursor: pointer;">👁️</button>
+            </div>
+            <div id="auth-match-indicator" style="font-size: 0.78rem; margin-top: 0.35rem; display: none; align-items: center; gap: 4px;"></div>
           </div>
 
           <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;" id="auth-submit-btn">
@@ -1563,24 +1702,27 @@ Dedicated Support Manager
         <form id="onboarding-form" onsubmit="handleOnboardingSubmit(event)">
           <div class="form-group">
             <label for="onboard-shopname">Business Name</label>
-            <input type="text" id="onboard-shopname" placeholder="e.g. Apex Barber Studio" required>
+            <input type="text" id="onboard-shopname" placeholder="e.g. Apex Barber Studio" required oninput="generateSlugFromInput(this.value)">
           </div>
 
           <div class="form-group" style="margin-top: 0.75rem;">
             <label for="onboard-slug">Choose Your Shareable Link Slug</label>
             <div class="slug-input-wrapper">
               <span class="slug-prefix">waitlink.app?s=</span>
-              <input type="text" id="onboard-slug" placeholder="apex-barber" required>
+              <input type="text" id="onboard-slug" placeholder="apex-barber" required oninput="this.dataset.manuallyEdited = '1'; this.value = slugify(this.value);">
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 0.75rem;">
             <label for="onboard-plan">Subscription Plan Tier</label>
-            <select id="onboard-plan" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
-              <option value="starter" data-price="0" data-title="Starter Tier">Starter Tier — Free Forever ($0/mo)</option>
-              <option value="pro" data-price="15" data-title="Pro Business Tier" selected>Pro Business Tier — Standard Shop ($15/mo)</option>
-              <option value="enterprise" data-price="49" data-title="Enterprise Tier">Enterprise Tier — Multi-Location ($49/mo)</option>
+            <select id="onboard-plan" onchange="updateOnboardPlanSelection()" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+              <option value="starter" data-price="0" data-title="Starter Tier (Free)" selected>Starter Tier — Free Forever ($0/mo)</option>
+              <option value="pro" data-price="15" data-title="Pro Business Tier">Pro Business Tier — Standard Shop ($15/mo — Requires Checkout)</option>
+              <option value="enterprise" data-price="49" data-title="Enterprise Tier">Enterprise Tier — Multi-Location ($49/mo — Requires Checkout)</option>
             </select>
+            <div id="onboard-plan-hint" style="font-size: 0.78rem; color: #10b981; margin-top: 0.35rem;">
+              ✓ Starter Tier is free forever (1 shop location, up to 100 walk-ins/mo). You can upgrade anytime to Pro in 1 tap.
+            </div>
           </div>
 
           <div class="form-group" style="margin-top: 0.75rem;">
@@ -1599,26 +1741,33 @@ Dedicated Support Manager
             <small class="form-hint" style="font-size: 0.75rem; color: var(--text-subtle);">Used to send your shop links, owner portal key, and registration confirmation email.</small>
           </div>
 
-          <!-- Promotional Offer Box with Info Icon Tooltip -->
-          <div class="card" style="margin-top: 1rem; padding: 1.25rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
-            <div class="form-group">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
-                <label for="onboard-promo-text" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
-                  🎁 Promotional Offer Details (Optional)
-                </label>
-                <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below.">ℹ️</span>
-              </div>
-              <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+          <!-- Promotional Offer Box with Info Icon Tooltip (Pro Feature) -->
+          <div class="card pro-gated-section" id="onboard-promo-card" style="margin-top: 1rem; padding: 1.25rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+              <label for="onboard-promo-text" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
+                🎁 Promotional Offer Details (Optional) <span id="onboard-promo-badge" class="badge-pro-pill unlocked">PRO</span>
+              </label>
+              <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below. Requires Pro Business tier ($15/mo).">ℹ️</span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+            <div id="onboard-promo-locked-banner" class="pro-locked-banner hidden" style="margin-bottom: 0.6rem;">
+              <span class="banner-text">🔒 <span><strong>Starter Tier:</strong> Promo banners require Pro Business ($15/mo) or Enterprise.</span></span>
+            </div>
+
+            <div class="pro-lockable-content" id="onboard-promo-lockable-content">
               <div class="form-group">
-                <label for="onboard-promo-start" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window Start</label>
-                <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
               </div>
-              <div class="form-group">
-                <label for="onboard-promo-end" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window End</label>
-                <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+                <div class="form-group">
+                  <label for="onboard-promo-start" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window Start</label>
+                  <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                </div>
+                <div class="form-group">
+                  <label for="onboard-promo-end" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window End</label>
+                  <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                </div>
               </div>
             </div>
           </div>
@@ -1637,85 +1786,162 @@ Dedicated Support Manager
   </div>
 
   <!-- Subscription Upgrade & Paywall Modal -->
-  <div id="upgrade-modal" class="modal-backdrop hidden">
-    <div class="modal-card" style="max-width: 720px; padding: 2rem;">
-      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+  <div id="upgrade-modal" class="modal-backdrop hidden" onclick="if(event.target === this) closeUpgradeModal()">
+    <div class="modal-card upgrade-modal-card">
+      <div class="modal-header upgrade-modal-header">
         <div>
           <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.6rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">💎 WAITLINK SUBSCRIPTION</span>
-          <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 0.4rem; color: #fff;">Upgrade Your Shop Subscription</h2>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">Power your shop growth with custom branding, active promo offers, and multi-location management.</p>
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-top: 0.35rem; color: #fff;">Shop Subscription Plans</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">Power your shop growth with automated SMS, custom branding, promo offers, and multi-location management.</p>
         </div>
-        <button class="btn-icon" onclick="closeUpgradeModal()" title="Close Modal">✕</button>
+        <button class="modal-close-btn" onclick="closeUpgradeModal()" title="Close Modal (Esc)" aria-label="Close Modal">✕</button>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+      <!-- Centered Processing / Redirecting Screen Overlay -->
+      <div id="upgrade-processing-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center;">
+        <div style="background: rgba(30, 41, 59, 0.85); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 20px; padding: 2.25rem 2rem; max-width: 440px; width: 100%; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.2); display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
+          
+          <div class="upgrade-spinner-container">
+            <div class="upgrade-pulse-ring"></div>
+            <div class="upgrade-spinner"></div>
+            <span id="upgrade-proc-icon" style="font-size: 2rem; position: relative; z-index: 2;">⚡</span>
+          </div>
+
+          <div>
+            <span style="font-size: 0.725rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.65rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">SECURE 256-BIT SSL GATEWAY</span>
+            <h3 id="upgrade-proc-title" style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-top: 0.5rem; margin-bottom: 0.3rem;">
+              Connecting to Stripe...
+            </h3>
+            <p id="upgrade-proc-desc" style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              Preparing your checkout session for <strong id="upgrade-proc-tier" style="color: #10b981;">Pro Business ($15/mo)</strong>.<br>Redirecting you to Stripe in just a moment...
+            </p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: #94a3b8; background: rgba(0, 0, 0, 0.35); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+            <span class="pulse-dot" style="background: #10b981;"></span>
+            <span>Official Stripe Hosted Checkout</span>
+          </div>
+
+          <div id="upgrade-proc-error-actions" class="hidden" style="margin-top: 0.5rem; display: flex; gap: 0.75rem; width: 100%;">
+            <button class="btn btn-primary btn-sm" id="upgrade-retry-btn" onclick="retryStripeUpgrade()" style="flex: 1;">🔄 Try Again</button>
+            <button class="btn btn-secondary btn-sm" onclick="hideUpgradeProcessingOverlay()" style="flex: 1;">Cancel</button>
+          </div>
+
+          <button id="upgrade-proc-cancel-btn" class="btn-text-sm" onclick="hideUpgradeProcessingOverlay()" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; text-decoration: underline; background: none; border: none; cursor: pointer;">
+            Cancel & Return to Plans
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body upgrade-modal-body">
+        <!-- Active Plan Highlight Banner -->
+        <div id="modal-active-plan-banner" style="margin-bottom: 0.5rem; padding: 0.85rem 1.2rem; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.35rem;">💈</span>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
+                Current Shop: <strong id="modal-active-shop-name" style="color: #fff;">Main St Barbers</strong>
+              </div>
+              <div style="font-size: 1rem; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 0.4rem; margin-top: 2px;">
+                <span class="pulse-dot" style="background: #10b981;"></span>
+                <span id="modal-active-plan-title">Starter Tier (Free • $0/mo)</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.8rem; color: #fff; background: #10b981; padding: 0.3rem 0.75rem; border-radius: 20px; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">✓ Currently Active</span>
+          </div>
+        </div>
+
+        <div class="upgrade-tiers-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: stretch; margin-top: 0.5rem;">
+          
+          <!-- Starter Tier -->
+          <div class="card" id="tier-card-starter" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+            <div id="tier-badge-starter" class="hidden" style="position: absolute; top: -11px; right: 12px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">✓ CURRENT PLAN</div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-subtle); font-weight: 600;" id="modal-t1-badge">FREE FOREVER</span>
+              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t1-title">Starter</h3>
+              <div style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.8rem;"><span id="modal-t1-price">$0</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+              <ul id="modal-tier-features-starter" style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                <li>✓ <strong>1 Shop Location</strong></li>
+                <li>✓ Up to 100 Monthly Check-ins</li>
+                <li>✓ Printable Window QR Poster</li>
+                <li>✓ 1-Tap Front Desk Control</li>
+                <li>✓ Real-Time Waiting Time Estimator</li>
+                <li>✓ Anonymous Public Wait Page</li>
+                <li>✓ Audible Turn Chimes & Sound Alerts</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Automated Twilio SMS Notifications</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Custom Shop Logo Branding</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Business Analytics & CSV History Export</li>
+              </ul>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="tier-btn-starter" onclick="selectUpgradeTier('starter')" style="width: 100%; margin-top: 1.25rem;">Select Starter ($0)</button>
+          </div>
+
+          <!-- Pro Business Tier (Recommended) -->
+          <div class="card" id="tier-card-pro" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+            <div id="tier-badge-pro" style="position: absolute; top: -11px; right: 12px; background: var(--primary); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">POPULAR</div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;" id="modal-t2-badge">STANDARD SHOP</span>
+              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t2-title">Pro Business</h3>
+              <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 0.8rem;"><span id="modal-t2-price">$15</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+              <ul id="modal-tier-features-pro" style="font-size: 0.8rem; color: var(--text-main); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                <li>✓ <strong>Everything in Starter</strong></li>
+                <li>✓ <strong>1 Dedicated Shop</strong> with Unlimited Check-ins</li>
+                <li>✓ 📱 <strong>Automated SMS Alerts (Twilio)</strong></li>
+                <li>✓ 📷 Custom Shop Logo & Accent Colors</li>
+                <li>✓ 🎁 Promotional Offer Banners</li>
+                <li>✓ 📊 Owner Business Intelligence Dashboard</li>
+                <li>✓ 📉 Peak Rush Window & Walk-Away Analytics</li>
+                <li>✓ 📥 Unlimited CSV History Export</li>
+                <li>✓ 🔄 Multi-Device Front Desk Sync</li>
+                <li>✓ ⚡ Priority Cloud Firestore Latency</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Multi-Location Network (Unlimited Shops)</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Multiple Staff Front Desk Accounts</li>
+              </ul>
+            </div>
+            <button class="btn btn-primary btn-sm" id="tier-btn-pro" onclick="selectUpgradeTier('pro')" style="width: 100%; margin-top: 1.25rem;">🚀 Upgrade to Pro ($15/mo)</button>
+          </div>
+
+          <!-- Enterprise Tier -->
+          <div class="card" id="tier-card-enterprise" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease;">
+            <div id="tier-badge-enterprise" class="hidden" style="position: absolute; top: -11px; right: 12px; background: #6366f1; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">ENTERPRISE</div>
+            <div>
+              <span style="font-size: 0.75rem; color: #6366f1; font-weight: 600;" id="modal-t3-badge">MULTI-LOCATION</span>
+              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t3-title">Enterprise</h3>
+              <div style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-bottom: 0.8rem;"><span id="modal-t3-price">$49</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+              <ul id="modal-tier-features-enterprise" style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                <li>✓ <strong>Everything in Pro Business</strong></li>
+                <li>✓ 🏢 <strong>Multi-Location Network (Unlimited Shops)</strong></li>
+                <li>✓ 👥 Multiple Staff Front Desk Accounts</li>
+                <li>✓ 📱 High-Volume Dedicated Twilio SMS</li>
+                <li>✓ 🔗 Custom Domain Slugs & CNAME Routing</li>
+                <li>✓ 👑 Multi-Tenant Platform SuperAdmin Directory</li>
+                <li>✓ 💬 Dedicated Support Manager</li>
+                <li>✓ 🛡️ 99.99% Cloud Uptime SLA</li>
+              </ul>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="tier-btn-enterprise" onclick="selectUpgradeTier('enterprise')" style="width: 100%; margin-top: 1.25rem; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">👑 Upgrade to Enterprise ($49/mo)</button>
+          </div>
+
+        </div>
+
+        <!-- Stripe Trust & Security Guarantee Badge -->
+        <div style="margin-top: 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.775rem; color: var(--text-muted);">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1rem;">🔒</span>
+            <span><strong>256-Bit SSL Encryption</strong> • 100% Secure Checkout Powered by <strong>Stripe</strong></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span>✓ Cancel Anytime</span>
+            <span>✓ Instant Activation</span>
+          </div>
+        </div>
         
-        <!-- Starter Tier -->
-        <div class="card" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <span style="font-size: 0.75rem; color: var(--text-subtle); font-weight: 600;">FREE FOREVER</span>
-            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Starter</h3>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.8rem;">$0 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
-            <ul style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
-              <li>✓ Live Walk-In Queue</li>
-              <li>✓ Printable Window QR Poster</li>
-              <li>✓ Shareable Customer Link</li>
-            </ul>
-          </div>
-          <button class="btn btn-secondary btn-sm" id="tier-btn-starter" onclick="selectUpgradeTier('starter')" style="width: 100%; margin-top: 1.25rem;">Select Starter ($0)</button>
-        </div>
-
-        <!-- Pro Business Tier (Recommended) -->
-        <div class="card" style="padding: 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%); border: 2px solid var(--primary); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-          <span style="position: absolute; top: -11px; right: 12px; background: var(--primary); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; text-transform: uppercase;">POPULAR</span>
-          <div>
-            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">STANDARD SHOP</span>
-            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Pro Business</h3>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 0.8rem;">$15 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
-            <ul style="font-size: 0.8rem; color: var(--text-main); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
-              <li>✓ Everything in Starter</li>
-              <li>✓ 📷 Custom Shop Logo Branding</li>
-              <li>✓ 🎁 Promotional Offer Banners</li>
-              <li>✓ 📥 Unlimited CSV History Export</li>
-              <li>✓ ⚡ Priority Cloud Synchronization</li>
-            </ul>
-          </div>
-          <button class="btn btn-primary btn-sm" id="tier-btn-pro" onclick="selectUpgradeTier('pro')" style="width: 100%; margin-top: 1.25rem;">🚀 Upgrade to Pro ($15/mo)</button>
-        </div>
-
-        <!-- Enterprise Tier -->
-        <div class="card" style="padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <span style="font-size: 0.75rem; color: #6366f1; font-weight: 600;">MULTI-LOCATION</span>
-            <h3 style="font-size: 1.1rem; color: #fff; margin: 0.3rem 0;">Enterprise</h3>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-bottom: 0.8rem;">$49 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
-            <ul style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
-              <li>✓ Everything in Pro Business</li>
-              <li>✓ 🏢 Multi-Location Shops</li>
-              <li>✓ 🔗 Custom Domain Slugs</li>
-              <li>✓ 👑 Dedicated Admin Priority Support</li>
-            </ul>
-          </div>
-          <button class="btn btn-secondary btn-sm" id="tier-btn-enterprise" onclick="selectUpgradeTier('enterprise')" style="width: 100%; margin-top: 1.25rem; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">👑 Upgrade to Enterprise ($49/mo)</button>
+        <div id="stripe-checkout-status-msg" class="hidden" style="margin-top: 0.5rem; padding: 0.75rem 1rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; color: #10b981; font-size: 0.85rem; text-align: center;">
         </div>
 
       </div>
-
-      <!-- Stripe Trust & Security Guarantee Badge -->
-      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.775rem; color: var(--text-muted);">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1rem;">🔒</span>
-          <span><strong>256-Bit SSL Encryption</strong> • 100% Secure Checkout Powered by <strong>Stripe</strong></span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <span>✓ Cancel Anytime</span>
-          <span>✓ Instant Activation</span>
-        </div>
-      </div>
-      
-      <div id="stripe-checkout-status-msg" class="hidden" style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; color: #10b981; font-size: 0.85rem; text-align: center;">
-      </div>
-
     </div>
   </div>
 
@@ -1879,18 +2105,18 @@ Dedicated Support Manager
       </div>
 
       <!-- Bottom Action Buttons -->
-      <div style="display: flex; flex-direction: column; gap: 0.65rem;">
-        <a id="reg-success-mailto-btn" href="mailto:" class="btn btn-primary btn-lg" style="width: 100%; font-weight: 700; padding: 0.8rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; border-radius: var(--radius-md);">
-          <span>✉️ Send Registration Email Confirmation</span>
-        </a>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
-          <button type="button" class="btn btn-secondary" onclick="copyRegistrationEmailDetails()" style="font-size: 0.82rem; padding: 0.65rem;">
-            📋 Copy All Links
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <button type="button" class="btn btn-primary btn-lg" onclick="launchFromRegistration('desk')" style="font-weight: 700; padding: 0.85rem 1rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md); background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+            <span>💈 Launch Front Desk</span>
           </button>
-          <button type="button" class="btn btn-accent" onclick="closeRegistrationSuccessModal()" style="font-size: 0.85rem; padding: 0.65rem; font-weight: 700;">
-            🏠 Owner Dashboard
+          <button type="button" class="btn btn-secondary btn-lg" onclick="launchFromRegistration('owner')" style="font-weight: 700; padding: 0.85rem 1rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md); border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;">
+            <span>🔑 Owner Admin</span>
           </button>
         </div>
+        <button type="button" class="btn btn-secondary" onclick="copyRegistrationEmailDetails()" style="font-size: 0.82rem; padding: 0.65rem; width: 100%; border-color: var(--border-color); color: var(--text-muted);">
+          📋 Copy All Shop Links to Clipboard
+        </button>
       </div>
     </div>
   </div>
@@ -1952,6 +2178,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=3.0"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>

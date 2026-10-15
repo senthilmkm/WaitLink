@@ -2,6 +2,8 @@
 .env
 *.env
 stripe_credentials.json
+secrets.json
+**/secrets.json
 *.secret
 secrets/
 config.secrets.js

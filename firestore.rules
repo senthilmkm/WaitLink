@@ -24,16 +24,24 @@ service cloud.firestore {
       allow get: if true;
       
       // Listing/querying across shops is restricted to SuperAdmin or authenticated owners
-      allow list: if isSuperAdmin() || (isAuthenticated() && request.query.limit <= 100);
+      allow list: if isSuperAdmin() || isAuthenticated();
 
-      // Create new shop: authenticated users or onboarding registration
-      allow create: if isAuthenticated() || isSuperAdmin() || (
+      // Create new shop: authenticated users (defaulting to Starter plan) or SuperAdmin
+      allow create: if isSuperAdmin() || (
+        isAuthenticated() &&
         request.resource.data.shopName is string &&
-        request.resource.data.slug is string
+        request.resource.data.slug is string &&
+        (!('planPrice' in request.resource.data) || request.resource.data.planPrice == 0)
       );
 
-      // Update shop: SuperAdmin, Shop Owner, or public customer check-in queue update
-      allow update: if isSuperAdmin() || isShopOwner(resource.data) || (
+      // Update shop: SuperAdmin, Shop Owner (locked from changing pricing), or public customer check-in
+      allow update: if isSuperAdmin() || (
+        isShopOwner(resource.data) &&
+        // Shop owners cannot directly alter planPrice, planTitle, or Stripe credentials from the client SDK
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'planPrice', 'planTitle', 'subscriptionStatus', 'stripeCustomerId', 'stripeSessionId'
+        ])
+      ) || (
         // Allow customer self-checkin to append to queue or update queue items without modifying owner credentials
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive'])
       );
@@ -44,8 +52,8 @@ service cloud.firestore {
 
     // 2. Outbound SMS Messages (Twilio Extension Trigger Queue)
     match /messages/{messageId} {
-      // App can enqueue turn SMS notifications with basic schema validation
-      allow create: if request.resource.data.to is string && request.resource.data.body is string;
+      // Outbound SMS message creation requires authentication
+      allow create: if isSuperAdmin() || (isAuthenticated() && request.resource.data.to is string && request.resource.data.body is string);
       // Nobody on the public web can read, list, update, or delete SMS records
       allow read, update, delete: if isSuperAdmin();
     }

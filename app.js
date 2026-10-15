@@ -10,6 +10,10 @@ const DEFAULT_FIREBASE_CONFIG = {
 
 const SUPERADMIN_EMAIL = "senthil930@gmail.com";
 
+function isSuperAdmin() {
+  return !!(state.user && state.user.email && state.user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase());
+}
+
 // Local Secrets Configuration (Loaded from config.secrets.js or window.WAITLINK_SECRETS)
 const SECRETS = (typeof window !== "undefined" && window.WAITLINK_SECRETS) ? window.WAITLINK_SECRETS : {};
 
@@ -46,6 +50,43 @@ const state = {
   stageFocusedIndex: 0
 };
 window.state = state;
+
+// Plan Tier Identification & Paywall Enforcement Helpers
+function getActivePlanInfo() {
+  const planPrice = (state.config && state.config.planPrice !== undefined) ? state.config.planPrice : 0;
+  const planTitle = (state.config && state.config.planTitle) || "Starter Tier (Free)";
+  const isSuper = isSuperAdmin();
+  const isEnterprise = isSuper || planPrice === 49 || planTitle.toLowerCase().includes("enterprise");
+  const isPro = isSuper || isEnterprise || planPrice === 15 || planTitle.toLowerCase().includes("pro");
+  const isStarter = !isPro && !isEnterprise;
+  return { planPrice, planTitle, isEnterprise, isPro, isStarter, isSuper };
+}
+
+function isPaidTier() {
+  const { isPro, isEnterprise, isSuper } = getActivePlanInfo();
+  return isPro || isEnterprise || isSuper;
+}
+
+function isEnterpriseTier() {
+  const { isEnterprise, isSuper } = getActivePlanInfo();
+  return isEnterprise || isSuper;
+}
+
+function checkMonthlyCheckinLimit() {
+  if (isPaidTier()) return true;
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const historyThisMonth = (state.history || []).filter(h => {
+    const ts = h.checkedInAt || h.calledAt;
+    return ts && ts >= startOfMonth;
+  }).length;
+  const totalThisMonth = historyThisMonth + (state.queue ? state.queue.length : 0);
+  if (totalThisMonth >= 100) {
+    showToast("🔒 Monthly limit reached for Starter Tier (100 check-ins/month). Upgrade to Pro for unlimited walk-ins!");
+    openUpgradeModal();
+    return false;
+  }
+  return true;
+}
 
 // Theme Mode Manager (Dark / Light)
 let currentThemeMode = localStorage.getItem("waitlink_theme") || "dark";
@@ -124,8 +165,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const modeParam = params.get("mode") || params.get("view");
 
   if (shopParam) {
-    state.config.slug = shopParam;
-    state.isDemoMode = false;
+    const cleanShopParam = slugify(shopParam);
+    state.config.slug = cleanShopParam || shopParam;
+    state.isDemoMode = !state.user && (state.config.slug === "main-st-barbers");
+    if (state.config.slug !== "main-st-barbers") {
+      state.config.shopName = formatSlugToTitle(state.config.slug);
+      state.config.address = "";
+      state.config.phone = "";
+    }
     if (modeParam === "public") {
       const header = document.querySelector(".app-header");
       if (header) header.style.display = "none";
@@ -174,6 +221,7 @@ function initFirestore() {
     const statusLabel = document.getElementById("firestore-status-label");
     if (statusLabel) statusLabel.textContent = `Connected to Cloud Firestore (${fbConfig.projectId})`;
     subscribeFirestore();
+    initPricingConfigRealtimeSync();
   } catch (e) {
     console.warn("Firestore initialization error:", e);
   }
@@ -338,12 +386,34 @@ function subscribeFirestore(forceResubscribe = false) {
         showToast("🔔 New customer joined the queue!");
       }
     } else {
-      // Push initial clean data to cloud on first load for new shop
-      if (state.config.slug !== "main-st-barbers" && !state.isDemoMode) {
-        state.queue = [];
-        state.history = [];
+      // Document not found under exact doc ID -> search by slug field in Firestore
+      if (db) {
+        db.collection("shops").where("slug", "==", state.config.slug).limit(1).get()
+          .then(querySnap => {
+            if (!querySnap.empty) {
+              const data = querySnap.docs[0].data();
+              if (data.shopName) state.config.shopName = data.shopName;
+              if (data.name) state.config.shopName = data.name;
+              if (data.address !== undefined) state.config.address = data.address;
+              if (data.phone !== undefined) state.config.phone = data.phone;
+              if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
+              if (Array.isArray(data.queue)) state.queue = data.queue;
+              if (Array.isArray(data.history)) state.history = data.history;
+              updateConfigUI();
+              renderAll();
+            } else {
+              // Non-existent shop: never overwrite or pollute cloud Firestore with demo data!
+              if (state.config.slug !== "main-st-barbers" && !state.isDemoMode) {
+                state.queue = [];
+                state.history = [];
+                renderAll();
+              }
+            }
+          })
+          .catch(err => {
+            console.warn("Fallback slug search error:", err);
+          });
       }
-      saveData();
     }
   }, err => {
     console.error("Firestore real-time subscription error:", err);
@@ -353,6 +423,8 @@ function subscribeFirestore(forceResubscribe = false) {
 // Helper to track visited & created shops for quick switching
 function trackMyShop(slug, shopName) {
   if (!slug || !shopName) return;
+  // Never track the demo shop for regular users / business owners
+  if (slug === "main-st-barbers" && !isSuperAdmin()) return;
   if (!Array.isArray(state.myShops)) state.myShops = [];
   const existing = state.myShops.find(s => s.slug === slug);
   if (!existing) {
@@ -406,17 +478,12 @@ function loadConfig() {
   const params = new URLSearchParams(window.location.search);
   const urlSlug = params.get("s") || params.get("shop");
   if (urlSlug) {
-    state.config.slug = urlSlug.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  }
-
-  const paymentStatus = params.get("payment");
-  const paidTier = params.get("tier");
-  if (paymentStatus === "success") {
-    let title = paidTier === "enterprise" ? "Enterprise Tier" : "Pro Business Tier";
-    let price = paidTier === "enterprise" ? 49 : 15;
-    state.config.planTitle = title;
-    state.config.planPrice = price;
-    saveConfig();
+    state.config.slug = slugify(urlSlug);
+    if (state.config.slug !== "main-st-barbers") {
+      state.config.shopName = formatSlugToTitle(state.config.slug);
+      state.config.address = "";
+      state.config.phone = "";
+    }
   }
 
   // Load tracked user shops
@@ -424,13 +491,17 @@ function loadConfig() {
   if (savedMyShops) {
     try { state.myShops = JSON.parse(savedMyShops); } catch (e) { state.myShops = []; }
   }
-  if (!Array.isArray(state.myShops) || state.myShops.length === 0) {
-    state.myShops = [
-      { slug: "main-st-barbers", shopName: "Main St Barbers" }
-    ];
+  if (!Array.isArray(state.myShops)) {
+    state.myShops = [];
+  }
+  // Never persist demo shop in local cache unless SuperAdmin
+  if (!isSuperAdmin()) {
+    state.myShops = state.myShops.filter(s => s && s.slug !== "main-st-barbers");
   }
 
-  trackMyShop(state.config.slug, state.config.shopName);
+  if (state.config.slug !== "main-st-barbers" || isSuperAdmin()) {
+    trackMyShop(state.config.slug, state.config.shopName);
+  }
 
   // Ensure isDemoMode is false for any custom user shop
   if (state.config.slug && state.config.slug !== "main-st-barbers") {
@@ -453,12 +524,32 @@ function saveConfig() {
   subscribeFirestore(); // Re-subscribe to new shop document
 }
 
+function slugify(text) {
+  return String(text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, "-")        // Turn spaces and underscores into hyphens
+    .replace(/[^a-z0-9-]/g, "")      // Strip non-alphanumeric except hyphens
+    .replace(/--+/g, "-")           // Collapse consecutive hyphens
+    .replace(/^-+|-+$/g, "");       // Strip leading and trailing hyphens
+}
+
+function formatSlugToTitle(slug) {
+  if (!slug) return "WaitLink";
+  return String(slug)
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function getPublicUrl() {
-  const host = window.location.origin;
-  const baseUrl = (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("file://"))
-    ? "https://waitlink.app"
-    : host;
-  return `${baseUrl}?s=${state.config.slug}&view=public`;
+  // Always enforce the clean canonical domain for customer-facing public links and SMS
+  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const baseUrl = isLocal ? window.location.origin : "https://waitlink.app";
+  const cleanSlug = slugify(state.config.slug || state.config.shopName || "main-st-barbers");
+  return `${baseUrl}?s=${encodeURIComponent(cleanSlug)}&view=public`;
 }
 
 function setElText(id, text) {
@@ -486,6 +577,13 @@ function formatDatetimeLocalVal(val) {
   }
 }
 
+function maskPhone(phone) {
+  if (!phone || typeof phone !== "string") return "";
+  const cleaned = phone.trim();
+  if (cleaned.length < 4) return "(***) ***-****";
+  return `(***) ***-${cleaned.slice(-4)}`;
+}
+
 function setElValue(id, val) {
   const el = document.getElementById(id);
   if (el && document.activeElement !== el) el.value = val;
@@ -496,7 +594,19 @@ function updateConfigUI() {
   setElText("owner-shop-name", state.config.shopName);
   setElText("public-shop-name", state.config.shopName);
   setElText("poster-shop-name", state.config.shopName.toUpperCase());
-  setElText("header-shop-name", state.config.shopName);
+
+  // Ensure header shop chip never shows demo shop for authenticated business owners
+  if (state.config.slug === "main-st-barbers" && state.user && !isSuperAdmin()) {
+    const myShops = Array.isArray(state.registeredShops) ? state.registeredShops.filter(s => s.slug !== "main-st-barbers") : [];
+    if (myShops.length > 0) {
+      setElText("header-shop-name", myShops[0].shopName || myShops[0].name);
+    } else {
+      setElText("header-shop-name", "My Shop");
+    }
+  } else {
+    setElText("header-shop-name", state.config.shopName);
+  }
+
   setElText("menu-current-shop", state.config.shopName);
   setElText("mobile-drawer-shop-name", state.config.shopName);
   
@@ -515,15 +625,10 @@ function updateConfigUI() {
   setElValue("twilio-account-sid", twilio.accountSid || SECRETS.TWILIO_ACCOUNT_SID || "");
   setElValue("twilio-auth-token", twilio.authToken || SECRETS.TWILIO_AUTH_TOKEN || "");
   
-  let fromPhoneDisplay = twilio.fromPhone || DEFAULT_TWILIO_FROM_DISPLAY;
-  const cleanFromDigits = fromPhoneDisplay.replace(/\D/g, "");
-  if (!cleanFromDigits || cleanFromDigits.includes("9802531359") || cleanFromDigits.includes("8774153678")) {
-    fromPhoneDisplay = DEFAULT_TWILIO_FROM_DISPLAY;
-    if (state.config.twilio) {
-      state.config.twilio.fromPhone = DEFAULT_TWILIO_FROM;
-    }
-  }
-  setElValue("twilio-from-phone", fromPhoneDisplay);
+  const fromPhoneDigits = String(DEFAULT_TWILIO_FROM).replace(/\D/g, "");
+  const last4 = fromPhoneDigits.slice(-4) || "7464";
+  const maskedFromDisplay = `+1 (•••) •••-${last4}`;
+  setElValue("twilio-from-phone", maskedFromDisplay);
 
   const serveNowTpl = (twilio && twilio.serveNowSmsTemplate) || DEFAULT_SERVE_NOW_SMS;
   setElValue("twilio-serve-now-template", serveNowTpl);
@@ -533,7 +638,8 @@ function updateConfigUI() {
   setElValue("share-url-input", publicUrl);
   setElText("poster-url-text", publicUrl.replace("https://", ""));
 
-  // Custom Logo updates
+  // Custom Logo updates (Pro / Enterprise Tier feature)
+  const isPaid = isPaidTier();
   const logoUrl = state.config.logoUrl || "";
   const publicLogo = document.getElementById("public-shop-logo");
   const posterLogo = document.getElementById("poster-shop-logo");
@@ -543,7 +649,7 @@ function updateConfigUI() {
 
   if (logoInput && !logoUrl.startsWith("data:")) logoInput.value = logoUrl;
 
-  if (logoUrl) {
+  if (logoUrl && isPaid) {
     if (publicLogo) { publicLogo.src = logoUrl; publicLogo.classList.remove("hidden"); }
     if (posterLogo) { posterLogo.src = logoUrl; posterLogo.classList.remove("hidden"); }
     if (previewBox && previewImg) {
@@ -553,7 +659,12 @@ function updateConfigUI() {
   } else {
     if (publicLogo) { publicLogo.src = ""; publicLogo.classList.add("hidden"); }
     if (posterLogo) { posterLogo.src = ""; posterLogo.classList.add("hidden"); }
-    if (previewBox) { previewBox.style.display = "none"; }
+    if (previewBox && previewImg && logoUrl) {
+      previewImg.src = logoUrl;
+      previewBox.style.display = "flex";
+    } else if (previewBox) {
+      previewBox.style.display = "none";
+    }
   }
 
   // Settings inputs
@@ -674,6 +785,11 @@ function handleCheckIn(event) {
   const name = input ? input.value.trim() : "";
   if (!name) return;
 
+  // Monthly Check-in Limit Gate for Starter Plan (Up to 100/mo)
+  if (!checkMonthlyCheckinLimit()) {
+    return;
+  }
+
   if (submitBtn) submitBtn.disabled = true;
 
   const serviceSelect = document.getElementById("desk-service-select");
@@ -747,6 +863,12 @@ function formatPhoneE164(phone) {
 function onTwilioToggleChange() {
   const check = document.getElementById("twilio-enable-checkbox");
   if (!check) return;
+  if (!isPaidTier()) {
+    check.checked = false;
+    showToast("🔒 Automated Twilio SMS Customer Alerts is a Pro Business feature ($15/mo). Upgrade to enable!");
+    openUpgradeModal();
+    return;
+  }
   state.config.twilio = {
     ...(state.config.twilio || {}),
     enabled: check.checked
@@ -822,16 +944,18 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
     return { success: false, error: "Twilio SMS is disabled in Shop Settings" };
   }
 
+  if (!isPaidTier() && !metadata.isTest) {
+    return { success: false, error: "Automated SMS alerts require Pro Business tier ($15/mo). Upgrade to send SMS." };
+  }
+
   const sidInput = document.getElementById("twilio-account-sid");
   const tokenInput = document.getElementById("twilio-auth-token");
   const fromInput = document.getElementById("twilio-from-phone");
 
   const sid = (sidInput && sidInput.value.trim()) || twilioConfig.accountSid || SECRETS.TWILIO_ACCOUNT_SID || "";
   const token = (tokenInput && tokenInput.value.trim()) || twilioConfig.authToken || SECRETS.TWILIO_AUTH_TOKEN || "";
-  let rawFrom = (fromInput && fromInput.value.trim()) || twilioConfig.fromPhone || DEFAULT_TWILIO_FROM;
-  if (rawFrom.replace(/\D/g, "").includes("9802531359") || rawFrom.replace(/\D/g, "").includes("8774153678")) {
-    rawFrom = DEFAULT_TWILIO_FROM;
-  }
+  // Twilio Sender is strictly platform-managed and locked (never read from masked input)
+  const rawFrom = DEFAULT_TWILIO_FROM;
   const e164From = formatPhoneE164(rawFrom) || DEFAULT_TWILIO_FROM;
 
   // 1. Write to Firestore 'messages' collection (Trigger for Firebase Twilio Extension / Cloud Function)
@@ -852,35 +976,51 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
     }
   }
 
-  // 2. Direct Twilio HTTPS REST API Call (Instant Fallback)
+  // 2. Dispatch via Cloud Function backend (Bypasses browser CORS & securely delivers SMS)
   try {
-    const auth = "Basic " + btoa(`${sid}:${token}`);
-    const postData = `To=${encodeURIComponent(e164Phone)}&From=${encodeURIComponent(e164From)}&Body=${encodeURIComponent(messageBody)}`;
+    let authHeader = "";
+    if (typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
+      try {
+        const idToken = await firebase.auth().currentUser.getIdToken();
+        authHeader = `Bearer ${idToken}`;
+      } catch (e) {}
+    }
 
-    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    const cloudRes = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendTwilioSms", {
       method: "POST",
       headers: {
-        "Authorization": auth,
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/json",
+        ...(authHeader ? { "Authorization": authHeader } : {})
       },
-      body: postData
+      body: JSON.stringify({
+        to: e164Phone,
+        from: e164From,
+        body: messageBody,
+        slug: state.config.slug || "main-st-barbers"
+      })
     });
 
-    const data = await response.json();
-    if (response.ok && data.sid) {
-      console.log("Twilio SMS dispatched successfully! SID:", data.sid);
+    const data = await cloudRes.json().catch(() => ({}));
+    if (cloudRes.ok && data.success && data.sid) {
+      console.log("Twilio SMS dispatched successfully via Cloud Function! SID:", data.sid);
       return { success: true, sid: data.sid, data };
     } else {
-      console.warn("Twilio REST API Error:", data);
-      return { success: false, error: data.message || `Twilio Error Code ${data.code}`, code: data.code, data };
+      console.warn("Twilio Cloud Function notice:", data);
+      return { success: false, error: data.error || "Failed to dispatch SMS via Twilio", code: data.code, data };
     }
   } catch (err) {
-    console.error("Twilio fetch exception:", err);
-    return { success: false, error: err.message };
+    console.error("Twilio dispatch exception:", err);
+    return { success: false, error: err.message || "Failed to dispatch SMS" };
   }
 }
 
 async function sendTestSmsUI() {
+  if (!isPaidTier()) {
+    showToast("🔒 Automated Twilio SMS Customer Alerts is a Pro Business feature ($15/mo). Upgrade to send test SMS!");
+    openUpgradeModal();
+    return;
+  }
+
   const ownerPhoneInput = document.getElementById("owner-input-phone");
   const targetPhone = (ownerPhoneInput && ownerPhoneInput.value.trim()) || state.config.phone || "9802531359";
   
@@ -1284,10 +1424,10 @@ function renderSubscriptionBadges() {
       dropdownBadge.style.background = "rgba(16, 185, 129, 0.15)";
       dropdownBadge.style.borderColor = "rgba(16, 185, 129, 0.3)";
     } else {
-      dropdownBadge.innerHTML = `<span class="pulse-dot"></span> Starter Plan (Free)`;
-      dropdownBadge.style.color = "var(--text-subtle)";
-      dropdownBadge.style.background = "rgba(255, 255, 255, 0.08)";
-      dropdownBadge.style.borderColor = "var(--border-color)";
+      dropdownBadge.innerHTML = `<span class="pulse-dot" style="background:#10b981;"></span> Active: Starter Plan (Free)`;
+      dropdownBadge.style.color = "#10b981";
+      dropdownBadge.style.background = "rgba(16, 185, 129, 0.15)";
+      dropdownBadge.style.borderColor = "rgba(16, 185, 129, 0.35)";
     }
   }
 
@@ -1301,6 +1441,268 @@ function renderSubscriptionBadges() {
 
   if (dropdownSubItemLabel) {
     dropdownSubItemLabel.textContent = isSubscribed ? "⚙️ Manage Subscription" : "🚀 Upgrade Subscription";
+  }
+
+  // 4. Starter Upgrade Callout Banner on Owner Dashboard
+  const isPaid = isPaidTier();
+  const ownerUpgradeCallout = document.getElementById("owner-starter-upgrade-callout");
+  if (ownerUpgradeCallout) {
+    if (!isPaid) {
+      ownerUpgradeCallout.classList.remove("hidden");
+    } else {
+      ownerUpgradeCallout.classList.add("hidden");
+    }
+  }
+
+  // 5. CSV Pro Badges
+  const deskCsvBadge = document.getElementById("desk-csv-pro-badge");
+  const ownerCsvBadge = document.getElementById("owner-csv-pro-badge");
+  if (deskCsvBadge) {
+    if (!isPaid) deskCsvBadge.classList.remove("hidden");
+    else deskCsvBadge.classList.add("hidden");
+  }
+  if (ownerCsvBadge) {
+    if (!isPaid) ownerCsvBadge.classList.remove("hidden");
+    else ownerCsvBadge.classList.add("hidden");
+  }
+
+  // 6. Dynamic Feature Lockdown Enforcement
+  updateTierFeatureLockdown();
+}
+
+// Complete Paywall Feature Lockdown (Fields, Controls, File Pickers & Banners)
+function updateTierFeatureLockdown() {
+  const isPaid = isPaidTier();
+
+  // 1. Promotional Offer Card & Controls
+  const promoCard = document.getElementById("owner-promo-card");
+  const promoBanner = document.getElementById("promo-locked-banner");
+  const promoBadge = document.getElementById("promo-badge-pill");
+  const promoInput = document.getElementById("owner-input-promo");
+  const promoStart = document.getElementById("owner-input-promo-start");
+  const promoEnd = document.getElementById("owner-input-promo-end");
+
+  if (promoCard) {
+    if (!isPaid) {
+      promoCard.classList.add("locked");
+      if (promoBanner) promoBanner.classList.remove("hidden");
+      if (promoBadge) {
+        promoBadge.className = "badge-pro-pill locked";
+        promoBadge.textContent = "🔒 PRO";
+      }
+      if (promoInput) {
+        promoInput.disabled = true;
+        promoInput.readOnly = true;
+        promoInput.placeholder = "🔒 Locked: Upgrade to Pro Business ($15/mo) to publish promotions";
+      }
+      if (promoStart) {
+        promoStart.disabled = true;
+        promoStart.readOnly = true;
+      }
+      if (promoEnd) {
+        promoEnd.disabled = true;
+        promoEnd.readOnly = true;
+      }
+      promoCard.onclick = (e) => {
+        if (e.target && e.target.closest && e.target.closest(".btn-upgrade-action")) return;
+        showToast("🔒 Promotional Offers is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
+      promoCard.style.cursor = "pointer";
+    } else {
+      promoCard.classList.remove("locked");
+      if (promoBanner) promoBanner.classList.add("hidden");
+      if (promoBadge) {
+        promoBadge.className = "badge-pro-pill unlocked";
+        promoBadge.textContent = "✓ UNLOCKED";
+      }
+      if (promoInput) {
+        promoInput.disabled = false;
+        promoInput.readOnly = false;
+        promoInput.placeholder = "e.g. 🎉 20% Off All Haircuts During Happy Hour!";
+      }
+      if (promoStart) {
+        promoStart.disabled = false;
+        promoStart.readOnly = false;
+      }
+      if (promoEnd) {
+        promoEnd.disabled = false;
+        promoEnd.readOnly = false;
+      }
+      promoCard.onclick = null;
+      promoCard.style.cursor = "default";
+    }
+  }
+
+  // 2. Custom Shop Logo Branding Card & Controls
+  const logoCard = document.getElementById("owner-logo-card");
+  const logoBanner = document.getElementById("logo-locked-banner");
+  const logoBadge = document.getElementById("logo-badge-pill");
+  const logoFileInput = document.getElementById("owner-file-logo");
+  const logoUploadBtn = document.getElementById("owner-btn-upload-logo");
+  const logoUrlInput = document.getElementById("owner-input-logourl");
+  const logoRemoveBtn = document.getElementById("owner-btn-remove-logo");
+
+  if (logoCard) {
+    if (!isPaid) {
+      logoCard.classList.add("locked");
+      if (logoBanner) logoBanner.classList.remove("hidden");
+      if (logoBadge) {
+        logoBadge.className = "badge-pro-pill locked";
+        logoBadge.textContent = "🔒 PRO";
+      }
+      if (logoFileInput) logoFileInput.disabled = true;
+      if (logoUploadBtn) {
+        logoUploadBtn.disabled = true;
+        logoUploadBtn.style.cursor = "not-allowed";
+      }
+      if (logoUrlInput) {
+        logoUrlInput.disabled = true;
+        logoUrlInput.readOnly = true;
+        logoUrlInput.placeholder = "🔒 Locked: Upgrade to Pro Business ($15/mo) for custom logo branding";
+      }
+      if (logoRemoveBtn) logoRemoveBtn.disabled = true;
+
+      logoCard.onclick = (e) => {
+        if (e.target && e.target.closest && e.target.closest(".btn-upgrade-action")) return;
+        showToast("🔒 Custom Shop Logo Branding is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
+      logoCard.style.cursor = "pointer";
+    } else {
+      logoCard.classList.remove("locked");
+      if (logoBanner) logoBanner.classList.add("hidden");
+      if (logoBadge) {
+        logoBadge.className = "badge-pro-pill unlocked";
+        logoBadge.textContent = "✓ UNLOCKED";
+      }
+      if (logoFileInput) logoFileInput.disabled = false;
+      if (logoUploadBtn) {
+        logoUploadBtn.disabled = false;
+        logoUploadBtn.style.cursor = "pointer";
+      }
+      if (logoUrlInput) {
+        logoUrlInput.disabled = false;
+        logoUrlInput.readOnly = false;
+        logoUrlInput.placeholder = "Or paste Image URL (https://...)";
+      }
+      if (logoRemoveBtn) logoRemoveBtn.disabled = false;
+
+      logoCard.onclick = null;
+      logoCard.style.cursor = "default";
+    }
+  }
+
+  // 3. Twilio SMS Notifications Card & Controls
+  const twilioCard = document.getElementById("owner-twilio-card");
+  const twilioBanner = document.getElementById("twilio-locked-banner");
+  const twilioBadge = document.getElementById("twilio-badge-pill");
+  const twilioCheckbox = document.getElementById("twilio-enable-checkbox");
+  const twilioTestBtn = document.getElementById("btn-send-test-sms");
+  const twilioTemplate = document.getElementById("twilio-serve-now-template");
+  const twilioResetBtn = document.getElementById("btn-reset-sms-tpl");
+  const twilioTagBtns = document.querySelectorAll(".btn-sms-tag");
+
+  if (twilioCard) {
+    if (!isPaid) {
+      twilioCard.classList.add("locked");
+      if (twilioBanner) twilioBanner.classList.remove("hidden");
+      if (twilioBadge) {
+        twilioBadge.className = "badge-pro-pill locked";
+        twilioBadge.textContent = "🔒 PRO";
+      }
+      if (twilioCheckbox) {
+        twilioCheckbox.checked = false;
+        twilioCheckbox.disabled = true;
+      }
+      if (twilioTestBtn) twilioTestBtn.disabled = true;
+      if (twilioTemplate) {
+        twilioTemplate.disabled = true;
+        twilioTemplate.readOnly = true;
+        twilioTemplate.placeholder = "🔒 Locked: Upgrade to Pro Business ($15/mo) to customize automated SMS alerts";
+      }
+      if (twilioResetBtn) twilioResetBtn.disabled = true;
+      twilioTagBtns.forEach(btn => {
+        btn.disabled = true;
+      });
+
+      twilioCard.onclick = (e) => {
+        if (e.target && e.target.closest && e.target.closest(".btn-upgrade-action")) return;
+        showToast("🔒 Automated Twilio SMS Notifications is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
+      twilioCard.style.cursor = "pointer";
+    } else {
+      twilioCard.classList.remove("locked");
+      if (twilioBanner) twilioBanner.classList.add("hidden");
+      if (twilioBadge) {
+        twilioBadge.className = "badge-pro-pill unlocked";
+        twilioBadge.textContent = "✓ UNLOCKED";
+      }
+      if (twilioCheckbox) {
+        twilioCheckbox.disabled = false;
+        const twilioConfig = (state.config && state.config.twilio) || {};
+        twilioCheckbox.checked = twilioConfig.enabled !== false;
+      }
+      if (twilioTestBtn) twilioTestBtn.disabled = false;
+      if (twilioTemplate) {
+        twilioTemplate.disabled = false;
+        twilioTemplate.readOnly = false;
+        twilioTemplate.placeholder = "Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}";
+      }
+      if (twilioResetBtn) twilioResetBtn.disabled = false;
+      twilioTagBtns.forEach(btn => {
+        btn.disabled = false;
+      });
+
+      twilioCard.onclick = null;
+      twilioCard.style.cursor = "default";
+    }
+  }
+}
+
+// Onboarding Modal Plan Selection Handler
+function updateOnboardPlanSelection() {
+  const planSelect = document.getElementById("onboard-plan");
+  const promoCard = document.getElementById("onboard-promo-card");
+  const promoBanner = document.getElementById("onboard-promo-locked-banner");
+  const promoBadge = document.getElementById("onboard-promo-badge");
+  const promoText = document.getElementById("onboard-promo-text");
+  const promoStart = document.getElementById("onboard-promo-start");
+  const promoEnd = document.getElementById("onboard-promo-end");
+
+  if (!planSelect || !promoCard) return;
+
+  const isStarter = planSelect.value === "starter";
+
+  if (isStarter) {
+    promoCard.classList.add("locked");
+    if (promoBanner) promoBanner.classList.remove("hidden");
+    if (promoBadge) {
+      promoBadge.className = "badge-pro-pill locked";
+      promoBadge.textContent = "🔒 PRO";
+    }
+    if (promoText) {
+      promoText.disabled = true;
+      promoText.readOnly = true;
+      promoText.placeholder = "🔒 Available on Pro Business ($15/mo) & Enterprise";
+    }
+    if (promoStart) promoStart.disabled = true;
+    if (promoEnd) promoEnd.disabled = true;
+  } else {
+    promoCard.classList.remove("locked");
+    if (promoBanner) promoBanner.classList.add("hidden");
+    if (promoBadge) {
+      promoBadge.className = "badge-pro-pill unlocked";
+      promoBadge.textContent = "✓ UNLOCKED";
+    }
+    if (promoText) {
+      promoText.disabled = false;
+      promoText.readOnly = false;
+      promoText.placeholder = "e.g. 🎉 20% Off All Haircuts During Happy Hour!";
+    }
+    if (promoStart) promoStart.disabled = false;
+    if (promoEnd) promoEnd.disabled = false;
   }
 }
 
@@ -1336,8 +1738,29 @@ function renderOwnerMetrics() {
   const ownerServedEl = document.getElementById("owner-served-today");
   if (ownerServedEl) ownerServedEl.textContent = servedCount;
   
+  const isPaid = isPaidTier();
+  const cardCancel = document.getElementById("card-metric-cancellations");
+  const cancelCap = document.getElementById("owner-cancellations-caption");
+
   const ownerCancelEl = document.getElementById("owner-cancellations");
-  if (ownerCancelEl) ownerCancelEl.textContent = `${cancelledCount} (${cancellationRate}%)`;
+  if (ownerCancelEl) {
+    if (!isPaid) {
+      ownerCancelEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
+      if (cancelCap) cancelCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
+      if (cardCancel) {
+        cardCancel.style.cursor = "pointer";
+        cardCancel.title = "Walk-Away Cancellation Loss Tracking is a Pro feature ($15/mo). Click to upgrade.";
+        cardCancel.onclick = () => {
+          showToast("🔒 Walk-Away Cancellation Loss Tracking is a Pro Business feature ($15/mo). Upgrade to unlock!");
+          openUpgradeModal();
+        };
+      }
+    } else {
+      if (cardCancel) { cardCancel.onclick = null; cardCancel.style.cursor = "default"; cardCancel.title = ""; }
+      if (cancelCap) cancelCap.textContent = "Cancelled walk-ins today";
+      ownerCancelEl.textContent = `${cancelledCount} (${cancellationRate}%)`;
+    }
+  }
 
   const ownerLobbyEl = document.getElementById("owner-lobby-count");
   if (ownerLobbyEl) ownerLobbyEl.textContent = state.queue.length;
@@ -1363,56 +1786,97 @@ function renderOwnerMetrics() {
   }
 
   // Calculate Peak Rush Hour Window (Strictly for TODAY's visits)
-  const todayEntries = [...state.history, ...state.queue].filter(item => {
-    const ts = item.checkedInAt || item.calledAt;
-    return ts && ts >= startOfToday;
-  });
+  const cardPeakHour = document.getElementById("card-metric-peakhour");
+  const peakCap = document.getElementById("owner-peakhour-caption");
+  const ownerPeakHourEl = document.getElementById("owner-peak-hour");
 
-  if (todayEntries.length > 0) {
-    const hourCounts = {};
-    todayEntries.forEach(item => {
-      const ts = item.checkedInAt || item.calledAt;
-      const date = new Date(ts);
-      const hour = date.getHours();
-      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-    });
-
-    let maxHour = -1;
-    let maxCount = 0;
-    Object.keys(hourCounts).forEach(h => {
-      if (hourCounts[h] > maxCount) {
-        maxCount = hourCounts[h];
-        maxHour = parseInt(h, 10);
-      }
-    });
-
-    const ownerPeakHourEl = document.getElementById("owner-peak-hour");
-    if (ownerPeakHourEl && maxHour !== -1) {
-      const ampm = maxHour >= 12 ? "PM" : "AM";
-      const displayHour = maxHour % 12 === 0 ? 12 : maxHour % 12;
-      const nextH = maxHour + 1;
-      const nextHour = nextH % 12 === 0 ? 12 : nextH % 12;
-      const nextAmpm = nextH >= 12 && nextH < 24 ? "PM" : "AM";
-      ownerPeakHourEl.textContent = `${displayHour} ${ampm} - ${nextHour} ${nextAmpm}`;
+  if (!isPaid) {
+    if (ownerPeakHourEl) {
+      ownerPeakHourEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
+    }
+    if (peakCap) peakCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
+    if (cardPeakHour) {
+      cardPeakHour.style.cursor = "pointer";
+      cardPeakHour.title = "Peak Rush Hour Window Insights is a Pro feature ($15/mo). Click to upgrade.";
+      cardPeakHour.onclick = () => {
+        showToast("🔒 Peak Rush Hour Window Insights is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
     }
   } else {
-    const ownerPeakHourEl = document.getElementById("owner-peak-hour");
-    if (ownerPeakHourEl) ownerPeakHourEl.textContent = "--";
+    if (cardPeakHour) { cardPeakHour.onclick = null; cardPeakHour.style.cursor = "default"; cardPeakHour.title = ""; }
+    if (peakCap) peakCap.textContent = "Highest traffic hour";
+
+    const todayEntries = [...state.history, ...state.queue].filter(item => {
+      const ts = item.checkedInAt || item.calledAt;
+      return ts && ts >= startOfToday;
+    });
+
+    if (todayEntries.length > 0) {
+      const hourCounts = {};
+      todayEntries.forEach(item => {
+        const ts = item.checkedInAt || item.calledAt;
+        const date = new Date(ts);
+        const hour = date.getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+
+      let maxHour = -1;
+      let maxCount = 0;
+      Object.keys(hourCounts).forEach(h => {
+        if (hourCounts[h] > maxCount) {
+          maxCount = hourCounts[h];
+          maxHour = parseInt(h, 10);
+        }
+      });
+
+      if (ownerPeakHourEl && maxHour !== -1) {
+        const ampm = maxHour >= 12 ? "PM" : "AM";
+        const displayHour = maxHour % 12 === 0 ? 12 : maxHour % 12;
+        const nextH = maxHour + 1;
+        const nextHour = nextH % 12 === 0 ? 12 : nextH % 12;
+        const nextAmpm = nextH >= 12 && nextH < 24 ? "PM" : "AM";
+        ownerPeakHourEl.textContent = `${displayHour} ${ampm} - ${nextHour} ${nextAmpm}`;
+      }
+    } else {
+      if (ownerPeakHourEl) ownerPeakHourEl.textContent = "--";
+    }
   }
 
   // Calculate Staff Speed (Visits / Hour)
+  const cardThroughput = document.getElementById("card-metric-throughput");
+  const speedCap = document.getElementById("owner-throughput-caption");
   const ownerThroughputEl = document.getElementById("owner-throughput");
-  if (ownerThroughputEl) {
-    if (todayCalledVisits.length > 0) {
-      const timestamps = todayCalledVisits.map(v => v.calledAt || v.checkedInAt);
-      const minTime = Math.min(...timestamps);
-      const maxTime = Math.max(...timestamps, Date.now());
-      // Minimum elapsed window set to 0.1 hour (6 minutes) to avoid artificial under-reporting early in the day
-      const hoursElapsed = Math.max(0.1, (maxTime - minTime) / (1000 * 60 * 60));
-      const throughput = (servedCount / hoursElapsed).toFixed(1);
-      ownerThroughputEl.textContent = `${throughput} / hr`;
-    } else {
-      ownerThroughputEl.textContent = "--";
+
+  if (!isPaid) {
+    if (ownerThroughputEl) {
+      ownerThroughputEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
+    }
+    if (speedCap) speedCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
+    if (cardThroughput) {
+      cardThroughput.style.cursor = "pointer";
+      cardThroughput.title = "Staff Speed (Throughput) Analytics is a Pro feature ($15/mo). Click to upgrade.";
+      cardThroughput.onclick = () => {
+        showToast("🔒 Staff Speed (Throughput) Analytics is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
+    }
+  } else {
+    if (cardThroughput) { cardThroughput.onclick = null; cardThroughput.style.cursor = "default"; cardThroughput.title = ""; }
+    if (speedCap) speedCap.textContent = "Visits served per hour";
+
+    if (ownerThroughputEl) {
+      if (todayCalledVisits.length > 0) {
+        const timestamps = todayCalledVisits.map(v => v.calledAt || v.checkedInAt);
+        const minTime = Math.min(...timestamps);
+        const maxTime = Math.max(...timestamps, Date.now());
+        // Minimum elapsed window set to 0.1 hour (6 minutes) to avoid artificial under-reporting early in the day
+        const hoursElapsed = Math.max(0.1, (maxTime - minTime) / (1000 * 60 * 60));
+        const throughput = (servedCount / hoursElapsed).toFixed(1);
+        ownerThroughputEl.textContent = `${throughput} / hr`;
+      } else {
+        ownerThroughputEl.textContent = "--";
+      }
     }
   }
 
@@ -1479,21 +1943,46 @@ function populateOwnerInputs() {
   const previewBox = document.getElementById("logo-preview-box");
   const previewImg = document.getElementById("logo-preview-img");
   if (previewBox && previewImg) {
-    if (state.config.logoUrl) {
+    if (state.config.logoUrl && isPaidTier()) {
       previewImg.src = state.config.logoUrl;
       previewBox.style.display = "flex";
     } else {
       previewBox.style.display = "none";
     }
   }
+
+  // Enforce tier lockdown on inputs immediately after populating
+  updateTierFeatureLockdown();
 }
 
-// Save Owner Dashboard Settings
-function saveOwnerSettings() {
+// Save Owner Dashboard Settings (Option 1: Modern SaaS Micro-Feedback)
+async function saveOwnerSettings() {
+  const saveBtn = document.getElementById("btn-save-owner-settings");
+  const saveIcon = document.getElementById("save-btn-icon");
+  const saveText = document.getElementById("save-btn-text");
+  const saveStatus = document.getElementById("owner-save-status");
+
+  // Step 1: Immediate Visual Feedback (Saving State)
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    if (saveIcon) saveIcon.textContent = "⏳";
+    if (saveText) saveText.textContent = "Saving changes...";
+    saveBtn.style.opacity = "0.85";
+  }
+  if (saveStatus) {
+    saveStatus.style.display = "inline-flex";
+    saveStatus.style.color = "#94a3b8";
+    saveStatus.style.background = "rgba(148, 163, 184, 0.1)";
+    saveStatus.style.borderColor = "rgba(148, 163, 184, 0.25)";
+    saveStatus.innerHTML = `<span>⏳</span> <span>Syncing to cloud...</span>`;
+  }
+
   const shopNameInput = document.getElementById("owner-input-shopname");
   const slugInput = document.getElementById("owner-input-slug");
   const shopName = shopNameInput ? shopNameInput.value.trim() || "Main St Barbers" : "Main St Barbers";
-  const slug = slugInput ? slugInput.value.trim() || "main-st-barbers" : "main-st-barbers";
+  const rawSlug = slugInput ? slugInput.value.trim() : "";
+  const slug = slugify(rawSlug || shopName || "main-st-barbers");
+  if (slugInput) slugInput.value = slug;
 
   const address = document.getElementById("owner-input-address") ? document.getElementById("owner-input-address").value.trim() : "";
   const phone = document.getElementById("owner-input-phone") ? document.getElementById("owner-input-phone").value.trim() : "";
@@ -1514,9 +2003,52 @@ function saveOwnerSettings() {
 
   const twilioEnable = document.getElementById("twilio-enable-checkbox") ? document.getElementById("twilio-enable-checkbox").checked : true;
   const twilioAccountSid = document.getElementById("twilio-account-sid") ? document.getElementById("twilio-account-sid").value.trim() : (SECRETS.TWILIO_ACCOUNT_SID || "");
-  let twilioFromPhone = document.getElementById("twilio-from-phone") ? document.getElementById("twilio-from-phone").value.trim() : DEFAULT_TWILIO_FROM;
-  if (!twilioFromPhone || twilioFromPhone.replace(/\D/g, "").includes("9802531359") || twilioFromPhone.replace(/\D/g, "").includes("8774153678")) {
-    twilioFromPhone = DEFAULT_TWILIO_FROM;
+  const twilioAuthToken = document.getElementById("twilio-auth-token") ? document.getElementById("twilio-auth-token").value.trim() : (SECRETS.TWILIO_AUTH_TOKEN || "");
+  // Twilio Sender Phone is strictly platform-managed (protected)
+  const twilioFromPhone = DEFAULT_TWILIO_FROM;
+
+  const isPaid = isPaidTier();
+
+  // Paywall Gate: Custom Logo Branding (Pro / Enterprise feature)
+  if (logoUrl && logoUrl.trim() && !isPaid) {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.opacity = "1";
+    }
+    if (saveStatus) saveStatus.style.display = "none";
+    showToast("🔒 Custom Shop Logo Branding is a Pro Business feature ($15/mo). Upgrade to brand your shop!");
+    openUpgradeModal();
+    return;
+  }
+
+  // Paywall Gate: Promotional Offer Banners (Pro / Enterprise feature)
+  if (promoText && promoText.trim() && !isPaid) {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.opacity = "1";
+    }
+    if (saveStatus) saveStatus.style.display = "none";
+    showToast("🔒 Promotional Offer Banners are a Pro Business feature ($15/mo). Upgrade to display promos on your public queue screen!");
+    openUpgradeModal();
+    return;
+  }
+
+  // Paywall Gate: Automated Twilio SMS (Pro / Enterprise feature)
+  if (twilioEnable && !isPaid) {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.opacity = "1";
+    }
+    if (saveStatus) saveStatus.style.display = "none";
+    showToast("🔒 Automated Twilio SMS Customer Alerts is a Pro Business feature ($15/mo). Upgrade to enable SMS notifications!");
+    openUpgradeModal();
+    return;
   }
 
   state.config = {
@@ -1547,11 +2079,63 @@ function saveOwnerSettings() {
   saveData();
   generateQRCode();
   renderAll();
-  showToast("Shop Profile & Branding updated!");
+
+  // Subtle 350ms delay so the tactile transition feels natural
+  await new Promise(r => setTimeout(r, 350));
+
+  // Step 2: Transition to Emerald Green Success State
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    if (saveIcon) saveIcon.textContent = "✅";
+    if (saveText) saveText.textContent = "Changes Saved Successfully!";
+    saveBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+    saveBtn.style.boxShadow = "0 8px 24px rgba(16, 185, 129, 0.45)";
+    saveBtn.style.borderColor = "#10b981";
+    saveBtn.style.transform = "scale(1.02)";
+    saveBtn.style.opacity = "1";
+  }
+  if (saveStatus) {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    saveStatus.style.display = "inline-flex";
+    saveStatus.style.color = "#10b981";
+    saveStatus.style.background = "rgba(16, 185, 129, 0.12)";
+    saveStatus.style.borderColor = "rgba(16, 185, 129, 0.3)";
+    saveStatus.innerHTML = `<span>☁️</span> <span>Saved to cloud at ${timeStr}</span>`;
+  }
+
+  showToast("✅ Shop Profile & Branding saved to cloud!");
+
+  // Step 3: Smoothly restore button to default state after 2.5s
+  setTimeout(() => {
+    if (saveBtn) {
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.background = "";
+      saveBtn.style.boxShadow = "";
+      saveBtn.style.borderColor = "";
+      saveBtn.style.transform = "";
+    }
+  }, 2500);
 }
 
-// Logo File Uploader & Canvas Sanitizer
+// Logo File Uploader & Canvas Sanitizer (Pro / Enterprise Tier)
+function handleLogoUploadButtonClick() {
+  if (!isPaidTier()) {
+    showToast("🔒 Custom Shop Logo Branding is a Pro Business feature ($15/mo). Upgrade to brand your shop!");
+    openUpgradeModal();
+    return;
+  }
+  const fileInput = document.getElementById("owner-file-logo");
+  if (fileInput) fileInput.click();
+}
+
 function handleLogoFileUpload(event) {
+  if (!isPaidTier()) {
+    showToast("🔒 Custom Shop Logo Branding is a Pro Business feature ($15/mo). Upgrade to brand your shop!");
+    openUpgradeModal();
+    if (event.target) event.target.value = "";
+    return;
+  }
   const file = event.target.files[0];
   if (!file) return;
 
@@ -2045,6 +2629,15 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     } else {
       statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);" data-tooltip="Cancelled or marked No-Show by Front Desk">🖥️ Desk Cancelled</span>`;
     }
+  } else if (item.delayedMinutes) {
+    statusTagHtml = `
+      <div style="display: inline-flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
+        <span class="status-tag called" data-tooltip="Customer called for service">Called</span>
+        <span class="status-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1.5px solid #f59e0b; font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem;" data-tooltip="Customer notified staff they are running ~${item.delayedMinutes}m late after being called">
+          <span class="pulse-dot" style="background: #f59e0b; width: 6px; height: 6px;"></span> 🕒 Late +${item.delayedMinutes}m
+        </span>
+      </div>
+    `;
   }
 
   const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
@@ -2174,9 +2767,14 @@ function renderHistory() {
   }
 }
 
-// Export History Log to CSV
 // Export History Log to CSV (Includes Full Lifecycle Audit Trail)
 function exportHistoryCSV() {
+  if (!isPaidTier()) {
+    showToast("🔒 Unlimited CSV History Export is a Pro Business feature ($15/mo). Upgrade to download your visit logs!");
+    openUpgradeModal();
+    return;
+  }
+
   if (!state.history || state.history.length === 0) {
     showToast("No history records available to export.");
     return;
@@ -2306,7 +2904,7 @@ function renderPublicPromoBanner() {
   const promoText = state.config.promoText || "";
   let isPromoValid = false;
 
-  if (promoText) {
+  if (promoText && isPaidTier()) {
     const now = Date.now();
     const startTime = parsePromoTimestamp(state.config.promoStart, false);
     
@@ -2379,6 +2977,25 @@ function updateActiveTicketTimer() {
 
 // Switch Views
 function switchView(viewName) {
+  if (viewName === "superadmin" && !isSuperAdmin()) {
+    showToast("🔒 Platform SuperAdmin directory is restricted to authorized platform administrators.");
+    switchView("desk");
+    return;
+  }
+
+  // Cross-Tenant Front Desk & Owner Analytics Barrier (P1-3)
+  if (viewName === "desk" || viewName === "owner") {
+    const isSuper = isSuperAdmin();
+    const isOwner = state.user && state.config.ownerEmail && (state.user.email.toLowerCase() === state.config.ownerEmail.toLowerCase());
+    const isSandboxDemo = !state.user && (state.isDemoMode || state.config.slug === "main-st-barbers");
+
+    if (!isSuper && !isOwner && !isSandboxDemo) {
+      showToast("🔒 Access Restricted: Please sign in as the registered owner of this shop to access Front Desk controls.");
+      switchView("public");
+      return;
+    }
+  }
+
   state.activeView = viewName;
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
   document.querySelectorAll(".mobile-drawer-nav-item").forEach(item => item.classList.remove("active"));
@@ -2403,10 +3020,10 @@ function switchView(viewName) {
     }
   }
 
-  // Handle Demo Mode Banner display (ONLY for Main St Barbers Sandbox)
+  // Handle Demo Mode Banner display (ONLY for Unauthenticated Guests exploring Main St Barbers Sandbox)
   const demoBanner = document.getElementById("demo-mode-banner");
   if (demoBanner) {
-    const isDemoSandbox = state.isDemoMode && state.config.slug === "main-st-barbers";
+    const isDemoSandbox = !state.user && state.isDemoMode && state.config.slug === "main-st-barbers";
     if (isDemoSandbox && viewName !== "home") {
       demoBanner.classList.remove("hidden");
     } else {
@@ -2426,21 +3043,110 @@ function switchView(viewName) {
   }
 }
 
+// Dynamically toggle Create Shop buttons in Header, Mobile Drawer, and Switcher based on Tier limits
+function updateCreateShopButtonsVisibility(ownedCountOverride) {
+  const isSuper = isSuperAdmin();
+  const email = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+  const planPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
+  const planTitle = state.config.planTitle || "Starter Tier (Free)";
+  const isEnterprise = planPrice === 49 || planTitle.includes("Enterprise");
+
+  let ownedCount = 0;
+  if (typeof ownedCountOverride === "number") {
+    ownedCount = ownedCountOverride;
+  } else if (state.user) {
+    const ownedMap = new Set();
+    const checkShop = (s) => {
+      if (!s) return;
+      const slug = s.slug || s.id;
+      if (!slug || slug === "main-st-barbers") return;
+      const owner = (s.ownerEmail || "").trim().toLowerCase();
+      if (isSuper || !owner || owner === email || (s.ownerUid && s.ownerUid === state.user.uid)) {
+        ownedMap.add(slug);
+      }
+    };
+    if (Array.isArray(state.registeredShops)) state.registeredShops.forEach(checkShop);
+    if (Array.isArray(state.myShops)) state.myShops.forEach(checkShop);
+    if (state.config.slug && state.config.slug !== "main-st-barbers") {
+      checkShop({ slug: state.config.slug, ownerEmail: state.config.ownerEmail });
+    }
+    ownedCount = ownedMap.size;
+  }
+
+  // Can the user create more shops without upgrading?
+  // - Guest/Unauthenticated: YES (funnel will prompt registration/setup)
+  // - Enterprise Tier ($49/mo): YES (multi-location network)
+  // - Starter ($0/mo) or Pro ($15/mo): ONLY if they currently have 0 shops!
+  const canCreateMore = !state.user || isEnterprise || (ownedCount === 0);
+
+  // Desktop Header Button
+  const headerCreateBtn = document.getElementById("header-create-shop-btn");
+  if (headerCreateBtn) {
+    if (canCreateMore) {
+      headerCreateBtn.classList.remove("hidden");
+    } else {
+      headerCreateBtn.classList.add("hidden");
+    }
+  }
+
+  // Mobile Drawer Action Button
+  const mobileCreateBtn = document.getElementById("mobile-create-shop-btn");
+  if (mobileCreateBtn) {
+    if (canCreateMore) {
+      mobileCreateBtn.classList.remove("hidden");
+    } else {
+      mobileCreateBtn.classList.add("hidden");
+    }
+  }
+
+  return { canCreateMore, ownedCount, isEnterprise, isSuper };
+}
+
 // Render Dynamic Active Shop Switcher Dropdown
 function renderShopDropdown() {
   const dropdown = document.getElementById("shop-dropdown");
   if (!dropdown) return;
 
-  const currentSlug = state.config.slug || "main-st-barbers";
+  const isSuper = isSuperAdmin();
+  const currentSlug = state.config.slug;
 
-  // Build unified map of custom user shops: slug -> shopName (only listed when authenticated)
+  // Build unified map of user shops: slug -> shopName (with duplicate name suppression)
   const shopMap = new Map();
+  const seenShopNames = new Map(); // normalizedName -> slug
   
   if (state.user) {
+    const userEmail = (state.user.email || "").trim().toLowerCase();
+
+    const registerShopEntry = (sSlug, sName, sOwner) => {
+      if (!sSlug) return;
+      if (sSlug === "main-st-barbers") {
+        if (isSuper) shopMap.set("main-st-barbers", "Main St Barbers (Demo Sandbox)");
+        return;
+      }
+      // Non-superadmin only sees shops they own
+      if (!isSuper && sOwner && sOwner.toLowerCase() !== userEmail) return;
+
+      const normName = (sName || sSlug).trim().toLowerCase();
+
+      // Deduplicate: If we already have a shop with this exact name for this user
+      if (seenShopNames.has(normName)) {
+        const existingSlug = seenShopNames.get(normName);
+        // Prefer current active slug, or clean kebab slug without spaces
+        if (sSlug === currentSlug || (sSlug.includes("-") && !existingSlug.includes("-"))) {
+          shopMap.delete(existingSlug);
+          seenShopNames.set(normName, sSlug);
+          shopMap.set(sSlug, sName || sSlug);
+        }
+      } else {
+        seenShopNames.set(normName, sSlug);
+        shopMap.set(sSlug, sName || sSlug);
+      }
+    };
+
     if (Array.isArray(state.myShops)) {
       state.myShops.forEach(s => {
-        if (s && s.slug && s.slug !== "main-st-barbers") {
-          shopMap.set(s.slug, s.shopName || s.slug);
+        if (s && s.slug) {
+          registerShopEntry(s.slug, s.shopName || s.name || s.slug, s.ownerEmail);
         }
       });
     }
@@ -2449,32 +3155,52 @@ function renderShopDropdown() {
       state.registeredShops.forEach(s => {
         const sSlug = s.slug || s.id;
         const sName = s.name || s.shopName || sSlug;
-        if (sSlug && sSlug !== "main-st-barbers") {
-          shopMap.set(sSlug, sName);
-        }
+        registerShopEntry(sSlug, sName, s.ownerEmail);
       });
     }
 
     if (currentSlug && currentSlug !== "main-st-barbers") {
-      shopMap.set(currentSlug, state.config.shopName || currentSlug);
+      registerShopEntry(currentSlug, state.config.shopName || currentSlug, state.config.ownerEmail);
+    }
+
+    // For SuperAdmin, ensure demo sandbox is always accessible in the switcher
+    if (isSuper && !shopMap.has("main-st-barbers")) {
+      shopMap.set("main-st-barbers", "Main St Barbers (Demo Sandbox)");
+    }
+  }
+
+  // Active header chip title sync:
+  const headerChipName = document.getElementById("header-shop-name");
+  if (headerChipName) {
+    if (!isSuper && state.config.slug === "main-st-barbers") {
+      if (shopMap.size > 0) {
+        const firstEntry = shopMap.entries().next().value;
+        if (firstEntry) headerChipName.textContent = firstEntry[1];
+      } else {
+        headerChipName.textContent = "My Shop";
+      }
+    } else {
+      headerChipName.textContent = state.config.shopName || "My Shop";
     }
   }
 
   let shopsListHtml = "";
   
-  // Render Custom User Shops
+  // Render Custom User Shops (Demo is excluded for non-SuperAdmin business owners)
   if (shopMap.size > 0) {
     shopMap.forEach((name, slug) => {
       const isActive = (slug === currentSlug);
+      const isDemo = (slug === "main-st-barbers");
+      const icon = isActive ? '✓' : (isDemo ? '🎮' : '💈');
       shopsListHtml += `
-        <button class="dropdown-item ${isActive ? 'active-shop-item' : ''}" onclick="inspectShop('${escapeHtml(slug)}'); closeAllDropdowns();">
-          <span>${isActive ? '✓' : '💈'} <strong>${escapeHtml(name)}</strong></span>
+        <button class="dropdown-item ${isActive ? 'active-shop-item' : ''}" onclick="${isDemo ? 'launchDemoMode()' : `inspectShop('${escapeHtml(slug)}')`}; closeAllDropdowns();">
+          <span>${icon} <strong>${escapeHtml(name)}</strong></span>
         </button>
       `;
     });
   } else if (state.user) {
     shopsListHtml = `
-      <div style="padding: 10px 14px; font-size: 13px; color: var(--text-muted); font-style: italic;">No custom shops created yet</div>
+      <div style="padding: 10px 14px; font-size: 13px; color: var(--text-muted); font-style: italic;">No shops created yet</div>
     `;
   } else {
     shopsListHtml = `
@@ -2482,13 +3208,34 @@ function renderShopDropdown() {
     `;
   }
 
+  // Dynamic bottom action: Create Shop vs Enterprise Upsell based on Tier limit
+  const nonDemoShopCount = Array.from(shopMap.keys()).filter(k => k !== "main-st-barbers").length;
+  const { canCreateMore } = updateCreateShopButtonsVisibility(nonDemoShopCount);
+
+  let bottomActionHtml = "";
+  if (canCreateMore) {
+    bottomActionHtml = `
+      <div class="dropdown-divider"></div>
+      <button class="dropdown-item" onclick="openCreateShopModal(); closeAllDropdowns();">
+        <span>⚡ + Create New Shop Waitlist</span>
+      </button>
+    `;
+  } else {
+    bottomActionHtml = `
+      <div class="dropdown-divider"></div>
+      <button class="dropdown-item" onclick="openUpgradeModal('enterprise'); closeAllDropdowns();" style="color: #6366f1;">
+        <span style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span>🏢 + Add Another Location</span>
+          <span style="font-size: 0.7rem; padding: 0.15rem 0.45rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 4px; font-weight: 700; color: #6366f1; letter-spacing: 0.02em;">Enterprise 🔒</span>
+        </span>
+      </button>
+    `;
+  }
+
   dropdown.innerHTML = `
     <div class="dropdown-header-title">MY SHOPS</div>
     ${shopsListHtml}
-    <div class="dropdown-divider"></div>
-    <button class="dropdown-item" onclick="openCreateShopModal(); closeAllDropdowns();">
-      <span>⚡ + Create New Shop Waitlist</span>
-    </button>
+    ${bottomActionHtml}
   `;
 }
 
@@ -2553,6 +3300,27 @@ function openCreateShopModal() {
 
   pendingCreateShopAfterAuth = false;
 
+  // Multi-shop limit enforcement:
+  // Starter Tier ($0) allows 1 shop. Pro Tier ($15) is 1 dedicated shop.
+  // Enterprise ($49) or SuperAdmin allows multi-location shops.
+  const email = (state.user.email || "").toLowerCase();
+  const isSuper = email === SUPERADMIN_EMAIL.toLowerCase();
+  const planPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
+  const planTitle = state.config.planTitle || "Starter Tier (Free)";
+  const isEnterprise = planPrice === 49 || planTitle.includes("Enterprise");
+
+  const ownedShops = (state.registeredShops || []).filter(s => 
+    s && s.slug !== "main-st-barbers" && 
+    ((s.ownerEmail || "").toLowerCase() === email || (s.ownerUid && s.ownerUid === state.user.uid))
+  );
+
+  if (!isSuper && !isEnterprise && ownedShops.length >= 1) {
+    const tierName = planPrice === 15 || planTitle.includes("Pro") ? "Pro Business plan" : "Starter plan";
+    showToast(`🔒 ${tierName} includes 1 dedicated shop location. Upgrade to Enterprise for Multi-Location management!`);
+    openUpgradeModal("enterprise");
+    return;
+  }
+
   // Pre-fill and lock the owner's email address from their authenticated profile
   const emailInput = document.getElementById("onboard-owner-email");
   if (emailInput) {
@@ -2567,6 +3335,7 @@ function openCreateShopModal() {
     modal.classList.remove("hidden");
     const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
     if (nameInput) nameInput.focus();
+    updateOnboardPlanSelection();
   }
 }
 
@@ -2587,8 +3356,9 @@ function closeOnboardingModal() {
 function generateSlugFromInput(val) {
   const slugInput = document.getElementById("onboard-slug") || document.getElementById("new-shop-slug");
   if (slugInput && val) {
-    const cleanSlug = val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    slugInput.value = cleanSlug;
+    if (!slugInput.dataset.manuallyEdited || !slugInput.value) {
+      slugInput.value = slugify(val);
+    }
   }
 }
 
@@ -2798,14 +3568,15 @@ function handleAccountDropdownAction() {
 function fetchUserShopsAndSync(userEmail) {
   if (!db || !userEmail) return;
 
-  const isSuper = userEmail.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+  const emailClean = userEmail.trim().toLowerCase();
+  const isSuper = emailClean === SUPERADMIN_EMAIL.toLowerCase();
 
   const query = isSuper 
-    ? db.collection("shops")
-    : db.collection("shops").where("ownerEmail", "==", userEmail);
+    ? db.collection("shops").limit(100)
+    : db.collection("shops").where("ownerEmail", "==", userEmail).limit(50);
 
   query.get().then(snapshot => {
-    const fetchedShops = [];
+    let fetchedShops = [];
     snapshot.forEach(doc => {
       const data = doc.data();
       const sSlug = data.slug || doc.id;
@@ -2814,28 +3585,64 @@ function fetchUserShopsAndSync(userEmail) {
       trackMyShop(sSlug, sName);
     });
 
-    state.registeredShops = fetchedShops;
-    renderShopDropdown();
+    // Fallback: if exact case match returned 0 docs and userEmail had case differences, check lowercased
+    if (fetchedShops.length === 0 && !isSuper && userEmail !== emailClean) {
+      db.collection("shops").where("ownerEmail", "==", emailClean).limit(50).get().then(snapLower => {
+        snapLower.forEach(doc => {
+          const data = doc.data();
+          const sSlug = data.slug || doc.id;
+          const sName = data.name || data.shopName || sSlug;
+          fetchedShops.push({ slug: sSlug, shopName: sName, ...data });
+          trackMyShop(sSlug, sName);
+        });
+        syncUserShopSelection(fetchedShops, isSuper);
+      }).catch(err => {
+        console.warn("Error fetching user shops fallback:", err);
+        syncUserShopSelection(fetchedShops, isSuper);
+      });
+      return;
+    }
 
-    // Auto-select user's custom shop if current active is still default demo on sign in
-    if (fetchedShops.length > 0) {
-      const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
-      if (nonDemoShop && state.config.slug === "main-st-barbers") {
-        inspectShop(nonDemoShop.slug);
-      }
-    } else if (!isSuper && state.user && state.user.email) {
-      // First-time business owner with 0 registered shops: guide them into shop setup wizard!
+    syncUserShopSelection(fetchedShops, isSuper);
+  }).catch(err => {
+    console.warn("Error fetching user shops:", err);
+    syncUserShopSelection([], isSuper);
+  });
+}
+
+function syncUserShopSelection(fetchedShops, isSuper) {
+  state.registeredShops = fetchedShops;
+  renderShopDropdown();
+
+  // 1. If user has registered shops in Firestore, auto-select their non-demo shop
+  if (fetchedShops.length > 0) {
+    const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
+    if (nonDemoShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
+      inspectShop(nonDemoShop.slug);
+      return;
+    }
+  }
+
+  // 2. If no shop from Firestore or still on main-st-barbers, check locally saved shops
+  if (!isSuper && state.user && state.user.email) {
+    const localShop = (state.myShops || []).find(s => s && s.slug && s.slug !== "main-st-barbers");
+    if (localShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
+      inspectShop(localShop.slug);
+      return;
+    }
+
+    // 3. First-time business owner with 0 registered shops: guide them into shop setup wizard!
+    if (fetchedShops.length === 0 && (!state.myShops || state.myShops.filter(s => s && s.slug !== "main-st-barbers").length === 0)) {
       showToast(`👋 Welcome ${state.user.displayName || state.user.email}! Let's set up your first shop.`);
       openOnboardingModal();
     }
-  }).catch(err => {
-    console.warn("Error fetching user shops:", err);
-  });
+  }
 }
 
 function applyUserRole(user) {
   const authBtnLabel = document.getElementById("auth-btn-label");
   const dropdownUserEmail = document.getElementById("dropdown-user-email");
+  const sectionSuperAdmin = document.getElementById("section-superadmin");
   const itemSuperAdmin = document.getElementById("item-superadmin");
   const itemSettings = document.getElementById("item-settings");
   const itemArchitecture = document.getElementById("item-architecture");
@@ -2855,11 +3662,17 @@ function applyUserRole(user) {
   const mobileDrawerAvatarIcon = document.getElementById("mobile-drawer-avatar-icon");
   const mobileItemAuthActionLabel = document.getElementById("mobile-item-auth-action-label");
   const mobileDrawerShopBadge = document.getElementById("mobile-drawer-shop-badge");
+  const mobileItemMainStDemo = document.getElementById("mobile-item-main-st-demo");
 
   if (user && user.email) {
     const email = user.email;
     const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
     state.userRole = isSuper ? "SuperAdmin" : "ShopOwner";
+    state.isDemoMode = false;
+
+    // Explicitly hide demo banner for any authenticated user
+    const demoBanner = document.getElementById("demo-mode-banner");
+    if (demoBanner) demoBanner.classList.add("hidden");
 
     fetchUserShopsAndSync(email);
 
@@ -2900,6 +3713,11 @@ function applyUserRole(user) {
       else mobileTabSuperAdmin.classList.add("hidden");
     }
 
+    if (sectionSuperAdmin) {
+      if (isSuper) sectionSuperAdmin.classList.remove("hidden");
+      else sectionSuperAdmin.classList.add("hidden");
+    }
+
     if (itemSuperAdmin) {
       if (isSuper) itemSuperAdmin.classList.remove("hidden");
       else itemSuperAdmin.classList.add("hidden");
@@ -2918,6 +3736,17 @@ function applyUserRole(user) {
     if (settingsBtn) {
       if (isSuper) settingsBtn.classList.remove("hidden");
       else settingsBtn.classList.add("hidden");
+    }
+
+    const itemMainStDemo = document.getElementById("item-main-st-demo");
+    if (itemMainStDemo) {
+      if (isSuper) itemMainStDemo.classList.remove("hidden");
+      else itemMainStDemo.classList.add("hidden");
+    }
+
+    if (mobileItemMainStDemo) {
+      if (isSuper) mobileItemMainStDemo.classList.remove("hidden");
+      else mobileItemMainStDemo.classList.add("hidden");
     }
 
     if (itemAuthActionLabel) {
@@ -2958,11 +3787,13 @@ function applyUserRole(user) {
       setElText("mobile-drawer-shop-name", "Main St Barbers");
     }
 
+    if (sectionSuperAdmin) sectionSuperAdmin.classList.add("hidden");
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
     if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
+    if (mobileItemMainStDemo) mobileItemMainStDemo.classList.remove("hidden");
 
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
@@ -2985,11 +3816,13 @@ function applyUserRole(user) {
     if (mobileDrawerAvatarIcon) mobileDrawerAvatarIcon.textContent = "👤";
     if (mobileDrawerShopBadge) mobileDrawerShopBadge.classList.add("hidden");
 
+    if (sectionSuperAdmin) sectionSuperAdmin.classList.add("hidden");
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
     if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
+    if (mobileItemMainStDemo) mobileItemMainStDemo.classList.add("hidden");
 
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
@@ -2998,6 +3831,9 @@ function applyUserRole(user) {
       mobileItemAuthActionLabel.textContent = "🔑 Sign In / Register";
     }
   }
+
+  // Keep Create Shop button visibility in sync with authenticated user role and shop count
+  updateCreateShopButtonsVisibility();
 }
 
 function handleAuthButtonClick(event) {
@@ -3091,6 +3927,45 @@ function clearAuthError() {
   setAuthError("");
 }
 
+function toggleAuthPasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "🙈";
+  } else {
+    input.type = "password";
+    btn.textContent = "👁️";
+  }
+}
+
+function checkAuthPasswordMatch() {
+  if (!isRegistering) return;
+  const pwd = document.getElementById("auth-password") ? document.getElementById("auth-password").value : "";
+  const confirm = document.getElementById("auth-confirm-password") ? document.getElementById("auth-confirm-password").value : "";
+  const indicator = document.getElementById("auth-match-indicator");
+  if (!indicator) return;
+
+  if (!confirm) {
+    indicator.style.display = "none";
+    return;
+  }
+  indicator.style.display = "flex";
+  if (pwd === confirm) {
+    indicator.style.color = "#10b981";
+    indicator.innerHTML = `<span>✅</span> <span>Passwords match</span>`;
+  } else {
+    indicator.style.color = "#f87171";
+    indicator.innerHTML = `<span>⚠️</span> <span>Passwords do not match</span>`;
+  }
+}
+
+function onAuthPasswordInput() {
+  if (isRegistering) {
+    checkAuthPasswordMatch();
+  }
+}
+
 function toggleForgotPassword() {
   clearAuthError();
   isResettingPassword = !isResettingPassword;
@@ -3100,7 +3975,14 @@ function toggleForgotPassword() {
   const formDivider = document.getElementById("auth-form-divider");
   const passwordGroup = document.getElementById("auth-password-group");
   const passwordInput = document.getElementById("auth-password");
+  const confirmGroup = document.getElementById("auth-confirm-password-group");
+  const confirmInput = document.getElementById("auth-confirm-password");
+  const matchIndicator = document.getElementById("auth-match-indicator");
   const switchHint = document.querySelector(".auth-switch-hint");
+
+  if (confirmGroup) confirmGroup.style.display = "none";
+  if (confirmInput) confirmInput.required = false;
+  if (matchIndicator) matchIndicator.style.display = "none";
 
   if (isResettingPassword) {
     if (title) title.textContent = "🔄 Reset Your Password";
@@ -3130,6 +4012,9 @@ function setAuthMode(registerMode) {
   const passwordHint = document.getElementById("auth-password-hint");
   const passwordInput = document.getElementById("auth-password");
   const passwordGroup = document.getElementById("auth-password-group");
+  const confirmGroup = document.getElementById("auth-confirm-password-group");
+  const confirmInput = document.getElementById("auth-confirm-password");
+  const matchIndicator = document.getElementById("auth-match-indicator");
   const googleBtn = document.getElementById("auth-google-btn");
   const formDivider = document.getElementById("auth-form-divider");
   const switchHint = document.querySelector(".auth-switch-hint");
@@ -3151,6 +4036,12 @@ function setAuthMode(registerMode) {
     }
     if (passwordHint) passwordHint.style.display = "block";
     if (passwordInput) passwordInput.setAttribute("autocomplete", "new-password");
+    if (confirmGroup) confirmGroup.style.display = "block";
+    if (confirmInput) {
+      confirmInput.required = true;
+      confirmInput.value = "";
+    }
+    if (matchIndicator) matchIndicator.style.display = "none";
     if (forgotBtn) forgotBtn.style.display = "none";
   } else {
     if (title) title.textContent = "🔑 Sign In to WaitLink";
@@ -3163,6 +4054,12 @@ function setAuthMode(registerMode) {
     }
     if (passwordHint) passwordHint.style.display = "none";
     if (passwordInput) passwordInput.setAttribute("autocomplete", "current-password");
+    if (confirmGroup) confirmGroup.style.display = "none";
+    if (confirmInput) {
+      confirmInput.required = false;
+      confirmInput.value = "";
+    }
+    if (matchIndicator) matchIndicator.style.display = "none";
     if (forgotBtn) forgotBtn.style.display = "";
   }
 }
@@ -3268,33 +4165,55 @@ function handleAuthSubmit(event) {
   }
 
   // =========================================================================
-  // 0. SELF-SERVICE PASSWORD RESET FLOW
+  // 0. SELF-SERVICE PASSWORD RESET FLOW (Luxury Branded Brevo/Resend Email)
   // =========================================================================
   if (isResettingPassword) {
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = "Sending Reset Link...";
     }
-    firebase.auth().sendPasswordResetEmail(email)
-      .then(() => {
-        setAuthError(`✅ Reset link sent to ${email}! Check your inbox and follow instructions.`, true);
-        showToast("📬 Password reset link sent to your email!");
+
+    // Dispatch via our custom Cloud Function for authentic, branded HTML email
+    fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendBrevoPasswordReset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        email: email,
+        origin: window.location.origin 
       })
-      .catch(err => {
-        console.warn("Password reset error:", err);
-        let errorMsg = "Could not send reset email. Please verify your address.";
-        switch (err.code) {
-          case "auth/user-not-found":
-            errorMsg = "⚠️ No account found with this email address.";
-            break;
-          case "auth/invalid-email":
-            errorMsg = "⚠️ Please enter a valid email address.";
-            break;
-          default:
-            errorMsg = `⚠️ ${err.message || errorMsg}`;
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to dispatch branded reset email");
         }
-        setAuthError(errorMsg);
-        showToast(errorMsg);
+        setAuthError(`✅ Reset link sent to ${email}! Check your inbox for your branded WaitLink security email.`, true);
+        showToast("📬 Luxury password reset email sent to your inbox!");
+      })
+      .catch((err) => {
+        console.warn("Cloud Function reset notice, attempting direct fallback:", err);
+        // Fallback to standard Firebase Auth reset if endpoint is unreachable
+        firebase.auth().sendPasswordResetEmail(email)
+          .then(() => {
+            setAuthError(`✅ Reset link sent to ${email}! Check your inbox and follow instructions.`, true);
+            showToast("📬 Password reset link sent to your email!");
+          })
+          .catch((fbErr) => {
+            console.warn("Password reset fallback error:", fbErr);
+            let errorMsg = "Could not send reset email. Please verify your address.";
+            switch (fbErr.code) {
+              case "auth/user-not-found":
+                errorMsg = "⚠️ No account found with this email address.";
+                break;
+              case "auth/invalid-email":
+                errorMsg = "⚠️ Please enter a valid email address.";
+                break;
+              default:
+                errorMsg = `⚠️ ${fbErr.message || errorMsg}`;
+            }
+            setAuthError(errorMsg);
+            showToast(errorMsg);
+          });
       })
       .finally(() => {
         if (submitBtn) {
@@ -3316,13 +4235,31 @@ function handleAuthSubmit(event) {
     return;
   }
 
-  // Client-side minimum password validation
-  if (isRegistering && password.length < 6) {
-    const errorMsg = "⚠️ Password must be at least 6 characters long.";
-    setAuthError(errorMsg);
-    showToast(errorMsg);
-    if (passwordInput) passwordInput.focus();
-    return;
+  // Client-side minimum password and confirmation validation
+  if (isRegistering) {
+    if (password.length < 6) {
+      const errorMsg = "⚠️ Password must be at least 6 characters long.";
+      setAuthError(errorMsg);
+      showToast(errorMsg);
+      if (passwordInput) passwordInput.focus();
+      return;
+    }
+    const confirmInput = document.getElementById("auth-confirm-password");
+    const confirmPassword = confirmInput ? confirmInput.value : "";
+    if (!confirmPassword) {
+      const errorMsg = "⚠️ Please confirm your password.";
+      setAuthError(errorMsg);
+      showToast(errorMsg);
+      if (confirmInput) confirmInput.focus();
+      return;
+    }
+    if (password !== confirmPassword) {
+      const errorMsg = "⚠️ Passwords do not match. Please verify both passwords.";
+      setAuthError(errorMsg);
+      showToast(errorMsg);
+      if (confirmInput) confirmInput.focus();
+      return;
+    }
   }
 
   // Set loading state on submit button
@@ -3475,20 +4412,74 @@ function handleOnboardingSubmit(event) {
   const slugInput = document.getElementById("onboard-slug") || document.getElementById("new-shop-slug");
 
   const shopName = nameInput ? nameInput.value.trim() : "";
-  let slug = slugInput ? slugInput.value.trim() : "";
+  let rawSlug = slugInput ? slugInput.value.trim() : "";
 
   if (!shopName) {
     showToast("Please enter a shop name");
     return;
   }
 
+  // Strictly sanitize the slug to kebab-case (no spaces, lowercase only)
+  let slug = slugify(rawSlug || shopName);
   if (!slug) {
-    slug = shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    slug = `shop-${Date.now().toString(36)}`;
+  }
+
+  const address = document.getElementById("onboard-address") ? document.getElementById("onboard-address").value.trim() : "";
+
+  // 1. Strict Duplicate Check: Prevent shops with the same name and same business address
+  const cleanName = shopName.toLowerCase();
+  const cleanAddr = address.toLowerCase();
+
+  const isDuplicate = (state.registeredShops || []).some(s => {
+    if (!s) return false;
+    const sSlug = s.slug || s.id;
+    // Allow saving/editing own existing shop with same slug
+    if (sSlug === slug || sSlug === rawSlug) return false;
+
+    const sName = (s.shopName || s.name || "").trim().toLowerCase();
+    const sAddr = (s.address || "").trim().toLowerCase();
+    const sOwner = (s.ownerEmail || "").trim().toLowerCase();
+
+    // Condition A: If both have an address and both address & name match -> Duplicate!
+    if (cleanAddr && sAddr && cleanAddr === sAddr && cleanName === sName) {
+      return true;
+    }
+
+    // Condition B: Same name for the same owner email -> Duplicate!
+    if (cleanName === sName && sOwner === currentEmail) {
+      return true;
+    }
+
+    return false;
+  });
+
+  if (isDuplicate) {
+    showToast(`⚠️ A shop named "${shopName}" with this address or owner already exists. Duplicate shops at the same location are not permitted.`);
+    return;
   }
 
   // Check for slug collision against existing directory
   const currentEmail = (state.user.email || "").toLowerCase();
+  const isSuper = currentEmail === SUPERADMIN_EMAIL.toLowerCase();
+  const currentPlanPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
+  const isEnterprise = currentPlanPrice === 49 || (state.config.planTitle || "").includes("Enterprise");
+
+  const ownedShops = (state.registeredShops || []).filter(s => 
+    s && s.slug !== "main-st-barbers" && 
+    ((s.ownerEmail || "").toLowerCase() === currentEmail || (s.ownerUid && s.ownerUid === state.user.uid))
+  );
+
   const isExistingOwned = state.myShops && state.myShops.some(s => s.slug === slug);
+  const isNewShop = !isExistingOwned && !ownedShops.some(s => s.slug === slug);
+
+  if (!isSuper && !isEnterprise && isNewShop && ownedShops.length >= 1) {
+    showToast("🔒 Free Starter plan includes 1 shop location. Upgrade to Enterprise for Multi-Location management!");
+    closeOnboardingModal();
+    openUpgradeModal();
+    return;
+  }
+
   const isCollision = !isExistingOwned && state.registeredShops && state.registeredShops.some(s => s.slug === slug && (s.ownerEmail || "").toLowerCase() !== currentEmail);
 
   if (isCollision) {
@@ -3497,19 +4488,16 @@ function handleOnboardingSubmit(event) {
     showToast(`Notice: Reserved slug collision auto-resolved to "${slug}"`);
   }
 
-  // Read selected Subscription Plan Tier
+  // Read selected Subscription Plan Tier intent
   const planSelect = document.getElementById("onboard-plan");
-  let planTitle = "Pro Business Tier";
-  let planPrice = 15;
-  if (planSelect) {
-    const selectedOpt = planSelect.options[planSelect.selectedIndex];
-    if (selectedOpt) {
-      planTitle = selectedOpt.getAttribute("data-title") || "Pro Business Tier";
-      planPrice = parseInt(selectedOpt.getAttribute("data-price") || "15", 10);
-    }
-  }
+  const wantsPaidUpgrade = planSelect && planSelect.value !== "starter";
+  const requestedTier = wantsPaidUpgrade ? planSelect.value : null;
 
-  const address = document.getElementById("onboard-address") ? document.getElementById("onboard-address").value.trim() : "";
+  // Security Hardening (P0-1): All newly registered shops strictly initialize on Starter Tier ($0).
+  // Paid tiers (Pro / Enterprise) can only be unlocked via verified Stripe Checkout.
+  const planTitle = "Starter Tier (Free)";
+  const planPrice = 0;
+
   const phone = document.getElementById("onboard-phone") ? document.getElementById("onboard-phone").value.trim() : "";
   const promoText = document.getElementById("onboard-promo-text") ? document.getElementById("onboard-promo-text").value.trim() : "";
   const promoStart = document.getElementById("onboard-promo-start") ? document.getElementById("onboard-promo-start").value : "";
@@ -3560,6 +4548,7 @@ function handleOnboardingSubmit(event) {
       planTitle: planTitle,
       planPrice: planPrice,
       ownerEmail: state.user.email,
+      ownerUid: (state.user && state.user.uid) || "",
       promoText: promoText,
       promoStart: promoStart,
       promoEnd: promoEnd,
@@ -3571,6 +4560,12 @@ function handleOnboardingSubmit(event) {
     subscribeFirestore();
   }
 
+  if (!state.registeredShops) state.registeredShops = [];
+  if (!state.registeredShops.some(s => s.slug === slug)) {
+    state.registeredShops.push({ slug, shopName, name: shopName, ownerEmail: state.user.email });
+  }
+  renderShopDropdown();
+
   saveData();
   generateQRCode();
   renderAll();
@@ -3578,14 +4573,22 @@ function handleOnboardingSubmit(event) {
   switchView("desk");
   showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
   openRegistrationSuccessModal(shopName, slug, state.user.email);
+
+  if (wantsPaidUpgrade) {
+    setTimeout(() => {
+      showToast(`⚡ Complete your Stripe checkout to activate ${requestedTier === 'enterprise' ? 'Enterprise' : 'Pro Business'} Tier!`);
+      openUpgradeModal(requestedTier);
+    }, 2200);
+  }
 }
 
 let lastRegisteredEmailPayload = null;
 
-function openRegistrationSuccessModal(shopName, slug, ownerEmail) {
+function openRegistrationSuccessModal(shopName, rawSlug, ownerEmail) {
   const modal = document.getElementById("modal-registration-success");
   if (!modal) return;
 
+  const slug = slugify(rawSlug || shopName);
   const emailVal = ownerEmail || (state.user ? state.user.email : "") || "owner@waitlink.app";
   const baseUrl = getPublicUrl().replace(/\?.*$/, "");
   const ownerUrl = `${baseUrl}?s=${slug}&view=owner`;
@@ -3603,7 +4606,6 @@ function openRegistrationSuccessModal(shopName, slug, ownerEmail) {
   const ownerBtn = document.getElementById("reg-link-owner-btn");
   const deskBtn = document.getElementById("reg-link-desk-btn");
   const publicBtn = document.getElementById("reg-link-public-btn");
-  const mailtoBtn = document.getElementById("reg-success-mailto-btn");
 
   if (ownerBtn) ownerBtn.href = ownerUrl;
   if (deskBtn) deskBtn.href = deskUrl;
@@ -3616,7 +4618,6 @@ function openRegistrationSuccessModal(shopName, slug, ownerEmail) {
     qrBox.innerHTML = `<img src="${qrApiUrl}" alt="Lobby QR Code" style="width: 140px; height: 140px; display: block; margin: 0 auto; border-radius: 8px;">`;
   }
 
-  const emailSubject = encodeURIComponent(`🚀 Successful Registration: Welcome ${shopName} to WaitLink!`);
   const emailBodyStr = `Welcome to WaitLink!
 
 Congratulations on registering ${shopName}! Your walk-in line management system is live and ready to serve your customers.
@@ -3640,8 +4641,6 @@ Best regards,
 The WaitLink Team
 https://waitlink.app`;
 
-  if (mailtoBtn) mailtoBtn.href = `mailto:${encodeURIComponent(emailVal)}?subject=${emailSubject}&body=${encodeURIComponent(emailBodyStr)}`;
-
   lastRegisteredEmailPayload = {
     shopName,
     emailVal,
@@ -3654,6 +4653,11 @@ https://waitlink.app`;
   modal.classList.remove("hidden");
   modal.style.display = "flex";
   sendAutomatedOnboardingEmail(shopName, slug, emailVal, ownerUrl, deskUrl, publicUrl);
+}
+
+function launchFromRegistration(view) {
+  closeRegistrationSuccessModal();
+  switchView(view);
 }
 
 function goToConfigSection(section) {
@@ -3674,34 +4678,40 @@ function goToConfigSection(section) {
 function sendAutomatedOnboardingEmail(shopName, slug, emailVal, ownerUrl, deskUrl, publicUrl) {
   if (!emailVal || emailVal === "owner@waitlink.app") return;
 
-  const payload = {
-    _subject: `🚀 Successful Registration: Welcome ${shopName} to WaitLink!`,
-    "Shop Name": shopName,
-    "Registered Owner Email": emailVal,
-    "🔑 Owner Admin Portal Link": ownerUrl,
-    "💈 Front Desk Controller Link": deskUrl,
-    "📱 Public Customer Check-In Page Link": publicUrl,
-    "Registration Date": new Date().toLocaleString(),
-    "_template": "table"
-  };
+  const cleanSlug = slugify(slug || shopName);
+  const cleanPublic = publicUrl || `https://waitlink.app?s=${cleanSlug}&view=public`;
+  const cleanDesk = deskUrl || `https://waitlink.app?s=${cleanSlug}&view=desk`;
+  const cleanOwner = ownerUrl || `https://waitlink.app?s=${cleanSlug}&view=owner`;
 
   setElText("reg-success-email-notice", `⏳ Sending confirmation email to ${emailVal}...`);
 
-  fetch(`https://formsubmit.co/ajax/${encodeURIComponent(emailVal)}`, {
+  fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendShopWelcomeEmail", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
-  }).then(res => res.json())
-    .then(data => {
-      setElText("reg-success-email-notice", `✅ Confirmation email automatically sent to ${emailVal}`);
-      showToast(`📧 Confirmation email sent to ${emailVal}`);
+    body: JSON.stringify({
+      shopName: shopName,
+      slug: cleanSlug,
+      email: emailVal,
+      ownerUrl: cleanOwner,
+      deskUrl: cleanDesk,
+      publicUrl: cleanPublic
     })
-    .catch(err => {
-      setElText("reg-success-email-notice", `📧 Confirmation details ready for ${emailVal}`);
-    });
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      setElText("reg-success-email-notice", `✅ Confirmation email delivered to ${emailVal}`);
+      showToast(`📧 Confirmation email delivered to ${emailVal}`);
+    } else {
+      setElText("reg-success-email-notice", `✅ Shop registration complete! Links & QR code ready.`);
+    }
+  })
+  .catch(err => {
+    console.warn("Cloud welcome email dispatch notice:", err);
+    setElText("reg-success-email-notice", `✅ Shop registration complete! Links & QR code ready.`);
+  });
 }
 
 function closeRegistrationSuccessModal() {
@@ -3759,7 +4769,7 @@ function inspectShop(slug) {
 
   state.config.slug = slug;
   state.config.shopName = targetName;
-  state.isDemoMode = (slug === "main-st-barbers");
+  state.isDemoMode = !state.user && (slug === "main-st-barbers");
 
   loadData();
   saveConfig();
@@ -3804,23 +4814,52 @@ function renderSuperAdminShopsTable() {
   let totalMRR = 0;
 
   tbody.innerHTML = shops.map(shop => {
-    const shopSlug = shop.slug || shop.id || 'main-st-barbers';
-    const shopName = shop.name || shop.shopName || shopSlug;
+    const rawSlug = shop.slug || shop.id || 'main-st-barbers';
+    const shopSlug = String(rawSlug).trim().replace(/[\r\n]+/g, ' ');
+    const rawName = shop.name || shop.shopName || shopSlug;
+    const shopName = String(rawName).trim().replace(/[\r\n]+/g, ' ');
+    const docId = String(shop.id || shop.slug || shopSlug).trim();
     const price = shop.planPrice !== undefined ? shop.planPrice : 0;
     totalMRR += price;
-    const planDisplay = shop.planTitle ? `${shop.planTitle} ($${price}/mo)` : (price === 0 ? "Starter Tier ($0/mo)" : `$${price} / mo`);
+    
+    const currentTierKey = price >= 49 ? 'enterprise' : (price >= 15 ? 'pro' : 'starter');
+    const borderColor = currentTierKey === 'enterprise' ? '#6366f1' : (currentTierKey === 'pro' ? '#06b6d4' : '#10b981');
+    const bgColor = currentTierKey === 'enterprise' ? 'rgba(99, 102, 241, 0.15)' : (currentTierKey === 'pro' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)');
+
+    const isSandbox = shopSlug === 'main-st-barbers' || docId === 'main-st-barbers';
 
     return `
       <tr>
         <td><strong>${escapeHtml(shopName)}</strong></td>
         <td><code>waitlink.app?s=${escapeHtml(shopSlug)}</code></td>
         <td>${escapeHtml(shop.ownerEmail || 'owner@waitlink.app')}</td>
-        <td><span class="status-tag called" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">${escapeHtml(planDisplay)}</span></td>
+        <td>
+          <select 
+            class="superadmin-plan-select" 
+            data-slug="${encodeURIComponent(shopSlug)}"
+            onchange="changeTenantShopPlan(decodeURIComponent(this.dataset.slug), this.value)"
+            style="background: ${bgColor}; color: #fff; border: 1.5px solid ${borderColor}; padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; outline: none; transition: all 0.2s ease;"
+            title="SuperAdmin: Click to reassign this shop's subscription tier"
+          >
+            <option value="starter" ${currentTierKey === 'starter' ? 'selected' : ''} style="background: #0f172a; color: #10b981;">Starter ($0 / mo)</option>
+            <option value="pro" ${currentTierKey === 'pro' ? 'selected' : ''} style="background: #0f172a; color: #06b6d4;">Pro Business ($15 / mo)</option>
+            <option value="enterprise" ${currentTierKey === 'enterprise' ? 'selected' : ''} style="background: #0f172a; color: #818cf8;">Enterprise ($49 / mo)</option>
+          </select>
+        </td>
         <td><span class="status-pill"><span class="pulse-dot"></span> Active</span></td>
         <td>
           <div class="actions-cell">
-            <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(shopSlug)}')">Inspect Desk</button>
-            <button class="btn-text-sm" onclick="openSettingsForShop('${escapeHtml(shopSlug)}')">Settings ⚙️</button>
+            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
+            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">Settings ⚙️</button>
+            ${!isSandbox ? `
+              <button class="btn-text-sm" 
+                data-slug="${encodeURIComponent(shopSlug)}" 
+                data-name="${encodeURIComponent(shopName)}" 
+                data-docid="${encodeURIComponent(docId)}" 
+                onclick="handleDeleteShopClick(this)" 
+                style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
+                title="Permanently delete this tenant shop">🗑️ Delete</button>
+            ` : ''}
           </div>
         </td>
       </tr>
@@ -3829,6 +4868,284 @@ function renderSuperAdminShopsTable() {
 
   if (mrrValEl) mrrValEl.textContent = `$${totalMRR} / mo`;
   if (mrrCapEl) mrrCapEl.textContent = `Calculated across ${shops.length} active tenant shop${shops.length === 1 ? '' : 's'}`;
+}
+
+// SuperAdmin: Dynamically change any tenant shop's plan directly from Master Directory
+function changeTenantShopPlan(shopSlug, newTierKey) {
+  if (!shopSlug) return;
+
+  let newTitle = "Starter Tier (Free)";
+  let newPrice = 0;
+  if (newTierKey === "enterprise") {
+    newTitle = "Enterprise Multi-Location";
+    newPrice = 49;
+  } else if (newTierKey === "pro") {
+    newTitle = "Pro Business Tier";
+    newPrice = 15;
+  }
+
+  let shopName = shopSlug;
+  let oldTitle = "Starter";
+  let oldPrice = 0;
+
+  if (Array.isArray(state.registeredShops)) {
+    const targetShop = state.registeredShops.find(s => (s.slug || s.id) === shopSlug);
+    if (targetShop) {
+      shopName = targetShop.name || targetShop.shopName || shopSlug;
+      oldTitle = targetShop.planTitle || (targetShop.planPrice ? `$${targetShop.planPrice}/mo` : "Starter ($0)");
+      oldPrice = targetShop.planPrice !== undefined ? targetShop.planPrice : 0;
+      targetShop.planTitle = newTitle;
+      targetShop.planPrice = newPrice;
+      localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+    }
+  }
+
+  // If this shop happens to be the active session shop, synchronize local state
+  if (state.config.slug === shopSlug) {
+    state.config.planTitle = newTitle;
+    state.config.planPrice = newPrice;
+    localStorage.setItem("waitlink_config", JSON.stringify(state.config));
+    updateConfigUI();
+    renderAll();
+  }
+
+  // Re-render the table with updated colors & re-calculate MRR
+  renderSuperAdminShopsTable();
+
+  // Commit update to Google Cloud Firestore
+  if (db) {
+    db.collection("shops").doc(shopSlug).set({
+      planTitle: newTitle,
+      planPrice: newPrice,
+      updatedAt: Date.now(),
+      updatedBy: (state.user && state.user.email) ? state.user.email : "SuperAdmin"
+    }, { merge: true }).catch(err => {
+      console.warn("Tenant plan Firestore update warning:", err);
+    });
+
+    // Record audit entry in pricing_audits
+    const auditEntry = {
+      id: "audit_" + Date.now(),
+      timestamp: Date.now(),
+      adminEmail: (state.user && state.user.email) ? state.user.email : "senthil930@gmail.com",
+      changes: [`SuperAdmin modified subscription for shop "${shopName}" from ${oldTitle} ($${oldPrice}/mo) ➔ ${newTitle} ($${newPrice}/mo)`]
+    };
+    db.collection("pricing_audits").add(auditEntry).catch(console.warn);
+  }
+
+  showToast(`✓ Plan for "${shopName}" changed to ${newTitle} ($${newPrice}/mo)!`);
+}
+
+let pendingDeleteShop = null;
+
+function handleDeleteShopClick(btn) {
+  if (!btn) return;
+  const slug = decodeURIComponent(btn.getAttribute("data-slug") || "").trim();
+  const name = decodeURIComponent(btn.getAttribute("data-name") || "").trim();
+  const docId = decodeURIComponent(btn.getAttribute("data-docid") || "").trim();
+
+  if (!slug || slug === "main-st-barbers" || docId === "main-st-barbers") {
+    showToast("⚠️ The demo sandbox shop cannot be deleted.");
+    return;
+  }
+
+  pendingDeleteShop = { slug, name, docId };
+
+  const modal = document.getElementById("delete-shop-modal");
+  const nameEl = document.getElementById("delete-modal-shop-name");
+  const slugEl = document.getElementById("delete-modal-shop-slug");
+
+  if (nameEl) nameEl.textContent = name || slug;
+  if (slugEl) slugEl.textContent = slug;
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeDeleteShopModal() {
+  const modal = document.getElementById("delete-shop-modal");
+  if (modal) modal.classList.add("hidden");
+  pendingDeleteShop = null;
+}
+
+function confirmDeleteShopFromModal() {
+  if (!pendingDeleteShop) return;
+  const { slug, name, docId } = pendingDeleteShop;
+  closeDeleteShopModal();
+  executeDeleteShop(slug, name, docId);
+}
+
+// SuperAdmin: Delete any tenant shop permanently
+function deleteTenantShop(shopSlug, shopName, shopDocId) {
+  executeDeleteShop(shopSlug, shopName, shopDocId);
+}
+
+function executeDeleteShop(shopSlug, shopName, shopDocId) {
+  if (!shopSlug || shopSlug === "main-st-barbers") {
+    showToast("⚠️ The demo sandbox shop cannot be deleted.");
+    return;
+  }
+
+  const cleanSlug = String(shopSlug).trim();
+  const cleanDocId = String(shopDocId || shopSlug).trim();
+
+  // 1. Remove from local state
+  if (Array.isArray(state.registeredShops)) {
+    state.registeredShops = state.registeredShops.filter(s => {
+      const sSlug = String(s.slug || s.id || '').trim();
+      const sId = String(s.id || '').trim();
+      return sSlug !== cleanSlug && sId !== cleanDocId && sSlug !== cleanDocId;
+    });
+    localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+  }
+
+  if (Array.isArray(state.myShops)) {
+    state.myShops = state.myShops.filter(s => {
+      const sSlug = String(s.slug || s.id || '').trim();
+      const sId = String(s.id || '').trim();
+      return sSlug !== cleanSlug && sId !== cleanDocId && sSlug !== cleanDocId;
+    });
+    localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
+  }
+
+  // If deleted shop was active session, reset to main-st-barbers
+  if (state.config.slug === cleanSlug || state.config.slug === cleanDocId) {
+    state.config.slug = "main-st-barbers";
+    state.config.shopName = "Main St Barbers";
+    saveConfig();
+  }
+
+  // Re-render SuperAdmin directory and navbar dropdown
+  renderSuperAdminShopsTable();
+  renderShopDropdown();
+
+  // 2. Delete from Google Cloud Firestore
+  if (db) {
+    const deletePromises = [];
+    if (cleanDocId) {
+      deletePromises.push(db.collection("shops").doc(cleanDocId).delete().catch(console.warn));
+    }
+    if (cleanSlug && cleanSlug !== cleanDocId) {
+      deletePromises.push(db.collection("shops").doc(cleanSlug).delete().catch(console.warn));
+    }
+
+    Promise.all(deletePromises).then(() => {
+      // Record audit entry in pricing_audits
+      const auditEntry = {
+        id: "audit_" + Date.now(),
+        timestamp: Date.now(),
+        adminEmail: (state.user && state.user.email) ? state.user.email : "SuperAdmin",
+        changes: [`SuperAdmin deleted tenant shop "${shopName || cleanSlug}" (slug: ${cleanSlug}, docId: ${cleanDocId})`]
+      };
+      db.collection("pricing_audits").add(auditEntry).catch(console.warn);
+      showToast(`🗑️ Shop "${shopName || cleanSlug}" successfully deleted!`);
+    }).catch(err => {
+      console.error("Firestore delete tenant shop error:", err);
+      showToast(`⚠️ Error deleting shop from cloud: ${err.message}`);
+    });
+  } else {
+    showToast(`🗑️ Shop "${shopName || cleanSlug}" removed locally.`);
+  }
+}
+
+// SuperAdmin: Scan and purge duplicate shop records
+function cleanDuplicateShops() {
+  if (!db || state.userRole !== "SuperAdmin") {
+    showToast("⚠️ SuperAdmin access required.");
+    return;
+  }
+
+  const shops = state.registeredShops || [];
+  if (shops.length === 0) {
+    showToast("No shops to inspect.");
+    return;
+  }
+
+  // Group by normalized (shopName + ownerEmail)
+  const groups = new Map();
+  shops.forEach(s => {
+    if (!s) return;
+    const sSlug = s.slug || s.id;
+    if (sSlug === "main-st-barbers") return; // protected demo
+
+    const sName = (s.shopName || s.name || sSlug).trim().toLowerCase();
+    const sOwner = (s.ownerEmail || "").trim().toLowerCase();
+    const groupKey = `${sName}:::${sOwner}`;
+
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(s);
+  });
+
+  const duplicatesToDelete = [];
+
+  groups.forEach((items, key) => {
+    if (items.length > 1) {
+      // Score each shop to find the best canonical one to KEEP:
+      items.sort((a, b) => {
+        const slugA = a.slug || a.id || "";
+        const slugB = b.slug || b.id || "";
+        const hasSpaceA = slugA.includes(" ");
+        const hasSpaceB = slugB.includes(" ");
+        if (hasSpaceA !== hasSpaceB) return hasSpaceA ? 1 : -1;
+        
+        const expectedSlug = slugify(a.shopName || a.name || "");
+        if (slugA === expectedSlug && slugB !== expectedSlug) return -1;
+        if (slugB === expectedSlug && slugA !== expectedSlug) return 1;
+
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+
+      const canonicalToKeep = items[0];
+      const ghosts = items.slice(1);
+      ghosts.forEach(g => {
+        duplicatesToDelete.push({
+          ghost: g,
+          canonical: canonicalToKeep
+        });
+      });
+    }
+  });
+
+  if (duplicatesToDelete.length === 0) {
+    showToast("✓ No duplicate shop records found. Directory is clean!");
+    return;
+  }
+
+  const confirmMsg = `Found ${duplicatesToDelete.length} duplicate shop record(s):\n\n` +
+    duplicatesToDelete.map(d => `• Delete ghost "${d.ghost.slug || d.ghost.id}" (keeping canonical "${d.canonical.slug || d.canonical.id}")`).join("\n") +
+    `\n\nProceed with cloud cleanup?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  const deletePromises = duplicatesToDelete.map(d => {
+    const slugToDelete = d.ghost.slug || d.ghost.id;
+    return db.collection("shops").doc(slugToDelete).delete().then(() => {
+      // Remove from state
+      state.registeredShops = state.registeredShops.filter(s => (s.slug || s.id) !== slugToDelete);
+      if (Array.isArray(state.myShops)) {
+        state.myShops = state.myShops.filter(s => (s.slug || s.id) !== slugToDelete);
+      }
+    });
+  });
+
+  Promise.all(deletePromises).then(() => {
+    localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+    localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
+    
+    // Log audit
+    const auditEntry = {
+      id: "audit_" + Date.now(),
+      timestamp: Date.now(),
+      adminEmail: (state.user && state.user.email) ? state.user.email : "SuperAdmin",
+      changes: [`SuperAdmin auto-purged ${duplicatesToDelete.length} duplicate ghost shop records (${duplicatesToDelete.map(d => d.ghost.slug || d.ghost.id).join(", ")})`]
+    };
+    db.collection("pricing_audits").add(auditEntry).catch(console.warn);
+
+    renderSuperAdminShopsTable();
+    renderShopDropdown();
+    showToast(`✓ Successfully purged ${duplicatesToDelete.length} duplicate shop(s) from Firestore!`);
+  }).catch(err => {
+    console.error("Error purging duplicate shops:", err);
+    showToast(`⚠️ Error during cleanup: ${err.message}`);
+  });
 }
 
 // SuperAdmin Sub-Tab Switcher & Support Inbox Loader
@@ -3875,20 +5192,33 @@ const DEFAULT_TIER_FEATURES = {
     { text: "Up to 100 Monthly Check-ins", enabled: true },
     { text: "Printable Window QR Poster", enabled: true },
     { text: "1-Tap Front Desk Control", enabled: true },
-    { text: "Basic Wait Time Estimator", enabled: true }
+    { text: "Real-Time Waiting Time Estimator", enabled: true },
+    { text: "Anonymous Public Wait Page", enabled: true },
+    { text: "Audible Turn Chimes & Sound Alerts", enabled: true },
+    { text: "Automated Twilio SMS Notifications", enabled: false },
+    { text: "Custom Shop Logo Branding", enabled: false },
+    { text: "Business Analytics & CSV History Export", enabled: false }
   ],
   t2: [
-    { text: "Unlimited Monthly Check-ins", enabled: true },
+    { text: "Everything in Starter", enabled: true },
+    { text: "1 Dedicated Shop with Unlimited Check-ins", enabled: true },
+    { text: "Automated Twilio SMS \"Turn Ready\" Alerts", enabled: true },
     { text: "Custom Logo Branding & Colors", enabled: true },
+    { text: "Promotional Offer Banners on Public Screen", enabled: true },
     { text: "Owner Business Intelligence Dashboard", enabled: true },
     { text: "Peak Rush Window & Walk-Away Analytics", enabled: true },
+    { text: "Unlimited CSV History Data Export", enabled: true },
     { text: "Multi-Device Front Desk Sync", enabled: true },
-    { text: "Priority Cloud Firestore Latency", enabled: true }
+    { text: "Priority Cloud Firestore Latency", enabled: true },
+    { text: "Multi-Location Network (Unlimited Shops)", enabled: false },
+    { text: "Multiple Staff Front Desk Accounts", enabled: false }
   ],
   t3: [
+    { text: "Everything in Pro Business", enabled: true },
     { text: "Unlimited Locations & Staff Accounts", enabled: true },
-    { text: "Multi-Tenant SuperAdmin Access", enabled: true },
+    { text: "Multi-Tenant Platform SuperAdmin Directory", enabled: true },
     { text: "Custom Domain CNAME Routing", enabled: true },
+    { text: "High-Volume Dedicated Twilio SMS", enabled: true },
     { text: "Dedicated Support Manager", enabled: true },
     { text: "99.99% Cloud SLA", enabled: true }
   ]
@@ -4080,6 +5410,7 @@ function savePricingConfig() {
 
   state.pricingTiers = newTiers;
   localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(newTiers));
+  renderUpgradeModalTiers(newTiers);
 
   // Save Audit Log
   const auditEntry = {
@@ -4114,16 +5445,34 @@ function savePricingConfig() {
 
 function loadPricingConfigUI() {
   const loadFeaturesIntoState = (tierKey, features) => {
-    if (!Array.isArray(features)) return;
-    state.adminFeatures[tierKey] = features.map(f => {
-      if (typeof f === 'object' && f !== null) {
-        return { text: f.text || '', enabled: f.enabled !== false };
-      }
-      const str = String(f || '').trim();
-      const isOff = str.startsWith('[x]') || str.startsWith('[X]') || str.startsWith('OFF:') || str.startsWith('~');
-      const clean = str.replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
-      return { text: clean, enabled: !isOff };
-    });
+    const defaultList = DEFAULT_TIER_FEATURES[tierKey] || [];
+    let list = [];
+    if (Array.isArray(features) && features.length > 0) {
+      list = features.map(f => {
+        if (typeof f === 'object' && f !== null) {
+          return { text: f.text || '', enabled: f.enabled !== false };
+        }
+        const str = String(f || '').trim();
+        const isOff = str.startsWith('[x]') || str.startsWith('[X]') || str.startsWith('OFF:') || str.startsWith('~');
+        const clean = str.replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
+        return { text: clean, enabled: !isOff };
+      });
+
+      // Merge any canonical features from DEFAULT_TIER_FEATURES that might be missing
+      defaultList.forEach(defF => {
+        const cleanDef = defF.text.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const exists = list.some(item => {
+          const cleanItem = item.text.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return cleanItem === cleanDef || (cleanItem.length > 10 && (cleanItem.includes(cleanDef) || cleanDef.includes(cleanItem)));
+        });
+        if (!exists) {
+          list.push({ text: defF.text, enabled: defF.enabled !== false });
+        }
+      });
+    } else {
+      list = JSON.parse(JSON.stringify(defaultList));
+    }
+    state.adminFeatures[tierKey] = list;
     renderAdminFeatureManager(tierKey);
   };
 
@@ -4152,12 +5501,17 @@ function loadPricingConfigUI() {
       setElValue("pricing-t3-desc", tiers[2].desc || "");
       loadFeaturesIntoState('t3', tiers[2].features);
     }
+    renderUpgradeModalTiers(tiers);
   };
 
   // Local load first
   const saved = localStorage.getItem("waitlink_pricing_tiers");
   if (saved) {
-    try { applyTiersToUI(JSON.parse(saved)); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(saved);
+      state.pricingTiers = parsed;
+      applyTiersToUI(parsed); 
+    } catch (e) {}
   }
 
   // Live Cloud load from Firestore
@@ -4169,6 +5523,84 @@ function loadPricingConfigUI() {
         applyTiersToUI(state.pricingTiers);
       }
     }).catch(console.warn);
+  }
+}
+
+function renderUpgradeModalTiers(tiers) {
+  if (!Array.isArray(tiers) || tiers.length === 0) return;
+  const t1 = tiers[0];
+  const t2 = tiers[1];
+  const t3 = tiers[2];
+
+  const renderTierList = (containerId, features) => {
+    const container = document.getElementById(containerId);
+    if (!container || !Array.isArray(features)) return;
+    container.innerHTML = features.map(f => {
+      const isEnabled = typeof f === 'object' && f !== null ? f.enabled !== false : !String(f).startsWith('[x]');
+      const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
+      if (isEnabled) {
+        return `<li style="display: flex; align-items: flex-start; gap: 0.45rem;"><span style="color: #10b981; font-weight: 700;">✓</span> <span>${escapeHtml(text)}</span></li>`;
+      } else {
+        return `<li style="display: flex; align-items: flex-start; gap: 0.45rem; color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700; text-decoration: none;">✕</span> <span>${escapeHtml(text)}</span></li>`;
+      }
+    }).join('');
+  };
+
+  if (t1) {
+    const badgeEl = document.getElementById("modal-t1-badge");
+    const titleEl = document.getElementById("modal-t1-title");
+    const priceEl = document.getElementById("modal-t1-price");
+    if (badgeEl) badgeEl.textContent = (t1.badge || "FREE FOREVER").toUpperCase();
+    if (titleEl) titleEl.textContent = t1.title || "Starter";
+    if (priceEl) priceEl.textContent = t1.price || "$0";
+    renderTierList("modal-tier-features-starter", t1.features);
+  }
+
+  if (t2) {
+    const badgeEl = document.getElementById("modal-t2-badge");
+    const titleEl = document.getElementById("modal-t2-title");
+    const priceEl = document.getElementById("modal-t2-price");
+    if (badgeEl) badgeEl.textContent = (t2.badge || "STANDARD SHOP").toUpperCase();
+    if (titleEl) titleEl.textContent = t2.title || "Pro Business";
+    if (priceEl) priceEl.textContent = t2.price || "$15";
+    renderTierList("modal-tier-features-pro", t2.features);
+  }
+
+  if (t3) {
+    const badgeEl = document.getElementById("modal-t3-badge");
+    const titleEl = document.getElementById("modal-t3-title");
+    const priceEl = document.getElementById("modal-t3-price");
+    if (badgeEl) badgeEl.textContent = (t3.badge || "MULTI-LOCATION").toUpperCase();
+    if (titleEl) titleEl.textContent = t3.title || "Enterprise";
+    if (priceEl) priceEl.textContent = t3.price || "$49";
+    renderTierList("modal-tier-features-enterprise", t3.features);
+  }
+}
+
+let pricingConfigUnsubscribe = null;
+function initPricingConfigRealtimeSync() {
+  if (!db || pricingConfigUnsubscribe) return;
+  try {
+    pricingConfigUnsubscribe = db.collection("settings").doc("pricing_config").onSnapshot(doc => {
+      if (doc.exists && doc.data().tiers) {
+        state.pricingTiers = doc.data().tiers;
+        localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+        renderUpgradeModalTiers(state.pricingTiers);
+
+        const panelPricing = document.getElementById("superpanel-pricing");
+        if (panelPricing && !panelPricing.classList.contains("hidden")) {
+          const activeEl = document.activeElement;
+          const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+          if (!isTyping) {
+            loadPricingConfigUI();
+          }
+        }
+      }
+    }, err => {
+      console.warn("Pricing config realtime listener error:", err);
+    });
+  } catch (e) {
+    console.warn("Failed to init pricing config realtime listener:", e);
   }
 }
 
@@ -4255,11 +5687,9 @@ function clearPricingAuditLogs() {
    ========================================================================== */
 
 let stripeConfig = {
-  publishableKey: SECRETS.STRIPE_PUBLISHABLE_KEY || "pk_test_51UMbOTQa30COilZxWnUhiZ3V2WPWAoHlzQ5VpP5RXrl5nZh4XmGrSPUyHFEZgT58WG6dfbYrUjkpvz2n8AhF0qTd009iF20uN5",
-  secretKey: SECRETS.STRIPE_SECRET_KEY || "",
-  proPriceId: SECRETS.STRIPE_PRO_PRICE_ID || "price_1UMbOzQa30COilZx6HAwQRjB",
-  resendApiKey: "",
-  brevoApiKey: SECRETS.BREVO_API_KEY || ""
+  publishableKey: (SECRETS && SECRETS.STRIPE_PUBLISHABLE_KEY) || "pk_live_51LiRniHXdog2I9XKaFBkGtBEDN1nWzMP0F1H2kX5WSUyfCm1dsuK76EXTl3dcO14RXD7QN9mvPm9Bcx6QoivfnOS008JHNbTvV",
+  proPriceId: (SECRETS && SECRETS.STRIPE_PRO_PRICE_ID) || "price_1UMbBvHXdog2I9XKNFauNDmJ",
+  enterprisePriceId: "price_1UMbCNHXdog2I9XK5sqqn8VA"
 };
 let stripeInstance = null;
 
@@ -4272,15 +5702,9 @@ function initStripePaymentEngine() {
   const paidTier = urlParams.get("tier");
   
   if (paymentStatus === "success") {
-    // Security Guard: Prevent unauthenticated URL tampering.
-    // Only the authenticated shop owner or SuperAdmin can process payment return callbacks.
-    const isOwner = state.user && (
-      state.userRole === "SuperAdmin" || 
-      (state.config.ownerEmail && state.user.email && state.config.ownerEmail.toLowerCase() === state.user.email.toLowerCase())
-    );
-
-    if (!isOwner) {
-      console.warn("Security Alert: Unauthenticated payment callback detected and ignored.");
+    const sessionId = urlParams.get("session_id");
+    if (!sessionId) {
+      console.warn("Security Alert: payment=success callback is missing session_id. Ignoring unverified callback.");
       try {
         const cleanUrl = window.location.pathname + window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
@@ -4288,34 +5712,51 @@ function initStripePaymentEngine() {
       return;
     }
 
-    let title = paidTier === "enterprise" ? "Enterprise Tier" : "Pro Business Tier";
-    let price = paidTier === "enterprise" ? 49 : 15;
+    showToast("⏳ Verifying your subscription payment with Stripe...");
 
-    state.config.planTitle = title;
-    state.config.planPrice = price;
-    saveConfig();
-    renderAll();
-    switchView("home");
-
-    if (db && state.config.slug) {
-      db.collection("shops").doc(state.config.slug).set({
-        planTitle: title,
-        planPrice: price,
-        updatedAt: Date.now()
-      }, { merge: true }).catch(console.warn);
-    }
-
-    showToast(`🎉 Payment Confirmed! Upgraded to ${title} ($${price}/mo).`);
-    try {
-      const cleanUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, document.title, cleanUrl);
-    } catch (e) {}
+    (async () => {
+      try {
+        let idToken = "";
+        if (typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
+          idToken = await firebase.auth().currentUser.getIdToken();
+        }
+        if (!idToken) {
+          console.warn("User auth token not ready; waiting for auth state change to verify payment...");
+          firebase.auth().onAuthStateChanged(async (currentUser) => {
+            if (currentUser && sessionId) {
+              const token = await currentUser.getIdToken();
+              verifyStripeSessionBackend(sessionId, token);
+            }
+          });
+          return;
+        }
+        await verifyStripeSessionBackend(sessionId, idToken);
+      } catch (e) {
+        console.error("Payment verification initiation error:", e);
+      }
+    })();
   } else if (paymentStatus === "cancelled") {
     showToast("Checkout cancelled. No charges were made.");
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
     } catch (e) {}
+  }
+
+  // Handle direct navigation to upgrade modal via ?action=upgrade&tier=pro
+  if (urlParams.get("action") === "upgrade") {
+    setTimeout(() => {
+      openUpgradeModal();
+      const targetTier = urlParams.get("tier");
+      if (targetTier) {
+        const cardId = targetTier === "enterprise" ? "tier-card-enterprise" : "tier-card-pro";
+        const card = document.getElementById(cardId);
+        if (card) {
+          card.style.transform = "scale(1.02)";
+          setTimeout(() => { if (card) card.style.transform = ""; }, 1200);
+        }
+      }
+    }, 350);
   }
 
   // Attempt to override config from local JSON if available
@@ -4326,23 +5767,11 @@ function initStripePaymentEngine() {
         if (data.stripe_publishable_key && !data.stripe_publishable_key.includes("PASTE_YOUR")) {
           stripeConfig.publishableKey = data.stripe_publishable_key.trim();
         }
-        if (data.stripe_secret_key && !data.stripe_secret_key.includes("PASTE_YOUR")) {
-          stripeConfig.secretKey = data.stripe_secret_key.trim();
-        }
         if (data.pro_price_id && !data.pro_price_id.includes("PASTE_YOUR")) {
           stripeConfig.proPriceId = data.pro_price_id.trim();
         }
         if (data.enterprise_price_id && !data.enterprise_price_id.includes("PASTE_YOUR")) {
           stripeConfig.enterprisePriceId = data.enterprise_price_id.trim();
-        }
-        if (data.resend_api_key && !data.resend_api_key.includes("PASTE_YOUR")) {
-          stripeConfig.resendApiKey = data.resend_api_key.trim();
-        }
-        if (data.sender_email && !data.sender_email.includes("PASTE_YOUR")) {
-          stripeConfig.senderEmail = data.sender_email.trim();
-        }
-        if (data.brevo_api_key && !data.brevo_api_key.includes("PASTE_YOUR")) {
-          stripeConfig.brevoApiKey = data.brevo_api_key.trim();
         }
       }
       initStripeSdk();
@@ -4350,6 +5779,57 @@ function initStripePaymentEngine() {
     .catch(() => {
       initStripeSdk();
     });
+}
+
+async function verifyStripeSessionBackend(sessionId, idToken) {
+  try {
+    const verifyRes = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/verifyStripeSessionAndUpgrade", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`
+      },
+      body: JSON.stringify({
+        sessionId: sessionId,
+        slug: state.config.slug || "main-st-barbers"
+      })
+    });
+
+    const verifyData = await verifyRes.json();
+    if (verifyRes.ok && verifyData.success) {
+      state.config.planTitle = verifyData.tierTitle;
+      state.config.planPrice = verifyData.planPrice;
+      saveConfig();
+      renderAll();
+      switchView("home");
+      showToast(`🎉 Payment Confirmed by Stripe! Upgraded to ${verifyData.tierTitle} ($${verifyData.planPrice}/mo).`);
+
+      const ownerEmail = (state.user && state.user.email) || state.config.ownerEmail;
+      if (ownerEmail) {
+        fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendSubscriptionUpgradeEmail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: ownerEmail,
+            shopName: state.config.shopName || "Your Shop",
+            planTitle: verifyData.tierTitle,
+            planPrice: verifyData.planPrice,
+            slug: state.config.slug || "main-st-barbers"
+          })
+        }).catch(err => console.warn("Upgrade email dispatch error:", err));
+      }
+    } else {
+      showToast(`⚠️ Payment Verification Notice: ${verifyData.error || "Could not confirm Stripe session."}`);
+    }
+  } catch (err) {
+    console.error("Verification error:", err);
+    showToast("⚠️ Error connecting to payment verification service.");
+  } finally {
+    try {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (e) {}
+  }
 }
 
 function initStripeSdk() {
@@ -4363,71 +5843,227 @@ function initStripeSdk() {
   }
 }
 
-function openUpgradeModal() {
+function openUpgradeModal(targetTier) {
   updateUpgradeModalUI();
   const modal = document.getElementById("upgrade-modal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (targetTier === "enterprise") {
+      const entCard = document.getElementById("tier-card-enterprise");
+      if (entCard) {
+        setTimeout(() => {
+          entCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          entCard.style.outline = "2px solid #6366f1";
+          setTimeout(() => { entCard.style.outline = ""; }, 2500);
+        }, 150);
+      }
+    }
+  }
 }
 
 function updateUpgradeModalUI() {
+  if (state.pricingTiers) {
+    renderUpgradeModalTiers(state.pricingTiers);
+  }
   const planPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const planTitle = state.config.planTitle || "Starter Tier (Free)";
+  const shopName = state.config.shopName || "Your Shop";
+
+  // 1. Update top banner in modal
+  const activeShopNameEl = document.getElementById("modal-active-shop-name");
+  const activePlanTitleEl = document.getElementById("modal-active-plan-title");
+  if (activeShopNameEl) activeShopNameEl.textContent = shopName;
+  if (activePlanTitleEl) {
+    if (planPrice === 49 || planTitle.includes("Enterprise")) {
+      activePlanTitleEl.innerHTML = `<span class="pulse-dot" style="background:#6366f1;"></span> Enterprise Tier ($49/mo) • Active`;
+      activePlanTitleEl.style.color = "#6366f1";
+    } else if (planPrice === 15 || planTitle.includes("Pro")) {
+      activePlanTitleEl.innerHTML = `<span class="pulse-dot" style="background:#06b6d4;"></span> Pro Business Tier ($15/mo) • Active`;
+      activePlanTitleEl.style.color = "#06b6d4";
+    } else {
+      activePlanTitleEl.innerHTML = `<span class="pulse-dot" style="background:#10b981;"></span> Starter Tier (Free • $0/mo) • Active`;
+      activePlanTitleEl.style.color = "#10b981";
+    }
+  }
+
+  // 2. References to cards, badges, and buttons
+  const cardStarter = document.getElementById("tier-card-starter");
+  const cardPro = document.getElementById("tier-card-pro");
+  const cardEnterprise = document.getElementById("tier-card-enterprise");
+
+  const badgeStarter = document.getElementById("tier-badge-starter");
+  const badgePro = document.getElementById("tier-badge-pro");
+  const badgeEnterprise = document.getElementById("tier-badge-enterprise");
 
   const starterBtn = document.getElementById("tier-btn-starter");
   const proBtn = document.getElementById("tier-btn-pro");
   const enterpriseBtn = document.getElementById("tier-btn-enterprise");
 
-  if (starterBtn) {
-    if (planPrice === 0) {
-      starterBtn.textContent = "✓ Current Plan (Free)";
-      starterBtn.disabled = true;
-      starterBtn.style.opacity = "0.7";
-      starterBtn.style.cursor = "default";
-    } else {
-      starterBtn.textContent = "Switch to Starter ($0)";
-      starterBtn.disabled = false;
-      starterBtn.style.opacity = "1";
-      starterBtn.style.cursor = "pointer";
-    }
-  }
+  const isStarterActive = (planPrice === 0 || planTitle.includes("Starter"));
+  const isProActive = (planPrice === 15 || planTitle.includes("Pro"));
+  const isEnterpriseActive = (planPrice === 49 || planTitle.includes("Enterprise"));
 
-  if (proBtn) {
-    if (planPrice === 15 || planTitle.includes("Pro")) {
-      proBtn.textContent = "✓ Current Active Plan";
-      proBtn.disabled = true;
-      proBtn.className = "btn btn-secondary btn-sm";
-      proBtn.style.background = "rgba(16, 185, 129, 0.2)";
-      proBtn.style.color = "#10b981";
-      proBtn.style.borderColor = "#10b981";
-      proBtn.style.cursor = "default";
-    } else {
-      proBtn.textContent = "🚀 Upgrade to Pro ($15/mo)";
+  // Reset all cards to clean default dark state
+  [cardStarter, cardPro, cardEnterprise].forEach(card => {
+    if (card) {
+      card.style.border = "1px solid var(--border-color)";
+      card.style.boxShadow = "none";
+      card.style.background = "var(--bg-card)";
+    }
+  });
+
+  // Apply prominent cosmetics based on the active plan
+  if (isStarterActive) {
+    if (cardStarter) {
+      cardStarter.style.border = "2px solid #10b981";
+      cardStarter.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.22)";
+      cardStarter.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%)";
+    }
+    if (badgeStarter) {
+      badgeStarter.classList.remove("hidden");
+      badgeStarter.textContent = "✓ YOUR CURRENT PLAN";
+      badgeStarter.style.background = "#10b981";
+    }
+    if (badgePro) {
+      badgePro.classList.remove("hidden");
+      badgePro.textContent = "POPULAR";
+      badgePro.style.background = "var(--primary)";
+    }
+    if (badgeEnterprise) badgeEnterprise.classList.add("hidden");
+
+    if (starterBtn) {
+      starterBtn.innerHTML = "✓ Currently Active Plan";
+      starterBtn.disabled = true;
+      starterBtn.className = "btn btn-sm";
+      starterBtn.style.background = "#10b981";
+      starterBtn.style.color = "#ffffff";
+      starterBtn.style.fontWeight = "700";
+      starterBtn.style.border = "none";
+      starterBtn.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.35)";
+      starterBtn.style.opacity = "1";
+      starterBtn.style.cursor = "default";
+    }
+    if (proBtn) {
+      proBtn.innerHTML = "🚀 Upgrade to Pro ($15/mo)";
       proBtn.disabled = false;
       proBtn.className = "btn btn-primary btn-sm";
       proBtn.style.background = "";
       proBtn.style.color = "";
       proBtn.style.borderColor = "";
+      proBtn.style.boxShadow = "";
+      proBtn.style.opacity = "1";
       proBtn.style.cursor = "pointer";
     }
-  }
-
-  if (enterpriseBtn) {
-    if (planPrice === 49 || planTitle.includes("Enterprise")) {
-      enterpriseBtn.textContent = "✓ Current Active Plan";
-      enterpriseBtn.disabled = true;
-      enterpriseBtn.className = "btn btn-secondary btn-sm";
-      enterpriseBtn.style.background = "rgba(99, 102, 241, 0.2)";
-      enterpriseBtn.style.color = "#6366f1";
-      enterpriseBtn.style.borderColor = "#6366f1";
-      enterpriseBtn.style.cursor = "default";
-    } else {
-      enterpriseBtn.textContent = "👑 Upgrade to Enterprise ($49/mo)";
+    if (enterpriseBtn) {
+      enterpriseBtn.innerHTML = "👑 Upgrade to Enterprise ($49/mo)";
       enterpriseBtn.disabled = false;
       enterpriseBtn.className = "btn btn-secondary btn-sm";
       enterpriseBtn.style.background = "";
       enterpriseBtn.style.color = "#6366f1";
       enterpriseBtn.style.borderColor = "rgba(99, 102, 241, 0.4)";
+      enterpriseBtn.style.boxShadow = "";
+      enterpriseBtn.style.opacity = "1";
       enterpriseBtn.style.cursor = "pointer";
+    }
+  } else if (isProActive) {
+    if (cardPro) {
+      cardPro.style.border = "2px solid #06b6d4";
+      cardPro.style.boxShadow = "0 0 25px rgba(6, 182, 212, 0.25)";
+      cardPro.style.background = "linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)";
+    }
+    if (badgeStarter) badgeStarter.classList.add("hidden");
+    if (badgePro) {
+      badgePro.classList.remove("hidden");
+      badgePro.textContent = "✓ YOUR CURRENT PLAN";
+      badgePro.style.background = "#06b6d4";
+    }
+    if (badgeEnterprise) badgeEnterprise.classList.add("hidden");
+
+    if (starterBtn) {
+      starterBtn.innerHTML = "Switch to Starter ($0)";
+      starterBtn.disabled = false;
+      starterBtn.className = "btn btn-secondary btn-sm";
+      starterBtn.style.background = "";
+      starterBtn.style.color = "";
+      starterBtn.style.border = "";
+      starterBtn.style.boxShadow = "";
+      starterBtn.style.opacity = "1";
+      starterBtn.style.cursor = "pointer";
+    }
+    if (proBtn) {
+      proBtn.innerHTML = "✓ Currently Active Plan";
+      proBtn.disabled = true;
+      proBtn.className = "btn btn-sm";
+      proBtn.style.background = "#06b6d4";
+      proBtn.style.color = "#ffffff";
+      proBtn.style.fontWeight = "700";
+      proBtn.style.border = "none";
+      proBtn.style.boxShadow = "0 4px 12px rgba(6, 182, 212, 0.35)";
+      proBtn.style.opacity = "1";
+      proBtn.style.cursor = "default";
+    }
+    if (enterpriseBtn) {
+      enterpriseBtn.innerHTML = "👑 Upgrade to Enterprise ($49/mo)";
+      enterpriseBtn.disabled = false;
+      enterpriseBtn.className = "btn btn-secondary btn-sm";
+      enterpriseBtn.style.background = "";
+      enterpriseBtn.style.color = "#6366f1";
+      enterpriseBtn.style.borderColor = "rgba(99, 102, 241, 0.4)";
+      enterpriseBtn.style.boxShadow = "";
+      enterpriseBtn.style.opacity = "1";
+      enterpriseBtn.style.cursor = "pointer";
+    }
+  } else if (isEnterpriseActive) {
+    if (cardEnterprise) {
+      cardEnterprise.style.border = "2px solid #6366f1";
+      cardEnterprise.style.boxShadow = "0 0 25px rgba(99, 102, 241, 0.25)";
+      cardEnterprise.style.background = "linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)";
+    }
+    if (badgeStarter) badgeStarter.classList.add("hidden");
+    if (badgePro) {
+      badgePro.classList.remove("hidden");
+      badgePro.textContent = "POPULAR";
+      badgePro.style.background = "var(--primary)";
+    }
+    if (badgeEnterprise) {
+      badgeEnterprise.classList.remove("hidden");
+      badgeEnterprise.textContent = "✓ YOUR CURRENT PLAN";
+      badgeEnterprise.style.background = "#6366f1";
+    }
+
+    if (starterBtn) {
+      starterBtn.innerHTML = "Switch to Starter ($0)";
+      starterBtn.disabled = false;
+      starterBtn.className = "btn btn-secondary btn-sm";
+      starterBtn.style.background = "";
+      starterBtn.style.color = "";
+      starterBtn.style.border = "";
+      starterBtn.style.boxShadow = "";
+      starterBtn.style.opacity = "1";
+      starterBtn.style.cursor = "pointer";
+    }
+    if (proBtn) {
+      proBtn.innerHTML = "Switch to Pro ($15/mo)";
+      proBtn.disabled = false;
+      proBtn.className = "btn btn-secondary btn-sm";
+      proBtn.style.background = "";
+      proBtn.style.color = "";
+      proBtn.style.border = "";
+      proBtn.style.boxShadow = "";
+      proBtn.style.opacity = "1";
+      proBtn.style.cursor = "pointer";
+    }
+    if (enterpriseBtn) {
+      enterpriseBtn.innerHTML = "✓ Currently Active Plan";
+      enterpriseBtn.disabled = true;
+      enterpriseBtn.className = "btn btn-sm";
+      enterpriseBtn.style.background = "#6366f1";
+      enterpriseBtn.style.color = "#ffffff";
+      enterpriseBtn.style.fontWeight = "700";
+      enterpriseBtn.style.border = "none";
+      enterpriseBtn.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.35)";
+      enterpriseBtn.style.opacity = "1";
+      enterpriseBtn.style.cursor = "default";
     }
   }
 }
@@ -4435,52 +6071,56 @@ function updateUpgradeModalUI() {
 function closeUpgradeModal() {
   const modal = document.getElementById("upgrade-modal");
   if (modal) modal.classList.add("hidden");
+  hideUpgradeProcessingOverlay();
   const statusMsg = document.getElementById("stripe-checkout-status-msg");
   if (statusMsg) statusMsg.classList.add("hidden");
 }
 
-// Create a 100% Hosted Stripe Checkout Session directly
-async function createStripeApiCheckoutSession(priceId, tierKey) {
-  const secretKey = stripeConfig.secretKey;
-  if (!secretKey || secretKey.includes("PASTE_YOUR")) return false;
+let currentUpgradingTier = null;
 
-  const bodyData = new URLSearchParams({
-    'payment_method_types[]': 'card',
-    'line_items[0][price]': priceId,
-    'line_items[0][quantity]': '1',
-    'mode': 'subscription',
-    'success_url': window.location.origin + window.location.pathname + `?payment=success&tier=${tierKey}`,
-    'cancel_url': window.location.origin + window.location.pathname + '?payment=cancelled'
-  });
+function showUpgradeProcessingOverlay(tierKey) {
+  const overlay = document.getElementById("upgrade-processing-overlay");
+  if (!overlay) return;
+  currentUpgradingTier = tierKey;
+  
+  const titleEl = document.getElementById("upgrade-proc-title");
+  const descEl = document.getElementById("upgrade-proc-desc");
+  const tierEl = document.getElementById("upgrade-proc-tier");
+  const iconEl = document.getElementById("upgrade-proc-icon");
+  const errActions = document.getElementById("upgrade-proc-error-actions");
+  const cancelBtn = document.getElementById("upgrade-proc-cancel-btn");
+  const spinnerContainer = document.querySelector(".upgrade-spinner-container");
 
-  try {
-    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + secretKey,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: bodyData
-    });
-
-    const result = await res.json();
-    if (result && result.url) {
-      console.log("🚀 Redirecting to Stripe Checkout URL:", result.url);
-      window.location.href = result.url;
-      return true;
-    } else if (result && result.error) {
-      console.warn("Stripe API Error:", result.error.message);
-      showToast("Stripe Error: " + result.error.message);
-    }
-  } catch (err) {
-    console.error("Stripe Checkout Session Fetch Error:", err);
+  const tierName = tierKey === "enterprise" ? "Enterprise ($49/mo)" : "Pro Business ($15/mo)";
+  if (titleEl) titleEl.textContent = "Connecting to Stripe...";
+  if (tierEl) {
+    tierEl.textContent = tierName;
+    tierEl.style.color = tierKey === "enterprise" ? "#6366f1" : "#10b981";
   }
-  return false;
+  if (descEl) {
+    descEl.innerHTML = `Preparing your checkout session for <strong style="color: ${tierKey === 'enterprise' ? '#6366f1' : '#10b981'};">${tierName}</strong>.<br>Redirecting you to Stripe in just a moment...`;
+  }
+  if (iconEl) iconEl.textContent = "⚡";
+  if (errActions) errActions.classList.add("hidden");
+  if (cancelBtn) cancelBtn.classList.remove("hidden");
+  if (spinnerContainer) spinnerContainer.style.display = "flex";
+
+  overlay.classList.remove("hidden");
+}
+
+function hideUpgradeProcessingOverlay() {
+  const overlay = document.getElementById("upgrade-processing-overlay");
+  if (overlay) overlay.classList.add("hidden");
+  currentUpgradingTier = null;
+}
+
+function retryStripeUpgrade() {
+  if (currentUpgradingTier) {
+    selectUpgradeTier(currentUpgradingTier);
+  }
 }
 
 async function selectUpgradeTier(tierKey) {
-  const statusMsg = document.getElementById("stripe-checkout-status-msg");
-  
   if (tierKey === 'starter') {
     state.config.planTitle = "Starter Tier (Free)";
     state.config.planPrice = 0;
@@ -4500,42 +6140,57 @@ async function selectUpgradeTier(tierKey) {
     return;
   }
 
+  // 1. Show centered processing screen overlay immediately!
+  showUpgradeProcessingOverlay(tierKey);
+
   const priceId = (tierKey === 'pro') ? stripeConfig.proPriceId : stripeConfig.enterprisePriceId;
+  const currentSlug = state.config.slug || "main-st-barbers";
+  const originUrl = window.location.origin + window.location.pathname;
 
-  if (statusMsg) {
-    statusMsg.textContent = "⏳ Redirecting to 100% Secure Stripe Payment Gateway...";
-    statusMsg.classList.remove("hidden");
-  }
+  try {
+    // 2. Direct Cloud Function Call (Guaranteed server-side Stripe redirect)
+    const cloudFnUrl = "https://us-central1-waitlink-app-8821.cloudfunctions.net/createStripeCheckoutSession";
+    const res = await fetch(cloudFnUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tierKey: tierKey,
+        priceId: priceId,
+        slug: currentSlug,
+        origin: originUrl
+      })
+    });
 
-  // 1. Direct Stripe REST API Checkout Session Creation (Guaranteed fast redirect)
-  const sessionCreated = await createStripeApiCheckoutSession(priceId, tierKey);
-  if (sessionCreated) return;
-
-  // 2. Firestore Extension Trigger Fallback
-  if (db && state.user && state.user.uid) {
-    try {
-      const sessionRef = await db.collection("users").doc(state.user.uid)
-        .collection("checkout_sessions").add({
-          price: priceId,
-          success_url: window.location.origin + window.location.pathname + `?payment=success&tier=${tierKey}`,
-          cancel_url: window.location.origin + window.location.pathname + "?payment=cancelled",
-          mode: "subscription",
-          createdAt: Date.now()
-        });
-
-      sessionRef.onSnapshot((snap) => {
-        const data = snap.data();
-        if (data && data.url) {
-          window.location.href = data.url;
-        }
-      });
+    const data = await res.json();
+    if (res.ok && data && data.url) {
+      const descEl = document.getElementById("upgrade-proc-desc");
+      if (descEl) descEl.innerHTML = `<span style="color:#10b981; font-weight:700;">✓ Checkout session created!</span> Redirecting to Stripe now...`;
+      console.log("🚀 Redirecting to Stripe URL:", data.url);
+      window.location.href = data.url;
       return;
-    } catch (err) {
-      console.warn("Firestore extension trigger note:", err);
+    } else {
+      throw new Error((data && data.error) ? data.error : "Stripe session initialization failed.");
     }
-  }
+  } catch (cloudErr) {
+    console.warn("Cloud function stripe session error:", cloudErr);
 
-  showToast("Unable to open payment screen. Please check your network connection.");
+    // Show error state on the centered overlay
+    const titleEl = document.getElementById("upgrade-proc-title");
+    const descEl = document.getElementById("upgrade-proc-desc");
+    const iconEl = document.getElementById("upgrade-proc-icon");
+    const errActions = document.getElementById("upgrade-proc-error-actions");
+    const cancelBtn = document.getElementById("upgrade-proc-cancel-btn");
+    const spinnerContainer = document.querySelector(".upgrade-spinner-container");
+
+    if (spinnerContainer) spinnerContainer.style.display = "none";
+    if (iconEl) iconEl.textContent = "⚠️";
+    if (titleEl) titleEl.textContent = "Unable to Connect to Stripe";
+    if (descEl) {
+      descEl.textContent = cloudErr.message || "Could not start checkout session. Please check your network connection and try again.";
+    }
+    if (errActions) errActions.classList.remove("hidden");
+    if (cancelBtn) cancelBtn.classList.add("hidden");
+  }
 }
 
 // Automatically initialize Stripe engine on startup
@@ -4781,52 +6436,35 @@ function handleSendSupportReply(event) {
     }
   }
 
-  // 2. Direct Email Dispatch via Brevo REST API (supports CORS out-of-the-box!)
-  const brevoKey = stripeConfig.brevoApiKey || SECRETS.BREVO_API_KEY || "";
+  // 2. Secure Email Dispatch via Backend Cloud Function (No API keys exposed in browser!)
+  const cloudFnUrl = "https://us-central1-waitlink-app-8821.cloudfunctions.net/sendSupportReply";
 
-  const emailHtml = `<div style="font-family: system-ui, -apple-system, sans-serif; font-size: 15px; color: #1e293b; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-    <div style="margin-bottom: 20px;">
-      <span style="font-size: 20px; font-weight: 700; color: #06b6d4;">WaitLink Customer Support</span>
-    </div>
-    <p style="color: #334155; font-size: 15px; margin: 0 0 16px 0;">Hello,</p>
-    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #06b6d4; color: #0f172a; white-space: pre-wrap; font-size: 14px; margin-bottom: 24px;">${escapeHtml(replyText)}</div>
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0 16px 0;" />
-    <p style="font-size: 13px; color: #64748b; margin: 0;">
-      <strong>WaitLink Customer Support Team</strong><br>
-      <a href="https://waitlink.app" style="color: #06b6d4; text-decoration: none;">waitlink.app</a>
-    </p>
-  </div>`;
-
-  const brevoPayload = {
-    sender: { name: "WaitLink Support", email: "senthil930@gmail.com" },
-    to: [{ email: email }],
-    subject: "Re: WaitLink Support Inquiry",
-    htmlContent: emailHtml,
-    textContent: `${replyText}\n\n----------------------------------------\nWaitLink Customer Support Team\nhttps://waitlink.app`
-  };
-
-  fetch("https://api.brevo.com/v3/smtp/email", {
+  fetch(cloudFnUrl, {
     method: "POST",
     headers: {
-      "api-key": brevoKey,
-      "Content-Type": "application/json",
-      "accept": "application/json"
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify(brevoPayload)
+    body: JSON.stringify({
+      email: email,
+      replyText: replyText,
+      inquiryId: msgId,
+      shopName: state.config?.shopName || ""
+    })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data && (data.messageId || data.id)) {
+  .then(async res => {
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && (data.messageId || data.success)) {
       showToast(`✉️ Support reply email delivered directly to ${email}!`);
-    } else if (data && data.message) {
-      showToast(`⚠️ Brevo notice: ${data.message}`);
+    } else if (data && data.error) {
+      console.warn("Backend email dispatch error:", res.status, data);
+      showToast(`⚠️ Email dispatch notice: ${data.error}`);
     } else {
-      showToast(`✅ Reply recorded & inquiry marked resolved for ${email}!`);
+      showToast(`✅ Reply recorded for ${email}!`);
     }
   })
   .catch(err => {
-    console.warn("Direct email send note:", err);
-    showToast(`✅ Reply recorded & inquiry marked resolved for ${email}!`);
+    console.warn("Backend email dispatch error:", err);
+    showToast(`✅ Reply recorded for ${email}!`);
   })
   .finally(() => {
     if (submitBtn) {
@@ -4889,6 +6527,13 @@ function handlePublicInlineCheckIn(event) {
       if (submitBtn) submitBtn.disabled = false;
       return;
     }
+  }
+
+  // Real-time monthly limit check for Starter Tier
+  if (!checkMonthlyCheckinLimit()) {
+    showToast("⚠️ This shop has reached its free monthly check-in limit. Please visit the front desk.");
+    if (submitBtn) submitBtn.disabled = false;
+    return;
   }
 
   if (submitBtn) submitBtn.disabled = true;
@@ -5008,14 +6653,20 @@ function restoreActiveTicket() {
         const lateLocked = document.getElementById("running-late-locked-msg");
         const lateGated = document.getElementById("running-late-gated-msg");
         const reportedMinsEl = document.getElementById("reported-late-mins");
+        const lateChip15 = document.getElementById("late-chip-15");
+        const lateTitle = document.getElementById("running-late-title");
+        const lateContainer = document.getElementById("ticket-running-late-container");
 
+        if (lateContainer) lateContainer.classList.remove("hidden");
         if (state.myTicket.delayedMinutes || state.myTicket.lateReportCount > 0) {
           if (lateChips) lateChips.classList.add("hidden");
           if (lateGated) lateGated.classList.add("hidden");
           if (lateLocked) lateLocked.classList.remove("hidden");
           if (reportedMinsEl) reportedMinsEl.textContent = state.myTicket.delayedMinutes || 10;
         } else if (queuePos <= 2) {
+          if (lateTitle) lateTitle.textContent = "🏃 Running Late? Notify front desk:";
           if (lateChips) lateChips.classList.remove("hidden");
+          if (lateChip15) lateChip15.classList.remove("hidden");
           if (lateLocked) lateLocked.classList.add("hidden");
           if (lateGated) lateGated.classList.add("hidden");
         } else {
@@ -5032,6 +6683,31 @@ function restoreActiveTicket() {
         setElText("ticket-position-display", "Visit In Progress");
         setElText("ticket-subtitle-display", `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`);
         ticketCard.classList.remove("hidden");
+
+        const lateChips = document.getElementById("running-late-chips");
+        const lateLocked = document.getElementById("running-late-locked-msg");
+        const lateGated = document.getElementById("running-late-gated-msg");
+        const reportedMinsEl = document.getElementById("reported-late-mins");
+        const lateChip15 = document.getElementById("late-chip-15");
+        const lateTitle = document.getElementById("running-late-title");
+        const lateContainer = document.getElementById("ticket-running-late-container");
+
+        if (lateContainer) lateContainer.classList.remove("hidden");
+
+        if (state.myTicket.delayedMinutes || state.myTicket.lateReportCount > 0) {
+          if (lateTitle) lateTitle.textContent = "🕒 Front Desk Alert Active:";
+          if (lateChips) lateChips.classList.add("hidden");
+          if (lateGated) lateGated.classList.add("hidden");
+          if (lateLocked) lateLocked.classList.remove("hidden");
+          if (reportedMinsEl) reportedMinsEl.textContent = state.myTicket.delayedMinutes || 5;
+        } else {
+          // Grace Period Delay Alert for Called Customers (+5m and +10m chips only!)
+          if (lateTitle) lateTitle.textContent = "🏃 Just called but delayed? Notify front desk:";
+          if (lateChips) lateChips.classList.remove("hidden");
+          if (lateChip15) lateChip15.classList.add("hidden");
+          if (lateLocked) lateLocked.classList.add("hidden");
+          if (lateGated) lateGated.classList.add("hidden");
+        }
       }
       if (timerBox) timerBox.classList.add("hidden");
       if (btnContainer) btnContainer.classList.add("hidden");
@@ -5107,25 +6783,55 @@ function cancelMyTicket() {
 
 function reportRunningLate(minutes) {
   if (!state.myTicket) return;
+
+  // 1. Check active waiting queue first
   const queueItem = state.queue.find(q => q.id === state.myTicket.id);
-  if (!queueItem) {
+
+  // 2. If not in active queue, check called visits in history (Visit In Progress)
+  const historyItem = !queueItem ? state.history.find(h => h.id === state.myTicket.id && h.status === "called") : null;
+
+  if (!queueItem && !historyItem) {
     showToast("⚠️ Could not locate your queue ticket.");
     return;
   }
 
-  if (queueItem.lateReportCount > 0 || queueItem.delayedMinutes) {
-    showToast("⚠️ Delay notification has already been submitted for this ticket.");
+  const target = queueItem || historyItem;
+
+  if (target.lateReportCount > 0 || target.delayedMinutes) {
+    showToast("⚠️ Delay notification has already been submitted for this visit.");
     return;
   }
 
-  queueItem.delayedMinutes = minutes;
-  queueItem.lateReportedAt = Date.now();
-  queueItem.lateReportCount = 1;
-  logCustomerActivity(queueItem, "running_late", `Running Late (+${minutes} mins)`, `Customer notified front desk of +${minutes} minutes delay`, "🏃");
+  target.delayedMinutes = minutes;
+  target.lateReportedAt = Date.now();
+  target.lateReportCount = 1;
 
   state.myTicket.delayedMinutes = minutes;
-  state.myTicket.lateReportedAt = queueItem.lateReportedAt;
+  state.myTicket.lateReportedAt = target.lateReportedAt;
   state.myTicket.lateReportCount = 1;
+
+  if (historyItem) {
+    target.lateDuringCalled = true;
+    state.myTicket.lateDuringCalled = true;
+    logCustomerActivity(
+      historyItem,
+      "running_late_called",
+      `Running Late to Call (+${minutes}m)`,
+      `Customer notified front desk of ~${minutes} mins delay after being called to chair`,
+      "🏃"
+    );
+    playFrontDeskChime();
+    showToast(`🕒 Front desk notified: You will arrive in ~${minutes} mins! Staff will hold your spot.`);
+  } else {
+    logCustomerActivity(
+      queueItem,
+      "running_late",
+      `Running Late (+${minutes} mins)`,
+      `Customer notified front desk of +${minutes} minutes delay`,
+      "🏃"
+    );
+    showToast(`🕒 Notified venue: Running ~${minutes} mins late!`);
+  }
 
   try {
     localStorage.setItem(`waitlink_ticket_${state.config.slug}`, JSON.stringify(state.myTicket));
@@ -5133,7 +6839,6 @@ function reportRunningLate(minutes) {
 
   saveData();
   renderAll();
-  showToast(`🕒 Notified venue: Running ~${minutes} mins late!`);
 }
 
 // ==========================================
@@ -5610,10 +7315,18 @@ function handleMobileAuthAction() {
   }
 }
 
-// Auto-close drawer on Escape key or when window resizes back to desktop
+// Auto-close drawer and modals on Escape key or when window resizes back to desktop
 window.addEventListener("keydown", function(e) {
   if (e.key === "Escape") {
     closeMobileNavDrawer();
+    const upgradeModal = document.getElementById("upgrade-modal");
+    if (upgradeModal && !upgradeModal.classList.contains("hidden")) {
+      closeUpgradeModal();
+    }
+    const deleteModal = document.getElementById("delete-shop-modal");
+    if (deleteModal && !deleteModal.classList.contains("hidden")) {
+      closeDeleteShopModal();
+    }
   }
 });
 
@@ -5632,6 +7345,23 @@ window.closeMobileNavDrawer = closeMobileNavDrawer;
 window.toggleMobileNavDrawer = toggleMobileNavDrawer;
 window.handleMobileNavClick = handleMobileNavClick;
 window.handleMobileAuthAction = handleMobileAuthAction;
+window.openUpgradeModal = openUpgradeModal;
+window.closeUpgradeModal = closeUpgradeModal;
+window.selectUpgradeTier = selectUpgradeTier;
+window.showUpgradeProcessingOverlay = showUpgradeProcessingOverlay;
+window.hideUpgradeProcessingOverlay = hideUpgradeProcessingOverlay;
+window.retryStripeUpgrade = retryStripeUpgrade;
+window.handleDeleteShopClick = handleDeleteShopClick;
+window.closeDeleteShopModal = closeDeleteShopModal;
+window.confirmDeleteShopFromModal = confirmDeleteShopFromModal;
+window.deleteTenantShop = deleteTenantShop;
+window.executeDeleteShop = executeDeleteShop;
+window.inspectShop = inspectShop;
+window.openSettingsForShop = openSettingsForShop;
+window.changeTenantShopPlan = changeTenantShopPlan;
+window.cleanDuplicateShops = cleanDuplicateShops;
+window.openCreateShopModal = openCreateShopModal;
+window.updateCreateShopButtonsVisibility = updateCreateShopButtonsVisibility;
 
 
 
