@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WaitLink — Live Walk-in Wait Time Tracker</title>
   <meta name="description" content="1-tap check-in and live public wait time publishing for walk-in shops.">
   <!-- Google Fonts -->
@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.8">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -77,18 +77,18 @@
           🌙
         </button>
 
-        <!-- Upgrade Primary Action -->
-        <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
+        <!-- Upgrade Primary Action (Desktop) -->
+        <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header desktop-only-action" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
           💎 Upgrade
         </button>
 
-        <!-- Create Shop Primary Action -->
-        <button class="btn btn-accent btn-sm-header" onclick="openCreateShopModal()">
+        <!-- Create Shop Primary Action (Desktop) -->
+        <button class="btn btn-accent btn-sm-header desktop-only-action" onclick="openCreateShopModal()">
           ⚡ + Create Shop
         </button>
 
-        <!-- Unified Account & Tools Dropdown -->
-        <div class="dropdown-wrapper" id="account-dropdown-container">
+        <!-- Unified Account & Tools Dropdown (Desktop) -->
+        <div class="dropdown-wrapper desktop-only-action" id="account-dropdown-container">
           <button class="btn btn-secondary auth-btn-pill" id="auth-btn" onclick="handleAuthButtonClick(event)">
             <span id="auth-btn-label">🔑 Sign In</span>
           </button>
@@ -147,9 +147,132 @@
           </div>
         </div>
 
+        <!-- Hamburger Menu Button (Mobile Only) -->
+        <button id="mobile-menu-toggle-btn" class="mobile-menu-btn" onclick="toggleMobileNavDrawer()" aria-label="Open Navigation Menu" aria-expanded="false">
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+        </button>
+
       </div>
     </div>
   </header>
+
+  <!-- Mobile Navigation Drawer Overlay & Panel -->
+  <div id="mobile-nav-drawer" class="mobile-drawer-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Mobile Navigation Menu">
+    <div class="mobile-drawer-backdrop" onclick="closeMobileNavDrawer()"></div>
+    <div class="mobile-drawer-panel">
+      <!-- Drawer Header Bar -->
+      <div class="mobile-drawer-header">
+        <div class="brand" onclick="handleMobileNavClick('home')" title="WaitLink Home">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </div>
+        <button class="mobile-drawer-close-btn" onclick="closeMobileNavDrawer()" aria-label="Close navigation menu">
+          ✕
+        </button>
+      </div>
+
+      <!-- Scrollable Drawer Body -->
+      <div class="mobile-drawer-body">
+        
+        <!-- User Status / Profile Card -->
+        <div class="mobile-drawer-user-card" id="mobile-drawer-user-card">
+          <div class="mobile-drawer-avatar">
+            <span id="mobile-drawer-avatar-icon">👤</span>
+          </div>
+          <div class="mobile-drawer-user-details">
+            <div class="mobile-drawer-user-email" id="mobile-drawer-user-email">Guest User</div>
+            <div class="mobile-drawer-user-tier" id="mobile-drawer-user-tier">
+              <span class="pulse-dot"></span> Starter Plan (Free)
+            </div>
+            <div id="mobile-drawer-shop-badge" class="mobile-drawer-shop-badge hidden">
+              <span>💈 <strong id="mobile-drawer-shop-name">Main St Barbers</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Navigation Modes -->
+        <div class="mobile-drawer-section">
+          <div class="mobile-drawer-section-title">NAVIGATION</div>
+          <div class="mobile-drawer-nav-list">
+            <button class="mobile-drawer-nav-item active" id="mobile-tab-home" onclick="handleMobileNavClick('home')">
+              <span class="drawer-item-icon">🏠</span>
+              <span class="drawer-item-label">Home</span>
+            </button>
+            <button class="mobile-drawer-nav-item hidden" id="mobile-tab-desk" onclick="handleMobileNavClick('desk')">
+              <span class="drawer-item-icon">📋</span>
+              <span class="drawer-item-label">Front Desk</span>
+            </button>
+            <button class="mobile-drawer-nav-item hidden" id="mobile-tab-owner" onclick="handleMobileNavClick('owner')">
+              <span class="drawer-item-icon">📊</span>
+              <span class="drawer-item-label">Owner Analytics</span>
+            </button>
+            <button class="mobile-drawer-nav-item hidden" id="mobile-tab-superadmin" onclick="handleMobileNavClick('superadmin')">
+              <span class="drawer-item-icon">👑</span>
+              <span class="drawer-item-label">SuperAdmin Directory</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Primary Quick CTAs -->
+        <div class="mobile-drawer-section">
+          <div class="mobile-drawer-section-title">QUICK ACTIONS</div>
+          <div class="mobile-drawer-actions">
+            <button class="btn btn-accent mobile-action-btn" onclick="openCreateShopModal(); closeMobileNavDrawer();">
+              ⚡ + Create Shop Waitlist
+            </button>
+            <button class="btn btn-secondary mobile-action-btn mobile-upgrade-btn" onclick="openUpgradeModal(); closeMobileNavDrawer();">
+              💎 Upgrade Plan
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 3: Tools & Views -->
+        <div class="mobile-drawer-section">
+          <div class="mobile-drawer-section-title">TOOLS & VIEWS</div>
+          <div class="mobile-drawer-nav-list">
+            <button class="mobile-drawer-nav-item" onclick="toggleThemeMode()">
+              <span class="drawer-item-icon" id="mobile-drawer-theme-icon">🌙</span>
+              <span class="drawer-item-label" id="mobile-drawer-theme-label">Switch Theme</span>
+            </button>
+            <button class="mobile-drawer-nav-item" onclick="handleMobileNavClick('public')">
+              <span class="drawer-item-icon">📲</span>
+              <span class="drawer-item-label">Public Customer View</span>
+            </button>
+            <button class="mobile-drawer-nav-item" onclick="handleMobileNavClick('poster')">
+              <span class="drawer-item-icon">🖨️</span>
+              <span class="drawer-item-label">Window QR Poster</span>
+            </button>
+            <button class="mobile-drawer-nav-item" onclick="copyPublicLink(); closeMobileNavDrawer();">
+              <span class="drawer-item-icon">📋</span>
+              <span class="drawer-item-label">Copy Shareable Link</span>
+            </button>
+            <button class="mobile-drawer-nav-item" onclick="launchDemoMode(); closeMobileNavDrawer();">
+              <span class="drawer-item-icon">🎮</span>
+              <span class="drawer-item-label">Main St Barbers Demo</span>
+            </button>
+            <a href="pricing.html" class="mobile-drawer-nav-item" onclick="closeMobileNavDrawer();" style="text-decoration: none;">
+              <span class="drawer-item-icon">💎</span>
+              <span class="drawer-item-label">Pricing Plans</span>
+            </a>
+            <a href="help.html" class="mobile-drawer-nav-item" onclick="closeMobileNavDrawer();" style="text-decoration: none;">
+              <span class="drawer-item-icon">❓</span>
+              <span class="drawer-item-label">Help & Docs</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 4: Auth Account Action (Sign In / Sign Out) -->
+        <div class="mobile-drawer-section mobile-drawer-footer-section">
+          <button class="btn btn-secondary mobile-auth-btn" id="mobile-item-auth-action" onclick="handleMobileAuthAction()">
+            <span id="mobile-item-auth-action-label">🔑 Sign In / Register</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
   <!-- Live Demo Mode Announcement Banner -->
   <div id="demo-mode-banner" class="demo-mode-banner hidden">
@@ -1392,6 +1515,12 @@ Dedicated Support Manager
 
         <div class="form-divider" style="text-align: center; color: var(--text-subtle); margin: 1rem 0;">OR USE EMAIL</div>
 
+        <!-- Inline Error Alert Banner for Auth Modal -->
+        <div id="auth-error-banner" class="auth-error-banner hidden" role="alert">
+          <span class="auth-error-icon">⚠️</span>
+          <span id="auth-error-text"></span>
+        </div>
+
         <form id="auth-form" onsubmit="handleAuthSubmit(event)">
           <div class="form-group">
             <label for="auth-email">Email Address</label>
@@ -1400,7 +1529,8 @@ Dedicated Support Manager
 
           <div class="form-group" style="margin-top: 0.75rem;">
             <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" placeholder="••••••••" required>
+            <input type="password" id="auth-password" placeholder="••••••••" required minlength="6" autocomplete="current-password">
+            <small class="form-hint" id="auth-password-hint" style="font-size: 0.75rem; color: var(--text-subtle); display: none; margin-top: 0.35rem;">Must be at least 6 characters.</small>
           </div>
 
           <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;" id="auth-submit-btn">
@@ -1832,9 +1962,15 @@ Dedicated Support Manager
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Local Secrets (Excluded from Git) -->
-  <script src="config.secrets.js" onerror="console.info('config.secrets.js not found - using environment/defaults')"></script>
+  <!-- Local Secrets (Only in local development) -->
+  <script>
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      const s = document.createElement("script");
+      s.src = "config.secrets.js";
+      document.head.appendChild(s);
+    }
+  </script>
   <!-- Main JS -->
-  <script src="app.js?v=2.4"></script>
+  <script src="app.js?v=2.8"></script>
 </body>
 </html>

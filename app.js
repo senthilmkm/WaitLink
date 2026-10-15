@@ -15,6 +15,7 @@ const SECRETS = (typeof window !== "undefined" && window.WAITLINK_SECRETS) ? win
 
 // Centralized Twilio SMS Gateway Sender Number
 const DEFAULT_TWILIO_FROM = SECRETS.TWILIO_FROM_PHONE || "+18039027464";
+const DEFAULT_TWILIO_FROM_DISPLAY = "+1 (803) 902-7464";
 const DEFAULT_SERVE_NOW_SMS = "Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}";
 
 // Application State
@@ -76,6 +77,14 @@ function updateThemeToggleUI() {
   if (menuBtn) {
     menuBtn.textContent = currentThemeMode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
   }
+  const mobileDrawerThemeIcon = document.getElementById("mobile-drawer-theme-icon");
+  const mobileDrawerThemeLabel = document.getElementById("mobile-drawer-theme-label");
+  if (mobileDrawerThemeIcon) {
+    mobileDrawerThemeIcon.textContent = currentThemeMode === "dark" ? "☀️" : "🌙";
+  }
+  if (mobileDrawerThemeLabel) {
+    mobileDrawerThemeLabel.textContent = currentThemeMode === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode";
+  }
 }
 
 // Immediately apply saved theme mode
@@ -97,6 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAll();
   startTimerTicker();
   generateQRCode();
+
+  // Auto-clear auth error banner when typing in email or password
+  const authEmailInput = document.getElementById("auth-email");
+  const authPasswordInput = document.getElementById("auth-password");
+  if (authEmailInput) authEmailInput.addEventListener("input", clearAuthError);
+  if (authPasswordInput) authPasswordInput.addEventListener("input", clearAuthError);
 
   window.addEventListener("beforeunload", () => {
     if (timerInterval) clearInterval(timerInterval);
@@ -128,24 +143,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// Ensure Firebase App is initialized once and available globally
+function ensureFirebaseInitialized() {
+  if (!window.firebase) return false;
+  if (!firebase.apps || !firebase.apps.length) {
+    const fbConfig = (state.config && state.config.firebaseConfig) || DEFAULT_FIREBASE_CONFIG;
+    if (fbConfig && fbConfig.apiKey) {
+      try {
+        firebase.initializeApp(fbConfig);
+      } catch (e) {
+        console.warn("Firebase initialization error:", e);
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Initialize Cloud Firestore Real-time Sync
 function initFirestore() {
+  if (!ensureFirebaseInitialized()) return;
   const fbConfig = state.config.firebaseConfig || DEFAULT_FIREBASE_CONFIG;
-  if (window.firebase && fbConfig && fbConfig.apiKey) {
-    try {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(fbConfig);
-      }
-      db = firebase.firestore();
-      const liveInd = document.getElementById("live-indicator");
-      if (liveInd) liveInd.innerHTML = `<span class="pulse-dot"></span> Cloud Live Sync`;
+  try {
+    db = firebase.firestore();
+    const liveInd = document.getElementById("live-indicator");
+    if (liveInd) liveInd.innerHTML = `<span class="pulse-dot"></span> Cloud Live Sync`;
 
-      const statusLabel = document.getElementById("firestore-status-label");
-      if (statusLabel) statusLabel.textContent = `Connected to Cloud Firestore (${fbConfig.projectId})`;
-      subscribeFirestore();
-    } catch (e) {
-      console.warn("Firestore initialization error:", e);
-    }
+    const statusLabel = document.getElementById("firestore-status-label");
+    if (statusLabel) statusLabel.textContent = `Connected to Cloud Firestore (${fbConfig.projectId})`;
+    subscribeFirestore();
+  } catch (e) {
+    console.warn("Firestore initialization error:", e);
   }
 }
 
@@ -468,6 +498,7 @@ function updateConfigUI() {
   setElText("poster-shop-name", state.config.shopName.toUpperCase());
   setElText("header-shop-name", state.config.shopName);
   setElText("menu-current-shop", state.config.shopName);
+  setElText("mobile-drawer-shop-name", state.config.shopName);
   
   // Set Owner Settings inputs
   setElValue("owner-input-address", state.config.address || "");
@@ -1258,6 +1289,14 @@ function renderSubscriptionBadges() {
       dropdownBadge.style.background = "rgba(255, 255, 255, 0.08)";
       dropdownBadge.style.borderColor = "var(--border-color)";
     }
+  }
+
+  const mobileDrawerUserTier = document.getElementById("mobile-drawer-user-tier");
+  if (mobileDrawerUserTier && dropdownBadge) {
+    mobileDrawerUserTier.innerHTML = dropdownBadge.innerHTML;
+    mobileDrawerUserTier.style.color = dropdownBadge.style.color;
+    mobileDrawerUserTier.style.background = dropdownBadge.style.background;
+    mobileDrawerUserTier.style.borderColor = dropdownBadge.style.borderColor;
   }
 
   if (dropdownSubItemLabel) {
@@ -2342,10 +2381,14 @@ function updateActiveTicketTimer() {
 function switchView(viewName) {
   state.activeView = viewName;
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".mobile-drawer-nav-item").forEach(item => item.classList.remove("active"));
   document.querySelectorAll(".view-panel").forEach(panel => panel.classList.add("hidden"));
 
   const targetTab = document.getElementById(`tab-${viewName}`);
   if (targetTab) targetTab.classList.add("active");
+
+  const mobileTargetTab = document.getElementById(`mobile-tab-${viewName}`);
+  if (mobileTargetTab) mobileTargetTab.classList.add("active");
 
   const targetPanel = document.getElementById(`view-${viewName}`);
   if (targetPanel) targetPanel.classList.remove("hidden");
@@ -2735,7 +2778,7 @@ function initAuth() {
     } catch (e) {}
   }
 
-  if (!window.firebase || !firebase.auth) return;
+  if (!ensureFirebaseInitialized() || !firebase.auth) return;
 
   // Process Google OAuth redirect result (Bypasses COOP popup restrictions)
   try {
@@ -2868,6 +2911,15 @@ function applyUserRole(user) {
 
   const shopChipContainer = document.getElementById("shop-chip-container");
 
+  // Mobile Drawer sync elements
+  const mobileTabDesk = document.getElementById("mobile-tab-desk");
+  const mobileTabOwner = document.getElementById("mobile-tab-owner");
+  const mobileTabSuperAdmin = document.getElementById("mobile-tab-superadmin");
+  const mobileDrawerUserEmail = document.getElementById("mobile-drawer-user-email");
+  const mobileDrawerAvatarIcon = document.getElementById("mobile-drawer-avatar-icon");
+  const mobileItemAuthActionLabel = document.getElementById("mobile-item-auth-action-label");
+  const mobileDrawerShopBadge = document.getElementById("mobile-drawer-shop-badge");
+
   if (user && user.email) {
     const email = user.email;
     const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
@@ -2878,6 +2930,9 @@ function applyUserRole(user) {
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
     if (deskTab) deskTab.classList.remove("hidden");
     if (ownerTab) ownerTab.classList.remove("hidden");
+
+    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.remove("hidden");
 
     if (authBtnLabel) {
       if (isSuper) {
@@ -2891,9 +2946,22 @@ function applyUserRole(user) {
       dropdownUserEmail.textContent = isSuper ? "👑 Platform Administrator" : `💈 Shop Owner: ${email}`;
     }
 
+    if (mobileDrawerUserEmail) {
+      mobileDrawerUserEmail.textContent = isSuper ? "👑 Platform Administrator" : email;
+    }
+
+    if (mobileDrawerAvatarIcon) {
+      mobileDrawerAvatarIcon.textContent = isSuper ? "👑" : "👤";
+    }
+
     if (superAdminTab) {
       if (isSuper) superAdminTab.classList.remove("hidden");
       else superAdminTab.classList.add("hidden");
+    }
+
+    if (mobileTabSuperAdmin) {
+      if (isSuper) mobileTabSuperAdmin.classList.remove("hidden");
+      else mobileTabSuperAdmin.classList.add("hidden");
     }
 
     if (itemSuperAdmin) {
@@ -2920,6 +2988,17 @@ function applyUserRole(user) {
       itemAuthActionLabel.textContent = "🚪 Sign Out";
     }
 
+    if (mobileItemAuthActionLabel) {
+      mobileItemAuthActionLabel.textContent = "🚪 Sign Out";
+    }
+
+    if (mobileDrawerShopBadge) {
+      if (state.config && state.config.shopName) {
+        mobileDrawerShopBadge.classList.remove("hidden");
+        setElText("mobile-drawer-shop-name", state.config.shopName);
+      }
+    }
+
     if (isSuper) {
       const superAdminEmailLabel = document.getElementById("superadmin-email-label");
       if (superAdminEmailLabel) superAdminEmailLabel.textContent = "Platform Administrator";
@@ -2930,8 +3009,19 @@ function applyUserRole(user) {
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
     if (deskTab) deskTab.classList.remove("hidden");
     if (ownerTab) ownerTab.classList.remove("hidden");
+    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.remove("hidden");
+    if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
+
     if (authBtnLabel) authBtnLabel.textContent = "🔑 Sign In";
     if (dropdownUserEmail) dropdownUserEmail.textContent = "Guest Sandbox Mode";
+    if (mobileDrawerUserEmail) mobileDrawerUserEmail.textContent = "Guest Sandbox Mode";
+    if (mobileDrawerAvatarIcon) mobileDrawerAvatarIcon.textContent = "🎮";
+    if (mobileDrawerShopBadge) {
+      mobileDrawerShopBadge.classList.remove("hidden");
+      setElText("mobile-drawer-shop-name", "Main St Barbers");
+    }
+
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
@@ -2941,13 +3031,24 @@ function applyUserRole(user) {
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
     }
+    if (mobileItemAuthActionLabel) {
+      mobileItemAuthActionLabel.textContent = "🔑 Sign In / Register";
+    }
   } else {
     state.userRole = "Guest";
     if (shopChipContainer) shopChipContainer.classList.add("hidden");
     if (deskTab) deskTab.classList.add("hidden");
     if (ownerTab) ownerTab.classList.add("hidden");
+    if (mobileTabDesk) mobileTabDesk.classList.add("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
+    if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
+
     if (authBtnLabel) authBtnLabel.textContent = "🔑 Sign In";
     if (dropdownUserEmail) dropdownUserEmail.textContent = "Guest User";
+    if (mobileDrawerUserEmail) mobileDrawerUserEmail.textContent = "Guest User";
+    if (mobileDrawerAvatarIcon) mobileDrawerAvatarIcon.textContent = "👤";
+    if (mobileDrawerShopBadge) mobileDrawerShopBadge.classList.add("hidden");
+
     if (superAdminTab) superAdminTab.classList.add("hidden");
     if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
     if (itemSettings) itemSettings.classList.add("hidden");
@@ -2956,6 +3057,9 @@ function applyUserRole(user) {
 
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
+    }
+    if (mobileItemAuthActionLabel) {
+      mobileItemAuthActionLabel.textContent = "🔑 Sign In / Register";
     }
   }
 }
@@ -3024,31 +3128,58 @@ function handleSignOut(e) {
   showToast("Logged out successfully");
 }
 
+function setAuthError(message) {
+  const banner = document.getElementById("auth-error-banner");
+  const text = document.getElementById("auth-error-text");
+  if (banner && text) {
+    if (message) {
+      text.textContent = message.replace(/^⚠️\s*/, "");
+      banner.classList.remove("hidden");
+    } else {
+      banner.classList.add("hidden");
+      text.textContent = "";
+    }
+  }
+}
+
+function clearAuthError() {
+  setAuthError("");
+}
+
 function openAuthModal() {
+  clearAuthError();
   document.getElementById("auth-modal").classList.remove("hidden");
 }
 
 function closeAuthModal() {
+  clearAuthError();
   document.getElementById("auth-modal").classList.add("hidden");
 }
 
 function toggleAuthMode() {
+  clearAuthError();
   isRegistering = !isRegistering;
   const title = document.getElementById("auth-modal-title");
   const submitBtn = document.getElementById("auth-submit-btn");
   const toggleBtn = document.getElementById("auth-toggle-btn");
   const switchText = document.getElementById("auth-switch-text");
+  const passwordHint = document.getElementById("auth-password-hint");
+  const passwordInput = document.getElementById("auth-password");
 
   if (isRegistering) {
-    title.textContent = "🚀 Register New Shop Account";
-    submitBtn.textContent = "Create Account & Set Up Shop";
-    switchText.textContent = "Already have an account?";
-    toggleBtn.textContent = "Sign In Instead";
+    if (title) title.textContent = "🚀 Register New Shop Account";
+    if (submitBtn) submitBtn.textContent = "Create Account & Set Up Shop";
+    if (switchText) switchText.textContent = "Already have an account?";
+    if (toggleBtn) toggleBtn.textContent = "Sign In Instead";
+    if (passwordHint) passwordHint.style.display = "block";
+    if (passwordInput) passwordInput.setAttribute("autocomplete", "new-password");
   } else {
-    title.textContent = "🔑 Sign In to WaitLink";
-    submitBtn.textContent = "Sign In";
-    switchText.textContent = "New Business Owner?";
-    toggleBtn.textContent = "Create Shop Account";
+    if (title) title.textContent = "🔑 Sign In to WaitLink";
+    if (submitBtn) submitBtn.textContent = "Sign In";
+    if (switchText) switchText.textContent = "New Business Owner?";
+    if (toggleBtn) toggleBtn.textContent = "Create Shop Account";
+    if (passwordHint) passwordHint.style.display = "none";
+    if (passwordInput) passwordInput.setAttribute("autocomplete", "current-password");
   }
 }
 
@@ -3089,13 +3220,31 @@ function handleEmailPromptSubmit(event) {
 }
 
 function signInWithGoogle() {
-  if (!window.firebase || !firebase.auth) {
+  if (!ensureFirebaseInitialized() || !firebase.auth) {
+    showToast("⚠️ Firebase Auth is not available. Please enter your email.");
     openEmailPromptModal();
     return;
   }
 
   showToast("🔍 Connecting to Google Auth...");
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  // On mobile browsers (e.g. iOS Safari), popups are blocked by default — use redirect
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    showToast("Redirecting to Google Sign-In...");
+    firebase.auth().signInWithRedirect(provider).catch(err => {
+      console.warn("Google Redirect Error:", err);
+      if (err && err.code === "auth/unauthorized-domain") {
+        showToast("⚠️ Domain not yet authorized in Firebase Console.");
+      } else {
+        showToast(`⚠️ ${err.message || 'Redirect failed'}`);
+      }
+      openEmailPromptModal();
+    });
+    return;
+  }
 
   firebase.auth().signInWithPopup(provider).then(result => {
     if (result && result.user) {
@@ -3117,8 +3266,18 @@ function signInWithGoogle() {
     console.warn("Google Popup Auth Error:", err);
     if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
       showToast("Redirecting to Google Sign-In...");
-      firebase.auth().signInWithRedirect(provider).catch(() => {});
+      firebase.auth().signInWithRedirect(provider).catch(redirectErr => {
+        console.warn("Redirect fallback error:", redirectErr);
+        if (redirectErr && redirectErr.code === "auth/unauthorized-domain") {
+          showToast("⚠️ Domain not yet authorized in Firebase Console.");
+        }
+        openEmailPromptModal();
+      });
+    } else if (err.code === "auth/unauthorized-domain") {
+      showToast("⚠️ Domain waitlink.app not authorized in Firebase Console yet.");
+      openEmailPromptModal();
     } else {
+      showToast(`⚠️ Auth error: ${err.message || err.code}`);
       openEmailPromptModal();
     }
   });
@@ -3126,42 +3285,153 @@ function signInWithGoogle() {
 
 function handleAuthSubmit(event) {
   event.preventDefault();
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
+  const emailInput = document.getElementById("auth-email");
+  const passwordInput = document.getElementById("auth-password");
+  const submitBtn = document.getElementById("auth-submit-btn");
+
+  const email = emailInput ? emailInput.value.trim() : "";
+  const password = passwordInput ? passwordInput.value : "";
   if (!email || !password) return;
 
-  const userObj = { email: email };
-  state.user = userObj;
-  sessionStorage.setItem("waitlink_session_user", JSON.stringify(userObj));
-  applyUserRole(userObj);
+  clearAuthError();
 
-  if (window.firebase && firebase.auth) {
-    if (isRegistering) {
-      firebase.auth().createUserWithEmailAndPassword(email, password).then(result => {
-        closeAuthModal();
-        showToast(`Account created for ${email}`);
-        if (email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
-          openOnboardingModal();
+  if (!ensureFirebaseInitialized() || !firebase.auth) {
+    const errorMsg = "⚠️ Firebase Auth service is currently unavailable. Please check your connection.";
+    setAuthError(errorMsg);
+    showToast(errorMsg);
+    return;
+  }
+
+  // Client-side minimum password validation
+  if (isRegistering && password.length < 6) {
+    const errorMsg = "⚠️ Password must be at least 6 characters long.";
+    setAuthError(errorMsg);
+    showToast(errorMsg);
+    if (passwordInput) passwordInput.focus();
+    return;
+  }
+
+  // Set loading state on submit button
+  const originalBtnText = submitBtn ? submitBtn.textContent : (isRegistering ? "Create Account & Set Up Shop" : "Sign In");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = isRegistering ? "Creating Account..." : "Signing In...";
+  }
+
+  if (isRegistering) {
+    // =========================================================================
+    // 1. REAL FIREBASE USER REGISTRATION (Create new account)
+    // =========================================================================
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+      .then(result => {
+        if (result && result.user) {
+          state.user = result.user;
+          sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+          applyUserRole(result.user);
+          closeAuthModal();
+          showToast(`🎉 Welcome to WaitLink! Account registered for ${email}.`);
+          if (emailInput) emailInput.value = "";
+          if (passwordInput) passwordInput.value = "";
+
+          // Launch the Shop Onboarding Setup Wizard for new business owners
+          if (email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
+            openOnboardingModal();
+          } else {
+            switchView("superadmin");
+          }
         }
-      }).catch(() => {
-        closeAuthModal();
-        showToast(`Logged in as ${email}`);
+      })
+      .catch(err => {
+        console.warn("Firebase Registration Error:", err);
+        let errorMsg = "Registration failed. Please try again.";
+        switch (err.code) {
+          case "auth/email-already-in-use":
+            errorMsg = "⚠️ An account with this email already exists. Please sign in instead.";
+            if (isRegistering) toggleAuthMode();
+            break;
+          case "auth/invalid-email":
+            errorMsg = "⚠️ Please enter a valid email address.";
+            break;
+          case "auth/weak-password":
+            errorMsg = "⚠️ Password is too weak. Please use at least 6 characters.";
+            break;
+          case "auth/operation-not-allowed":
+            errorMsg = "⚠️ Email/Password accounts are not enabled in Firebase Console.";
+            break;
+          case "auth/network-request-failed":
+            errorMsg = "⚠️ Network error. Please check your internet connection.";
+            break;
+          default:
+            errorMsg = `⚠️ ${err.message || 'Registration failed.'}`;
+        }
+        setAuthError(errorMsg);
+        showToast(errorMsg);
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
       });
-    } else {
-      firebase.auth().signInWithEmailAndPassword(email, password).then(result => {
-        closeAuthModal();
-        showToast(`Welcome back, ${email}`);
-      }).catch(() => {
-        closeAuthModal();
-        showToast(`Logged in as ${email}`);
-      });
-    }
   } else {
-    closeAuthModal();
-    showToast(`Logged in as ${email}`);
-    if (isRegistering && email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
-      openOnboardingModal();
-    }
+    // =========================================================================
+    // 2. REAL FIREBASE USER SIGN-IN (Verify existing credentials)
+    // =========================================================================
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(result => {
+        if (result && result.user) {
+          state.user = result.user;
+          sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+          applyUserRole(result.user);
+          closeAuthModal();
+          if (emailInput) emailInput.value = "";
+          if (passwordInput) passwordInput.value = "";
+
+          const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          if (isSuper) {
+            switchView("superadmin");
+            showToast("👑 Welcome Platform Administrator");
+          } else {
+            switchView("owner");
+            showToast(`💈 Welcome back, ${email}!`);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn("Firebase Sign-In Error:", err);
+        let errorMsg = "Sign-in failed. Please verify your credentials.";
+        switch (err.code) {
+          case "auth/user-not-found":
+            errorMsg = "⚠️ No account found with this email. Click 'Create Shop Account' below.";
+            break;
+          case "auth/wrong-password":
+          case "auth/invalid-credential":
+            errorMsg = "⚠️ Incorrect password. Please try again.";
+            break;
+          case "auth/invalid-email":
+            errorMsg = "⚠️ Please enter a valid email address.";
+            break;
+          case "auth/too-many-requests":
+            errorMsg = "⚠️ Too many failed attempts. Please wait a moment and try again.";
+            break;
+          case "auth/user-disabled":
+            errorMsg = "⚠️ This account has been disabled.";
+            break;
+          case "auth/network-request-failed":
+            errorMsg = "⚠️ Network error. Please check your internet connection.";
+            break;
+          default:
+            errorMsg = `⚠️ ${err.message || 'Invalid email or password.'}`;
+        }
+        setAuthError(errorMsg);
+        showToast(errorMsg);
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+      });
   }
 }
 
@@ -5199,6 +5469,92 @@ document.addEventListener("click", function(e) {
     }
   }
 });
+
+/* ==========================================================================
+   Mobile Navigation Drawer Controller
+   ========================================================================== */
+function openMobileNavDrawer() {
+  const drawer = document.getElementById("mobile-nav-drawer");
+  const toggleBtn = document.getElementById("mobile-menu-toggle-btn");
+  if (!drawer) return;
+  closeAllDropdowns();
+  drawer.classList.remove("hidden");
+  // Force reflow for silky smooth CSS entrance animation
+  void drawer.offsetWidth;
+  drawer.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  if (toggleBtn) {
+    toggleBtn.classList.add("hamburger-active");
+    toggleBtn.setAttribute("aria-expanded", "true");
+  }
+  document.body.classList.add("drawer-open");
+}
+
+function closeMobileNavDrawer() {
+  const drawer = document.getElementById("mobile-nav-drawer");
+  const toggleBtn = document.getElementById("mobile-menu-toggle-btn");
+  if (!drawer) return;
+  drawer.classList.remove("open");
+  drawer.setAttribute("aria-hidden", "true");
+  if (toggleBtn) {
+    toggleBtn.classList.remove("hamburger-active");
+    toggleBtn.setAttribute("aria-expanded", "false");
+  }
+  document.body.classList.remove("drawer-open");
+  setTimeout(() => {
+    if (!drawer.classList.contains("open")) {
+      drawer.classList.add("hidden");
+    }
+  }, 280);
+}
+
+function toggleMobileNavDrawer() {
+  const drawer = document.getElementById("mobile-nav-drawer");
+  if (!drawer) return;
+  if (drawer.classList.contains("open")) {
+    closeMobileNavDrawer();
+  } else {
+    openMobileNavDrawer();
+  }
+}
+
+function handleMobileNavClick(viewName) {
+  switchView(viewName);
+  closeMobileNavDrawer();
+}
+
+function handleMobileAuthAction() {
+  closeMobileNavDrawer();
+  if (state.user) {
+    handleSignOut();
+  } else {
+    openAuthModal();
+  }
+}
+
+// Auto-close drawer on Escape key or when window resizes back to desktop
+window.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") {
+    closeMobileNavDrawer();
+  }
+});
+
+window.addEventListener("resize", function() {
+  if (window.innerWidth > 768) {
+    const drawer = document.getElementById("mobile-nav-drawer");
+    if (drawer && drawer.classList.contains("open")) {
+      closeMobileNavDrawer();
+    }
+  }
+});
+
+// Explicit window bindings for inline HTML onclick reliability
+window.openMobileNavDrawer = openMobileNavDrawer;
+window.closeMobileNavDrawer = closeMobileNavDrawer;
+window.toggleMobileNavDrawer = toggleMobileNavDrawer;
+window.handleMobileNavClick = handleMobileNavClick;
+window.handleMobileAuthAction = handleMobileAuthAction;
+
 
 
 
