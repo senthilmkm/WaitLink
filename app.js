@@ -2543,6 +2543,25 @@ function launchDemoMode() {
 
 // Open Shop Creation Wizard Modal
 function openCreateShopModal() {
+  // Gate unauthenticated guests: prompt them to register/sign in first!
+  if (!state.user || !state.user.email) {
+    pendingCreateShopAfterAuth = true;
+    showToast("👋 Please create an account or sign in to set up your shop.");
+    openAuthModal(true); // Open directly in "🚀 Register New Shop Account" mode
+    return;
+  }
+
+  pendingCreateShopAfterAuth = false;
+
+  // Pre-fill and lock the owner's email address from their authenticated profile
+  const emailInput = document.getElementById("onboard-owner-email");
+  if (emailInput) {
+    emailInput.value = state.user.email;
+    emailInput.readOnly = true;
+    emailInput.style.opacity = "0.85";
+    emailInput.style.cursor = "not-allowed";
+  }
+
   const modal = document.getElementById("onboarding-modal") || document.getElementById("create-shop-modal");
   if (modal) {
     modal.classList.remove("hidden");
@@ -2573,97 +2592,9 @@ function generateSlugFromInput(val) {
   }
 }
 
-// Handle Shop Creation Form Submission
+// Handle Shop Creation Form Submission (Delegates to unified handleOnboardingSubmit)
 function handleCreateShopSubmit(event) {
-  event.preventDefault();
-  const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
-  const slugInput = document.getElementById("onboard-slug") || document.getElementById("new-shop-slug");
-
-  const shopName = nameInput ? nameInput.value.trim() : "";
-  let slug = slugInput ? slugInput.value.trim() : "";
-
-  if (!shopName) {
-    showToast("Please enter a shop name");
-    return;
-  }
-
-  if (!slug) {
-    slug = shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  }
-
-  // Safeguard 3: Check for slug collision against existing directory
-  const currentEmail = state.user ? (state.user.email || "").toLowerCase() : "";
-  const isExistingOwned = state.myShops && state.myShops.some(s => s.slug === slug);
-  const isCollision = !isExistingOwned && state.registeredShops && state.registeredShops.some(s => s.slug === slug && (s.ownerEmail || "").toLowerCase() !== currentEmail);
-
-  if (isCollision) {
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    slug = `${slug}-${randomSuffix}`;
-    showToast(`Notice: Reserved slug collision auto-resolved to "${slug}"`);
-  }
-
-  // Read selected Subscription Plan Tier
-  const planSelect = document.getElementById("onboard-plan");
-  let planTitle = "Pro Business Tier";
-  let planPrice = 15;
-  if (planSelect) {
-    const selectedOpt = planSelect.options[planSelect.selectedIndex];
-    if (selectedOpt) {
-      planTitle = selectedOpt.getAttribute("data-title") || "Pro Business Tier";
-      planPrice = parseInt(selectedOpt.getAttribute("data-price") || "15", 10);
-    }
-  }
-
-  // Force exit demo mode and set new shop configuration
-  state.isDemoMode = false;
-  state.config.shopName = shopName;
-  state.config.slug = slug;
-  state.config.planTitle = planTitle;
-  state.config.planPrice = planPrice;
-  state.queue = [];
-  state.history = [];
-
-  // Remove legacy global keys so no demo contamination remains
-  localStorage.removeItem("waitlink_queue");
-  localStorage.removeItem("waitlink_history");
-
-  // Update browser URL query string to match newly created shop
-  try {
-    const newUrl = `${window.location.pathname}?shop=${slug}`;
-    window.history.pushState({ shop: slug }, "", newUrl);
-  } catch (e) {}
-
-  // Explicitly hide demo banner
-  const demoBanner = document.getElementById("demo-mode-banner");
-  if (demoBanner) demoBanner.classList.add("hidden");
-
-  // Persist locally and sync with Firestore
-  saveConfig();
-  saveData();
-
-  if (db) {
-    db.collection("shops").doc(slug).set({
-      shopName: shopName,
-      slug: slug,
-      planTitle: planTitle,
-      planPrice: planPrice,
-      ownerEmail: (state.user && state.user.email) ? state.user.email : "owner@waitlink.app",
-      queue: [],
-      history: [],
-      createdAt: Date.now()
-    }, { merge: true }).catch(err => console.error("Firestore shop save error:", err));
-    subscribeFirestore();
-  }
-
-  closeCreateShopModal();
-  renderAll();
-  generateQRCode();
-  switchView("desk");
-  showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
-}
-
-function handleOnboardingSubmit(event) {
-  handleCreateShopSubmit(event);
+  handleOnboardingSubmit(event);
 }
 
 // Generate QR Code for Poster
@@ -2767,6 +2698,7 @@ function showToast(message) {
    ========================================================================== */
 
 let isRegistering = false;
+let pendingCreateShopAfterAuth = false;
 
 function initAuth() {
   // Check for persistent session override first
@@ -3146,19 +3078,9 @@ function clearAuthError() {
   setAuthError("");
 }
 
-function openAuthModal() {
+function setAuthMode(registerMode) {
+  isRegistering = !!registerMode;
   clearAuthError();
-  document.getElementById("auth-modal").classList.remove("hidden");
-}
-
-function closeAuthModal() {
-  clearAuthError();
-  document.getElementById("auth-modal").classList.add("hidden");
-}
-
-function toggleAuthMode() {
-  clearAuthError();
-  isRegistering = !isRegistering;
   const title = document.getElementById("auth-modal-title");
   const submitBtn = document.getElementById("auth-submit-btn");
   const toggleBtn = document.getElementById("auth-toggle-btn");
@@ -3181,6 +3103,24 @@ function toggleAuthMode() {
     if (passwordHint) passwordHint.style.display = "none";
     if (passwordInput) passwordInput.setAttribute("autocomplete", "current-password");
   }
+}
+
+function openAuthModal(forRegister = false) {
+  clearAuthError();
+  setAuthMode(forRegister);
+  const modal = document.getElementById("auth-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeAuthModal() {
+  clearAuthError();
+  pendingCreateShopAfterAuth = false;
+  const modal = document.getElementById("auth-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function toggleAuthMode() {
+  setAuthMode(!isRegistering);
 }
 
 function openEmailPromptModal() {
@@ -3251,15 +3191,20 @@ function signInWithGoogle() {
       state.user = result.user;
       sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
       applyUserRole(result.user);
+      const wasPendingShop = pendingCreateShopAfterAuth || isRegistering;
       closeAuthModal();
       const email = result.user.email || "";
       if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
         switchView("superadmin");
         showToast(`👑 Welcome SuperAdmin (${email})`);
+      } else if (wasPendingShop) {
+        pendingCreateShopAfterAuth = false;
+        switchView("owner");
+        showToast(`💈 Welcome ${result.user.displayName || email}! Let's set up your shop.`);
+        openOnboardingModal();
       } else {
         switchView("owner");
         showToast(`💈 Welcome ${result.user.displayName || email}!`);
-        if (isRegistering) openOnboardingModal();
       }
     }
   }).catch(err => {
@@ -3383,6 +3328,7 @@ function handleAuthSubmit(event) {
           state.user = result.user;
           sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
           applyUserRole(result.user);
+          const wasPendingShop = pendingCreateShopAfterAuth;
           closeAuthModal();
           if (emailInput) emailInput.value = "";
           if (passwordInput) passwordInput.value = "";
@@ -3391,6 +3337,11 @@ function handleAuthSubmit(event) {
           if (isSuper) {
             switchView("superadmin");
             showToast("👑 Welcome Platform Administrator");
+          } else if (wasPendingShop) {
+            pendingCreateShopAfterAuth = false;
+            switchView("owner");
+            showToast(`💈 Welcome back, ${email}! Let's set up your shop.`);
+            openOnboardingModal();
           } else {
             switchView("owner");
             showToast(`💈 Welcome back, ${email}!`);
@@ -3439,25 +3390,62 @@ function handleAuthSubmit(event) {
    SHOP ONBOARDING WIZARD (BUSINESS OWNER)
    ========================================================================== */
 
-function openOnboardingModal() {
-  document.getElementById("onboarding-modal").classList.remove("hidden");
-}
-
-function closeOnboardingModal() {
-  document.getElementById("onboarding-modal").classList.add("hidden");
-}
-
 function handleOnboardingSubmit(event) {
   event.preventDefault();
-  const shopName = document.getElementById("onboard-shopname").value.trim() || "Apex Barber Studio";
-  const slug = document.getElementById("onboard-slug").value.trim() || "apex-barber";
+
+  // Strict Auth Gate: Ensure user is authenticated
+  if (!state.user || !state.user.email) {
+    showToast("⚠️ Authentication required. Please register or sign in to set up your shop.");
+    closeOnboardingModal();
+    pendingCreateShopAfterAuth = true;
+    openAuthModal(true);
+    return;
+  }
+
+  const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
+  const slugInput = document.getElementById("onboard-slug") || document.getElementById("new-shop-slug");
+
+  const shopName = nameInput ? nameInput.value.trim() : "";
+  let slug = slugInput ? slugInput.value.trim() : "";
+
+  if (!shopName) {
+    showToast("Please enter a shop name");
+    return;
+  }
+
+  if (!slug) {
+    slug = shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  // Check for slug collision against existing directory
+  const currentEmail = (state.user.email || "").toLowerCase();
+  const isExistingOwned = state.myShops && state.myShops.some(s => s.slug === slug);
+  const isCollision = !isExistingOwned && state.registeredShops && state.registeredShops.some(s => s.slug === slug && (s.ownerEmail || "").toLowerCase() !== currentEmail);
+
+  if (isCollision) {
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    slug = `${slug}-${randomSuffix}`;
+    showToast(`Notice: Reserved slug collision auto-resolved to "${slug}"`);
+  }
+
+  // Read selected Subscription Plan Tier
+  const planSelect = document.getElementById("onboard-plan");
+  let planTitle = "Pro Business Tier";
+  let planPrice = 15;
+  if (planSelect) {
+    const selectedOpt = planSelect.options[planSelect.selectedIndex];
+    if (selectedOpt) {
+      planTitle = selectedOpt.getAttribute("data-title") || "Pro Business Tier";
+      planPrice = parseInt(selectedOpt.getAttribute("data-price") || "15", 10);
+    }
+  }
+
   const address = document.getElementById("onboard-address") ? document.getElementById("onboard-address").value.trim() : "";
   const phone = document.getElementById("onboard-phone") ? document.getElementById("onboard-phone").value.trim() : "";
-  const ownerEmail = document.getElementById("onboard-owner-email") ? document.getElementById("onboard-owner-email").value.trim() : "";
   const promoText = document.getElementById("onboard-promo-text") ? document.getElementById("onboard-promo-text").value.trim() : "";
   const promoStart = document.getElementById("onboard-promo-start") ? document.getElementById("onboard-promo-start").value : "";
   const promoEnd = document.getElementById("onboard-promo-end") ? document.getElementById("onboard-promo-end").value : "";
-  const baseline = parseInt(document.getElementById("onboard-baseline").value) || 20;
+  const baseline = (document.getElementById("onboard-baseline") ? parseInt(document.getElementById("onboard-baseline").value, 10) : 0) || 20;
 
   // Clear previous shop's in-memory queue & history for the new shop
   state.queue = [];
@@ -3467,16 +3455,32 @@ function handleOnboardingSubmit(event) {
   state.config.slug = slug;
   state.config.address = address;
   state.config.phone = phone;
-  state.config.ownerEmail = ownerEmail || (state.user ? state.user.email : "");
+  state.config.ownerEmail = state.user.email;
+  state.config.planTitle = planTitle;
+  state.config.planPrice = planPrice;
   state.config.promoText = promoText;
   state.config.promoStart = promoStart;
   state.config.promoEnd = promoEnd;
   state.config.estBaseWaitMin = baseline;
   state.isDemoMode = false;
 
+  // Remove legacy global keys so no demo contamination remains
+  localStorage.removeItem("waitlink_queue");
+  localStorage.removeItem("waitlink_history");
+
+  // Update browser URL query string to match newly created shop
+  try {
+    const newUrl = `${window.location.pathname}?shop=${slug}`;
+    window.history.pushState({ shop: slug }, "", newUrl);
+  } catch (e) {}
+
+  // Explicitly hide demo banner
+  const demoBanner = document.getElementById("demo-mode-banner");
+  if (demoBanner) demoBanner.classList.add("hidden");
+
   saveConfig();
 
-  // Register shop in Firestore with clean queue & history
+  // Register shop in Firestore with clean queue & history and verified owner
   if (db) {
     db.collection("shops").doc(slug).set({
       name: shopName,
@@ -3484,7 +3488,9 @@ function handleOnboardingSubmit(event) {
       slug: slug,
       address: address,
       phone: phone,
-      ownerEmail: state.config.ownerEmail,
+      planTitle: planTitle,
+      planPrice: planPrice,
+      ownerEmail: state.user.email,
       promoText: promoText,
       promoStart: promoStart,
       promoEnd: promoEnd,
@@ -3492,14 +3498,17 @@ function handleOnboardingSubmit(event) {
       queue: [],
       history: [],
       createdAt: Date.now()
-    }, { merge: true });
+    }, { merge: true }).catch(err => console.error("Firestore shop save error:", err));
+    subscribeFirestore();
   }
 
   saveData();
   generateQRCode();
   renderAll();
   closeOnboardingModal();
-  openRegistrationSuccessModal(shopName, slug, state.config.ownerEmail);
+  switchView("desk");
+  showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
+  openRegistrationSuccessModal(shopName, slug, state.user.email);
 }
 
 let lastRegisteredEmailPayload = null;
