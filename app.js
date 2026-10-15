@@ -3344,8 +3344,12 @@ function openCreateShopModal() {
   const modal = document.getElementById("onboarding-modal") || document.getElementById("create-shop-modal");
   if (modal) {
     modal.classList.remove("hidden");
+    resetSlugWizardState();
     const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
-    if (nameInput) nameInput.focus();
+    if (nameInput) {
+      nameInput.value = "";
+      nameInput.focus();
+    }
     updateOnboardPlanSelection();
   }
 }
@@ -3357,19 +3361,276 @@ function openOnboardingModal() {
 function closeCreateShopModal() {
   const modal = document.getElementById("onboarding-modal") || document.getElementById("create-shop-modal");
   if (modal) modal.classList.add("hidden");
+  resetSlugWizardState();
 }
 
 function closeOnboardingModal() {
   closeCreateShopModal();
 }
 
+// Reserved system slugs that cannot be claimed by tenant shops
+const RESERVED_SLUGS = new Set([
+  "home", "desk", "owner", "superadmin", "public", "admin", "api", "waitlink", 
+  "app", "settings", "main-st-barbers", "login", "register", "auth", "pricing", 
+  "terms", "privacy", "contact", "support", "dashboard", "analytics", "demo", 
+  "billing", "account", "shop", "shops", "status", "help", "faq", "cookies", "reset-password"
+]);
+
+// Extract simple clean city candidate from address input
+function extractCityFromAddress(addr) {
+  if (!addr || typeof addr !== "string") return "";
+  const parts = addr.split(",").map(p => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    // Standard format: Street, City, State ZIP -> part 1 is City
+    const rawCity = parts[1].replace(/\d+/g, "").trim();
+    const citySlug = slugify(rawCity);
+    if (citySlug && citySlug.length >= 2 && citySlug.length <= 25) {
+      return citySlug;
+    }
+  }
+  if (parts.length === 1) {
+    const single = slugify(parts[0]);
+    if (single && single.length >= 3 && single.length <= 20) {
+      return single;
+    }
+  }
+  return "";
+}
+
+// Reset Smart Slug Wizard UI & State
+function resetSlugWizardState() {
+  const slugInput = document.getElementById("onboard-slug");
+  if (slugInput) {
+    slugInput.value = "";
+    delete slugInput.dataset.manuallyEdited;
+    delete slugInput.dataset.slugValid;
+  }
+  const statusEl = document.getElementById("onboard-slug-status");
+  if (statusEl) statusEl.innerHTML = "";
+  const wrapperEl = document.getElementById("onboard-slug-wrapper");
+  if (wrapperEl) wrapperEl.className = "slug-input-wrapper";
+  const urlEl = document.getElementById("onboard-slug-url-display");
+  if (urlEl) urlEl.textContent = "https://waitlink.app?s=...";
+  const chipEl = document.getElementById("onboard-slug-suggestion-chip");
+  if (chipEl) {
+    chipEl.classList.add("hidden");
+    chipEl.innerHTML = "";
+    chipEl.dataset.suggestedSlug = "";
+  }
+}
+
+// Check Cloud Firestore and local directory for slug uniqueness
+async function isSlugAvailableInCloud(candidateSlug) {
+  if (!candidateSlug || candidateSlug.length < 3) {
+    return { available: false, reason: "too-short" };
+  }
+  if (RESERVED_SLUGS.has(candidateSlug)) {
+    return { available: false, reason: "reserved" };
+  }
+
+  const currentUserEmail = (state.user && state.user.email ? state.user.email : "").toLowerCase();
+
+  // If the logged-in user already owns this shop slug, it is valid for them
+  const isUserOwnExisting = (state.myShops && state.myShops.some(s => s.slug === candidateSlug)) ||
+    (state.registeredShops && state.registeredShops.some(s => s.slug === candidateSlug && (s.ownerEmail || "").toLowerCase() === currentUserEmail));
+  if (isUserOwnExisting) {
+    return { available: true, ownedByCurrent: true };
+  }
+
+  // Check in-memory registered shops directory
+  const inMemoryConflict = (state.registeredShops || []).some(s => {
+    if (!s) return false;
+    const sSlug = String(s.slug || s.id || "").trim();
+    return sSlug === candidateSlug && (s.ownerEmail || "").toLowerCase() !== currentUserEmail;
+  });
+  if (inMemoryConflict) {
+    return { available: false, reason: "taken" };
+  }
+
+  // Live Cloud Firestore check across shops collection
+  if (db) {
+    try {
+      // 1. Check exact document ID
+      const docSnap = await db.collection("shops").doc(candidateSlug).get();
+      if (docSnap.exists) {
+        const d = docSnap.data() || {};
+        const docOwner = (d.ownerEmail || "").toLowerCase();
+        if (docOwner && docOwner === currentUserEmail) {
+          return { available: true, ownedByCurrent: true };
+        }
+        return { available: false, reason: "taken" };
+      }
+
+      // 2. Query slug field
+      const querySnap = await db.collection("shops").where("slug", "==", candidateSlug).limit(1).get();
+      if (!querySnap.empty) {
+        const d = querySnap.docs[0].data() || {};
+        const docOwner = (d.ownerEmail || "").toLowerCase();
+        if (docOwner && docOwner === currentUserEmail) {
+          return { available: true, ownedByCurrent: true };
+        }
+        return { available: false, reason: "taken" };
+      }
+    } catch (err) {
+      console.warn("Firestore live slug check warning:", err);
+    }
+  }
+
+  return { available: true };
+}
+
+// Find an available alternative slug suggestion based on business city or clean increment
+async function findAvailableSlugSuggestion(baseSlug, address) {
+  const cleanBase = slugify(baseSlug);
+  if (!cleanBase) return "";
+
+  const city = extractCityFromAddress(address);
+  // Candidate 1: shopname-city (e.g. apex-barber-boston)
+  if (city) {
+    const cityCandidate = slugify(`${cleanBase}-${city}`);
+    const check1 = await isSlugAvailableInCloud(cityCandidate);
+    if (check1.available) return cityCandidate;
+  }
+
+  // Candidate 2 to 5: shopname-2, shopname-3, etc.
+  for (let i = 2; i <= 6; i++) {
+    const numCandidate = `${cleanBase}-${i}`;
+    const checkNum = await isSlugAvailableInCloud(numCandidate);
+    if (checkNum.available) return numCandidate;
+  }
+
+  // Fallback random suffix
+  return `${cleanBase}-${Math.floor(10 + Math.random() * 89)}`;
+}
+
+// Debounce timer & state tracking for live slug availability
+let slugCheckDebounceTimer = null;
+let activeCheckingSlug = "";
+
+function triggerSlugCheck(candidateRaw) {
+  if (slugCheckDebounceTimer) {
+    clearTimeout(slugCheckDebounceTimer);
+  }
+
+  const statusEl = document.getElementById("onboard-slug-status");
+  const wrapperEl = document.getElementById("onboard-slug-wrapper");
+  const urlEl = document.getElementById("onboard-slug-url-display");
+  const chipEl = document.getElementById("onboard-slug-suggestion-chip");
+  const slugInput = document.getElementById("onboard-slug");
+
+  const cleanSlug = slugify(candidateRaw);
+
+  // Update live preview link immediately
+  if (urlEl) {
+    urlEl.textContent = cleanSlug ? `https://waitlink.app?s=${cleanSlug}` : "https://waitlink.app?s=...";
+  }
+
+  if (!cleanSlug) {
+    if (statusEl) statusEl.innerHTML = "";
+    if (wrapperEl) wrapperEl.className = "slug-input-wrapper";
+    if (chipEl) chipEl.classList.add("hidden");
+    if (slugInput) slugInput.dataset.slugValid = "false";
+    return;
+  }
+
+  if (cleanSlug.length < 3) {
+    if (statusEl) statusEl.innerHTML = '<span style="color: #f59e0b;">⚠️ Min 3 characters</span>';
+    if (wrapperEl) wrapperEl.className = "slug-input-wrapper";
+    if (chipEl) chipEl.classList.add("hidden");
+    if (slugInput) slugInput.dataset.slugValid = "false";
+    return;
+  }
+
+  // Show immediate progress status
+  if (statusEl) statusEl.innerHTML = '<span style="color: #38bdf8;">🔄 Checking...</span>';
+  if (wrapperEl) {
+    wrapperEl.classList.remove("is-valid", "is-taken");
+    wrapperEl.classList.add("is-checking");
+  }
+  if (chipEl) chipEl.classList.add("hidden");
+
+  // Debounce 250ms for smooth live typing without Firestore read thrashing
+  slugCheckDebounceTimer = setTimeout(async () => {
+    activeCheckingSlug = cleanSlug;
+    const res = await isSlugAvailableInCloud(cleanSlug);
+
+    // Guard against race conditions if user typed more characters
+    if (activeCheckingSlug !== cleanSlug) return;
+
+    if (wrapperEl) wrapperEl.classList.remove("is-checking");
+
+    if (res.available) {
+      if (statusEl) statusEl.innerHTML = '<span style="color: #10b981;">✅ Available</span>';
+      if (wrapperEl) {
+        wrapperEl.classList.remove("is-taken");
+        wrapperEl.classList.add("is-valid");
+      }
+      if (chipEl) chipEl.classList.add("hidden");
+      if (slugInput) slugInput.dataset.slugValid = "true";
+    } else {
+      const reasonText = res.reason === "reserved" ? "⚠️ Reserved name" : "❌ Already taken";
+      if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">${reasonText}</span>`;
+      if (wrapperEl) {
+        wrapperEl.classList.remove("is-valid");
+        wrapperEl.classList.add("is-taken");
+      }
+      if (slugInput) slugInput.dataset.slugValid = "false";
+
+      // Compute and display smart suggestion
+      const addrInput = document.getElementById("onboard-address");
+      const addrVal = addrInput ? addrInput.value.trim() : "";
+      const suggestion = await findAvailableSlugSuggestion(cleanSlug, addrVal);
+      if (suggestion && chipEl) {
+        chipEl.dataset.suggestedSlug = suggestion;
+        chipEl.innerHTML = `💡 Try: <strong>${suggestion}</strong> <span style="text-decoration: underline; margin-left: 4px;">Apply</span>`;
+        chipEl.classList.remove("hidden");
+      }
+    }
+  }, 250);
+}
+
+// User explicitly typing in the slug field
+function handleManualSlugInput(val) {
+  const slugInput = document.getElementById("onboard-slug");
+  if (slugInput) {
+    slugInput.dataset.manuallyEdited = "true";
+    const sanitized = val.toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "");
+    slugInput.value = sanitized;
+  }
+  triggerSlugCheck(val);
+}
+
 // Auto-generate URL slug from Shop Name
 function generateSlugFromInput(val) {
   const slugInput = document.getElementById("onboard-slug") || document.getElementById("new-shop-slug");
-  if (slugInput && val) {
+  if (slugInput) {
     if (!slugInput.dataset.manuallyEdited || !slugInput.value) {
-      slugInput.value = slugify(val);
+      const autoSlug = slugify(val);
+      slugInput.value = autoSlug;
+      triggerSlugCheck(autoSlug);
     }
+  }
+}
+
+// User typing in the Business Address field
+function handleOnboardAddressInput(addrVal) {
+  const slugInput = document.getElementById("onboard-slug");
+  if (slugInput && slugInput.value && slugInput.dataset.slugValid === "false") {
+    triggerSlugCheck(slugInput.value);
+  }
+}
+
+// User clicks the smart suggestion chip
+function applySlugSuggestion() {
+  const chipEl = document.getElementById("onboard-slug-suggestion-chip");
+  const slugInput = document.getElementById("onboard-slug");
+  if (chipEl && chipEl.dataset.suggestedSlug && slugInput) {
+    const suggestion = chipEl.dataset.suggestedSlug;
+    slugInput.value = suggestion;
+    slugInput.dataset.manuallyEdited = "true";
+    chipEl.classList.add("hidden");
+    triggerSlugCheck(suggestion);
+    showToast(`✓ Applied suggestion: ${suggestion}`);
   }
 }
 
@@ -4434,6 +4695,12 @@ function handleOnboardingSubmit(event) {
   let slug = slugify(rawSlug || shopName);
   if (!slug) {
     slug = `shop-${Date.now().toString(36)}`;
+  }
+
+  if (slugInput && slugInput.dataset.slugValid === "false") {
+    showToast("⚠️ The URL slug is either reserved or already taken. Please choose an available slug or tap the smart suggestion.");
+    slugInput.focus();
+    return;
   }
 
   const address = document.getElementById("onboard-address") ? document.getElementById("onboard-address").value.trim() : "";
