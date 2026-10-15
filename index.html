@@ -72,8 +72,8 @@
           🌙
         </button>
 
-        <!-- Upgrade Primary Action (Desktop) -->
-        <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header desktop-only-action" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
+        <!-- Upgrade Primary Action (Desktop, visible only for authenticated Starter owners) -->
+        <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header desktop-only-action" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="display: none; border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
           💎 Upgrade
         </button>
 
@@ -233,7 +233,7 @@
             <button id="mobile-create-shop-btn" class="btn btn-accent mobile-action-btn" onclick="openCreateShopModal(); closeMobileNavDrawer();">
               ⚡ + Create Shop Waitlist
             </button>
-            <button class="btn btn-secondary mobile-action-btn mobile-upgrade-btn" onclick="openUpgradeModal(); closeMobileNavDrawer();">
+            <button id="mobile-upgrade-btn" class="btn btn-secondary mobile-action-btn mobile-upgrade-btn" onclick="openUpgradeModal(); closeMobileNavDrawer();" style="display: none;">
               💎 Upgrade Plan
             </button>
           </div>

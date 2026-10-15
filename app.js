@@ -1397,14 +1397,25 @@ function renderSubscriptionBadges() {
     }
   }
 
-  // 2. Main Header Upgrade Button (Only visible for Free Starter & Guest users; hidden when subscribed for clean navbar)
+  // 2. Main Header & Mobile Drawer Upgrade Buttons (Strictly visible only for authenticated owners on the Starter tier; hidden for guests and paid subscribers)
   const headerBtn = document.getElementById("header-upgrade-btn");
+  const mobileUpgradeBtn = document.getElementById("mobile-upgrade-btn");
+  const showUpgradeBtn = isAuthenticated && !isSubscribed;
+
   if (headerBtn) {
-    if (isSubscribed) {
-      headerBtn.style.display = "none";
-    } else {
+    if (showUpgradeBtn) {
       headerBtn.style.display = "inline-flex";
       headerBtn.innerHTML = `<span>💎 Upgrade</span>`;
+    } else {
+      headerBtn.style.display = "none";
+    }
+  }
+
+  if (mobileUpgradeBtn) {
+    if (showUpgradeBtn) {
+      mobileUpgradeBtn.style.display = "inline-flex";
+    } else {
+      mobileUpgradeBtn.style.display = "none";
     }
   }
 
@@ -5116,12 +5127,42 @@ function cleanDuplicateShops() {
   if (!confirm(confirmMsg)) return;
 
   const deletePromises = duplicatesToDelete.map(d => {
-    const slugToDelete = d.ghost.slug || d.ghost.id;
-    return db.collection("shops").doc(slugToDelete).delete().then(() => {
-      // Remove from state
-      state.registeredShops = state.registeredShops.filter(s => (s.slug || s.id) !== slugToDelete);
+    const ghostDocId = String(d.ghost.id || '').trim();
+    const ghostSlug = String(d.ghost.slug || '').trim();
+    const canonicalDocId = String(d.canonical.id || '').trim();
+    const canonicalSlug = String(d.canonical.slug || '').trim();
+
+    const idsToDelete = new Set();
+    if (ghostDocId && ghostDocId !== canonicalDocId) {
+      idsToDelete.add(ghostDocId);
+    }
+    if (ghostSlug && ghostSlug !== canonicalSlug && ghostSlug !== canonicalDocId) {
+      idsToDelete.add(ghostSlug);
+    }
+
+    const firestoreDeletions = Array.from(idsToDelete).map(id => 
+      db.collection("shops").doc(id).delete().catch(console.warn)
+    );
+
+    return Promise.all(firestoreDeletions).then(() => {
+      // Remove from in-memory state
+      state.registeredShops = state.registeredShops.filter(s => {
+        if (!s) return false;
+        const sId = String(s.id || '').trim();
+        const sSlug = String(s.slug || '').trim();
+        if (sId && idsToDelete.has(sId)) return false;
+        if (sSlug && idsToDelete.has(sSlug)) return false;
+        return true;
+      });
       if (Array.isArray(state.myShops)) {
-        state.myShops = state.myShops.filter(s => (s.slug || s.id) !== slugToDelete);
+        state.myShops = state.myShops.filter(s => {
+          if (!s) return false;
+          const sId = String(s.id || '').trim();
+          const sSlug = String(s.slug || '').trim();
+          if (sId && idsToDelete.has(sId)) return false;
+          if (sSlug && idsToDelete.has(sSlug)) return false;
+          return true;
+        });
       }
     });
   });
