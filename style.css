@@ -1622,10 +1622,23 @@ html[data-theme="light"] .app-header {
   40%, 80% { transform: translateX(5px); }
 }
 
+.auth-error-banner.success {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+  animation: slideUp 0.3s ease;
+}
+
 html[data-theme="light"] .auth-error-banner {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.35);
   color: #b91c1c;
+}
+
+html[data-theme="light"] .auth-error-banner.success {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
 }
 
 @keyframes slideUp {

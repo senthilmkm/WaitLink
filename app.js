@@ -2699,6 +2699,7 @@ function showToast(message) {
 
 let isRegistering = false;
 let pendingCreateShopAfterAuth = false;
+let isResettingPassword = false;
 
 function initAuth() {
   // Check for persistent session override first
@@ -2733,7 +2734,6 @@ function initAuth() {
       console.warn("Google Redirect result error:", err);
       if (err && (err.message || "").includes("domain")) {
         showToast("⚠️ Domain authorization pending in Firebase Console.");
-        openEmailPromptModal();
       }
     });
   } catch (e) {}
@@ -2823,6 +2823,10 @@ function fetchUserShopsAndSync(userEmail) {
       if (nonDemoShop && state.config.slug === "main-st-barbers") {
         inspectShop(nonDemoShop.slug);
       }
+    } else if (!isSuper && state.user && state.user.email) {
+      // First-time business owner with 0 registered shops: guide them into shop setup wizard!
+      showToast(`👋 Welcome ${state.user.displayName || state.user.email}! Let's set up your first shop.`);
+      openOnboardingModal();
     }
   }).catch(err => {
     console.warn("Error fetching user shops:", err);
@@ -3060,15 +3064,24 @@ function handleSignOut(e) {
   showToast("Logged out successfully");
 }
 
-function setAuthError(message) {
+function setAuthError(message, isSuccess = false) {
   const banner = document.getElementById("auth-error-banner");
   const text = document.getElementById("auth-error-text");
+  const icon = banner ? banner.querySelector(".auth-error-icon") : null;
   if (banner && text) {
     if (message) {
-      text.textContent = message.replace(/^⚠️\s*/, "");
+      text.textContent = message.replace(/^([⚠️✅📬ℹ️]|\s)+/, "");
+      if (isSuccess) {
+        banner.classList.add("success");
+        if (icon) icon.textContent = "✅";
+      } else {
+        banner.classList.remove("success");
+        if (icon) icon.textContent = "⚠️";
+      }
       banner.classList.remove("hidden");
     } else {
       banner.classList.add("hidden");
+      banner.classList.remove("success");
       text.textContent = "";
     }
   }
@@ -3078,35 +3091,85 @@ function clearAuthError() {
   setAuthError("");
 }
 
-function setAuthMode(registerMode) {
-  isRegistering = !!registerMode;
+function toggleForgotPassword() {
   clearAuthError();
+  isResettingPassword = !isResettingPassword;
   const title = document.getElementById("auth-modal-title");
   const submitBtn = document.getElementById("auth-submit-btn");
-  const toggleBtn = document.getElementById("auth-toggle-btn");
-  const switchText = document.getElementById("auth-switch-text");
+  const googleBtn = document.getElementById("auth-google-btn");
+  const formDivider = document.getElementById("auth-form-divider");
+  const passwordGroup = document.getElementById("auth-password-group");
+  const passwordInput = document.getElementById("auth-password");
+  const switchHint = document.querySelector(".auth-switch-hint");
+
+  if (isResettingPassword) {
+    if (title) title.textContent = "🔄 Reset Your Password";
+    if (submitBtn) submitBtn.textContent = "Send Password Reset Link";
+    if (googleBtn) googleBtn.style.display = "none";
+    if (formDivider) formDivider.style.display = "none";
+    if (passwordGroup) passwordGroup.style.display = "none";
+    if (passwordInput) passwordInput.required = false;
+    if (switchHint) {
+      switchHint.innerHTML = `
+        <span>Remembered your password?</span>
+        <button type="button" class="btn-text" style="color: var(--primary); font-weight: 600;" onclick="toggleForgotPassword()">Back to Sign In</button>
+      `;
+    }
+  } else {
+    setAuthMode(false);
+  }
+}
+
+function setAuthMode(registerMode) {
+  isRegistering = !!registerMode;
+  isResettingPassword = false;
+  clearAuthError();
+
+  const title = document.getElementById("auth-modal-title");
+  const submitBtn = document.getElementById("auth-submit-btn");
   const passwordHint = document.getElementById("auth-password-hint");
   const passwordInput = document.getElementById("auth-password");
+  const passwordGroup = document.getElementById("auth-password-group");
+  const googleBtn = document.getElementById("auth-google-btn");
+  const formDivider = document.getElementById("auth-form-divider");
+  const switchHint = document.querySelector(".auth-switch-hint");
+  const forgotBtn = document.getElementById("auth-forgot-btn");
+
+  if (googleBtn) googleBtn.style.display = "";
+  if (formDivider) formDivider.style.display = "";
+  if (passwordGroup) passwordGroup.style.display = "";
+  if (passwordInput) passwordInput.required = true;
 
   if (isRegistering) {
     if (title) title.textContent = "🚀 Register New Shop Account";
     if (submitBtn) submitBtn.textContent = "Create Account & Set Up Shop";
-    if (switchText) switchText.textContent = "Already have an account?";
-    if (toggleBtn) toggleBtn.textContent = "Sign In Instead";
+    if (switchHint) {
+      switchHint.innerHTML = `
+        <span id="auth-switch-text">Already have an account?</span>
+        <button type="button" class="btn-text" style="color: var(--primary); font-weight: 600;" onclick="toggleAuthMode()" id="auth-toggle-btn">Sign In Instead</button>
+      `;
+    }
     if (passwordHint) passwordHint.style.display = "block";
     if (passwordInput) passwordInput.setAttribute("autocomplete", "new-password");
+    if (forgotBtn) forgotBtn.style.display = "none";
   } else {
     if (title) title.textContent = "🔑 Sign In to WaitLink";
     if (submitBtn) submitBtn.textContent = "Sign In";
-    if (switchText) switchText.textContent = "New Business Owner?";
-    if (toggleBtn) toggleBtn.textContent = "Create Shop Account";
+    if (switchHint) {
+      switchHint.innerHTML = `
+        <span id="auth-switch-text">New Business Owner?</span>
+        <button type="button" class="btn-text" style="color: var(--primary); font-weight: 600;" onclick="toggleAuthMode()" id="auth-toggle-btn">Create Shop Account</button>
+      `;
+    }
     if (passwordHint) passwordHint.style.display = "none";
     if (passwordInput) passwordInput.setAttribute("autocomplete", "current-password");
+    if (forgotBtn) forgotBtn.style.display = "";
   }
 }
 
 function openAuthModal(forRegister = false) {
   clearAuthError();
+  isResettingPassword = false;
   setAuthMode(forRegister);
   const modal = document.getElementById("auth-modal");
   if (modal) modal.classList.remove("hidden");
@@ -3114,6 +3177,7 @@ function openAuthModal(forRegister = false) {
 
 function closeAuthModal() {
   clearAuthError();
+  isResettingPassword = false;
   pendingCreateShopAfterAuth = false;
   const modal = document.getElementById("auth-modal");
   if (modal) modal.classList.add("hidden");
@@ -3123,46 +3187,11 @@ function toggleAuthMode() {
   setAuthMode(!isRegistering);
 }
 
-function openEmailPromptModal() {
-  closeAuthModal();
-  const modal = document.getElementById("email-prompt-modal");
-  if (modal) modal.classList.remove("hidden");
-}
-
-function closeEmailPromptModal() {
-  const modal = document.getElementById("email-prompt-modal");
-  if (modal) modal.classList.add("hidden");
-}
-
-function handleEmailPromptSubmit(event) {
-  event.preventDefault();
-  const input = document.getElementById("prompt-email-input");
-  const email = input ? input.value.trim() : "";
-  if (!email) return;
-
-  const user = { email: email };
-  state.user = user;
-  sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
-  applyUserRole(user);
-  closeEmailPromptModal();
-
-  if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
-    switchView("superadmin");
-    showToast("👑 Welcome Platform Administrator");
-  } else {
-    if (isRegistering) {
-      openOnboardingModal();
-    } else {
-      switchView("owner");
-      showToast(`💈 Welcome back, ${email}!`);
-    }
-  }
-}
-
 function signInWithGoogle() {
   if (!ensureFirebaseInitialized() || !firebase.auth) {
-    showToast("⚠️ Firebase Auth is not available. Please enter your email.");
-    openEmailPromptModal();
+    const errorMsg = "⚠️ Firebase Auth is not available. Please sign in with your email and password.";
+    setAuthError(errorMsg);
+    showToast(errorMsg);
     return;
   }
 
@@ -3176,12 +3205,12 @@ function signInWithGoogle() {
     showToast("Redirecting to Google Sign-In...");
     firebase.auth().signInWithRedirect(provider).catch(err => {
       console.warn("Google Redirect Error:", err);
+      let errorMsg = "Google Sign-In failed. Please sign in with email and password.";
       if (err && err.code === "auth/unauthorized-domain") {
-        showToast("⚠️ Domain not yet authorized in Firebase Console.");
-      } else {
-        showToast(`⚠️ ${err.message || 'Redirect failed'}`);
+        errorMsg = "⚠️ Domain waitlink.app is pending authorization in Firebase Console. Please use email & password.";
       }
-      openEmailPromptModal();
+      setAuthError(errorMsg);
+      showToast(errorMsg);
     });
     return;
   }
@@ -3210,20 +3239,11 @@ function signInWithGoogle() {
   }).catch(err => {
     console.warn("Google Popup Auth Error:", err);
     if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
-      showToast("Redirecting to Google Sign-In...");
-      firebase.auth().signInWithRedirect(provider).catch(redirectErr => {
-        console.warn("Redirect fallback error:", redirectErr);
-        if (redirectErr && redirectErr.code === "auth/unauthorized-domain") {
-          showToast("⚠️ Domain not yet authorized in Firebase Console.");
-        }
-        openEmailPromptModal();
-      });
+      setAuthError("⚠️ Google sign-in was closed or blocked. You can retry or sign in using your email and password below.");
     } else if (err.code === "auth/unauthorized-domain") {
-      showToast("⚠️ Domain waitlink.app not authorized in Firebase Console yet.");
-      openEmailPromptModal();
+      setAuthError("⚠️ Domain waitlink.app is pending authorization in Firebase Console. Please sign in with email and password.");
     } else {
-      showToast(`⚠️ Auth error: ${err.message || err.code}`);
-      openEmailPromptModal();
+      setAuthError(`⚠️ Google Sign-In error: ${err.message || err.code}`);
     }
   });
 }
@@ -3236,7 +3256,56 @@ function handleAuthSubmit(event) {
 
   const email = emailInput ? emailInput.value.trim() : "";
   const password = passwordInput ? passwordInput.value : "";
-  if (!email || !password) return;
+  if (!email) return;
+
+  clearAuthError();
+
+  if (!ensureFirebaseInitialized() || !firebase.auth) {
+    const errorMsg = "⚠️ Firebase Auth service is currently unavailable. Please check your connection.";
+    setAuthError(errorMsg);
+    showToast(errorMsg);
+    return;
+  }
+
+  // =========================================================================
+  // 0. SELF-SERVICE PASSWORD RESET FLOW
+  // =========================================================================
+  if (isResettingPassword) {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending Reset Link...";
+    }
+    firebase.auth().sendPasswordResetEmail(email)
+      .then(() => {
+        setAuthError(`✅ Reset link sent to ${email}! Check your inbox and follow instructions.`, true);
+        showToast("📬 Password reset link sent to your email!");
+      })
+      .catch(err => {
+        console.warn("Password reset error:", err);
+        let errorMsg = "Could not send reset email. Please verify your address.";
+        switch (err.code) {
+          case "auth/user-not-found":
+            errorMsg = "⚠️ No account found with this email address.";
+            break;
+          case "auth/invalid-email":
+            errorMsg = "⚠️ Please enter a valid email address.";
+            break;
+          default:
+            errorMsg = `⚠️ ${err.message || errorMsg}`;
+        }
+        setAuthError(errorMsg);
+        showToast(errorMsg);
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send Password Reset Link";
+        }
+      });
+    return;
+  }
+
+  if (!password) return;
 
   clearAuthError();
 
