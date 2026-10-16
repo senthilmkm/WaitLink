@@ -178,14 +178,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modeParam === "public") {
       const header = document.querySelector(".app-header");
       if (header) header.style.display = "none";
-      switchView("public");
+      switchView("public", true);
+    } else if (modeParam === "owner") {
+      state.pendingInitialView = "owner";
+      switchView("owner", true);
+    } else if (modeParam === "desk") {
+      state.pendingInitialView = "desk";
+      switchView("desk", true);
     } else {
-      switchView("desk");
+      // By default, custom shop URL visits are public customer check-in cards!
+      // If the visiting user is already logged in as the registered owner, auth resolution will auto-promote to desk.
+      if (state.config.slug === "main-st-barbers") {
+        switchView("desk", true);
+      } else {
+        switchView("public", true);
+      }
     }
   } else if (modeParam === "public") {
     const header = document.querySelector(".app-header");
     if (header) header.style.display = "none";
-    switchView("public");
+    switchView("public", true);
   } else {
     // Root URL visit without shop parameter -> Show Product Landing Overview!
     switchView("home");
@@ -363,6 +375,16 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.address !== undefined) state.config.address = data.address;
       if (data.phone !== undefined) state.config.phone = data.phone;
       if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
+      // Auto-promote owner to Front Desk if they landed on public view or had a pending view request
+      if (state.user && state.user.email && (state.activeView === "public" || state.pendingInitialView)) {
+        const uEmail = state.user.email.toLowerCase().trim();
+        const oEmail = (state.config.ownerEmail || "").toLowerCase().trim();
+        if (uEmail === oEmail) {
+          const target = state.pendingInitialView || "desk";
+          state.pendingInitialView = null;
+          switchView(target);
+        }
+      }
       if (data.promoText !== undefined) state.config.promoText = data.promoText;
       if (data.promoStart !== undefined) state.config.promoStart = data.promoStart;
       if (data.promoEnd !== undefined) state.config.promoEnd = data.promoEnd;
@@ -3155,10 +3177,10 @@ function updateActiveTicketTimer() {
 }
 
 // Switch Views
-function switchView(viewName) {
+function switchView(viewName, isSilent = false) {
   if (viewName === "superadmin" && !isSuperAdmin()) {
-    showToast("🔒 Platform SuperAdmin directory is restricted to authorized platform administrators.");
-    switchView("desk");
+    if (!isSilent) showToast("🔒 Platform SuperAdmin directory is restricted to authorized platform administrators.");
+    switchView("desk", isSilent);
     return;
   }
 
@@ -3168,8 +3190,23 @@ function switchView(viewName) {
     const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
     const configOwnerEmail = (state.config.ownerEmail || "").trim().toLowerCase();
 
+    // Check cached owned slugs for instant synchronous validation even before network queries complete
+    let isCachedOwner = false;
+    if (userEmailClean) {
+      try {
+        const cachedSlugs = JSON.parse(localStorage.getItem("waitlink_owned_slugs_" + userEmailClean) || "[]");
+        if (Array.isArray(cachedSlugs) && (
+          cachedSlugs.includes(state.config.slug) || 
+          (cachedSlugs.includes("stomada") && state.config.slug === "stomada-clinic") || 
+          (cachedSlugs.includes("stomada-clinic") && state.config.slug === "stomada")
+        )) {
+          isCachedOwner = true;
+        }
+      } catch (e) {}
+    }
+
     // Check direct config match OR check if registeredShops / myShops contains this active shop with matching owner
-    const isRegisteredOwner = (Array.isArray(state.registeredShops) && state.registeredShops.some(s => {
+    const isRegisteredOwner = isCachedOwner || (Array.isArray(state.registeredShops) && state.registeredShops.some(s => {
       const matchSlug = s.slug === state.config.slug || s.id === state.config.slug;
       const matchOwner = (s.ownerEmail || "").trim().toLowerCase() === userEmailClean || (s.ownerUid && s.ownerUid === state.user.uid);
       return matchSlug && matchOwner;
@@ -3190,8 +3227,15 @@ function switchView(viewName) {
     const isSandboxDemo = !state.user && (state.isDemoMode || state.config.slug === "main-st-barbers");
 
     if (!isSuper && !isOwner && !isSandboxDemo) {
-      showToast("🔒 Access Restricted: Please sign in as the registered owner of this shop to access Front Desk controls.");
-      switchView("public");
+      if (!isSilent) {
+        if (!state.user) {
+          showToast(`👋 Please sign in to access Front Desk controls for ${state.config.shopName || 'this shop'}.`);
+          openAuthModal(false);
+        } else {
+          showToast("🔒 Access Restricted: Please sign in as the registered owner of this shop to access Front Desk controls.");
+        }
+      }
+      switchView("public", true);
       return;
     }
   }
@@ -3938,18 +3982,18 @@ function initAuth() {
 
   // Process Google OAuth redirect result (Bypasses COOP popup restrictions)
   try {
-    firebase.auth().getRedirectResult().then(result => {
+    firebase.auth().getRedirectResult().then(async result => {
       if (result && result.user) {
         state.user = result.user;
         sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
-        applyUserRole(result.user);
+        await applyUserRole(result.user);
         closeAuthModal();
         const email = result.user.email || "";
         if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
           switchView("superadmin");
           showToast("👑 Welcome Platform Administrator");
         } else {
-          switchView("owner");
+          switchView("desk");
           showToast(`💈 Welcome ${result.user.displayName || email}!`);
         }
       }
@@ -3961,13 +4005,20 @@ function initAuth() {
     });
   } catch (e) {}
 
-  firebase.auth().onAuthStateChanged(user => {
-    // If a manual session exists, priority is given to session
-    const currentSession = sessionStorage.getItem("waitlink_session_user");
-    if (currentSession) return;
-
+  firebase.auth().onAuthStateChanged(async user => {
+    if (!user) {
+      state.user = null;
+      applyUserRole(null);
+      return;
+    }
     state.user = user;
-    applyUserRole(user);
+    sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
+    await applyUserRole(user);
+    if (state.pendingInitialView) {
+      const target = state.pendingInitialView;
+      state.pendingInitialView = null;
+      switchView(target);
+    }
   });
 }
 
@@ -4019,7 +4070,7 @@ function handleAccountDropdownAction() {
 }
 
 function fetchUserShopsAndSync(userEmail) {
-  if (!db || !userEmail) return;
+  if (!db || !userEmail) return Promise.resolve([]);
 
   const emailClean = userEmail.trim().toLowerCase();
   const isSuper = emailClean === SUPERADMIN_EMAIL.toLowerCase();
@@ -4028,43 +4079,48 @@ function fetchUserShopsAndSync(userEmail) {
     ? db.collection("shops").limit(100)
     : db.collection("shops").where("ownerEmail", "==", userEmail).limit(50);
 
-  query.get().then(snapshot => {
+  return query.get().then(snapshot => {
     let fetchedShops = [];
     snapshot.forEach(doc => {
       const data = doc.data();
       const sSlug = data.slug || doc.id;
       const sName = data.name || data.shopName || sSlug;
-      fetchedShops.push({ slug: sSlug, shopName: sName, ...data });
+      fetchedShops.push({ slug: sSlug, id: doc.id, shopName: sName, ...data });
       trackMyShop(sSlug, sName);
     });
 
     // Fallback: if exact case match returned 0 docs and userEmail had case differences, check lowercased
     if (fetchedShops.length === 0 && !isSuper && userEmail !== emailClean) {
-      db.collection("shops").where("ownerEmail", "==", emailClean).limit(50).get().then(snapLower => {
+      return db.collection("shops").where("ownerEmail", "==", emailClean).limit(50).get().then(snapLower => {
         snapLower.forEach(doc => {
           const data = doc.data();
           const sSlug = data.slug || doc.id;
           const sName = data.name || data.shopName || sSlug;
-          fetchedShops.push({ slug: sSlug, shopName: sName, ...data });
+          fetchedShops.push({ slug: sSlug, id: doc.id, shopName: sName, ...data });
           trackMyShop(sSlug, sName);
         });
-        syncUserShopSelection(fetchedShops, isSuper);
+        return syncUserShopSelection(fetchedShops, isSuper);
       }).catch(err => {
         console.warn("Error fetching user shops fallback:", err);
-        syncUserShopSelection(fetchedShops, isSuper);
+        return syncUserShopSelection(fetchedShops, isSuper);
       });
-      return;
     }
 
-    syncUserShopSelection(fetchedShops, isSuper);
+    return syncUserShopSelection(fetchedShops, isSuper);
   }).catch(err => {
     console.warn("Error fetching user shops:", err);
-    syncUserShopSelection([], isSuper);
+    return syncUserShopSelection([], isSuper);
   });
 }
 
 function syncUserShopSelection(fetchedShops, isSuper) {
   state.registeredShops = fetchedShops;
+  
+  if (state.user && state.user.email) {
+    const ownedSlugs = fetchedShops.map(s => s.slug || s.id);
+    localStorage.setItem("waitlink_owned_slugs_" + state.user.email.toLowerCase().trim(), JSON.stringify(ownedSlugs));
+  }
+
   renderShopDropdown();
 
   // 1. If user has registered shops in Firestore, check if currently viewed shop belongs to them
@@ -4075,13 +4131,19 @@ function syncUserShopSelection(fetchedShops, isSuper) {
       if (currentOwned.name || currentOwned.shopName) {
         state.config.shopName = currentOwned.name || currentOwned.shopName;
       }
-      return;
+      // If user was on public view or had pendingInitialView, promote to desk!
+      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+        const targetView = state.pendingInitialView || "desk";
+        state.pendingInitialView = null;
+        switchView(targetView);
+      }
+      return fetchedShops;
     }
 
     const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
     if (nonDemoShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
       inspectShop(nonDemoShop.slug);
-      return;
+      return fetchedShops;
     }
   }
 
@@ -4090,7 +4152,7 @@ function syncUserShopSelection(fetchedShops, isSuper) {
     const localShop = (state.myShops || []).find(s => s && s.slug && s.slug !== "main-st-barbers");
     if (localShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
       inspectShop(localShop.slug);
-      return;
+      return fetchedShops;
     }
 
     // 3. First-time business owner with 0 registered shops: guide them into shop setup wizard!
@@ -4099,6 +4161,7 @@ function syncUserShopSelection(fetchedShops, isSuper) {
       openOnboardingModal();
     }
   }
+  return fetchedShops;
 }
 
 function applyUserRole(user) {
@@ -4136,8 +4199,8 @@ function applyUserRole(user) {
     const demoBanner = document.getElementById("demo-mode-banner");
     if (demoBanner) demoBanner.classList.add("hidden");
 
-    fetchUserShopsAndSync(email);
     subscribeFirestore(true);
+    const syncPromise = fetchUserShopsAndSync(email);
 
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
     if (deskTab) deskTab.classList.remove("hidden");
@@ -4575,11 +4638,11 @@ function signInWithGoogle() {
     return;
   }
 
-  firebase.auth().signInWithPopup(provider).then(result => {
+  firebase.auth().signInWithPopup(provider).then(async result => {
     if (result && result.user) {
       state.user = result.user;
       sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
-      applyUserRole(result.user);
+      await applyUserRole(result.user);
       const wasPendingShop = pendingCreateShopAfterAuth || isRegistering;
       closeAuthModal();
       const email = result.user.email || "";
@@ -4592,7 +4655,7 @@ function signInWithGoogle() {
         showToast(`💈 Welcome ${result.user.displayName || email}! Let's set up your shop.`);
         openOnboardingModal();
       } else {
-        switchView("owner");
+        switchView("desk");
         showToast(`💈 Welcome ${result.user.displayName || email}!`);
       }
     }
@@ -4792,11 +4855,11 @@ function handleAuthSubmit(event) {
     // 2. REAL FIREBASE USER SIGN-IN (Verify existing credentials)
     // =========================================================================
     firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(result => {
+      .then(async result => {
         if (result && result.user) {
           state.user = result.user;
           sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
-          applyUserRole(result.user);
+          await applyUserRole(result.user);
           const wasPendingShop = pendingCreateShopAfterAuth;
           closeAuthModal();
           if (emailInput) emailInput.value = "";
@@ -4812,7 +4875,7 @@ function handleAuthSubmit(event) {
             showToast(`💈 Welcome back, ${email}! Let's set up your shop.`);
             openOnboardingModal();
           } else {
-            switchView("owner");
+            switchView("desk");
             showToast(`💈 Welcome back, ${email}!`);
           }
         }
