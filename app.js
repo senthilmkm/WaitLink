@@ -7803,7 +7803,9 @@ function renderUpgradeModalTiers(tiers) {
       const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
       if (isEnabled) {
         let contentHtml = escapeHtml(text);
-        if (text.includes("500 Automated SMS") || text.includes("2,500+ Automated SMS") || text.includes("0 SMS Included") || text.includes("Rollover Bank") || text.includes("Top-Up SMS")) {
+        if (text.includes("Top-Up SMS") || text.includes("Top-Up Packs") || text.includes("+250 / +1,000")) {
+          contentHtml = `<button type="button" onclick="closeUpgradeModal(); openTopUpModal();" style="background: none; border: none; padding: 0; color: #38bdf8; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: inherit; font-family: inherit; text-align: left;" title="Click to view Top-Up Packs">${contentHtml}</button>`;
+        } else if (text.includes("500 Automated SMS") || text.includes("2,500+ Automated SMS") || text.includes("0 SMS Included") || text.includes("Rollover Bank")) {
           contentHtml = `<strong style="color: #06b6d4;">${contentHtml}</strong>`;
         }
         return `<li style="display: flex; align-items: flex-start; gap: 0.45rem;"><span style="color: #10b981; font-weight: 700;">✓</span> <span>${contentHtml}</span></li>`;
