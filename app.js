@@ -1430,7 +1430,7 @@ function callCustomer(id) {
 }
 
 // Cancel Customer
-function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
+async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
   if (cancelledBy === "desk" && !hasStaffPermission("canCancel")) {
     showToast("🔒 Cancelling visits is disabled for your staff account.");
     return;
@@ -1443,6 +1443,20 @@ function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
 
   if (index !== -1) {
     const item = state.queue[index];
+
+    if (cancelledBy === "desk") {
+      const confirmed = await showConfirmDialog({
+        title: "Cancel Waiting Customer?",
+        message: `Remove "${item.customerName || 'Customer'}" from the active waitlist?\n\nThis will remove them from the queue and log the visit as cancelled.`,
+        confirmText: "Yes, Cancel Visit",
+        cancelText: "Keep in Line",
+        type: "danger",
+        icon: "✕",
+        category: "Queue Cancellation"
+      });
+      if (!confirmed) return;
+    }
+
     const nowTs = Date.now();
     const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : cancelledBy));
     const historyItem = {
