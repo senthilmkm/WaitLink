@@ -299,6 +299,10 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || localSecrets.twilio
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || localSecrets.twilio_auth_token || "";
 const TWILIO_FROM_PHONE = process.env.TWILIO_FROM_PHONE || localSecrets.twilio_from_phone || "+18039027464";
 
+const TOPUP_MICRO_PRICE_ID = process.env.TOPUP_MICRO_PRICE_ID || localSecrets.topup_micro_price_id || "price_1URHUhHXdog2I9XKyYLKFxLM";
+const TOPUP_GROWTH_PRICE_ID = process.env.TOPUP_GROWTH_PRICE_ID || localSecrets.topup_growth_price_id || "price_1URHVaHXdog2I9XKypqiBnDf";
+const TOPUP_POWER_PRICE_ID = process.env.TOPUP_POWER_PRICE_ID || localSecrets.topup_power_price_id || "price_1URHW8HXdog2I9XK0vb6CJXN";
+
 // Rate limiting map for SMS: slug -> array of timestamps
 const smsRateLimitMap = new Map();
 function checkSmsRateLimit(slug) {
@@ -315,9 +319,146 @@ function checkSmsRateLimit(slug) {
 }
 
 /**
+ * Calculates SMS carrier segments based on GSM-7 vs UCS-2 encoding.
+ * GSM-7: 160 chars max for 1 segment; 153 chars/segment for multi-segment.
+ * UCS-2 (Emojis/Unicode): 70 chars max for 1 segment; 67 chars/segment for multi-segment.
+ */
+function calculateSmsSegments(text) {
+  if (!text || typeof text !== "string") return 1;
+  const gsmRegex = /^[@£$¥èéùìòÇ\r\nØøÅåΔ_ΦΓΛΩΠΨΣΘΞ\x1bÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà^{}\\[~\]|€]*$/;
+  const isGsm = gsmRegex.test(text);
+  const len = text.length;
+  if (isGsm) {
+    if (len <= 160) return 1;
+    return Math.ceil(len / 153);
+  } else {
+    if (len <= 70) return 1;
+    return Math.ceil(len / 67);
+  }
+}
+
+/**
+ * Retrieves or initializes shop SMS usage wallet with billing cycle rollover logic.
+ */
+async function getOrInitSmsUsage(slug, shopData) {
+  const now = Date.now();
+  const monthMs = 30 * 24 * 60 * 60 * 1000;
+  const usageRef = admin.firestore().collection("shops").doc(slug).collection("billing").doc("smsUsage");
+  const snap = await usageRef.get();
+  
+  const planPrice = shopData && shopData.planPrice !== undefined ? shopData.planPrice : 15;
+  const planTitle = String((shopData && shopData.planTitle) || "").toLowerCase();
+  const isEnterprise = planPrice >= 49 || planTitle.includes("enterprise");
+  const baseMonthlyQuota = isEnterprise ? 2500 : 500;
+
+  let usage = snap.exists ? snap.data() : null;
+
+  if (!usage) {
+    usage = {
+      monthlyAllowance: baseMonthlyQuota,
+      rolledOverFromPriorMonth: 0,
+      monthlyUsed: 0,
+      topUpBalance: 0,
+      totalAvailable: baseMonthlyQuota,
+      billingCycleStart: now,
+      billingCycleEnd: now + monthMs,
+      lastResetAt: now,
+      lifetimeSent: 0,
+      lastAlertThreshold: 0,
+      recentDispatches: []
+    };
+    await usageRef.set(usage);
+    return { usage, ref: usageRef };
+  }
+
+  // Check if billing cycle has expired -> perform rollover
+  if (now >= (usage.billingCycleEnd || (now + monthMs))) {
+    // Fetch system rollover policy from settings/pricing_config
+    let rolloverPolicy = "option_b";
+    try {
+      const configDoc = await admin.firestore().collection("settings").doc("pricing_config").get();
+      if (configDoc.exists && configDoc.data().rolloverPolicy) {
+        rolloverPolicy = configDoc.data().rolloverPolicy;
+      }
+    } catch (e) {
+      logger.warn("Could not fetch pricing_config rolloverPolicy, defaulting to option_b:", e.message);
+    }
+
+    if (rolloverPolicy === "option_b") {
+      const unspent = Math.max(0, (usage.monthlyAllowance || baseMonthlyQuota) - (usage.monthlyUsed || 0));
+      const rolledOver = Math.min(baseMonthlyQuota, unspent);
+      usage.monthlyAllowance = baseMonthlyQuota + rolledOver;
+      usage.rolledOverFromPriorMonth = rolledOver;
+    } else {
+      usage.monthlyAllowance = baseMonthlyQuota;
+      usage.rolledOverFromPriorMonth = 0;
+    }
+
+    usage.monthlyUsed = 0;
+    usage.billingCycleStart = now;
+    usage.billingCycleEnd = now + monthMs;
+    usage.lastResetAt = now;
+    usage.lastAlertThreshold = 0;
+    usage.totalAvailable = Math.max(0, usage.monthlyAllowance) + (usage.topUpBalance || 0);
+    usage.updatedAt = now;
+
+    await usageRef.set(usage, { merge: true });
+  } else {
+    // Recompute totalAvailable to ensure consistency
+    usage.totalAvailable = Math.max(0, (usage.monthlyAllowance || baseMonthlyQuota) - (usage.monthlyUsed || 0)) + (usage.topUpBalance || 0);
+  }
+
+  return { usage, ref: usageRef };
+}
+
+/**
+ * Checks and dispatches 80% or 100% capacity warning transactional emails.
+ */
+async function checkAndSendCapacityAlerts(slug, shopData, usage) {
+  const ownerEmail = (shopData && shopData.ownerEmail) ? shopData.ownerEmail : "";
+  if (!ownerEmail) return;
+  const shopName = (shopData && shopData.shopName) || slug;
+  const monthlyAllowance = usage.monthlyAllowance || 500;
+  const monthlyUsed = usage.monthlyUsed || 0;
+  const topUpBalance = usage.topUpBalance || 0;
+  const pct = (monthlyUsed / monthlyAllowance) * 100;
+  const topUpUrl = `https://waitlink.app?s=${slug}&view=owner&tab=notifications`;
+
+  if (usage.totalAvailable <= 0 && (!usage.lastAlertThreshold || usage.lastAlertThreshold < 100)) {
+    usage.lastAlertThreshold = 100;
+    const subject = `⚠️ SMS Alerts Paused for ${shopName} (100% Quota Reached)`;
+    const html = `<!DOCTYPE html><html><body style="background:#080d1a;color:#f1f5f9;font-family:sans-serif;padding:30px;">
+      <div style="max-width:560px;margin:auto;background:#0f172a;border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:24px;">
+        <h2 style="color:#ef4444;margin-top:0;">⚠️ Outbound SMS Alerts Paused</h2>
+        <p>Your shop <strong>${shopName}</strong> has reached 100% of its monthly SMS quota (<strong>${monthlyUsed}/${monthlyAllowance}</strong> used).</p>
+        <p style="color:#cbd5e1;">In-lobby screen calling continues normally, but cellular SMS text alerts to customer phones are temporarily paused until your next billing cycle or until you add top-up credits.</p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${topUpUrl}" style="background:#10b981;color:#fff;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">⚡ Add SMS Top-Up Credits (From $5) &rarr;</a>
+        </div>
+        <p style="font-size:12px;color:#94a3b8;">Top-up credits never expire and roll over indefinitely.</p>
+      </div></body></html>`;
+    await dispatchEmail({ to: ownerEmail, subject, html, text: `SMS alerts paused for ${shopName}. 100% quota used. Add top-up credits at: ${topUpUrl}` }).catch(console.warn);
+  } else if (pct >= 80 && topUpBalance <= 0 && (!usage.lastAlertThreshold || usage.lastAlertThreshold < 80)) {
+    usage.lastAlertThreshold = 80;
+    const subject = `⚠️ 80% SMS Quota Warning for ${shopName}`;
+    const html = `<!DOCTYPE html><html><body style="background:#080d1a;color:#f1f5f9;font-family:sans-serif;padding:30px;">
+      <div style="max-width:560px;margin:auto;background:#0f172a;border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:24px;">
+        <h2 style="color:#f59e0b;margin-top:0;">⚠️ 80% SMS Capacity Reached</h2>
+        <p>Your shop <strong>${shopName}</strong> has used <strong>${monthlyUsed} of ${monthlyAllowance}</strong> included monthly SMS credits (80%).</p>
+        <p style="color:#cbd5e1;">To avoid any disruption during peak rush hours, you can add top-up credits that never expire.</p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${topUpUrl}" style="background:#06b6d4;color:#fff;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">⚡ View Top-Up Packs &rarr;</a>
+        </div>
+      </div></body></html>`;
+    await dispatchEmail({ to: ownerEmail, subject, html, text: `80% SMS capacity reached for ${shopName}. View top-up packs at: ${topUpUrl}` }).catch(console.warn);
+  }
+}
+
+/**
  * Cloud Function: sendTwilioSms
  * Dispatches SMS via Twilio REST API server-side.
- * Strictly requires Firebase Auth, verifies shop ownership, and verifies active paid tier ($15/mo+).
+ * Strictly requires Firebase Auth, verifies shop ownership, enforces SMS quota limits,
+ * debits carrier segments accurately, and records audit logs.
  */
 exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
   return cors(req, res, async () => {
@@ -379,18 +520,19 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
     const targetTo = to.trim();
     const senderFrom = (from && typeof from === "string" && from.trim()) ? from.trim() : TWILIO_FROM_PHONE;
     const messageBody = body.trim();
+    const neededSegments = calculateSmsSegments(messageBody);
 
-    // 2. Verify Shop Ownership / Staff Authorization and Tier (if slug provided and not SuperAdmin)
+    // 2. Verify Shop Ownership / Staff Authorization and Tier
     const callerEmail = decodedToken ? (decodedToken.email || "").toLowerCase() : "";
     const isSuper = decodedToken && (callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com");
 
-    if (!isSuper) {
-      const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
-      if (!shopDoc.exists) {
-        return res.status(404).json({ success: false, error: "Shop not found." });
-      }
-      const shopData = shopDoc.data() || {};
+    const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
+    if (!shopDoc.exists) {
+      return res.status(404).json({ success: false, error: "Shop not found." });
+    }
+    const shopData = shopDoc.data() || {};
 
+    if (!isSuper) {
       if (!isStaffAuthenticated) {
         const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
                         (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
@@ -407,14 +549,32 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       if (!isPaid) {
         return res.status(403).json({
           success: false,
+          tierUpgradeRequired: true,
           error: "Automated SMS alerts require an active Pro Business ($15/mo) or Enterprise plan. Upgrade to unlock automated SMS."
         });
       }
     }
 
-    // 3. Rate Limit per shop
+    // 3. Rate Limit per shop (Anti-Spam)
     if (!checkSmsRateLimit(cleanSlug)) {
       return res.status(429).json({ success: false, error: "SMS dispatch rate limit exceeded (maximum 10 per minute)." });
+    }
+
+    // 4. Quota Enforcement & Wallet Inspection
+    const { usage: usageData, ref: usageRef } = await getOrInitSmsUsage(cleanSlug, shopData);
+    const availablePlan = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0));
+    const totalAvailable = availablePlan + (usageData.topUpBalance || 0);
+
+    if (!isSuper && totalAvailable < neededSegments) {
+      await checkAndSendCapacityAlerts(cleanSlug, shopData, usageData);
+      await usageRef.set(usageData, { merge: true });
+      return res.status(402).json({
+        success: false,
+        quotaExhausted: true,
+        error: "SMS Quota Exhausted: Your shop has 0 available SMS credits. Please top up your balance in Owner Settings to resume automated text alerts.",
+        totalAvailable: totalAvailable,
+        neededSegments: neededSegments
+      });
     }
 
     const activeSid = (accountSid && typeof accountSid === "string" && accountSid.trim().startsWith("AC")) 
@@ -445,7 +605,38 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
 
       const data = await twilioRes.json();
       if (twilioRes.ok && data.sid) {
-        logger.info(`Twilio SMS sent successfully to ${targetTo}! SID: ${data.sid}`);
+        logger.info(`Twilio SMS sent successfully to ${targetTo}! SID: ${data.sid}, Segments: ${neededSegments}`);
+
+        // Debit credits accurately: plan allowance first, then top-up balance
+        if (!isSuper) {
+          if (availablePlan >= neededSegments) {
+            usageData.monthlyUsed = (usageData.monthlyUsed || 0) + neededSegments;
+          } else {
+            const remainder = neededSegments - availablePlan;
+            usageData.monthlyUsed = usageData.monthlyAllowance || 500;
+            usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) - remainder);
+          }
+          usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + (usageData.topUpBalance || 0);
+          usageData.lifetimeSent = (usageData.lifetimeSent || 0) + neededSegments;
+
+          // Record in recent dispatches (keep latest 50)
+          usageData.recentDispatches = usageData.recentDispatches || [];
+          usageData.recentDispatches.unshift({
+            to: targetTo.replace(/(\+\d{1,3}\d{3})\d{4}(\d{4})/, "$1****$2"),
+            segments: neededSegments,
+            sid: data.sid,
+            dispatchedAt: Date.now(),
+            status: data.status || "delivered",
+            caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner")
+          });
+          if (usageData.recentDispatches.length > 50) {
+            usageData.recentDispatches.length = 50;
+          }
+
+          // Check if warning alerts need to be dispatched
+          await checkAndSendCapacityAlerts(cleanSlug, shopData, usageData);
+          await usageRef.set(usageData, { merge: true });
+        }
 
         // Record delivery record in /messages collection with Admin SDK
         try {
@@ -455,6 +646,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
             body: messageBody,
             shopSlug: cleanSlug,
             sid: data.sid,
+            segments: neededSegments,
             status: data.status || "delivered",
             caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner"),
             createdAt: Date.now()
@@ -466,12 +658,14 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
         return res.status(200).json({
           success: true,
           sid: data.sid,
+          segments: neededSegments,
+          totalAvailable: usageData.totalAvailable,
           status: data.status,
           to: data.to,
           from: data.from
         });
       } else {
-        logger.warn("Twilio REST API Error:", data);
+        logger.warn("Twilio REST API Error (0 credits deducted):", data);
         return res.status(twilioRes.status || 400).json({
           success: false,
           error: data.message || `Twilio Error Code ${data.code}`,
@@ -694,6 +888,124 @@ exports.sendContactSupportAlert = onRequest({ cors: true, maxInstances: 10 }, as
 });
 
 /**
+ * Helper: Dispatches luxury branded subscription upgrade confirmation email.
+ */
+async function dispatchSubscriptionUpgradeEmailHelper({ email, shopName, planTitle, planPrice, slug }) {
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanShop = String(shopName || "Your Shop").trim();
+  const cleanPlan = String(planTitle || "Pro Business Tier").trim();
+  const priceStr = planPrice !== undefined ? `$${planPrice}/mo` : "$15/mo";
+  const cleanSlug = String(slug || "main-st-barbers").trim();
+  const adminUrl = `https://waitlink.app?s=${cleanSlug}&view=owner`;
+  const deskUrl = `https://waitlink.app?s=${cleanSlug}&view=desk`;
+
+  const emailHtml = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>WaitLink Subscription Upgraded</title></head>
+<body style="margin: 0; padding: 0; background-color: #080d1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #080d1a; padding: 40px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
+        <tr>
+          <td style="padding: 32px; text-align: center; background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0) 100%); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+            <span style="font-size: 36px;">💎</span>
+            <h1 style="margin: 8px 0 0 0; font-size: 24px; color: #ffffff;">Subscription Confirmed!</h1>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #10b981; font-weight: 600;">${cleanShop} is now on ${cleanPlan} (${priceStr})</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 32px;">
+            <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
+              Thank you for upgrading! Your premium WaitLink features and monthly outbound SMS allowance are now active:
+            </p>
+            <ul style="font-size: 14px; line-height: 1.9; color: #e2e8f0; padding-left: 20px; margin: 0 0 24px 0;">
+              <li>✓ <strong>📱 500 Outbound SMS Customer Alerts / month:</strong> Automated text alerts when staff tap "Serve Now".</li>
+              <li>✓ <strong>🎁 1-Month Rollover Bank:</strong> Unused monthly SMS credits automatically roll over (up to 1,000 SMS bank).</li>
+              <li>✓ <strong>⚡ SMS Top-Up Wallet:</strong> Add non-expiring credit packs anytime from $5.</li>
+              <li>✓ <strong>Custom Shop Logo & Branding:</strong> Upload your logo and custom brand colors.</li>
+              <li>✓ <strong>Promotional Offer Banners:</strong> Run customer promo messages on your live public status display.</li>
+              <li>✓ <strong>90-Day History & RFC 4180 CSV Export:</strong> Unlimited download of queue logs and wait time metrics.</li>
+            </ul>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px;">
+              <a href="${adminUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%); color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 9999px;">🔑 Open Owner Admin &rarr;</a>
+              <a href="${deskUrl}" target="_blank" style="display: inline-block; background: rgba(255,255,255,0.08); color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.15);">💈 Front Desk Station &rarr;</a>
+            </div>
+            <p style="margin: 28px 0 0 0; font-size: 12px; color: #64748b; text-align: center;">
+              Auto-renews monthly &bull; Cancel anytime with 1-click &bull; Powered by Stripe
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  return await dispatchEmail({
+    to: cleanEmail,
+    subject: `🎉 Your WaitLink Pro Upgrade is Confirmed! (500 SMS Credits Activated)`,
+    html: emailHtml,
+    text: `Congratulations! ${cleanShop} is now upgraded to ${cleanPlan} (${priceStr}). Included: 500 SMS/mo + Rollover Bank. Open Owner Admin at: ${adminUrl}`
+  });
+}
+
+/**
+ * Helper: Dispatches SMS top-up credit confirmation email.
+ */
+async function dispatchTopUpConfirmationEmailHelper({ email, shopName, slug, packName, amountPaid, addedCredits, newTotalBalance }) {
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanShop = String(shopName || "Your Shop").trim();
+  const cleanSlug = String(slug || "main-st-barbers").trim();
+  const walletUrl = `https://waitlink.app?s=${cleanSlug}&view=owner&tab=notifications`;
+
+  const emailHtml = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>WaitLink SMS Top-Up Confirmed</title></head>
+<body style="margin: 0; padding: 0; background-color: #080d1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #080d1a; padding: 40px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
+        <tr>
+          <td style="padding: 32px; text-align: center; background: linear-gradient(180deg, rgba(6, 182, 212, 0.12) 0%, rgba(15, 23, 42, 0) 100%); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+            <span style="font-size: 36px;">⚡</span>
+            <h1 style="margin: 8px 0 0 0; font-size: 24px; color: #ffffff;">SMS Credits Added!</h1>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #06b6d4; font-weight: 600;">+${addedCredits.toLocaleString()} SMS Credits Added to ${cleanShop}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 32px;">
+            <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
+              Your one-time SMS Top-Up purchase was successful. Your credits have been deposited into your reserve wallet:
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 24px;">
+              <tr><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #94a3b8; font-size: 13px;">Package</td><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #fff; font-weight: 700; text-align: right; font-size: 13px;">${packName}</td></tr>
+              <tr><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #94a3b8; font-size: 13px;">Amount Paid</td><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #10b981; font-weight: 700; text-align: right; font-size: 13px;">${amountPaid}</td></tr>
+              <tr><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #94a3b8; font-size: 13px;">Added Credits</td><td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #06b6d4; font-weight: 700; text-align: right; font-size: 13px;">+${addedCredits.toLocaleString()} SMS</td></tr>
+              <tr><td style="padding: 12px 16px; color: #94a3b8; font-size: 13px;">Total Balance Available</td><td style="padding: 12px 16px; color: #38bdf8; font-weight: 800; text-align: right; font-size: 14px;">${newTotalBalance.toLocaleString()} SMS</td></tr>
+            </table>
+            <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; border-radius: 6px; padding: 12px 16px; margin-bottom: 24px;">
+              <p style="margin: 0; font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+                🔒 <strong>Lifetime Guarantee:</strong> Your top-up credits <strong>never expire</strong>. They roll over month-to-month until 100% consumed.
+              </p>
+            </div>
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="${walletUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%); color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 28px; border-radius: 9999px;">View SMS Credit Wallet &rarr;</a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  return await dispatchEmail({
+    to: cleanEmail,
+    subject: `⚡ +${addedCredits.toLocaleString()} SMS Credits Added to Your WaitLink Reserve Wallet`,
+    html: emailHtml,
+    text: `Your top-up of +${addedCredits} SMS credits for ${cleanShop} is confirmed! New available balance: ${newTotalBalance} SMS. These credits never expire. View wallet at: ${walletUrl}`
+  });
+}
+
+/**
  * Cloud Function: sendSubscriptionUpgradeEmail
  * Dispatches a confirmation email when a shop owner upgrades their plan.
  */
@@ -708,61 +1020,24 @@ exports.sendSubscriptionUpgradeEmail = onRequest({ cors: true, maxInstances: 10 
       return res.status(400).json({ success: false, error: "Email is required." });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
-    const cleanShop = String(shopName || "Your Shop").trim();
-    const cleanPlan = String(planTitle || "Pro Business Tier").trim();
-    const priceStr = planPrice !== undefined ? `$${planPrice}/mo` : "$15/mo";
-    const cleanSlug = String(slug || "main-st-barbers").trim();
-    const adminUrl = `https://waitlink.app?s=${cleanSlug}&view=owner`;
+    try {
+      const dispatchResult = await dispatchSubscriptionUpgradeEmailHelper({
+        email,
+        shopName,
+        planTitle,
+        planPrice,
+        slug
+      });
 
-    const emailHtml = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>WaitLink Subscription Upgraded</title></head>
-<body style="margin: 0; padding: 0; background-color: #080d1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #080d1a; padding: 40px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
-        <tr>
-          <td style="padding: 32px; text-align: center; background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0) 100%); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-            <span style="font-size: 36px;">💎</span>
-            <h1 style="margin: 8px 0 0 0; font-size: 24px; color: #ffffff;">Subscription Upgraded!</h1>
-            <p style="margin: 4px 0 0 0; font-size: 14px; color: #10b981; font-weight: 600;">${cleanShop} is now on ${cleanPlan} (${priceStr})</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 32px;">
-            <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
-              Thank you for upgrading! Your premium WaitLink features are now fully unlocked for <strong>${cleanShop}</strong>:
-            </p>
-            <ul style="font-size: 14px; line-height: 1.8; color: #e2e8f0; padding-left: 20px; margin: 0 0 24px 0;">
-              <li>✓ <strong>Custom Shop Logo & Branding:</strong> Upload your business logo and colors.</li>
-              <li>✓ <strong>Promotional Offer Banners:</strong> Highlight happy hours, discounts, and announcements.</li>
-              <li>✓ <strong>Priority Cloud Sync:</strong> Ultra-low latency Firestore live sync across front desk and customer devices.</li>
-              <li>✓ <strong>Unlimited CSV Export:</strong> Download your daily queue history and customer wait analytics.</li>
-            </ul>
-            <div style="text-align: center; margin-top: 24px;">
-              <a href="${adminUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%); color: #fff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 12px 28px; border-radius: 9999px;">Open Owner Admin &rarr;</a>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-
-    const dispatchResult = await dispatchEmail({
-      to: cleanEmail,
-      subject: `🎉 Congratulations! ${cleanShop} is now upgraded to ${cleanPlan}`,
-      html: emailHtml,
-      text: `Congratulations! ${cleanShop} is now upgraded to ${cleanPlan} (${priceStr}). Log in to your Owner Admin at: ${adminUrl}`
-    });
-
-    return res.status(200).json({
-      success: dispatchResult.success,
-      provider: dispatchResult.provider,
-      messageId: dispatchResult.messageId,
-      error: dispatchResult.error
-    });
+      return res.status(200).json({
+        success: dispatchResult.success,
+        provider: dispatchResult.provider,
+        messageId: dispatchResult.messageId,
+        error: dispatchResult.error
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
   });
 });
 
@@ -772,8 +1047,7 @@ const ENTERPRISE_PRICE_ID = localSecrets.enterprise_price_id || "price_1UMbCNHXd
 
 /**
  * Cloud Function: createStripeCheckoutSession
- * Securely creates a hosted Stripe Checkout Session server-side without exposing
- * Stripe secret API keys to the browser, and returns the direct checkout redirect URL.
+ * Securely creates a hosted Stripe Checkout Session for subscription plans ($15 Pro / $49 Enterprise).
  */
 exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
   return cors(req, res, async () => {
@@ -832,9 +1106,84 @@ exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }
 });
 
 /**
+ * Cloud Function: createStripeTopUpSession
+ * Securely creates a hosted Stripe Checkout Session for one-time SMS credit packs ($5 / $15 / $39).
+ */
+exports.createStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+
+    const { packId, slug, origin } = req.body || {};
+    const cleanSlug = String(slug || "").trim().toLowerCase();
+    if (!cleanSlug) {
+      return res.status(400).json({ success: false, error: "Parameter 'slug' is required." });
+    }
+
+    let priceId = TOPUP_GROWTH_PRICE_ID;
+    let credits = 1000;
+    let priceCents = 1500;
+    if (packId === "micro") {
+      priceId = TOPUP_MICRO_PRICE_ID;
+      credits = 250;
+      priceCents = 500;
+    } else if (packId === "power") {
+      priceId = TOPUP_POWER_PRICE_ID;
+      credits = 2500;
+      priceCents = 3900;
+    }
+
+    const hostOrigin = (origin && typeof origin === "string") ? origin.replace(/\/+$/, "") : "https://waitlink.app";
+
+    try {
+      const postParams = new URLSearchParams({
+        "payment_method_types[]": "card",
+        "line_items[0][price]": priceId,
+        "line_items[0][quantity]": "1",
+        "mode": "payment",
+        "client_reference_id": cleanSlug,
+        "metadata[shopSlug]": cleanSlug,
+        "metadata[packId]": packId || "growth",
+        "metadata[addedCredits]": String(credits),
+        "metadata[amountTotal]": String(priceCents),
+        "success_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&topup=success&session_id={CHECKOUT_SESSION_ID}`,
+        "cancel_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&topup=cancel`
+      });
+
+      const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${STRIPE_SECRET_KEY.trim()}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: postParams.toString()
+      });
+
+      const data = await stripeRes.json();
+      if (stripeRes.ok && data.url) {
+        logger.info(`Stripe Top-Up Session successfully generated: ${data.id} for ${cleanSlug} pack: ${packId}`);
+        return res.status(200).json({ success: true, url: data.url, sessionId: data.id });
+      } else {
+        logger.error("Stripe Top-Up Session Error:", data);
+        return res.status(stripeRes.status || 400).json({
+          success: false,
+          error: data.error ? data.error.message : "Failed to create Stripe top-up session.",
+          details: data
+        });
+      }
+    } catch (err) {
+      logger.error("Server error creating Stripe top-up session:", err);
+      return res.status(500).json({ success: false, error: "Internal server error: " + err.message });
+    }
+  });
+});
+
+/**
  * Cloud Function: verifyStripeSessionAndUpgrade
- * Cryptographically verifies a completed Stripe Checkout Session with Stripe's API
- * and securely updates the shop's tier to Pro or Enterprise using Firebase Admin SDK.
+ * Cryptographically verifies a completed Stripe Checkout Session with Stripe's API,
+ * updates the shop's tier to Pro or Enterprise, initializes the SMS wallet,
+ * and dispatches a luxury confirmation email to the shop owner.
  */
 exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
   return cors(req, res, async () => {
@@ -920,6 +1269,37 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
         updatedAt: Date.now()
       });
 
+      // 6. Initialize / verify SMS wallet subcollection
+      const usageDocRef = shopDocRef.collection("billing").doc("smsUsage");
+      const usageSnap = await usageDocRef.get();
+      const allowance = (tierPrice >= 49) ? 2500 : 500;
+      if (!usageSnap.exists) {
+        await usageDocRef.set({
+          monthlyAllowance: allowance,
+          rolledOverFromPriorMonth: 0,
+          monthlyUsed: 0,
+          topUpBalance: 0,
+          totalAvailable: allowance,
+          billingCycleStart: Date.now(),
+          billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          lifetimeSent: 0,
+          lastAlertThreshold: 0,
+          recentDispatches: []
+        });
+      }
+
+      // 7. Dispatch luxury confirmation email to shop owner
+      const targetEmail = shopData.ownerEmail || callerEmail;
+      if (targetEmail) {
+        dispatchSubscriptionUpgradeEmailHelper({
+          email: targetEmail,
+          shopName: shopData.shopName || cleanSlug,
+          planTitle: tierTitle,
+          planPrice: tierPrice,
+          slug: cleanSlug
+        }).catch(err => logger.warn("Upgrade confirmation email dispatch warning:", err.message));
+      }
+
       logger.info(`Successfully upgraded shop ${cleanSlug} to ${tierTitle} ($${tierPrice}/mo) via verified session ${cleanSessionId}`);
 
       return res.status(200).json({
@@ -931,6 +1311,215 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
     } catch (err) {
       logger.error("Error in verifyStripeSessionAndUpgrade:", err);
       return res.status(500).json({ success: false, error: "Internal server error verifying session: " + err.message });
+    }
+  });
+});
+
+/**
+ * Cloud Function: verifyStripeTopUpSession
+ * Verifies a completed Stripe top-up checkout session, credits the shop's reserve wallet,
+ * records an idempotent audit log, and dispatches an automated receipt confirmation email.
+ */
+exports.verifyStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+
+    const { sessionId, slug } = req.body || {};
+    if (!sessionId || !slug) {
+      return res.status(400).json({ success: false, error: "Parameters 'sessionId' and 'slug' are required." });
+    }
+
+    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSessionId = String(sessionId).trim();
+
+    try {
+      const shopDocRef = admin.firestore().collection("shops").doc(cleanSlug);
+      const shopSnap = await shopDocRef.get();
+      if (!shopSnap.exists) {
+        return res.status(404).json({ success: false, error: "Shop does not exist." });
+      }
+      const shopData = shopSnap.data() || {};
+
+      // Idempotency check: has this session already been credited?
+      const topUpHistoryRef = shopDocRef.collection("top_ups").doc(cleanSessionId);
+      const existingHistory = await topUpHistoryRef.get();
+      if (existingHistory.exists) {
+        const histData = existingHistory.data();
+        const usageSnap = await shopDocRef.collection("billing").doc("smsUsage").get();
+        const curUsage = usageSnap.data() || {};
+        return res.status(200).json({
+          success: true,
+          alreadyCredited: true,
+          addedCredits: histData.addedCredits || 0,
+          totalAvailable: curUsage.totalAvailable || 0,
+          packName: histData.packName || "Growth Pack (+1,000 SMS)"
+        });
+      }
+
+      // Fetch from Stripe REST API
+      const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(cleanSessionId)}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${STRIPE_SECRET_KEY.trim()}`,
+          "Content-Type": "application/json"
+        }
+      });
+      const sessionData = await stripeRes.json();
+      if (!stripeRes.ok || !sessionData || sessionData.error) {
+        return res.status(400).json({ success: false, error: "Invalid Stripe checkout session." });
+      }
+      if (sessionData.payment_status !== "paid") {
+        return res.status(400).json({ success: false, error: `Payment status is '${sessionData.payment_status}', not paid.` });
+      }
+
+      // Determine added credits
+      let addedCredits = 1000;
+      let packName = "Growth Pack (+1,000 SMS)";
+      let packPrice = "$15.00";
+      const totalAmount = sessionData.amount_total || 1500;
+      if (sessionData.metadata && sessionData.metadata.addedCredits) {
+        addedCredits = parseInt(sessionData.metadata.addedCredits, 10) || 1000;
+      } else {
+        if (totalAmount >= 3900) { addedCredits = 2500; }
+        else if (totalAmount >= 1500) { addedCredits = 1000; }
+        else { addedCredits = 250; }
+      }
+      if (addedCredits === 250) { packName = "Micro Pack (+250 SMS)"; packPrice = "$5.00"; }
+      else if (addedCredits === 2500) { packName = "Power Pack (+2,500 SMS)"; packPrice = "$39.00"; }
+
+      // Atomically update smsUsage
+      const usageDocRef = shopDocRef.collection("billing").doc("smsUsage");
+      const usageSnap = await usageDocRef.get();
+      let usageData = usageSnap.exists ? usageSnap.data() : {
+        monthlyAllowance: 500,
+        rolledOverFromPriorMonth: 0,
+        monthlyUsed: 0,
+        topUpBalance: 0,
+        totalAvailable: 500,
+        billingCycleStart: Date.now(),
+        billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        lifetimeSent: 0,
+        lastAlertThreshold: 0,
+        recentDispatches: []
+      };
+
+      usageData.topUpBalance = (usageData.topUpBalance || 0) + addedCredits;
+      usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + usageData.topUpBalance;
+      usageData.updatedAt = Date.now();
+
+      await usageDocRef.set(usageData, { merge: true });
+
+      // Save top-up history record for audit and idempotency
+      await topUpHistoryRef.set({
+        sessionId: cleanSessionId,
+        addedCredits: addedCredits,
+        amountPaid: totalAmount / 100,
+        packName: packName,
+        createdAt: Date.now(),
+        stripeCustomerId: sessionData.customer || ""
+      });
+
+      // Dispatch SMS Top-Up Credit Confirmation Email
+      if (shopData.ownerEmail) {
+        dispatchTopUpConfirmationEmailHelper({
+          email: shopData.ownerEmail,
+          shopName: shopData.shopName || cleanSlug,
+          slug: cleanSlug,
+          packName: packName,
+          amountPaid: packPrice,
+          addedCredits: addedCredits,
+          newTotalBalance: usageData.totalAvailable
+        }).catch(err => logger.warn("Top-up confirmation email warning:", err.message));
+      }
+
+      logger.info(`Successfully added +${addedCredits} SMS credits to ${cleanSlug} via session ${cleanSessionId}`);
+
+      return res.status(200).json({
+        success: true,
+        addedCredits: addedCredits,
+        totalAvailable: usageData.totalAvailable,
+        topUpBalance: usageData.topUpBalance,
+        sessionId: cleanSessionId,
+        packName: packName
+      });
+    } catch (err) {
+      logger.error("Error in verifyStripeTopUpSession:", err);
+      return res.status(500).json({ success: false, error: "Internal server error: " + err.message });
+    }
+  });
+});
+
+/**
+ * Cloud Function: adjustShopSmsCredits
+ * SuperAdmin endpoint to manually grant courtesy or support credits with an audit reason.
+ */
+exports.adjustShopSmsCredits = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+
+    const authHeader = req.headers.authorization || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, error: "Unauthorized token required." });
+    }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(authHeader.split("Bearer ")[1].trim());
+      const caller = (decoded.email || "").toLowerCase();
+      const isSuper = caller === SENDER_EMAIL.toLowerCase() || caller === "senthil930@gmail.com";
+      if (!isSuper) {
+        return res.status(403).json({ success: false, error: "Forbidden: SuperAdmin authentication required." });
+      }
+
+      const { slug, amount, reason } = req.body || {};
+      const cleanSlug = String(slug || "").trim().toLowerCase();
+      const delta = parseInt(amount, 10);
+      if (!cleanSlug || isNaN(delta)) {
+        return res.status(400).json({ success: false, error: "Parameters 'slug' and numeric 'amount' are required." });
+      }
+
+      const usageDocRef = admin.firestore().collection("shops").doc(cleanSlug).collection("billing").doc("smsUsage");
+      const usageSnap = await usageDocRef.get();
+      let usageData = usageSnap.exists ? usageSnap.data() : {
+        monthlyAllowance: 500,
+        rolledOverFromPriorMonth: 0,
+        monthlyUsed: 0,
+        topUpBalance: 0,
+        totalAvailable: 500,
+        billingCycleStart: Date.now(),
+        billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        lifetimeSent: 0,
+        lastAlertThreshold: 0,
+        recentDispatches: []
+      };
+
+      usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) + delta);
+      usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + usageData.topUpBalance;
+      usageData.updatedAt = Date.now();
+
+      await usageDocRef.set(usageData, { merge: true });
+
+      // Record audit entry
+      await admin.firestore().collection("shops").doc(cleanSlug).collection("credit_audits").add({
+        amount: delta,
+        reason: String(reason || "SuperAdmin courtesy adjustment").trim(),
+        adjustedBy: caller,
+        timestamp: Date.now(),
+        newTotal: usageData.totalAvailable
+      });
+
+      return res.status(200).json({
+        success: true,
+        adjustedAmount: delta,
+        newBalance: usageData.totalAvailable,
+        topUpBalance: usageData.topUpBalance
+      });
+    } catch (err) {
+      logger.error("Error in adjustShopSmsCredits:", err);
+      return res.status(500).json({ success: false, error: "Server error: " + err.message });
     }
   });
 });

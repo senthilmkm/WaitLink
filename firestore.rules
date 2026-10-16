@@ -112,6 +112,23 @@ service cloud.firestore {
         );
         allow read: if true;
       }
+
+      // Step 5: Billing, SMS Usage & Credit Wallet Subcollection
+      match /billing/{docId} {
+        allow read: if isSuperAdmin() || (
+          isAuthenticated() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
+        );
+        // Only written server-side by Cloud Functions (Admin SDK) or SuperAdmin
+        allow write: if isSuperAdmin();
+      }
+
+      // Step 6: Top-Up Checkout History Records (Audit Trail)
+      match /top_ups/{topUpId} {
+        allow read: if isSuperAdmin() || (
+          isAuthenticated() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
+        );
+        allow write: if isSuperAdmin();
+      }
     }
 
     // 2. Outbound SMS Messages (Twilio Extension Trigger Queue)

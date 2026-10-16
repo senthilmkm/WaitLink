@@ -43,27 +43,29 @@
 
     <!-- Section 2 -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. Subscription Tiers & Stripe Payments</h2>
-      <p>WaitLink offers free and paid subscription plans:</p>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. Subscription Tiers, SMS Quotas &amp; Stripe Billing</h2>
+      <p>WaitLink offers free and paid subscription plans governed by automated cloud metering:</p>
       <ul style="margin: 0.5rem 0 1rem 1.25rem;">
-        <li><strong>Starter Tier (Free):</strong> Includes core single-shop waitlist tracking with a 7-day rolling history window at no charge ($0/mo).</li>
-        <li><strong>Pro Business Tier ($15/mo):</strong> Billed monthly via Stripe. Unlocks branding uploads, promo banners, 90-day history retention, and RFC 4180 CSV audit exports.</li>
-        <li><strong>Enterprise Tier ($49/mo):</strong> Billed monthly via Stripe. Unlocks multi-location directory, 365-day history retention across all shop branches, and SLA guarantees.</li>
+        <li><strong>Starter Tier (Free):</strong> Includes core single-shop waitlist tracking with a 7-day rolling history window at no charge ($0/mo). Does not include outbound carrier SMS credits (0 SMS); queues operate via live customer mobile web cards and lobby screen displays.</li>
+        <li><strong>Pro Business Tier ($15/mo):</strong> Billed monthly via Stripe. Unlocks custom branding, promo banners, 90-day history retention, RFC 4180 CSV audit exports, and <strong>500 included automated SMS carrier segments per monthly billing cycle</strong> with an automated <strong>1-Month Rollover Bank</strong> (protecting up to 1,000 unused SMS credits across consecutive months).</li>
+        <li><strong>Enterprise Tier ($49/mo):</strong> Billed monthly via Stripe. Unlocks multi-location directory, 365-day history retention, <strong>2,500+ included automated SMS messages per month</strong>, cross-branch CSV exports, priority support, and custom SLA agreements.</li>
       </ul>
-      <p>All credit card transactions, recurring billing cycles, and tier upgrades/downgrades are processed securely via <strong>Stripe Checkout API</strong>. Subscription fees are non-refundable once billed, except where required by law.</p>
+      <p><strong>SMS Top-Up Credit Packs:</strong> Active subscribers may purchase one-time SMS credit packs at any time ($5.00 for 250 SMS, $15.00 for 1,000 SMS, and $39.00 for 2,500 SMS). Purchased top-up credits feature a <strong>Lifetime Non-Expiration Guarantee</strong>; they are credited to the shop's reserve wallet and remain valid month-to-month until 100% consumed.</p>
+      <p>All credit card transactions, recurring subscriptions, and top-up purchases are processed securely via <strong>Stripe Checkout API</strong> (PCI-DSS Level 1 compliant). Subscription and top-up fees are non-refundable once billed, except where required by law.</p>
     </div>
 
     <!-- Section 3: SMS Text Notification Terms & CTIA Disclaimer -->
     <div class="card" style="padding: 2rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #10b981; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>📱</span> 3. SMS Text Notification Terms & CTIA Disclaimer
+        <span>📱</span> 3. SMS Text Notification Terms, Quota Metering &amp; CTIA Disclaimer
       </h2>
       <p>WaitLink enables business owners to send automated SMS text messages to walk-in customers regarding their waitlist position. By using the SMS text notification feature, you agree to the following terms:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
-        <li><strong>Purpose of Collection:</strong> Customer mobile phone numbers are collected solely to deliver operational queue turn notifications (e.g. <em>"Your turn at Kelly Real Estate is ready"</em>). Phone numbers are never harvested, sold, or used for unsolicited marketing.</li>
-        <li><strong>User Consent & Opt-In:</strong> Entering a mobile phone number into a WaitLink check-in form constitutes explicit voluntary consent to receive transactional queue status text messages for that visit.</li>
+        <li><strong>Purpose of Collection:</strong> Customer mobile phone numbers are collected solely to deliver operational queue turn notifications (e.g. <em>"Your turn at Main St Barbers is ready now"</em>). Phone numbers are never harvested, sold, or used for unsolicited marketing.</li>
+        <li><strong>User Consent &amp; Opt-In:</strong> Entering a mobile phone number into a WaitLink check-in form constitutes explicit voluntary consent to receive transactional queue status text messages for that visit.</li>
         <li><strong>Opt-Out Mechanism:</strong> Customers may opt out of SMS text messages at any time by texting <strong>STOP</strong> or <strong>CANCEL</strong> to the sending number. Reply <strong>HELP</strong> for assistance.</li>
-        <li><strong>Message Frequency & Rates:</strong> Message frequency depends on customer check-in activity (typically 1 to 2 transactional messages per queue visit). Standard message and data rates from your wireless carrier may apply.</li>
+        <li><strong>Carrier Segment Accounting:</strong> Messages adhere to global wireless carrier telecommunication standards. Standard GSM-7 character sets allow up to 160 characters per single segment credit. Messages containing Unicode or emojis enforce UCS-2 encoding (70 characters per segment credit). Concatenated multi-segment messages are debited according to carrier segments consumed.</li>
+        <li><strong>Zero-Disruption Front Desk Guarantee:</strong> If a shop's SMS credit balance reaches zero, queue calling, ticking wait time timers, and public lobby screen announcements proceed completely uninterrupted. Outbound carrier SMS delivery is temporarily paused until top-up or monthly cycle reset.</li>
         <li><strong>Carrier Non-Liability:</strong> Wireless mobile carriers are not liable for delayed or undelivered text messages.</li>
       </ul>
     </div>

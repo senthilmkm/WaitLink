@@ -848,13 +848,13 @@
         </table>
       </div>
 
-      <!-- Subsection: All 8 Cloud Functions Architectural Specification -->
+      <!-- Subsection: All 11 Cloud Functions Architectural Specification -->
       <div style="margin-top: 2rem;">
         <h3 style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-          <span>⚡</span> All 8 Serverless Cloud Functions (Node.js 20 &bull; 2nd Gen)
+          <span>⚡</span> All 11 Serverless Cloud Functions (Node.js 20 &bull; 2nd Gen)
         </h3>
         <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
-          WaitLink deploys 8 enterprise serverless micro-functions hosted in Google Cloud (<code>us-central1</code>). Each function runs on <strong>Node.js 20</strong>, enforces CORS validation, executes within a concurrency limit of <code>maxInstances: 10</code> to prevent cost overruns, and interacts with third-party APIs (Twilio, Stripe, Brevo) using secure environment secrets:
+          WaitLink deploys 11 enterprise serverless micro-functions hosted in Google Cloud (<code>us-central1</code>). Each function runs on <strong>Node.js 20</strong>, enforces CORS validation, executes within a concurrency limit of <code>maxInstances: 10</code> to prevent cost overruns, and interacts with third-party APIs (Twilio, Stripe, Brevo) using secure environment secrets:
         </p>
 
         <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
@@ -872,23 +872,44 @@
               <tr>
                 <td><strong style="color: #10b981;">sendTwilioSms</strong></td>
                 <td>HTTP POST &bull; CORS</td>
-                <td>Twilio REST API</td>
-                <td><code>to, message, shopSlug, ticketId</code></td>
-                <td>Normalizes numbers to E.164 &bull; Dispatches turn-ready SMS alerts &bull; Logs delivery status to <code>/messages</code></td>
+                <td>Twilio REST API &bull; Firestore</td>
+                <td><code>to, body, slug, staffUsername, staffPasscode</code></td>
+                <td>Calculates carrier segments (GSM-7 vs UCS-2) &bull; Enforces monthly volume allowance &bull; Debits plan quota &amp; top-up reserve &bull; Dispatches turn-ready SMS alerts &bull; Logs delivery status</td>
               </tr>
               <tr>
                 <td><strong style="color: #6366f1;">createStripeCheckoutSession</strong></td>
                 <td>HTTP POST &bull; CORS</td>
                 <td>Stripe Billing API</td>
-                <td><code>slug, price, planTitle, ownerEmail</code></td>
-                <td>Creates cryptographically signed Stripe Checkout sessions with dynamic tier metadata and return URLs</td>
+                <td><code>slug, tierKey, priceId, origin</code></td>
+                <td>Creates cryptographically signed Stripe Checkout sessions for monthly subscription plans (Pro / Enterprise) with dynamic metadata and return URLs</td>
               </tr>
               <tr>
                 <td><strong style="color: #06b6d4;">verifyStripeSessionAndUpgrade</strong></td>
                 <td>HTTP POST &bull; CORS</td>
-                <td>Stripe API &bull; Firestore</td>
+                <td>Stripe API &bull; Firestore &bull; Brevo</td>
                 <td><code>sessionId, slug</code></td>
-                <td>Verifies payment completion directly with Stripe &bull; Atomically upgrades shop tier in Firestore with fraud protection</td>
+                <td>Verifies payment completion directly with Stripe &bull; Upgrades shop tier &bull; Initializes SMS quota &bull; Dispatches transactional upgrade receipt email</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #38bdf8;">createStripeTopUpSession</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Stripe Checkout API</td>
+                <td><code>packId, slug, origin</code></td>
+                <td>Generates hosted checkout sessions for one-time SMS credit packs ($5 Micro: 250 SMS, $15 Growth: 1,000 SMS, $39 Power: 2,500 SMS) with shop metadata</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #34d399;">verifyStripeTopUpSession</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Stripe API &bull; Firestore &bull; Brevo</td>
+                <td><code>sessionId, slug</code></td>
+                <td>Idempotently validates top-up payment &bull; Credits shop reserve wallet (never expires) &bull; Logs audit record to <code>/top_ups</code> &bull; Sends confirmation email</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #c084fc;">adjustShopSmsCredits</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Firestore Admin SDK</td>
+                <td><code>slug, adjustmentAmount, reason</code></td>
+                <td>SuperAdmin master override &bull; Authenticates Senthi/SuperAdmin token &bull; Grants courtesy credits or rebalances shop reserve wallet with full audit logging</td>
               </tr>
               <tr>
                 <td><strong style="color: #f59e0b;">sendBrevoPasswordReset</strong></td>
@@ -1024,6 +1045,131 @@
 Ticket ID,Customer Name,Phone Number,Service,Joined At,Called At,Completed At,Status,Wait Time (mins),Service Time (mins),Audit Status
 WL-8821,"Jonathan E••••","+1 (555) •••-••89","Urgent Consultation","2026-09-12 09:14","2026-09-12 09:28","2026-09-12 09:50","completed",14,22,"PII Anonymized (30d+)"
         </div>
+      </div>
+
+      <!-- Subsection: SMS Volume Quotas, Metering & Top-Up Packs Architecture -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>📲</span> SMS Outbound Volume Quotas, Metering &amp; Top-Up Engine
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          Automated customer SMS notifications are a primary driver of walk-away elimination, but unmetered carrier dispatches introduce uncapped telecom COGS risk. WaitLink deploys a rigorous 3-phase metering and quota governance architecture that protects platform margins while delivering a flawless, zero-disruption front desk experience:
+        </p>
+
+        <div class="flow-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">Carrier Segment Accounting</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">GSM-7 vs. UCS-2 Metering</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              Telecommunication carriers bill messages by <em>segments</em>. Standard alphanumeric text uses <strong>GSM 03.38 (160 characters/segment)</strong>. Including even one emoji or special symbol triggers <strong>UCS-2 Unicode encoding (70 characters/segment)</strong>. WaitLink's live template meter displays exact characters and segments in real time before staff save templates.
+            </p>
+          </div>
+
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.4);">Zero-Disruption Principle</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">Front Desk Uninterrupted Calling</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              If a shop exhausts its SMS credit balance (0 credits remaining), front desk queue calling, wait time clocks, and lobby screen displays proceed <strong>100% normally</strong>. Only outbound text dispatches are paused with a subtle amber banner. Receptionists are never blocked by disruptive modal popups.
+            </p>
+          </div>
+
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">Rollover Governance</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">Option A vs. Option B Toggle</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              Platform SuperAdmins control renewal mechanics via <code>/settings/pricing_config.rolloverPolicy</code>:
+              <br>• <strong>Option A (Monthly Reset):</strong> Unused included quota expires at billing renewal; refreshes strictly to 500.
+              <br>• <strong>Option B (1-Month Rollover Bank):</strong> Unused included SMS roll over for 1 month (capped at 1,000 SMS reserve).
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Top-Up Packs & COGS Margin Table -->
+        <div style="margin-top: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem;">
+          <h4 style="color: #fff; margin: 0 0 0.75rem 0; font-size: 1rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>💰</span> One-Time SMS Top-Up Pack Unit Economics &amp; Twilio COGS Margins
+          </h4>
+          <div style="overflow-x: auto;">
+            <table class="url-table" style="margin-top: 0.5rem;">
+              <thead>
+                <tr>
+                  <th>Top-Up Pack</th>
+                  <th>SMS Credits</th>
+                  <th>Retail Price</th>
+                  <th>Price / Segment</th>
+                  <th>Twilio Base COGS ($0.0079)</th>
+                  <th>Gross Profit Margin</th>
+                  <th>Expiry Terms</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong style="color: #94a3b8;">Micro Pack</strong></td>
+                  <td>+250 SMS</td>
+                  <td><strong style="color: #10b981;">$5.00</strong></td>
+                  <td>2.00¢</td>
+                  <td>$1.98</td>
+                  <td><strong style="color: #10b981;">+$3.02 (60.4% Gross Margin)</strong></td>
+                  <td>Lifetime Guarantee (Never Expires)</td>
+                </tr>
+                <tr>
+                  <td><strong style="color: #06b6d4;">Growth Pack (Featured)</strong></td>
+                  <td>+1,000 SMS</td>
+                  <td><strong style="color: #10b981;">$15.00</strong></td>
+                  <td>1.50¢</td>
+                  <td>$7.90</td>
+                  <td><strong style="color: #10b981;">+$7.10 (47.3% Gross Margin)</strong></td>
+                  <td>Lifetime Guarantee (Never Expires)</td>
+                </tr>
+                <tr>
+                  <td><strong style="color: #c084fc;">Power Pack</strong></td>
+                  <td>+2,500 SMS</td>
+                  <td><strong style="color: #10b981;">$39.00</strong></td>
+                  <td>1.56¢</td>
+                  <td>$19.75</td>
+                  <td><strong style="color: #10b981;">+$19.25 (49.4% Gross Margin)</strong></td>
+                  <td>Lifetime Guarantee (Never Expires)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Firestore Subcollection Schemas -->
+        <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+          <div style="padding: 1rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);">
+            <strong style="color: #38bdf8; font-size: 0.85rem;">Firestore Schema: /shops/{slug}/billing/smsUsage</strong>
+            <div class="code-block" style="font-size: 0.75rem; margin-top: 0.5rem;">{
+  monthlyAllowance: 500,
+  rolledOverFromPriorMonth: 120,
+  monthlyUsed: 84,
+  topUpBalance: 1000,
+  totalAvailable: 1536,
+  billingCycleStart: 1774000000000,
+  billingCycleEnd: 1776592000000,
+  lifetimeSent: 342,
+  lastAlertThreshold: 80,
+  recentDispatches: [
+    { to: "+1980****1359", segments: 1, sid: "SM...", dispatchedAt: 1774050000000, status: "delivered" }
+  ]
+}</div>
+          </div>
+          <div style="padding: 1rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);">
+            <strong style="color: #10b981; font-size: 0.85rem;">Firestore Schema: /shops/{slug}/top_ups/{sessionId}</strong>
+            <div class="code-block" style="font-size: 0.75rem; margin-top: 0.5rem;">{
+  sessionId: "cs_live_a1b2c3d4...",
+  addedCredits: 1000,
+  amountPaid: 15.00,
+  packName: "Growth Pack (+1,000 SMS)",
+  paymentStatus: "paid",
+  createdAt: 1774051200000,
+  confirmedViaEmail: true
+}</div>
+          </div>
+        </div>
+
       </div>
 
     </section>

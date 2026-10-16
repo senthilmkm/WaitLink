@@ -627,6 +627,254 @@ function updateSoundToggleUI() {
 
 let currentSubscribedSlug = "";
 
+/* ==========================================================================
+   SMS OUTBOUND QUOTA, WALLET & TOP-UP ENGINE
+   ========================================================================== */
+
+let smsUsageUnsubscribe = null;
+
+function subscribeSmsUsage(slug) {
+  if (!db || !slug) return;
+  if (smsUsageUnsubscribe) {
+    try { smsUsageUnsubscribe(); } catch (e) {}
+    smsUsageUnsubscribe = null;
+  }
+  try {
+    smsUsageUnsubscribe = db.collection("shops").doc(slug).collection("billing").doc("smsUsage").onSnapshot(doc => {
+      if (doc.exists) {
+        state.smsUsage = doc.data() || {};
+        renderSmsWalletUI(state.smsUsage);
+      } else {
+        state.smsUsage = {
+          monthlyAllowance: 500,
+          rolledOverFromPriorMonth: 0,
+          monthlyUsed: 0,
+          topUpBalance: 0,
+          totalAvailable: 500,
+          lifetimeSent: 0,
+          recentDispatches: []
+        };
+        renderSmsWalletUI(state.smsUsage);
+      }
+    }, err => {
+      console.warn("SMS usage listener note (requires shop owner auth):", err.message);
+    });
+  } catch (err) {
+    console.warn("Could not attach SMS usage listener:", err);
+  }
+}
+
+function renderSmsWalletUI(usage = state.smsUsage || {}) {
+  const allowance = usage.monthlyAllowance !== undefined ? usage.monthlyAllowance : 500;
+  const used = usage.monthlyUsed || 0;
+  const rolledOver = usage.rolledOverFromPriorMonth || 0;
+  const topUp = usage.topUpBalance || 0;
+  const planRemaining = Math.max(0, allowance - used);
+  const totalAvailable = usage.totalAvailable !== undefined ? usage.totalAvailable : (planRemaining + topUp);
+  const pct = allowance > 0 ? Math.min(100, Math.round((used / allowance) * 100)) : 0;
+
+  // Labels & Progress Bar in Settings
+  const usageLabel = document.getElementById("sms-usage-label");
+  const remainingLabel = document.getElementById("sms-remaining-label");
+  const progressBar = document.getElementById("sms-usage-progress-bar");
+  const renewalNote = document.getElementById("sms-renewal-date-text");
+  const rolloverBadge = document.getElementById("sms-rollover-badge");
+
+  if (usageLabel) usageLabel.textContent = `Monthly Included Usage: ${used} / ${allowance} Used (${pct}%)`;
+  if (remainingLabel) {
+    remainingLabel.textContent = `${planRemaining} Remaining`;
+    remainingLabel.style.color = planRemaining === 0 ? "#f87171" : (pct >= 80 ? "#f59e0b" : "#10b981");
+  }
+
+  if (progressBar) {
+    progressBar.style.width = `${pct}%`;
+    if (pct >= 100) {
+      progressBar.style.background = "linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)";
+    } else if (pct >= 80) {
+      progressBar.style.background = "linear-gradient(90deg, #10b981 0%, #f59e0b 100%)";
+    } else {
+      progressBar.style.background = "linear-gradient(90deg, #10b981 0%, #06b6d4 100%)";
+    }
+  }
+
+  if (renewalNote && usage.billingCycleEnd) {
+    const renDate = new Date(usage.billingCycleEnd);
+    renewalNote.textContent = `🔄 Resets on ${renDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+
+  if (rolloverBadge) {
+    const isOptA = state.rolloverPolicy === "option_a";
+    if (isOptA) {
+      rolloverBadge.textContent = "🔄 Monthly Refresh Active";
+      rolloverBadge.style.color = "#38bdf8";
+    } else {
+      rolloverBadge.textContent = "🎁 1-Month Rollover Bank Active";
+      rolloverBadge.style.color = "#10b981";
+    }
+  }
+
+  // 3 Stat Tiles
+  const statAllowance = document.getElementById("sms-stat-allowance");
+  const statRolloverNote = document.getElementById("sms-stat-rollover-note");
+  const statTopup = document.getElementById("sms-stat-topup");
+  const statTotal = document.getElementById("sms-stat-total");
+
+  if (statAllowance) statAllowance.textContent = `${allowance} SMS`;
+  if (statRolloverNote) {
+    statRolloverNote.textContent = `${rolledOver} rolled over from prior month`;
+    statRolloverNote.style.color = rolledOver > 0 ? "#10b981" : "var(--text-muted)";
+  }
+  if (statTopup) statTopup.textContent = `${topUp} SMS`;
+  if (statTotal) {
+    statTotal.textContent = `${totalAvailable} SMS`;
+    statTotal.style.color = totalAvailable <= 0 ? "#ef4444" : (totalAvailable < 50 ? "#f59e0b" : "#10b981");
+  }
+
+  // Front Desk Zero-Disruption Warning Banner
+  const deskBanner = document.getElementById("desk-sms-exhausted-banner");
+  if (deskBanner) {
+    const isPaid = isPaidTier();
+    if (isPaid && totalAvailable <= 0) {
+      deskBanner.classList.remove("hidden");
+    } else {
+      deskBanner.classList.add("hidden");
+    }
+  }
+}
+
+function openTopUpModal() {
+  const modal = document.getElementById("modal-sms-topup");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeTopUpModal() {
+  const modal = document.getElementById("modal-sms-topup");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function initiateTopUpCheckout(packId) {
+  const currentSlug = (state.config && state.config.slug) || "main-st-barbers";
+  showToast(`⚡ Connecting to Stripe Checkout for ${String(packId || "pack").toUpperCase()} Pack...`);
+  const originUrl = window.location.origin + window.location.pathname;
+
+  try {
+    const cloudFnUrl = "https://us-central1-waitlink-app-8821.cloudfunctions.net/createStripeTopUpSession";
+    const res = await fetch(cloudFnUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        packId: packId,
+        slug: currentSlug,
+        origin: originUrl
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data && data.url) {
+      console.log("🚀 Redirecting to Stripe Top-Up Checkout URL:", data.url);
+      window.location.href = data.url;
+    } else {
+      throw new Error((data && data.error) ? data.error : "Failed to generate top-up checkout session.");
+    }
+  } catch (err) {
+    console.error("Stripe top-up session error:", err);
+    await showAlertDialog({
+      title: "Top-Up Checkout Notice",
+      message: err.message || "Could not connect to Stripe. Please verify your connection and try again.",
+      buttonText: "Dismiss",
+      type: "warning",
+      icon: "⚠️",
+      category: "Stripe Top-Up"
+    });
+  }
+}
+
+async function verifyTopUpSessionBackend(sessionId) {
+  if (!sessionId) return;
+  try {
+    showToast("⏳ Verifying your SMS credit purchase with Stripe...");
+    const currentSlug = (state.config && state.config.slug) || "main-st-barbers";
+    const verifyRes = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/verifyStripeTopUpSession", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionId,
+        slug: currentSlug
+      })
+    });
+
+    const data = await verifyRes.json().catch(() => ({}));
+    if (verifyRes.ok && data && data.success) {
+      const added = data.addedCredits || 0;
+      const pack = data.packName || "SMS Credit Pack";
+      showToast(`🎉 +${added} SMS Credits added to your reserve wallet!`);
+      await showAlertDialog({
+        title: "SMS Credits Added!",
+        message: `Your payment was successfully verified.\n\nPackage: ${pack}\nCredits Added: +${added} SMS\nTotal Available: ${data.totalAvailable !== undefined ? data.totalAvailable : 'Updated'} SMS\n\nTop-up credits never expire and roll over automatically. Receipt confirmation has been emailed.`,
+        buttonText: "Awesome!",
+        type: "success",
+        icon: "⚡",
+        category: "SMS Top-Up"
+      });
+    } else {
+      console.warn("Top-up verification notice:", data);
+      showToast(data.error || "Notice: Verification response received.");
+    }
+  } catch (err) {
+    console.error("Top-up verification error:", err);
+  } finally {
+    try {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (e) {}
+  }
+}
+
+function openSmsLogsModal() {
+  const modal = document.getElementById("modal-sms-logs");
+  const tbody = document.getElementById("sms-logs-tbody");
+  if (!modal) return;
+
+  if (tbody) {
+    const logs = (state.smsUsage && Array.isArray(state.smsUsage.recentDispatches)) ? state.smsUsage.recentDispatches : [];
+    if (logs.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
+            No outbound SMS dispatches recorded yet for this billing cycle.
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = logs.map(item => {
+        const d = item.dispatchedAt ? new Date(item.dispatchedAt) : new Date();
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        const caller = item.caller || "Staff Station";
+        const status = item.status || "delivered";
+        const statusColor = status === "delivered" || status === "sent" ? "#10b981" : "#f59e0b";
+        return `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 0.65rem 0.85rem; color: #fff; font-family: monospace;">${item.to || 'Masked Phone'}</td>
+            <td style="padding: 0.65rem 0.85rem; text-align: center; color: #38bdf8; font-weight: 700;">${item.segments || 1}</td>
+            <td style="padding: 0.65rem 0.85rem; color: var(--text-muted);">${caller}</td>
+            <td style="padding: 0.65rem 0.85rem;">
+              <span style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">● ${status}</span>
+            </td>
+            <td style="padding: 0.65rem 0.85rem; text-align: right; color: var(--text-muted);">${timeStr}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function closeSmsLogsModal() {
+  const modal = document.getElementById("modal-sms-logs");
+  if (modal) modal.classList.add("hidden");
+}
+
 function subscribeFirestore(forceResubscribe = false) {
   if (!db || !state.config.slug) return;
   if (!forceResubscribe && currentSubscribedSlug === state.config.slug && unsubscribeSnapshot) {
@@ -635,6 +883,7 @@ function subscribeFirestore(forceResubscribe = false) {
 
   if (unsubscribeSnapshot) unsubscribeSnapshot();
   currentSubscribedSlug = state.config.slug;
+  subscribeSmsUsage(state.config.slug);
 
   const shopDoc = db.collection("shops").doc(state.config.slug);
   unsubscribeSnapshot = shopDoc.onSnapshot(doc => {
@@ -1476,6 +1725,20 @@ function formatServeNowSms(template, customerName, shopName, serviceName, ticket
   return formatted.trim();
 }
 
+function calculateSmsSegments(text) {
+  if (!text) return 1;
+  // GSM 03.38 standard character set check
+  const isGsm7 = !/[^\u0020-\u007E\r\n\t€£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(text);
+  const len = Array.from(text).length;
+  if (isGsm7) {
+    if (len <= 160) return 1;
+    return Math.ceil(len / 153);
+  } else {
+    if (len <= 70) return 1;
+    return Math.ceil(len / 67);
+  }
+}
+
 function updateServeNowTemplatePreview() {
   const input = document.getElementById("twilio-serve-now-template");
   const preview = document.getElementById("twilio-template-live-preview");
@@ -1483,7 +1746,41 @@ function updateServeNowTemplatePreview() {
   const val = input ? input.value : "";
   const shopName = (state.config && state.config.shopName) || "Main St Barbers";
   const sampleTicketUrl = `${getPublicUrl()}&ticket=sample-101`;
-  preview.textContent = formatServeNowSms(val, "Alex", shopName, "Haircut", sampleTicketUrl);
+  const formatted = formatServeNowSms(val, "Alex", shopName, "Haircut", sampleTicketUrl);
+  preview.textContent = formatted;
+
+  // Live Carrier Encoding & Segment Meter
+  const isGsm7 = !/[^\u0020-\u007E\r\n\t€£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(formatted);
+  const charCount = Array.from(formatted).length;
+  const segments = calculateSmsSegments(formatted);
+  const maxSingle = isGsm7 ? 160 : 70;
+
+  const counterEl = document.getElementById("sms-char-counter");
+  const badgeEl = document.getElementById("sms-encoding-badge");
+  const emojiWarn = document.getElementById("sms-emoji-warning");
+
+  if (counterEl) {
+    counterEl.textContent = `${charCount}/${maxSingle} Characters • ${segments} Carrier Segment${segments > 1 ? "s" : ""}`;
+    counterEl.style.color = segments > 1 ? "#f59e0b" : "#38bdf8";
+  }
+
+  if (badgeEl) {
+    if (isGsm7) {
+      badgeEl.textContent = "GSM-7 Standard";
+      badgeEl.style.color = "#10b981";
+    } else {
+      badgeEl.textContent = "UCS-2 (Unicode / Emoji)";
+      badgeEl.style.color = "#f59e0b";
+    }
+  }
+
+  if (emojiWarn) {
+    if (!isGsm7) {
+      emojiWarn.classList.remove("hidden");
+    } else {
+      emojiWarn.classList.add("hidden");
+    }
+  }
 }
 
 function insertServeNowTemplateTag(tag) {
@@ -1585,6 +1882,12 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
       return { success: true, sid: data.sid, data };
     } else {
       console.warn("Twilio Cloud Function notice:", data);
+      if (data && data.quotaExhausted) {
+        if (state.smsUsage) {
+          state.smsUsage.totalAvailable = 0;
+          renderSmsWalletUI(state.smsUsage);
+        }
+      }
       return { success: false, error: data.error || "Failed to dispatch SMS via Twilio", code: data.code, data };
     }
   } catch (err) {
@@ -1637,6 +1940,19 @@ async function sendTestSmsUI() {
     const errMsg = result.error || "Unknown error";
     showToast(`⚠️ Twilio Notice: ${errMsg}`);
     
+    if ((result.data && result.data.quotaExhausted) || errMsg.includes("Quota Exhausted") || errMsg.includes("quota")) {
+      await showAlertDialog({
+        title: "SMS Quota Exhausted",
+        message: "Your shop has used all available monthly included and top-up SMS credits.\n\nPurchase an SMS Top-Up Pack ($5 / $15 / $39) to instantly resume delivering automated text alerts to your walk-in customers.",
+        buttonText: "⚡ Buy Top-Up Pack",
+        type: "warning",
+        icon: "⚠️",
+        category: "SMS Quota"
+      });
+      openTopUpModal();
+      return;
+    }
+
     if (result.code === 20003 || errMsg.includes("Primary compliance profile") || errMsg.includes("KYC")) {
       await showAlertDialog({
         title: "Twilio Compliance Required",
@@ -1739,7 +2055,13 @@ async function callCustomer(id) {
           logCustomerActivity(targetItem, "sms_sent", "SMS Notification Sent", `Delivered SMS text message with live ticket link to ${targetItem.phone} via Twilio`, "📲", "WaitLink Twilio Bot (Automated)");
           showToast(`📱 SMS with ticket link sent to ${targetItem.customerName} (${targetItem.phone})`);
         } else {
-          logCustomerActivity(targetItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱", "WaitLink Twilio Bot (Automated)");
+          const isQuota = (res.data && res.data.quotaExhausted) || (res.error && res.error.toLowerCase().includes("quota"));
+          if (isQuota) {
+            logCustomerActivity(targetItem, "sms_skipped", "SMS Quota Reached", "SMS alert skipped because shop monthly quota has been reached. Customer was called to desk without disruption.", "⚠️", "WaitLink Telecom Quota");
+            showToast(`⚠️ Called ${targetItem.customerName} to desk. (SMS alert skipped — monthly quota reached).`);
+          } else {
+            logCustomerActivity(targetItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱", "WaitLink Twilio Bot (Automated)");
+          }
         }
       });
   }
@@ -7071,6 +7393,7 @@ const DEFAULT_TIER_FEATURES = {
     { text: "Real-Time Waiting Time Estimator", enabled: true },
     { text: "Anonymous Public Wait Page", enabled: true },
     { text: "Audible Turn Chimes & Sound Alerts", enabled: true },
+    { text: "0 SMS (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true },
     { text: "Automated Twilio SMS Notifications", enabled: false },
     { text: "Custom Shop Logo Branding", enabled: false },
     { text: "Business Analytics & CSV History Export", enabled: false }
@@ -7078,7 +7401,9 @@ const DEFAULT_TIER_FEATURES = {
   t2: [
     { text: "Everything in Starter", enabled: true },
     { text: "1 Dedicated Shop with Unlimited Check-ins", enabled: true },
+    { text: "500 Automated SMS / mo included (+ 1-Month Rollover Bank up to 1,000 SMS)", enabled: true },
     { text: "Automated Twilio SMS \"Turn Ready\" Alerts", enabled: true },
+    { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true },
     { text: "Custom Logo Branding & Colors", enabled: true },
     { text: "Promotional Offer Banners on Public Screen", enabled: true },
     { text: "Owner Business Intelligence Dashboard", enabled: true },
@@ -7091,6 +7416,7 @@ const DEFAULT_TIER_FEATURES = {
   ],
   t3: [
     { text: "Everything in Pro Business", enabled: true },
+    { text: "2,500+ Automated SMS / mo Included", enabled: true },
     { text: "Unlimited Locations & Staff Accounts", enabled: true },
     { text: "Multi-Tenant Platform SuperAdmin Directory", enabled: true },
     { text: "Custom Domain CNAME Routing", enabled: true },
@@ -7458,10 +7784,18 @@ function initPricingConfigRealtimeSync() {
   if (!db || pricingConfigUnsubscribe) return;
   try {
     pricingConfigUnsubscribe = db.collection("settings").doc("pricing_config").onSnapshot(doc => {
-      if (doc.exists && doc.data().tiers) {
-        state.pricingTiers = doc.data().tiers;
-        localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
-        renderUpgradeModalTiers(state.pricingTiers);
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (d.tiers) {
+          state.pricingTiers = d.tiers;
+          localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+          renderUpgradeModalTiers(state.pricingTiers);
+        }
+
+        if (d.rolloverPolicy) {
+          state.rolloverPolicy = d.rolloverPolicy;
+          updateAdminRolloverPolicyUI(d.rolloverPolicy);
+        }
 
         const panelPricing = document.getElementById("superpanel-pricing");
         if (panelPricing && !panelPricing.classList.contains("hidden")) {
@@ -7477,6 +7811,87 @@ function initPricingConfigRealtimeSync() {
     });
   } catch (e) {
     console.warn("Failed to init pricing config realtime listener:", e);
+  }
+}
+
+function updateAdminRolloverPolicyUI(policy) {
+  const chosen = (policy === "option_a") ? "option_a" : "option_b";
+  const btnA = document.getElementById("admin-policy-opt-a");
+  const btnB = document.getElementById("admin-policy-opt-b");
+  const descA = document.getElementById("policy-card-desc-a");
+  const descB = document.getElementById("policy-card-desc-b");
+
+  if (chosen === "option_a") {
+    if (btnA) {
+      btnA.classList.add("active", "btn-primary");
+      btnA.classList.remove("btn-secondary");
+      btnA.style.background = "#0284c7";
+      btnA.style.borderColor = "#0284c7";
+      btnA.textContent = "🔄 Option A: Monthly Reset (Active)";
+    }
+    if (btnB) {
+      btnB.classList.remove("active", "btn-primary");
+      btnB.classList.add("btn-secondary");
+      btnB.style.background = "";
+      btnB.style.borderColor = "";
+      btnB.textContent = "🎁 Option B: 1-Month Rollover Bank";
+    }
+    if (descA) {
+      descA.style.background = "rgba(2, 132, 199, 0.12)";
+      descA.style.borderColor = "rgba(2, 132, 199, 0.4)";
+      descA.style.color = "#e2e8f0";
+    }
+    if (descB) {
+      descB.style.background = "rgba(255,255,255,0.02)";
+      descB.style.borderColor = "rgba(255,255,255,0.06)";
+      descB.style.color = "var(--text-muted)";
+    }
+  } else {
+    if (btnB) {
+      btnB.classList.add("active", "btn-primary");
+      btnB.classList.remove("btn-secondary");
+      btnB.style.background = "#10b981";
+      btnB.style.borderColor = "#10b981";
+      btnB.textContent = "🎁 Option B: 1-Month Rollover Bank (Active)";
+    }
+    if (btnA) {
+      btnA.classList.remove("active", "btn-primary");
+      btnA.classList.add("btn-secondary");
+      btnA.style.background = "";
+      btnA.style.borderColor = "";
+      btnA.textContent = "🔄 Option A: Monthly Reset";
+    }
+    if (descB) {
+      descB.style.background = "rgba(16, 185, 129, 0.08)";
+      descB.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      descB.style.color = "#e2e8f0";
+    }
+    if (descA) {
+      descA.style.background = "rgba(255,255,255,0.02)";
+      descA.style.borderColor = "rgba(255,255,255,0.06)";
+      descA.style.color = "var(--text-muted)";
+    }
+  }
+}
+
+function setAdminRolloverPolicy(policy) {
+  const chosen = (policy === "option_a") ? "option_a" : "option_b";
+  state.rolloverPolicy = chosen;
+  updateAdminRolloverPolicyUI(chosen);
+
+  if (typeof db !== "undefined" && db) {
+    db.collection("settings").doc("pricing_config").set({
+      rolloverPolicy: chosen,
+      updatedAt: Date.now(),
+      updatedBy: (state.user && state.user.email) || "senthil930@gmail.com"
+    }, { merge: true }).then(() => {
+      showToast(`⚙️ Rollover Policy switched to ${chosen === 'option_a' ? 'Option A: Monthly Reset' : 'Option B: 1-Month Rollover Bank'}`);
+      if (state.smsUsage) {
+        renderSmsWalletUI(state.smsUsage);
+      }
+    }).catch(err => {
+      console.warn("Failed to persist rollover policy:", err);
+    });
   }
 }
 
@@ -7622,6 +8037,21 @@ function initStripePaymentEngine() {
     })();
   } else if (paymentStatus === "cancelled") {
     showToast("Checkout cancelled. No charges were made.");
+    try {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (e) {}
+  }
+
+  // Handle SMS Top-Up pack return callback
+  const topupStatus = urlParams.get("topup");
+  if (topupStatus === "success") {
+    const topupSessionId = urlParams.get("session_id");
+    if (topupSessionId) {
+      verifyTopUpSessionBackend(topupSessionId);
+    }
+  } else if (topupStatus === "cancel") {
+    showToast("Top-up checkout cancelled. No charges were made.");
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
