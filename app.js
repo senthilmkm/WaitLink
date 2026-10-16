@@ -38,6 +38,7 @@ const state = {
       { id: "srv_demo_2", name: "Haircut & Beard Trim", estDurationMin: 35, icon: "💈", enabled: true },
       { id: "srv_demo_3", name: "Beard Trim & Lineup", estDurationMin: 15, icon: "🧔", enabled: true }
     ],
+    clinicalPrivacyEnabled: false,
     firebaseConfig: DEFAULT_FIREBASE_CONFIG
   },
   queue: [], // Active waiting items
@@ -47,7 +48,8 @@ const state = {
   ownerHistoryPage: 1,
   historyPageSize: 20,
   deskViewMode: localStorage.getItem("waitlink_desk_view_mode") || "grid",
-  stageFocusedIndex: 0
+  stageFocusedIndex: 0,
+  revealedPhoneIds: new Set()
 };
 window.state = state;
 
@@ -371,6 +373,7 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.logoUrl !== undefined) state.config.logoUrl = data.logoUrl;
       if (data.planTitle !== undefined) state.config.planTitle = data.planTitle;
       if (data.planPrice !== undefined) state.config.planPrice = data.planPrice;
+      if (data.clinicalPrivacyEnabled !== undefined) state.config.clinicalPrivacyEnabled = !!data.clinicalPrivacyEnabled;
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
@@ -397,6 +400,7 @@ function subscribeFirestore(forceResubscribe = false) {
               if (data.address !== undefined) state.config.address = data.address;
               if (data.phone !== undefined) state.config.phone = data.phone;
               if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
+              if (data.clinicalPrivacyEnabled !== undefined) state.config.clinicalPrivacyEnabled = !!data.clinicalPrivacyEnabled;
               if (Array.isArray(data.queue)) state.queue = data.queue;
               if (Array.isArray(data.history)) state.history = data.history;
               updateConfigUI();
@@ -461,6 +465,9 @@ function loadConfig() {
 
   if (state.config.enableServices === undefined) {
     state.config.enableServices = true;
+  }
+  if (state.config.clinicalPrivacyEnabled === undefined) {
+    state.config.clinicalPrivacyEnabled = false;
   }
   if (!Array.isArray(state.config.services) || state.config.services.length === 0) {
     state.config.services = [
@@ -589,6 +596,67 @@ function setElValue(id, val) {
   if (el && document.activeElement !== el) el.value = val;
 }
 
+// Format display name for clinical patient privacy (First Name + Last Initial)
+function formatPatientDisplayName(name, isClinical = false) {
+  if (!name || typeof name !== "string") return "";
+  if (!isClinical) return name;
+  const trimmed = name.trim();
+  const parts = trimmed.split(/\s+/);
+  if (parts.length <= 1) return trimmed;
+  const first = parts[0];
+  const lastPart = parts[parts.length - 1];
+  const lastInitial = lastPart.charAt(0).toUpperCase() + ".";
+  return `${first} ${lastInitial}`;
+}
+
+// Staff Click-to-Reveal phone toggle in clinical mode
+function toggleRevealPhone(itemId, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (!state.revealedPhoneIds) state.revealedPhoneIds = new Set();
+  if (state.revealedPhoneIds.has(itemId)) {
+    state.revealedPhoneIds.delete(itemId);
+  } else {
+    state.revealedPhoneIds.add(itemId);
+  }
+  renderQueue();
+}
+
+// Clinical & Healthcare Privacy Mode Toggle Handler
+function onClinicalPrivacyToggleChange() {
+  const check = document.getElementById("owner-clinical-privacy-checkbox");
+  if (!check) return;
+  state.config.clinicalPrivacyEnabled = check.checked;
+  showToast(`🏥 Clinical Privacy Mode: ${state.config.clinicalPrivacyEnabled ? "ENABLED (Patient Names & PHI Protected)" : "DISABLED"}`);
+  renderAll();
+}
+
+// Dynamic TCPA Phone Input listener on Public Check-in Card
+function onPublicPhoneInput(input) {
+  const container = document.getElementById("inline-tcpa-consent-container");
+  const helperNote = document.getElementById("inline-sms-helper-note");
+  const tcpaShopName = document.getElementById("tcpa-shop-name");
+  const consentCheck = document.getElementById("inline-tcpa-consent");
+
+  if (!input || !container) return;
+  const val = input.value.trim().replace(/\D/g, "");
+
+  if (tcpaShopName) {
+    tcpaShopName.textContent = state.config.shopName || "this business";
+  }
+
+  if (val.length > 0) {
+    container.classList.remove("hidden");
+    if (helperNote) helperNote.classList.add("hidden");
+  } else {
+    container.classList.add("hidden");
+    if (helperNote) helperNote.classList.remove("hidden");
+    if (consentCheck) consentCheck.checked = false;
+  }
+}
+
 function updateConfigUI() {
   setElText("desk-shop-name", state.config.shopName);
   setElText("owner-shop-name", state.config.shopName);
@@ -617,6 +685,10 @@ function updateConfigUI() {
   setElValue("owner-input-promo", state.config.promoText || "");
   setElValue("owner-input-promo-start", formatDatetimeLocalVal(state.config.promoStart));
   setElValue("owner-input-promo-end", formatDatetimeLocalVal(state.config.promoEnd));
+
+  // Set Clinical Privacy toggle
+  const clinicalCheck = document.getElementById("owner-clinical-privacy-checkbox");
+  if (clinicalCheck) clinicalCheck.checked = !!state.config.clinicalPrivacyEnabled;
 
   // Set Twilio Settings inputs
   const twilio = state.config.twilio || {};
@@ -769,6 +841,7 @@ function saveData() {
         hours: state.config.hours || "9:00 AM - 7:00 PM",
         estBaseWaitMin: state.config.estBaseWaitMin || 20,
         enableServices: !!state.config.enableServices,
+        clinicalPrivacyEnabled: !!state.config.clinicalPrivacyEnabled,
         services: state.config.services || [],
         logoUrl: state.config.logoUrl || "",
         queue: state.queue,
@@ -1236,6 +1309,28 @@ function calculateAvgTurnaround() {
 
 // Render All UI Views
 function renderAll() {
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+  const deskSubtitle = document.getElementById("desk-shop-subtitle");
+  if (deskSubtitle) {
+    deskSubtitle.textContent = isClinical 
+      ? "Clinical Reception Desk • Confidential Patient Intake & Call"
+      : "Desk Control Panel • 1-Tap Check In & Call";
+  }
+  const deskIcon = document.getElementById("desk-checkin-icon");
+  if (deskIcon) {
+    deskIcon.textContent = isClinical ? "🩺" : "👤";
+  }
+  const deskInput = document.getElementById("customer-name-input");
+  if (deskInput) {
+    deskInput.placeholder = isClinical
+      ? "Enter patient name or initials (e.g. Marcus S.)"
+      : "Enter customer name or initials (e.g. Marcus S.)";
+  }
+  const deskBtnText = document.getElementById("desk-checkin-btn-text");
+  if (deskBtnText) {
+    deskBtnText.textContent = isClinical ? "Check In Patient" : "Check In";
+  }
+
   renderMetrics();
   renderQueue();
   renderHistory();
@@ -1277,25 +1372,22 @@ function renderPublicContactBar() {
   }
 
   container.style.display = "flex";
+  container.style.flexDirection = "column";
   container.style.alignItems = "center";
   container.style.justifyContent = "center";
-  container.style.gap = "0.5rem";
-  container.style.fontSize = "0.85rem";
+  container.style.gap = "0.25rem";
+  container.style.fontSize = "0.82rem";
   container.style.color = "var(--text-muted)";
-  container.style.marginTop = "0.4rem";
-  container.style.flexWrap = "wrap";
+  container.style.marginTop = "0.3rem";
 
   let html = "";
   if (address) {
     const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
-    html += `<a href="${mapsUrl}" target="_blank" style="color: var(--text-subtle); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">📍 ${escapeHtml(address)}</a>`;
-  }
-  if (address && phone) {
-    html += `<span style="color: var(--text-muted);">&bull;</span>`;
+    html += `<a href="${mapsUrl}" target="_blank" style="color: var(--text-subtle); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; text-align: center; line-height: 1.3;">📍 ${escapeHtml(address)}</a>`;
   }
   if (phone) {
     const cleanPhone = phone.replace(/[^0-9+]/g, '');
-    html += `<a href="tel:${cleanPhone}" data-phone="${escapeHtml(phone)}" data-label="${escapeHtml(state.config.shopName || 'Shop')}" onclick="handlePhoneClick(event, this)" style="color: #06b6d4; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(6, 182, 212, 0.1); padding: 0.25rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.85rem;" title="Tap to call shop">📞 ${escapeHtml(phone)}</a>`;
+    html += `<a href="tel:${cleanPhone}" data-phone="${escapeHtml(phone)}" data-label="${escapeHtml(state.config.shopName || 'Shop')}" onclick="handlePhoneClick(event, this)" style="color: #06b6d4; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(6, 182, 212, 0.1); padding: 0.2rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.8rem; margin-top: 0.15rem;" title="Tap to call shop">📞 ${escapeHtml(phone)}</a>`;
   }
 
   container.innerHTML = html;
@@ -2076,6 +2168,10 @@ async function saveOwnerSettings() {
     return;
   }
 
+  const clinicalPrivacyEnabled = document.getElementById("owner-clinical-privacy-checkbox") 
+    ? document.getElementById("owner-clinical-privacy-checkbox").checked 
+    : !!state.config.clinicalPrivacyEnabled;
+
   state.config = {
     ...state.config,
     shopName,
@@ -2089,6 +2185,7 @@ async function saveOwnerSettings() {
     promoEnd,
     logoUrl,
     estBaseWaitMin,
+    clinicalPrivacyEnabled,
     twilio: {
       enabled: twilioEnable,
       accountSid: twilioAccountSid,
@@ -2329,14 +2426,15 @@ function renderQueue() {
   if (!queueContainer) return;
 
   updateViewModeToggleUI();
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
 
   if (state.queue.length === 0) {
     queueContainer.className = "queue-grid";
     queueContainer.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">🛋️</div>
-        <h3>No one in line right now</h3>
-        <p>Enter a customer's name above and tap <strong>Check In</strong> to start tracking wait time.</p>
+        <div class="empty-icon">${isClinical ? '🏥' : '🛋️'}</div>
+        <h3>${isClinical ? 'No patients in waiting room right now' : 'No one in line right now'}</h3>
+        <p>${isClinical ? 'Enter a patient\'s name above and tap <strong>Check In Patient</strong> to start tracking wait time.' : 'Enter a customer\'s name above and tap <strong>Check In</strong> to start tracking wait time.'}</p>
       </div>
     `;
     return;
@@ -2359,7 +2457,9 @@ function renderQueue() {
     const checkInClock = new Date(item.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const isNextUp = index === 0;
-    const badgeText = isNextUp ? "#1 NEXT UP" : `#${index + 1} IN LINE`;
+    const badgeText = isClinical 
+      ? (isNextUp ? "🏥 NEXT PATIENT" : `PATIENT #${index + 1}`)
+      : (isNextUp ? "#1 NEXT UP" : `#${index + 1} IN LINE`);
     const nextUpClass = isNextUp ? "next-up" : "";
 
     const lateBadgeHtml = item.delayedMinutes 
@@ -2367,10 +2467,29 @@ function renderQueue() {
       : '';
 
     const servicePillHtml = item.selectedServiceName 
-      ? `<span class="badge-service" title="Selected Service">💈 ${escapeHtml(item.selectedServiceName)} (${item.selectedServiceDurationMin || 20}m)</span>` 
+      ? `<span class="badge-service" title="Selected Service">${isClinical ? '🩺' : '💈'} ${escapeHtml(item.selectedServiceName)} (${item.selectedServiceDurationMin || 20}m)</span>` 
+      : '';
+
+    const patientIdHtml = isClinical 
+      ? `<span class="badge-service" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3);" title="Confidential Patient Ticket ID">🔒 ID #${escapeHtml(String(item.id || '').slice(-4).toUpperCase())}</span>` 
       : '';
 
     const phoneDigits = item.phone ? String(item.phone).replace(/\D/g, '') : '';
+    let phoneDisplayHtml = '';
+    if (item.phone) {
+      if (isClinical) {
+        const isRevealed = state.revealedPhoneIds && state.revealedPhoneIds.has(item.id);
+        if (isRevealed) {
+          phoneDisplayHtml = `<span class="details-divider">&bull;</span><a href="tel:${escapeHtml(phoneDigits || item.phone)}" class="customer-phone-link" onclick="handlePhoneClick(event, this)" title="Direct phone line">📞 ${escapeHtml(item.phone)}</a> <button type="button" class="btn-text-link" onclick="toggleRevealPhone('${escapeHtml(item.id)}', event)" style="font-size:0.75rem; margin-left:4px; padding:1px 6px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="Hide phone">🔒 Hide</button>`;
+        } else {
+          phoneDisplayHtml = `<span class="details-divider">&bull;</span><span class="customer-phone-link" style="color:var(--text-muted); cursor:default;" title="Masked for patient privacy">📞 ${escapeHtml(maskPhone(item.phone))}</span> <button type="button" class="btn-text-link" onclick="toggleRevealPhone('${escapeHtml(item.id)}', event)" style="font-size:0.75rem; margin-left:4px; padding:1px 6px; border:1px solid rgba(14,165,233,0.4); border-radius:4px; color:#0284c7; cursor:pointer;" title="Staff click to reveal phone">👁️ Reveal</button>`;
+        }
+      } else {
+        phoneDisplayHtml = `<span class="details-divider">&bull;</span><a href="tel:${escapeHtml(phoneDigits || item.phone)}" data-phone="${escapeHtml(item.phone)}" data-label="${escapeHtml(item.customerName)}" class="customer-phone-link" onclick="handlePhoneClick(event, this)" title="Tap to call ${escapeHtml(item.customerName)}">📞 ${escapeHtml(item.phone)}</a>`;
+      }
+    }
+
+    const displayName = formatPatientDisplayName(item.customerName, isClinical);
 
     let stageClass = "";
     if (state.deskViewMode === "stage") {
@@ -2394,17 +2513,17 @@ function renderQueue() {
         </div>
 
         <div class="customer-info-section">
-          <div class="customer-name">${escapeHtml(item.customerName)}</div>
-          ${(servicePillHtml || lateBadgeHtml) ? `<div class="customer-tags-row">${servicePillHtml}${lateBadgeHtml}</div>` : ''}
+          <div class="customer-name">${escapeHtml(displayName)}</div>
+          ${(patientIdHtml || servicePillHtml || lateBadgeHtml) ? `<div class="customer-tags-row">${patientIdHtml}${servicePillHtml}${lateBadgeHtml}</div>` : ''}
           <div class="checkin-details-row">
             <span class="checkin-time">Checked in at ${checkInClock}</span>
-            ${item.phone ? `<span class="details-divider">&bull;</span><a href="tel:${escapeHtml(phoneDigits || item.phone)}" data-phone="${escapeHtml(item.phone)}" data-label="${escapeHtml(item.customerName)}" class="customer-phone-link" onclick="handlePhoneClick(event, this)" title="Tap to call ${escapeHtml(item.customerName)}">📞 ${escapeHtml(item.phone)}</a>` : ''}
+            ${phoneDisplayHtml}
           </div>
         </div>
 
         <div class="queue-item-actions">
           <button class="btn btn-call ${isNextUp ? 'btn-hero' : ''}" onclick="callCustomer('${escapeHtml(item.id)}')" title="Serve customer and dispatch turn-ready SMS with live ticket link">
-            ⏱️ SERVE ${isNextUp ? 'NOW' : 'NEXT'}
+            ${isClinical ? '🩺 CALL ' + (isNextUp ? 'PATIENT' : 'NEXT') : '⏱️ SERVE ' + (isNextUp ? 'NOW' : 'NEXT')}
           </button>
           ${showMoveToEnd ? `
           <button class="btn btn-requeue" onclick="requeueActiveCustomerToEnd('${escapeHtml(item.id)}')" title="Move customer to end of active line">
@@ -2683,11 +2802,16 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     </div>
   `;
 
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+  const displayName = isOwnerView 
+    ? item.customerName 
+    : formatPatientDisplayName(item.customerName, isClinical);
+
   const customerNameCell = isOwnerView ? `
     <strong data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" style="cursor: pointer; color: #06b6d4; text-decoration: underline;" title="Click to view lifecycle audit log">
-      ${escapeHtml(item.customerName)}
+      ${isClinical ? '🩺 ' : ''}${escapeHtml(item.customerName)}
     </strong>
-  ` : `<strong>${escapeHtml(item.customerName)}</strong>`;
+  ` : `<strong>${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}</strong>`;
 
   return `
     <tr>
@@ -2868,12 +2992,34 @@ function exportHistoryCSV() {
 function renderPublicView() {
   const estWait = calculateEstimatedWait();
   const queueCount = state.queue.length;
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
 
-  setElText("public-shop-name", state.config.shopName || "Main St Barbers");
-  setElText("public-footer-shop-name", state.config.shopName || "Main St Barbers");
+  setElText("public-shop-name", state.config.shopName || (isClinical ? "Healthcare Clinic" : "Main St Barbers"));
+  setElText("public-footer-shop-name", state.config.shopName || (isClinical ? "Healthcare Clinic" : "Main St Barbers"));
   setElText("public-wait-display", estWait > 0 ? `~ ${estWait} MINS` : "NO WAIT ⚡");
-  setElText("public-queue-summary", `${queueCount} ${queueCount === 1 ? 'person' : 'people'} currently waiting in line`);
+  setElText("public-queue-summary", isClinical 
+    ? `${queueCount} ${queueCount === 1 ? 'patient' : 'patients'} currently waiting in clinic`
+    : `${queueCount} ${queueCount === 1 ? 'person' : 'people'} currently waiting in line`
+  );
   setElText("public-last-updated", "Updated " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+  // Update Public Check-In Card Labels & Placeholders
+  setElText("public-join-btn-text", isClinical ? "🩺 Join Patient Reception Line" : "🎟️ Join Queue Now");
+  setElText("public-checkin-title", isClinical ? "🩺 Patient Walk-In Intake" : "🎟️ Join Walk-In Line");
+  setElText("public-name-label", isClinical ? "Patient Name or Initials *" : "Your Name or Initials *");
+  const nameInput = document.getElementById("inline-customer-name");
+  if (nameInput) {
+    nameInput.placeholder = isClinical ? "e.g. Sammy K. (First name + Last initial)" : "e.g. Sammy K.";
+  }
+  setElText("public-privacy-trust-text", isClinical
+    ? "Confidential & HIPAA-Friendly: Patient names are auto-masked and PHI is strictly secured."
+    : "Privacy Protected: Customer names are kept confidential and never shown publicly."
+  );
+
+  const tcpaShopName = document.getElementById("tcpa-shop-name");
+  if (tcpaShopName) {
+    tcpaShopName.textContent = state.config.shopName || "this business";
+  }
 
   // Render Store Hours
   const hoursText = state.config.hours || "9:00 AM - 7:00 PM (Open Today 🟢)";
@@ -6798,10 +6944,21 @@ function toggleInlineCheckInForm(show) {
   const btnContainer = document.getElementById("public-join-btn-container");
   const card = document.getElementById("public-inline-checkin-card");
   const nameInput = document.getElementById("inline-customer-name");
+  const phoneInput = document.getElementById("inline-customer-phone");
+  const tcpaContainer = document.getElementById("inline-tcpa-consent-container");
+  const tcpaCheck = document.getElementById("inline-tcpa-consent");
+  const tcpaShopName = document.getElementById("tcpa-shop-name");
 
   if (show) {
     if (btnContainer) btnContainer.classList.add("hidden");
     if (card) card.classList.remove("hidden");
+    if (tcpaShopName) tcpaShopName.textContent = state.config.shopName || "this business";
+    if (phoneInput && phoneInput.value.trim().replace(/\D/g, "").length > 0) {
+      if (tcpaContainer) tcpaContainer.classList.remove("hidden");
+    } else {
+      if (tcpaContainer) tcpaContainer.classList.add("hidden");
+      if (tcpaCheck) tcpaCheck.checked = false;
+    }
     renderPublicServiceChips();
     if (nameInput) setTimeout(() => nameInput.focus(), 100);
   } else {
@@ -6814,12 +6971,29 @@ function handlePublicInlineCheckIn(event) {
   event.preventDefault();
   const nameInput = document.getElementById("inline-customer-name");
   const phoneInput = document.getElementById("inline-customer-phone");
+  const tcpaCheck = document.getElementById("inline-tcpa-consent");
   const submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
 
   const customerName = nameInput ? nameInput.value.trim() : "";
   const phone = phoneInput ? phoneInput.value.trim() : "";
 
   if (!customerName) return;
+
+  // TCPA Compliance Guardrail: If customer enters a phone number, affirmative SMS consent is legally required
+  const cleanPhoneDigits = phone.replace(/\D/g, "");
+  if (cleanPhoneDigits.length > 0) {
+    if (!tcpaCheck || !tcpaCheck.checked) {
+      showToast("⚠️ TCPA Compliance: Please check the SMS consent box to receive text notifications.");
+      const container = document.getElementById("inline-tcpa-consent-container");
+      if (container) {
+        container.classList.remove("hidden");
+        container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      if (tcpaCheck) tcpaCheck.focus();
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+  }
 
   // Anti-Spam / Rate Limit Guardrail 1: Active Ticket on this Device
   if (state.myTicket && state.queue.some(q => q.id === state.myTicket.id)) {
@@ -6830,7 +7004,6 @@ function handlePublicInlineCheckIn(event) {
   }
 
   // Anti-Spam / Rate Limit Guardrail 2: Duplicate Phone Number in Active Queue
-  const cleanPhoneDigits = phone.replace(/\D/g, "");
   if (cleanPhoneDigits && cleanPhoneDigits.length >= 7) {
     const isDuplicatePhone = state.queue.some(q => {
       const existingDigits = (q.phone || "").replace(/\D/g, "");
@@ -6865,6 +7038,8 @@ function handlePublicInlineCheckIn(event) {
     id: "q_" + Date.now(),
     customerName: customerName,
     phone: phone,
+    tcpaConsent: !!(cleanPhoneDigits.length > 0 && tcpaCheck && tcpaCheck.checked),
+    tcpaConsentTimestamp: cleanPhoneDigits.length > 0 ? Date.now() : null,
     checkedInAt: Date.now(),
     selectedServiceId: validService ? validService.id : null,
     selectedServiceName: validService ? validService.name : null,
@@ -6893,9 +7068,7 @@ function handlePublicInlineCheckIn(event) {
   if (inlineCard) inlineCard.classList.add("hidden");
   
   if (ticketCard) {
-    setElText("ticket-customer-name", customerName);
-    setElText("ticket-position-display", `Position #${queuePos || 1}`);
-    ticketCard.classList.remove("hidden");
+    restoreActiveTicket();
   }
 
   showToast(`✅ You joined the queue! Position #${queuePos}. Timer started!`);
@@ -6939,6 +7112,9 @@ function restoreActiveTicket() {
   if (state.myTicket) {
     const queueItem = state.queue.find(q => q.id === state.myTicket.id);
     const historyItem = state.history.find(h => h.id === state.myTicket.id);
+    const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+    const displayName = formatPatientDisplayName(state.myTicket.customerName, isClinical);
+    const ticketIdShort = String(state.myTicket.id || '').slice(-4).toUpperCase();
 
     if (queueItem) {
       state.myTicket = queueItem;
@@ -6949,14 +7125,37 @@ function restoreActiveTicket() {
       if (infoBox) infoBox.classList.add("hidden"); // Hide 3-point trust box on active ticket card
       
       if (ticketCard) {
-        setElText("ticket-badge-display", state.myTicket.requeued ? "🎟️ YOUR TICKET (RE-QUEUED)" : "🎟️ YOUR TICKET");
-        setElText("ticket-customer-name", state.myTicket.customerName);
-        setElText("ticket-position-display", `Position #${queuePos || 1}`);
-
-        if (state.myTicket.selectedServiceName) {
-          setElText("ticket-subtitle-display", `Service: ${state.myTicket.selectedServiceName} (~${state.myTicket.selectedServiceDurationMin || 20}m)`);
+        if (isClinical) {
+          setElText("ticket-badge-display", state.myTicket.requeued ? "🔒 PATIENT TICKET (RE-QUEUED)" : "🔒 CONFIDENTIAL PATIENT TICKET");
+          setElText("ticket-customer-name", `${displayName} • ID #${ticketIdShort}`);
+          setElText("ticket-position-display", `Position #${queuePos || 1} in Clinic`);
+          if (state.myTicket.selectedServiceName) {
+            setElText("ticket-subtitle-display", `Consultation: ${state.myTicket.selectedServiceName} (~${state.myTicket.selectedServiceDurationMin || 20}m)`);
+          } else {
+            setElText("ticket-subtitle-display", "Please wait in the reception lobby. You will be called by your ticket ID.");
+          }
         } else {
-          setElText("ticket-subtitle-display", "Please stay near the lobby");
+          setElText("ticket-badge-display", state.myTicket.requeued ? "🎟️ YOUR TICKET (RE-QUEUED)" : "🎟️ YOUR TICKET");
+          setElText("ticket-customer-name", state.myTicket.customerName);
+          setElText("ticket-position-display", `Position #${queuePos || 1}`);
+
+          if (state.myTicket.selectedServiceName) {
+            setElText("ticket-subtitle-display", `Service: ${state.myTicket.selectedServiceName} (~${state.myTicket.selectedServiceDurationMin || 20}m)`);
+          } else {
+            setElText("ticket-subtitle-display", "Please stay near the lobby");
+          }
+        }
+
+        // TCPA SMS Consent Verified Badge
+        const tcpaBadge = document.getElementById("ticket-sms-consent-badge");
+        if (tcpaBadge) {
+          if (state.myTicket.phone && (state.myTicket.tcpaConsent || state.myTicket.tcpaConsentTimestamp)) {
+            tcpaBadge.classList.remove("hidden");
+            tcpaBadge.style.display = "inline-flex";
+          } else {
+            tcpaBadge.classList.add("hidden");
+            tcpaBadge.style.display = "none";
+          }
         }
 
         ticketCard.classList.remove("hidden");
@@ -6978,7 +7177,7 @@ function restoreActiveTicket() {
           if (lateLocked) lateLocked.classList.remove("hidden");
           if (reportedMinsEl) reportedMinsEl.textContent = state.myTicket.delayedMinutes || 10;
         } else if (queuePos <= 2) {
-          if (lateTitle) lateTitle.textContent = "🏃 Running Late? Notify front desk:";
+          if (lateTitle) lateTitle.textContent = isClinical ? "🏃 Running Late? Notify reception desk:" : "🏃 Running Late? Notify front desk:";
           if (lateChips) lateChips.classList.remove("hidden");
           if (lateChip15) lateChip15.classList.remove("hidden");
           if (lateLocked) lateLocked.classList.add("hidden");
@@ -6992,10 +7191,30 @@ function restoreActiveTicket() {
     } else if (historyItem && historyItem.status === "called") {
       state.myTicket = historyItem;
       if (ticketCard) {
-        setElText("ticket-badge-display", "🎉 VISIT IN PROGRESS");
-        setElText("ticket-customer-name", state.myTicket.customerName);
-        setElText("ticket-position-display", "Visit In Progress");
-        setElText("ticket-subtitle-display", `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`);
+        if (isClinical) {
+          setElText("ticket-badge-display", "🩺 CONSULTATION IN PROGRESS");
+          setElText("ticket-customer-name", `${displayName} • ID #${ticketIdShort}`);
+          setElText("ticket-position-display", "Consultation In Progress");
+          setElText("ticket-subtitle-display", `Please proceed to examination room or front desk at ${state.config.shopName || 'Healthcare Clinic'}.`);
+        } else {
+          setElText("ticket-badge-display", "🎉 VISIT IN PROGRESS");
+          setElText("ticket-customer-name", state.myTicket.customerName);
+          setElText("ticket-position-display", "Visit In Progress");
+          setElText("ticket-subtitle-display", `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`);
+        }
+
+        // TCPA SMS Consent Verified Badge
+        const tcpaBadge = document.getElementById("ticket-sms-consent-badge");
+        if (tcpaBadge) {
+          if (state.myTicket.phone && (state.myTicket.tcpaConsent || state.myTicket.tcpaConsentTimestamp)) {
+            tcpaBadge.classList.remove("hidden");
+            tcpaBadge.style.display = "inline-flex";
+          } else {
+            tcpaBadge.classList.add("hidden");
+            tcpaBadge.style.display = "none";
+          }
+        }
+
         ticketCard.classList.remove("hidden");
 
         const lateChips = document.getElementById("running-late-chips");
@@ -7009,14 +7228,14 @@ function restoreActiveTicket() {
         if (lateContainer) lateContainer.classList.remove("hidden");
 
         if (state.myTicket.delayedMinutes || state.myTicket.lateReportCount > 0) {
-          if (lateTitle) lateTitle.textContent = "🕒 Front Desk Alert Active:";
+          if (lateTitle) lateTitle.textContent = isClinical ? "🕒 Clinic Reception Alert Active:" : "🕒 Front Desk Alert Active:";
           if (lateChips) lateChips.classList.add("hidden");
           if (lateGated) lateGated.classList.add("hidden");
           if (lateLocked) lateLocked.classList.remove("hidden");
           if (reportedMinsEl) reportedMinsEl.textContent = state.myTicket.delayedMinutes || 5;
         } else {
           // Grace Period Delay Alert for Called Customers (+5m and +10m chips only!)
-          if (lateTitle) lateTitle.textContent = "🏃 Just called but delayed? Notify front desk:";
+          if (lateTitle) lateTitle.textContent = isClinical ? "🏃 Just called but delayed? Notify clinic reception:" : "🏃 Just called but delayed? Notify front desk:";
           if (lateChips) lateChips.classList.remove("hidden");
           if (lateChip15) lateChip15.classList.add("hidden");
           if (lateLocked) lateLocked.classList.add("hidden");

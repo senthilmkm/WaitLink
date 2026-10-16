@@ -419,7 +419,7 @@
       <div class="shop-banner">
         <div>
           <h1 class="shop-title" id="desk-shop-name">Main St Barbers</h1>
-          <p class="shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
+          <p class="shop-subtitle" id="desk-shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
         </div>
         <div class="mode-badge-toggle" onclick="switchView('owner')" title="Click to switch mode">
           <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
@@ -430,11 +430,11 @@
       <div class="card checkin-card">
         <form id="checkin-form" onsubmit="handleCheckIn(event)">
           <div class="input-group">
-            <span class="input-icon">👤</span>
+            <span class="input-icon" id="desk-checkin-icon">👤</span>
             <input type="text" id="customer-name-input" placeholder="Enter customer name or initials (e.g. Marcus S.)" autocomplete="off" required autofocus>
-            <button type="submit" class="btn btn-primary btn-lg">
+            <button type="submit" class="btn btn-primary btn-lg" id="btn-desk-checkin">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Check In
+              <span id="desk-checkin-btn-text">Check In</span>
             </button>
           </div>
 
@@ -720,6 +720,20 @@
                     </div>
                   </div>
                 </div>
+              <!-- Clinical & Healthcare Privacy Mode Toggle -->
+              <div class="card" id="owner-clinical-privacy-card" style="padding: 1rem; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.06); border: 1.5px solid rgba(99, 102, 241, 0.35);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
+                  <strong style="color: #a5b4fc; font-size: 0.92rem; display: flex; align-items: center; gap: 0.45rem;">
+                    <span>🏥</span> Clinical & Healthcare Privacy Mode
+                    <span style="font-size: 0.68rem; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.45); padding: 0.15rem 0.45rem; border-radius: 9999px;">HIPAA / CLINIC</span>
+                  </strong>
+                  <label id="clinical-privacy-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(99, 102, 241, 0.4);">
+                    <input type="checkbox" id="owner-clinical-privacy-checkbox" onchange="onClinicalPrivacyToggleChange()" style="accent-color: #6366f1; cursor: pointer;"> Enable Privacy Mode
+                  </label>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0; line-height: 1.45;">
+                  Recommended for urgent care centers, medical walk-ins, and wellness practices. Auto-masks patient full names (e.g. <em>Jonathan E.</em>), masks phone numbers by default on front desk screen with staff tap-to-reveal toggle, generates anonymous patient ticket IDs (<em>Patient #104</em>), and hides sensitive medical service names on public customer screens.
+                </p>
               </div>
 
               <!-- Twilio SMS Settings Panel (Pro Feature Gated) -->
@@ -1011,15 +1025,15 @@
             <img id="public-shop-logo" class="public-logo-img hidden" alt="Shop Logo">
             <div class="shop-badge">LIVE WALK-IN QUEUE</div>
             <h1 class="public-shop-name" id="public-shop-name">Main St Barbers</h1>
-            
-            <!-- Address, Phone & Store Hours Contact Bar -->
-            <div class="public-contact-bar" id="public-contact-bar"></div>
-            
-            <!-- Store Hours Banner -->
-            <div id="public-hours-box" style="margin-top: 0.6rem; font-size: 0.85rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.08); padding: 0.35rem 0.8rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.2);">
+
+            <!-- Store Hours Banner (Placed immediately below shop name) -->
+            <div id="public-hours-box" style="margin-top: 0.35rem; font-size: 0.8rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; background: rgba(16, 185, 129, 0.08); padding: 0.22rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.25);">
               <span>🕒 Today's Store Hours:</span>
-              <span id="public-hours-text">9:00 AM - 7:00 PM (Open Now 🟢)</span>
+              <span id="public-hours-text">9:00 AM - 7:00 PM (Open Today 🟢)</span>
             </div>
+
+            <!-- Address & Phone Contact Bar (Clean compact layout, NO isolated dot) -->
+            <div class="public-contact-bar" id="public-contact-bar"></div>
           </div>
 
           <!-- Active Promotional Banner -->
@@ -1028,11 +1042,16 @@
           <!-- Active Customer Ticket Card (Spotlight at Top for Ticket Holders) -->
           <div id="public-active-ticket-card" class="hidden" style="margin: 1.25rem 0 1rem 0; padding: 1.5rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 2px solid #10b981; border-radius: var(--radius-md); text-align: center;">
             <div id="ticket-badge-display" style="font-size: 0.75rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">✅ YOU ARE IN LINE</div>
-            <h2 id="ticket-customer-name" style="color: #fff; font-size: 1.5rem; margin: 0.3rem 0 0.1rem 0;">Senthil K.</h2>
+            <h2 id="ticket-customer-name" style="color: #fff; font-size: 1.5rem; margin: 0.3rem 0 0.1rem 0;">Sammy K.</h2>
             <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0;" id="ticket-position-display">Position #1</div>
             <p id="ticket-subtitle-display" style="font-size: 0.85rem; color: var(--text-muted); margin: 0.2rem 0 0.6rem 0;">Please stay near the lobby</p>
 
-            <p style="font-size: 0.85rem; color: var(--text-main); margin: 0.6rem 0 0.6rem 0;">Timer Started &bull; <span id="ticket-timer-display" style="color: #06b6d4; font-weight: 700;">Waited 00:00</span></p>
+            <p style="font-size: 0.85rem; color: var(--text-main); margin: 0.6rem 0 0.4rem 0;">Timer Started &bull; <span id="ticket-timer-display" style="color: #06b6d4; font-weight: 700;">Waited 00:00</span></p>
+
+            <!-- TCPA SMS Consent Verified Badge -->
+            <div id="ticket-sms-consent-badge" class="hidden" style="margin-bottom: 0.6rem; font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 9999px; padding: 0.2rem 0.55rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📲 SMS Alerts Active &bull; TCPA Consent Verified ✓
+            </div>
 
             <!-- Running Late Action Container -->
             <div id="ticket-running-late-container" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: var(--radius-sm); text-align: center;">
@@ -1075,7 +1094,7 @@
           <!-- Customer Self Check-In CTA Button -->
           <div id="public-join-btn-container" style="margin: 1.25rem 0 0.5rem 0;">
             <button class="btn btn-accent btn-lg" onclick="toggleInlineCheckInForm(true)" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              <span>🎟️ Join Queue Now</span>
+              <span id="public-join-btn-text">🎟️ Join Queue Now</span>
               <span>&rarr;</span>
             </button>
           </div>
@@ -1083,7 +1102,7 @@
           <!-- Inline Expanding Check-In Form -->
           <div id="public-inline-checkin-card" class="hidden" style="margin: 1.25rem 0 0.5rem 0; padding: 1.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-md); text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-              <h3 style="color: #fff; font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              <h3 id="public-checkin-title" style="color: #fff; font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                 <span>🎟️</span> Join Walk-In Line
               </h3>
               <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.8rem;" onclick="toggleInlineCheckInForm(false)">✕ Close</button>
@@ -1091,19 +1110,30 @@
 
             <form id="public-inline-form" onsubmit="handlePublicInlineCheckIn(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
               <div>
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
+                <label id="public-name-label" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                   Your Name or Initials *
                 </label>
-                <input type="text" id="inline-customer-name" placeholder="e.g. Senthil K." required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+                <input type="text" id="inline-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
               </div>
 
               <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                   Mobile Phone Number (Optional)
                 </label>
-                <input type="tel" id="inline-customer-phone" placeholder="e.g. (555) 234-5678" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.35;">
-                  📲 <strong>SMS Disclosure:</strong> Providing your mobile number opts you in to receive a 1-time SMS text message with your live ticket link when your turn is ready. Standard msg & data rates may apply. Reply STOP to cancel.
+                <input type="tel" id="inline-customer-phone" placeholder="e.g. (555) 234-5678" oninput="onPublicPhoneInput(this)" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+                
+                <!-- TCPA Affirmative Consent Checkbox Container (Shows dynamically when phone is entered) -->
+                <div id="inline-tcpa-consent-container" class="hidden" style="margin-top: 0.5rem; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-sm); padding: 0.65rem 0.8rem;">
+                  <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="inline-tcpa-consent" style="margin-top: 0.2rem; accent-color: var(--primary); width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;">
+                    <span style="font-size: 0.74rem; color: #cbd5e1; line-height: 1.45;">
+                      <strong style="color: #fff;">I agree to receive automated SMS alerts</strong> from <span id="tcpa-shop-name" style="color: var(--primary); font-weight: 600;">this business</span> regarding my waitlist spot and when my turn is ready. Msg & data rates may apply. Reply STOP to opt out anytime. View <a href="privacy.html" target="_blank" style="color: var(--primary); text-decoration: underline;" onclick="event.stopPropagation()">Privacy Policy</a>.
+                    </span>
+                  </label>
+                </div>
+
+                <div id="inline-sms-helper-note" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.35;">
+                  📲 <strong>SMS Waitlist Alert:</strong> Enter your mobile number to receive text alerts when you are called to chair.
                 </div>
               </div>
 
@@ -1131,7 +1161,7 @@
           <div class="public-info-box" style="margin-top: 1.25rem;">
             <div class="info-row">
               <span class="info-icon">🔒</span>
-              <span><strong>Privacy Protected:</strong> Customer names are kept confidential and never shown publicly.</span>
+              <span id="public-privacy-trust-text"><strong>Privacy Protected:</strong> Customer names are kept confidential and never shown publicly.</span>
             </div>
             <div class="info-row">
               <span class="info-icon">⚡</span>
@@ -1977,7 +2007,7 @@ Dedicated Support Manager
           <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
             Your Name or Initials *
           </label>
-          <input type="text" id="public-customer-name" placeholder="e.g. Senthil K." required style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
+          <input type="text" id="public-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
         </div>
 
         <div>
