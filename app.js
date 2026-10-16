@@ -7710,7 +7710,7 @@ function loadPricingConfigUI() {
   const saved = localStorage.getItem("waitlink_pricing_tiers");
   if (saved) {
     try { 
-      const parsed = JSON.parse(saved);
+      const parsed = ensureTierSMSLimits(JSON.parse(saved));
       state.pricingTiers = parsed;
       applyTiersToUI(parsed); 
     } catch (e) {}
@@ -7720,7 +7720,7 @@ function loadPricingConfigUI() {
   if (db) {
     db.collection("settings").doc("pricing_config").get().then(doc => {
       if (doc.exists && doc.data().tiers) {
-        state.pricingTiers = doc.data().tiers;
+        state.pricingTiers = ensureTierSMSLimits(doc.data().tiers);
         localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
         applyTiersToUI(state.pricingTiers);
       }
@@ -7728,8 +7728,69 @@ function loadPricingConfigUI() {
   }
 }
 
+function ensureTierSMSLimits(tiers) {
+  if (!Array.isArray(tiers)) return tiers;
+  tiers.forEach((tier, idx) => {
+    if (!tier || !Array.isArray(tier.features)) return;
+    const id = tier.id || (idx === 0 ? "starter" : (idx === 1 ? "pro" : "enterprise"));
+    const feats = tier.features;
+
+    const hasText = (query) => feats.some(f => {
+      const t = typeof f === 'object' && f !== null ? f.text : String(f);
+      return t.toLowerCase().includes(query.toLowerCase());
+    });
+
+    if (id === "starter" || idx === 0) {
+      if (!hasText("0 SMS")) {
+        const smsIdx = feats.findIndex(f => {
+          const t = typeof f === 'object' && f !== null ? f.text : String(f);
+          return t.toLowerCase().includes("sms");
+        });
+        const targetIdx = smsIdx !== -1 ? smsIdx : 7;
+        feats.splice(targetIdx, 0, { text: "0 SMS Included (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true });
+      }
+    } else if (id === "pro" || idx === 1) {
+      if (!hasText("500")) {
+        const smsIdx = feats.findIndex(f => {
+          const t = typeof f === 'object' && f !== null ? f.text : String(f);
+          return t.toLowerCase().includes("sms");
+        });
+        const targetIdx = smsIdx !== -1 ? smsIdx : 2;
+        feats.splice(targetIdx, 0, { text: "500 Automated SMS / mo included (+ 1-Month Rollover Bank up to 1,000 SMS)", enabled: true });
+      }
+      if (!hasText("Rollover Bank") && !hasText("rollover")) {
+        const fiveIdx = feats.findIndex(f => {
+          const t = typeof f === 'object' && f !== null ? f.text : String(f);
+          return t.includes("500");
+        });
+        const targetIdx = fiveIdx !== -1 ? fiveIdx + 1 : 3;
+        feats.splice(targetIdx, 0, { text: "1-Month Rollover Bank (Up to 1,000 SMS reserve)", enabled: true });
+      }
+      if (!hasText("Top-Up") && !hasText("top up") && !hasText("+250")) {
+        const rollIdx = feats.findIndex(f => {
+          const t = typeof f === 'object' && f !== null ? f.text : String(f);
+          return t.toLowerCase().includes("rollover");
+        });
+        const targetIdx = rollIdx !== -1 ? rollIdx + 1 : 4;
+        feats.splice(targetIdx, 0, { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true });
+      }
+    } else if (id === "enterprise" || idx === 2) {
+      if (!hasText("2,500") && !hasText("2500")) {
+        const smsIdx = feats.findIndex(f => {
+          const t = typeof f === 'object' && f !== null ? f.text : String(f);
+          return t.toLowerCase().includes("sms");
+        });
+        const targetIdx = smsIdx !== -1 ? smsIdx : 2;
+        feats.splice(targetIdx, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
+      }
+    }
+  });
+  return tiers;
+}
+
 function renderUpgradeModalTiers(tiers) {
   if (!Array.isArray(tiers) || tiers.length === 0) return;
+  tiers = ensureTierSMSLimits(tiers);
   const t1 = tiers[0];
   const t2 = tiers[1];
   const t3 = tiers[2];
@@ -7741,7 +7802,11 @@ function renderUpgradeModalTiers(tiers) {
       const isEnabled = typeof f === 'object' && f !== null ? f.enabled !== false : !String(f).startsWith('[x]');
       const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
       if (isEnabled) {
-        return `<li style="display: flex; align-items: flex-start; gap: 0.45rem;"><span style="color: #10b981; font-weight: 700;">✓</span> <span>${escapeHtml(text)}</span></li>`;
+        let contentHtml = escapeHtml(text);
+        if (text.includes("500 Automated SMS") || text.includes("2,500+ Automated SMS") || text.includes("0 SMS Included") || text.includes("Rollover Bank") || text.includes("Top-Up SMS")) {
+          contentHtml = `<strong style="color: #06b6d4;">${contentHtml}</strong>`;
+        }
+        return `<li style="display: flex; align-items: flex-start; gap: 0.45rem;"><span style="color: #10b981; font-weight: 700;">✓</span> <span>${contentHtml}</span></li>`;
       } else {
         return `<li style="display: flex; align-items: flex-start; gap: 0.45rem; color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700; text-decoration: none;">✕</span> <span>${escapeHtml(text)}</span></li>`;
       }
@@ -7787,7 +7852,7 @@ function initPricingConfigRealtimeSync() {
       if (doc.exists) {
         const d = doc.data() || {};
         if (d.tiers) {
-          state.pricingTiers = d.tiers;
+          state.pricingTiers = ensureTierSMSLimits(d.tiers);
           localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
           renderUpgradeModalTiers(state.pricingTiers);
         }
