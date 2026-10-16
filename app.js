@@ -5756,10 +5756,29 @@ function loadSuperAdminShops() {
   if (!db || state.userRole !== "SuperAdmin") return;
 
   db.collection("shops").get().then(snapshot => {
-    state.registeredShops = [];
+    const rawShops = [];
     snapshot.forEach(doc => {
-      state.registeredShops.push({ id: doc.id, ...doc.data() });
+      rawShops.push({ id: doc.id, ...doc.data() });
     });
+
+    const dedupMap = new Map();
+    rawShops.forEach(s => {
+      const slugKey = String(s.slug || s.id || '').trim().toLowerCase();
+      if (!slugKey) return;
+      if (!dedupMap.has(slugKey)) {
+        dedupMap.set(slugKey, { ...s, allDocIds: [s.id] });
+      } else {
+        const existing = dedupMap.get(slugKey);
+        if (s.id && !existing.allDocIds.includes(s.id)) {
+          existing.allDocIds.push(s.id);
+        }
+        if (s.id === s.slug) {
+          dedupMap.set(slugKey, { ...s, allDocIds: existing.allDocIds });
+        }
+      }
+    });
+
+    state.registeredShops = Array.from(dedupMap.values());
     renderSuperAdminShopsTable();
   }).catch(err => {
     console.error("Error fetching shops for SuperAdmin:", err);
@@ -5881,6 +5900,7 @@ function renderSuperAdminShopsTable() {
                 data-slug="${encodeURIComponent(shopSlug)}" 
                 data-name="${encodeURIComponent(shopName)}" 
                 data-docid="${encodeURIComponent(docId)}" 
+                data-docids="${encodeURIComponent(JSON.stringify(shop.allDocIds || [docId]))}" 
                 onclick="handleDeleteShopClick(this)" 
                 style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
                 title="Permanently delete this tenant shop">🗑️ Delete</button>
@@ -5968,17 +5988,37 @@ function handleDeleteShopClick(btn) {
   const slug = decodeURIComponent(btn.getAttribute("data-slug") || "").trim();
   const name = decodeURIComponent(btn.getAttribute("data-name") || "").trim();
   const docId = decodeURIComponent(btn.getAttribute("data-docid") || "").trim();
+  let allDocIds = [];
+  try {
+    const rawAll = btn.getAttribute("data-docids");
+    if (rawAll) {
+      allDocIds = JSON.parse(decodeURIComponent(rawAll));
+    }
+  } catch (e) {
+    allDocIds = [];
+  }
 
   if (!slug || slug === "main-st-barbers" || docId === "main-st-barbers") {
     showToast("⚠️ The demo sandbox shop cannot be deleted.");
     return;
   }
 
-  pendingDeleteShop = { slug, name, docId };
+  pendingDeleteShop = { slug, name, docId, allDocIds };
 
   const modal = document.getElementById("delete-shop-modal");
   const nameEl = document.getElementById("delete-modal-shop-name");
   const slugEl = document.getElementById("delete-modal-shop-slug");
+  const badgeEl = document.getElementById("delete-modal-action-badge");
+  const titleEl = document.getElementById("delete-modal-title");
+  const confirmBtn = document.getElementById("delete-shop-confirm-submit-btn");
+
+  const isSuper = state.userRole === "SuperAdmin";
+  if (badgeEl) badgeEl.textContent = isSuper ? "SUPERADMIN ACTION" : "OWNER ACTION";
+  if (titleEl) titleEl.textContent = isSuper ? "Delete Tenant Shop" : "Delete Shop Location";
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "🗑️ Yes, Permanently Delete";
+  }
 
   if (nameEl) nameEl.textContent = name || slug;
   if (slugEl) slugEl.textContent = slug;
@@ -5991,19 +6031,33 @@ function closeDeleteShopModal() {
   pendingDeleteShop = null;
 }
 
-function confirmDeleteShopFromModal() {
+async function confirmDeleteShopFromModal() {
   if (!pendingDeleteShop) return;
-  const { slug, name, docId } = pendingDeleteShop;
-  closeDeleteShopModal();
-  executeDeleteShop(slug, name, docId);
+  const { slug, name, docId, allDocIds } = pendingDeleteShop;
+  const confirmBtn = document.getElementById("delete-shop-confirm-submit-btn");
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<span class="pulse-dot"></span> Deleting Shop...`;
+  }
+
+  try {
+    await executeDeleteShop(slug, name, docId, allDocIds);
+    closeDeleteShopModal();
+  } catch (e) {
+    console.error("Delete shop confirmation error:", e);
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "🗑️ Yes, Permanently Delete";
+    }
+  }
 }
 
 // SuperAdmin: Delete any tenant shop permanently
-function deleteTenantShop(shopSlug, shopName, shopDocId) {
-  executeDeleteShop(shopSlug, shopName, shopDocId);
+function deleteTenantShop(shopSlug, shopName, shopDocId, allDocIds) {
+  executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds);
 }
 
-function executeDeleteShop(shopSlug, shopName, shopDocId) {
+async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
   if (!shopSlug || shopSlug === "main-st-barbers") {
     showToast("⚠️ The demo sandbox shop cannot be deleted.");
     return;
@@ -6011,13 +6065,36 @@ function executeDeleteShop(shopSlug, shopName, shopDocId) {
 
   const cleanSlug = String(shopSlug).trim();
   const cleanDocId = String(shopDocId || shopSlug).trim();
+  const idsToPurge = new Set();
+  if (cleanDocId) idsToPurge.add(cleanDocId);
+  if (cleanSlug) idsToPurge.add(cleanSlug);
 
-  // 1. Remove from local state
+  if (Array.isArray(allDocIds)) {
+    allDocIds.forEach(id => {
+      const clean = String(id || '').trim();
+      if (clean && clean !== "main-st-barbers") idsToPurge.add(clean);
+    });
+  }
+
+  // 1. Immediate optimistic removal from all local states & UI
+  if (Array.isArray(state.ownerDirectoryShops)) {
+    state.ownerDirectoryShops = state.ownerDirectoryShops.filter(s => {
+      const sSlug = String(s.slug || s.id || '').trim();
+      const sId = String(s.id || '').trim();
+      return !idsToPurge.has(sSlug) && !idsToPurge.has(sId) && sSlug !== cleanSlug && sId !== cleanDocId;
+    });
+    renderOwnerShopsTable(state.ownerDirectoryShops);
+    const totalShopsEl = document.getElementById("owner-dir-total-shops");
+    const tabShopCount = document.getElementById("owner-dir-tab-shop-count");
+    if (totalShopsEl) totalShopsEl.textContent = state.ownerDirectoryShops.length;
+    if (tabShopCount) tabShopCount.textContent = state.ownerDirectoryShops.length;
+  }
+
   if (Array.isArray(state.registeredShops)) {
     state.registeredShops = state.registeredShops.filter(s => {
       const sSlug = String(s.slug || s.id || '').trim();
       const sId = String(s.id || '').trim();
-      return sSlug !== cleanSlug && sId !== cleanDocId && sSlug !== cleanDocId;
+      return !idsToPurge.has(sSlug) && !idsToPurge.has(sId) && sSlug !== cleanSlug && sId !== cleanDocId;
     });
     localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
   }
@@ -6026,52 +6103,91 @@ function executeDeleteShop(shopSlug, shopName, shopDocId) {
     state.myShops = state.myShops.filter(s => {
       const sSlug = String(s.slug || s.id || '').trim();
       const sId = String(s.id || '').trim();
-      return sSlug !== cleanSlug && sId !== cleanDocId && sSlug !== cleanDocId;
+      return !idsToPurge.has(sSlug) && !idsToPurge.has(sId) && sSlug !== cleanSlug && sId !== cleanDocId;
     });
     localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
   }
 
   // If deleted shop was active session, reset to main-st-barbers
-  if (state.config.slug === cleanSlug || state.config.slug === cleanDocId) {
+  if (idsToPurge.has(state.config.slug) || state.config.slug === cleanSlug || state.config.slug === cleanDocId) {
     state.config.slug = "main-st-barbers";
     state.config.shopName = "Main St Barbers";
     saveConfig();
   }
 
-  // Re-render SuperAdmin directory, navbar dropdown, and Owner Directory
   renderSuperAdminShopsTable();
   renderShopDropdown();
-  if (state.activeView === "owner-directory") {
-    loadOwnerDirectory();
-  }
 
   // 2. Delete from Google Cloud Firestore
   if (db) {
-    const deletePromises = [];
-    if (cleanDocId) {
-      deletePromises.push(db.collection("shops").doc(cleanDocId).delete().catch(console.warn));
-    }
-    if (cleanSlug && cleanSlug !== cleanDocId) {
-      deletePromises.push(db.collection("shops").doc(cleanSlug).delete().catch(console.warn));
-    }
+    try {
+      const isSuper = state.userRole === "SuperAdmin";
+      const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
 
-    Promise.all(deletePromises).then(() => {
-      // Record audit entry in pricing_audits
-      const auditEntry = {
-        id: "audit_" + Date.now(),
-        timestamp: Date.now(),
-        adminEmail: (state.user && state.user.email) ? state.user.email : "SuperAdmin",
-        changes: [`Deleted shop "${shopName || cleanSlug}" (slug: ${cleanSlug}, docId: ${cleanDocId})`]
-      };
-      db.collection("pricing_audits").add(auditEntry).catch(console.warn);
+      // Find any extra documents matching this slug owned by this user/account
+      if (cleanSlug) {
+        try {
+          const matchingSnap = await db.collection("shops").where("slug", "==", cleanSlug).get();
+          matchingSnap.forEach(doc => {
+            const data = doc.data() || {};
+            const docOwner = String(data.ownerEmail || '').trim().toLowerCase();
+            if (isSuper || docOwner === userEmailClean) {
+              idsToPurge.add(doc.id);
+            }
+          });
+        } catch (e) {
+          console.warn("Notice checking extra matching slug docs:", e);
+        }
+      }
+
+      // Purge each shop document and any associated staff_roles subcollections
+      const deleteTasks = [];
+      for (const targetId of idsToPurge) {
+        if (!targetId || targetId === "main-st-barbers") continue;
+
+        // Clean staff_roles subcollection
+        deleteTasks.push(
+          db.collection("shops").doc(targetId).collection("staff_roles").get().then(snap => {
+            if (snap.empty) return;
+            const batch = db.batch();
+            snap.forEach(doc => batch.delete(doc.ref));
+            return batch.commit().catch(e => console.warn("Staff roles batch delete note:", e));
+          }).catch(() => {})
+        );
+
+        // Delete the shop document directly (ensures errors are properly surfaced)
+        deleteTasks.push(
+          db.collection("shops").doc(targetId).delete()
+        );
+      }
+
+      await Promise.all(deleteTasks);
+
+      // Record audit entry in pricing_audits (non-blocking)
+      try {
+        const auditEntry = {
+          id: "audit_" + Date.now(),
+          timestamp: Date.now(),
+          adminEmail: (state.user && state.user.email) ? state.user.email : "ShopOwner",
+          changes: [`Deleted shop "${shopName || cleanSlug}" (purged IDs: ${Array.from(idsToPurge).join(", ")})`]
+        };
+        await db.collection("pricing_audits").add(auditEntry).catch(e => console.warn("Audit log notice:", e));
+      } catch (e) {
+        console.warn("Pricing audit write note:", e);
+      }
+
       showToast(`🗑️ Shop "${shopName || cleanSlug}" successfully deleted!`);
       if (state.activeView === "owner-directory") {
-        loadOwnerDirectory();
+        await loadOwnerDirectory();
       }
-    }).catch(err => {
-      console.error("Firestore delete tenant shop error:", err);
-      showToast(`⚠️ Error deleting shop from cloud: ${err.message}`);
-    });
+    } catch (err) {
+      console.error("Firestore delete shop error:", err);
+      showToast(`⚠️ Error deleting shop from cloud: ${err.message || 'Permission denied'}`);
+      if (state.activeView === "owner-directory") {
+        await loadOwnerDirectory();
+      }
+      throw err;
+    }
   } else {
     showToast(`🗑️ Shop "${shopName || cleanSlug}" removed locally.`);
   }
@@ -9084,6 +9200,26 @@ async function loadOwnerDirectory(forceRefresh = false) {
     }
   }
 
+  // Deduplicate entries by normalized slug to prevent duplicate rows from conflicting Firestore doc IDs
+  const dedupMap = new Map();
+  ownedShops.forEach(s => {
+    const slugKey = String(s.slug || s.id || '').trim().toLowerCase();
+    if (!slugKey) return;
+    if (!dedupMap.has(slugKey)) {
+      dedupMap.set(slugKey, { ...s, allDocIds: [s.id] });
+    } else {
+      const existing = dedupMap.get(slugKey);
+      if (s.id && !existing.allDocIds.includes(s.id)) {
+        existing.allDocIds.push(s.id);
+      }
+      // If current doc id matches the slug exactly, prefer it as canonical metadata
+      if (s.id === s.slug) {
+        dedupMap.set(slugKey, { ...s, allDocIds: existing.allDocIds });
+      }
+    }
+  });
+  ownedShops = Array.from(dedupMap.values());
+
   state.ownerDirectoryShops = ownedShops;
 
   if (totalShopsEl) totalShopsEl.textContent = ownedShops.length;
@@ -9196,6 +9332,7 @@ function renderOwnerShopsTable(shopsList) {
                 data-slug="${encodeURIComponent(shopSlug)}" 
                 data-name="${encodeURIComponent(shopName)}" 
                 data-docid="${encodeURIComponent(docId)}" 
+                data-docids="${encodeURIComponent(JSON.stringify(shop.allDocIds || [docId]))}" 
                 onclick="handleDeleteShopClick(this)" 
                 style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
                 title="Delete this shop">🗑️ Delete</button>

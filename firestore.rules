@@ -13,8 +13,16 @@ service cloud.firestore {
 
     function isShopOwner(shopData) {
       return isAuthenticated() && (
-        (shopData.ownerEmail != null && shopData.ownerEmail == request.auth.token.email) ||
-        (shopData.ownerUid != null && shopData.ownerUid == request.auth.uid)
+        (
+          'ownerEmail' in shopData && 
+          shopData.ownerEmail is string && 
+          request.auth.token.email is string && 
+          shopData.ownerEmail.lower() == request.auth.token.email.lower()
+        ) || (
+          'ownerUid' in shopData && 
+          shopData.ownerUid is string && 
+          shopData.ownerUid == request.auth.uid
+        )
       );
     }
 
@@ -137,7 +145,8 @@ service cloud.firestore {
 
     // 6. Pricing Audit Logs
     match /pricing_audits/{auditId} {
-      allow read, write: if isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isSuperAdmin();
     }
 
     // 7. Users & Stripe Checkout Subcollections
