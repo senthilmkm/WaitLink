@@ -325,22 +325,46 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
     }
 
-    // 1. Authenticate caller via Firebase ID Token
+    // 1. Authenticate caller via Firebase ID Token OR verified Staff Terminal Credentials
     const authHeader = req.headers.authorization || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, error: "Authentication required to dispatch SMS. Missing bearer token." });
+    let decodedToken = null;
+    let isStaffAuthenticated = false;
+
+    if (authHeader.startsWith("Bearer ")) {
+      const idToken = authHeader.split("Bearer ")[1].trim();
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (authErr) {
+        logger.warn("Twilio SMS bearer token error:", authErr.message);
+      }
     }
 
-    const idToken = authHeader.split("Bearer ")[1].trim();
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
-    } catch (authErr) {
-      logger.warn("Twilio SMS unauthorized token:", authErr.message);
-      return res.status(401).json({ success: false, error: "Unauthorized token: " + authErr.message });
+    const { to, body, from, accountSid, authToken, slug, staffUsername, staffPasscode } = req.body || {};
+    const cleanSlug = String(slug || "main-st-barbers").trim().toLowerCase();
+
+    // Check staff terminal credentials if no valid ID token
+    if (!decodedToken && staffUsername && staffPasscode && cleanSlug) {
+      try {
+        const staffSnap = await admin.firestore().collection("shops").doc(cleanSlug)
+          .collection("staff_roles")
+          .where("username", "==", String(staffUsername).trim().toLowerCase())
+          .limit(1)
+          .get();
+        if (!staffSnap.empty) {
+          const staffData = staffSnap.docs[0].data();
+          if (staffData.passcode === String(staffPasscode).trim()) {
+            isStaffAuthenticated = true;
+          }
+        }
+      } catch (staffErr) {
+        logger.warn("Staff credential check note:", staffErr.message);
+      }
     }
 
-    const { to, body, from, accountSid, authToken, slug } = req.body || {};
+    if (!decodedToken && !isStaffAuthenticated) {
+      return res.status(401).json({ success: false, error: "Authentication required to dispatch SMS. Please sign in as Owner or use active Front Desk Staff Station credentials." });
+    }
+
     if (!to || !body) {
       return res.status(400).json({ success: false, error: "Parameters 'to' and 'body' are required." });
     }
@@ -348,33 +372,36 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
     const targetTo = to.trim();
     const senderFrom = (from && typeof from === "string" && from.trim()) ? from.trim() : TWILIO_FROM_PHONE;
     const messageBody = body.trim();
-    const cleanSlug = String(slug || "main-st-barbers").trim().toLowerCase();
 
-    // 2. Verify Shop Ownership and Tier (if slug provided and not SuperAdmin)
-    const callerEmail = (decodedToken.email || "").toLowerCase();
-    const isSuper = callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com";
+    // 2. Verify Shop Ownership / Staff Authorization and Tier (if slug provided and not SuperAdmin)
+    const callerEmail = decodedToken ? (decodedToken.email || "").toLowerCase() : "";
+    const isSuper = decodedToken && (callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com");
 
     if (!isSuper) {
       const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
-      if (shopDoc.exists) {
-        const shopData = shopDoc.data() || {};
+      if (!shopDoc.exists) {
+        return res.status(404).json({ success: false, error: "Shop not found." });
+      }
+      const shopData = shopDoc.data() || {};
+
+      if (!isStaffAuthenticated) {
         const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
                         (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
 
         if (!isOwner) {
           return res.status(403).json({ success: false, error: "Forbidden: You are not authorized to send SMS for this shop." });
         }
+      }
 
-        const planPrice = shopData.planPrice !== undefined ? shopData.planPrice : 0;
-        const planTitle = String(shopData.planTitle || "").toLowerCase();
-        const isPaid = planPrice >= 15 || planTitle.includes("pro") || planTitle.includes("enterprise");
+      const planPrice = shopData.planPrice !== undefined ? shopData.planPrice : 0;
+      const planTitle = String(shopData.planTitle || "").toLowerCase();
+      const isPaid = planPrice >= 15 || planTitle.includes("pro") || planTitle.includes("enterprise");
 
-        if (!isPaid) {
-          return res.status(403).json({
-            success: false,
-            error: "Automated SMS alerts require an active Pro Business ($15/mo) or Enterprise plan. Upgrade to unlock automated SMS."
-          });
-        }
+      if (!isPaid) {
+        return res.status(403).json({
+          success: false,
+          error: "Automated SMS alerts require an active Pro Business ($15/mo) or Enterprise plan. Upgrade to unlock automated SMS."
+        });
       }
     }
 
@@ -412,6 +439,23 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       const data = await twilioRes.json();
       if (twilioRes.ok && data.sid) {
         logger.info(`Twilio SMS sent successfully to ${targetTo}! SID: ${data.sid}`);
+
+        // Record delivery record in /messages collection with Admin SDK
+        try {
+          await admin.firestore().collection("messages").add({
+            to: data.to || targetTo,
+            from: data.from || senderFrom,
+            body: messageBody,
+            shopSlug: cleanSlug,
+            sid: data.sid,
+            status: data.status || "delivered",
+            caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner"),
+            createdAt: Date.now()
+          });
+        } catch (dbErr) {
+          logger.warn("Message collection log note:", dbErr.message);
+        }
+
         return res.status(200).json({
           success: true,
           sid: data.sid,
@@ -893,6 +937,23 @@ exports.sendSupportReply = onRequest({ cors: true, maxInstances: 10 }, async (re
   return cors(req, res, async () => {
     if (req.method !== "POST") {
       return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+
+    const authHeader = req.headers.authorization || "";
+    if (authHeader.startsWith("Bearer ")) {
+      const idToken = authHeader.split("Bearer ")[1].trim();
+      try {
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        const caller = (decoded.email || "").toLowerCase();
+        const isSuper = caller === SENDER_EMAIL.toLowerCase() || caller === "senthil930@gmail.com";
+        if (!isSuper) {
+          logger.warn("Non-admin attempted support reply:", caller);
+          return res.status(403).json({ success: false, error: "Forbidden: SuperAdmin authentication required to dispatch support replies." });
+        }
+      } catch (authErr) {
+        logger.warn("Support reply token verification failed:", authErr.message);
+        return res.status(401).json({ success: false, error: "Unauthorized token: " + authErr.message });
+      }
     }
 
     const { email, replyText, inquiryId, shopName } = req.body || {};

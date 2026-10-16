@@ -251,6 +251,25 @@ let timerInterval = null;
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
+  // 1. Smart URL parameter routing logic parsed FIRST to guarantee shop isolation
+  const params = new URLSearchParams(window.location.search);
+  const rawShopParam = params.get("shop") || params.get("s");
+  const shopParam = rawShopParam ? (slugify(rawShopParam) || rawShopParam) : null;
+  const modeParam = params.get("mode") || params.get("view");
+  const staffParam = params.get("staff");
+  const keyParam = params.get("key") || params.get("passcode");
+
+  if (shopParam) {
+    state.config.slug = shopParam;
+    state.isDemoMode = !state.user && (shopParam === "main-st-barbers");
+    if (shopParam !== "main-st-barbers") {
+      state.config.shopName = formatSlugToTitle(shopParam);
+    }
+    // Clean queue & history so previous shop state never flashes or leaks
+    state.queue = [];
+    state.history = [];
+  }
+
   loadConfig();
   loadData();
   initFirestore();
@@ -270,27 +289,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (unsubscribeSnapshot) unsubscribeSnapshot();
   });
 
-  // Smart URL parameter routing logic
-  const params = new URLSearchParams(window.location.search);
-  const shopParam = params.get("shop") || params.get("s");
-  const modeParam = params.get("mode") || params.get("view");
-  const staffParam = params.get("staff");
-  const keyParam = params.get("key") || params.get("passcode");
-
   if (shopParam && staffParam && keyParam) {
     checkStaffAutoLogin(shopParam, staffParam, keyParam);
   } else if (restoreStaffSessionIfPresent()) {
     // Staff session restored from active tablet session storage
   } else if (shopParam) {
-    const cleanShopParam = slugify(shopParam);
-    state.config.slug = cleanShopParam || shopParam;
-    state.isDemoMode = !state.user && (state.config.slug === "main-st-barbers");
-    if (state.config.slug !== "main-st-barbers") {
-      state.config.shopName = formatSlugToTitle(state.config.slug);
-      state.config.address = "";
-      state.config.phone = "";
-    }
-    if (modeParam === "public") {
+    if (modeParam === "public" || modeParam === "customer") {
       const header = document.querySelector(".app-header");
       if (header) header.style.display = "none";
       switchView("public", true);
@@ -300,6 +304,11 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (modeParam === "desk") {
       state.pendingInitialView = "desk";
       switchView("desk", true);
+    } else if (modeParam === "poster") {
+      switchView("poster", true);
+    } else if (modeParam === "owner-directory") {
+      state.pendingInitialView = "owner-directory";
+      switchView("owner-directory", true);
     } else {
       // By default, custom shop URL visits are public customer check-in cards!
       // If the visiting user is already logged in as the registered owner, auth resolution will auto-promote to desk.
@@ -309,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
         switchView("public", true);
       }
     }
-  } else if (modeParam === "public") {
+  } else if (modeParam === "public" || modeParam === "customer") {
     const header = document.querySelector(".app-header");
     if (header) header.style.display = "none";
     switchView("public", true);
@@ -545,11 +554,15 @@ function subscribeFirestore(forceResubscribe = false) {
               updateConfigUI();
               renderAll();
 
-              // Auto-heal / alias: If authenticated as the owner, write the alias document so future direct lookups are instantaneous!
+              // Auto-heal / alias: If authenticated as the owner, cleanly migrate to canonical slug ID and purge legacy ID
               const currentEmail = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
               const ownerEmailClean = (data.ownerEmail || "").trim().toLowerCase();
               if (currentEmail && currentEmail === ownerEmailClean && docSnap.id !== state.config.slug) {
-                db.collection("shops").doc(state.config.slug).set(data, { merge: true }).catch(console.warn);
+                db.collection("shops").doc(state.config.slug).set(data, { merge: true })
+                  .then(() => {
+                    db.collection("shops").doc(docSnap.id).delete().catch(console.warn);
+                  })
+                  .catch(console.warn);
               }
             } else {
               // Non-existent shop: never overwrite or pollute cloud Firestore with demo data!
@@ -983,16 +996,26 @@ function saveData() {
   localStorage.setItem(historyKey, JSON.stringify(state.history));
 
   if (db && state.config.slug) {
-    const isOwner = state.user && state.config.ownerEmail && (state.user.email.toLowerCase() === state.config.ownerEmail.toLowerCase());
     const isSuper = isSuperAdmin();
+    const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+    const configOwnerEmail = (state.config && state.config.ownerEmail ? state.config.ownerEmail : "").trim().toLowerCase();
+    const isOwner = isSuper || (userEmailClean && (
+      (configOwnerEmail && userEmailClean === configOwnerEmail) ||
+      (Array.isArray(state.registeredShops) && state.registeredShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
+      (Array.isArray(state.ownerDirectoryShops) && state.ownerDirectoryShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
+      (Array.isArray(state.myShops) && state.myShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean))
+    ));
 
-    if (isOwner || isSuper) {
+    if (isOwner) {
+      if (!state.config.ownerEmail && userEmailClean) {
+        state.config.ownerEmail = userEmailClean;
+      }
       db.collection("shops").doc(state.config.slug).set({
         shopName: state.config.shopName,
         slug: state.config.slug,
         address: state.config.address || "",
         phone: state.config.phone || "",
-        ownerEmail: state.config.ownerEmail || (state.user ? state.user.email : ""),
+        ownerEmail: state.config.ownerEmail || userEmailClean,
         promoText: state.config.promoText || "",
         promoStart: state.config.promoStart || "",
         promoEnd: state.config.promoEnd || "",
@@ -1066,7 +1089,7 @@ function handleCheckIn(event) {
   const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
 
   const newItem = {
-    id: "q_" + Date.now(),
+    id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
     customerName: name,
     phone: phone || null,
     checkedInAt: Date.now(),
@@ -1222,7 +1245,7 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
   const e164From = formatPhoneE164(rawFrom) || DEFAULT_TWILIO_FROM;
 
   // 1. Write to Firestore 'messages' collection (Trigger for Firebase Twilio Extension / Cloud Function)
-  if (typeof db !== "undefined" && db) {
+  if (typeof db !== "undefined" && db && typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
     try {
       db.collection("messages").add({
         to: e164Phone,
@@ -1259,7 +1282,9 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
         to: e164Phone,
         from: e164From,
         body: messageBody,
-        slug: state.config.slug || "main-st-barbers"
+        slug: state.config.slug || "main-st-barbers",
+        staffUsername: (state.isStaffSession && state.staffUser) ? (state.staffUser.username || null) : null,
+        staffPasscode: (state.isStaffSession && state.staffUser) ? (state.staffUser.passcode || null) : null
       })
     });
 
@@ -3594,8 +3619,12 @@ function switchView(viewName, isSilent = false) {
       } catch (e) {}
     }
 
-    // Check direct config match OR check if registeredShops / myShops contains this active shop with matching owner
+    // Check direct config match OR check if registeredShops / ownerDirectoryShops / myShops contains this active shop with matching owner
     const isRegisteredOwner = isCachedOwner || (Array.isArray(state.registeredShops) && state.registeredShops.some(s => {
+      const matchSlug = s.slug === state.config.slug || s.id === state.config.slug;
+      const matchOwner = (s.ownerEmail || "").trim().toLowerCase() === userEmailClean || (s.ownerUid && s.ownerUid === state.user.uid);
+      return matchSlug && matchOwner;
+    })) || (Array.isArray(state.ownerDirectoryShops) && state.ownerDirectoryShops.some(s => {
       const matchSlug = s.slug === state.config.slug || s.id === state.config.slug;
       const matchOwner = (s.ownerEmail || "").trim().toLowerCase() === userEmailClean || (s.ownerUid && s.ownerUid === state.user.uid);
       return matchSlug && matchOwner;
@@ -6121,7 +6150,7 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
   // 2. Delete from Google Cloud Firestore
   if (db) {
     try {
-      const isSuper = state.userRole === "SuperAdmin";
+      const isSuper = isSuperAdmin();
       const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
 
       // Find any extra documents matching this slug owned by this user/account
@@ -6140,28 +6169,37 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
         }
       }
 
-      // Purge each shop document and any associated staff_roles subcollections
-      const deleteTasks = [];
+      // Purge each shop document and any associated subcollections in strict sequence
       for (const targetId of idsToPurge) {
         if (!targetId || targetId === "main-st-barbers") continue;
 
-        // Clean staff_roles subcollection
-        deleteTasks.push(
-          db.collection("shops").doc(targetId).collection("staff_roles").get().then(snap => {
-            if (snap.empty) return;
+        // Clean staff_roles subcollection first while parent document is intact
+        try {
+          const staffSnap = await db.collection("shops").doc(targetId).collection("staff_roles").get();
+          if (!staffSnap.empty) {
             const batch = db.batch();
-            snap.forEach(doc => batch.delete(doc.ref));
-            return batch.commit().catch(e => console.warn("Staff roles batch delete note:", e));
-          }).catch(() => {})
-        );
+            staffSnap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit().catch(e => console.warn("Staff roles batch delete note:", e));
+          }
+        } catch (e) {
+          console.warn("Staff roles read/delete note:", e);
+        }
 
-        // Delete the shop document directly (ensures errors are properly surfaced)
-        deleteTasks.push(
-          db.collection("shops").doc(targetId).delete()
-        );
+        // Clean history subcollection if present
+        try {
+          const histSnap = await db.collection("shops").doc(targetId).collection("history").get();
+          if (!histSnap.empty) {
+            const batch = db.batch();
+            histSnap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit().catch(e => console.warn("History subcollection batch delete note:", e));
+          }
+        } catch (e) {
+          console.warn("History subcollection read/delete note:", e);
+        }
+
+        // Delete the parent shop document directly
+        await db.collection("shops").doc(targetId).delete();
       }
-
-      await Promise.all(deleteTasks);
 
       // Record audit entry in pricing_audits (non-blocking)
       try {
@@ -7410,14 +7448,13 @@ function handlePublicSelfCheckIn(event) {
   if (!customerName) return;
 
   const newItem = {
-    id: "q_" + Date.now(),
+    id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
     customerName: customerName,
     phone: phone,
     checkedInAt: Date.now()
   };
 
-  state.queue.push(newItem);
-  saveData();
+  addQueueItemAtomic(newItem);
 
   closePublicCheckInModal();
   renderAll();
@@ -7584,7 +7621,7 @@ function closeSupportReplyModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function handleSendSupportReply(event) {
+async function handleSendSupportReply(event) {
   event.preventDefault();
   const msgId = document.getElementById("reply-msg-id").value;
   const email = document.getElementById("reply-recipient-email").value;
@@ -7620,10 +7657,19 @@ function handleSendSupportReply(event) {
   // 2. Secure Email Dispatch via Backend Cloud Function (No API keys exposed in browser!)
   const cloudFnUrl = "https://us-central1-waitlink-app-8821.cloudfunctions.net/sendSupportReply";
 
+  let authHeader = "";
+  if (typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
+    try {
+      const idToken = await firebase.auth().currentUser.getIdToken();
+      if (idToken) authHeader = "Bearer " + idToken;
+    } catch (e) {}
+  }
+
   fetch(cloudFnUrl, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(authHeader ? { "Authorization": authHeader } : {})
     },
     body: JSON.stringify({
       email: email,
@@ -8000,7 +8046,7 @@ function handlePublicInlineCheckIn(event) {
   }
 
   const newItem = {
-    id: "q_" + Date.now(),
+    id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
     customerName: customerName,
     phone: phone,
     tcpaConsent: !!(cleanPhoneDigits.length > 0 && tcpaCheck && tcpaCheck.checked),
@@ -8531,7 +8577,11 @@ function addQueueItemAtomic(newItem) {
   try {
     localStorage.setItem(`waitlink_ticket_${state.config.slug}`, JSON.stringify(newItem));
   } catch (e) {}
-  saveData();
+
+  const { queueKey } = getStorageKeys();
+  try {
+    localStorage.setItem(queueKey, JSON.stringify(state.queue));
+  } catch (e) {}
 
   if (db && state.config.slug) {
     const shopRef = db.collection("shops").doc(state.config.slug);
@@ -8547,8 +8597,11 @@ function addQueueItemAtomic(newItem) {
         }
       }
     }).catch(err => {
-      console.warn("Atomic transaction note:", err);
+      console.warn("Atomic transaction note, falling back to direct write:", err);
+      saveData();
     });
+  } else {
+    saveData();
   }
 }
 
