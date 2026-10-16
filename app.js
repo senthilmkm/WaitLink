@@ -1087,6 +1087,7 @@ function handleCheckIn(event) {
   const phone = phoneInput ? phoneInput.value.trim() : "";
 
   const isDeskCheckIn = (state.currentView === "desk");
+  const operatorLabel = isDeskCheckIn ? getCurrentOperatorLabel() : "Customer (Self Check-in via QR)";
   const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
 
   const newItem = {
@@ -1095,7 +1096,7 @@ function handleCheckIn(event) {
     phone: phone || null,
     checkedInAt: Date.now(),
     checkedInVia: isDeskCheckIn ? "Front Desk Terminal" : "Customer QR Code Live Card",
-    checkedInBy: operatorName,
+    checkedInBy: isDeskCheckIn ? operatorName : "Customer (Self-Service)",
     selectedServiceId: selectedServiceObj ? selectedServiceObj.id : null,
     selectedServiceName: selectedServiceObj ? selectedServiceObj.name : null,
     selectedServiceDurationMin: selectedServiceObj ? selectedServiceObj.estDurationMin : null,
@@ -1105,7 +1106,8 @@ function handleCheckIn(event) {
         title: "Customer Checked In",
         detail: isDeskCheckIn ? `Added manually by ${operatorName}${phone ? ' (Cell: ' + phone + ')' : ''}` : `Self check-in via QR Code Live Card${phone ? ' (Cell: ' + phone + ')' : ''}`,
         timestamp: Date.now(),
-        icon: "📝"
+        icon: "📝",
+        actor: operatorLabel
       }
     ]
   };
@@ -1116,7 +1118,8 @@ function handleCheckIn(event) {
       title: "Service Selected",
       detail: `${selectedServiceObj.icon || '✂️'} ${selectedServiceObj.name} (${selectedServiceObj.estDurationMin || 20}m)`,
       timestamp: Date.now(),
-      icon: "✂️"
+      icon: "✂️",
+      actor: operatorLabel
     });
   }
 
@@ -1402,7 +1405,8 @@ function callCustomer(id) {
     waitDurationMin: durationMin
   };
 
-  logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞");
+  const operatorLabel = getCurrentOperatorLabel();
+  logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞", operatorLabel);
 
   // Trigger Twilio SMS notification if customer provided cell phone number
   if (item.phone) {
@@ -1414,10 +1418,10 @@ function callCustomer(id) {
     sendTwilioSms(item.phone, smsMsg, { ticketId: item.id, triggerType: "CALLED_NOW", ticketUrl })
       .then(res => {
         if (res.success) {
-          logCustomerActivity(historyItem, "sms_sent", "SMS Notification Sent", `Delivered SMS text message with live ticket link to ${item.phone} via Twilio`, "📲");
+          logCustomerActivity(historyItem, "sms_sent", "SMS Notification Sent", `Delivered SMS text message with live ticket link to ${item.phone} via Twilio`, "📲", "WaitLink Twilio Bot (Automated)");
           showToast(`📱 SMS with ticket link sent to ${item.customerName} (${item.phone})`);
         } else {
-          logCustomerActivity(historyItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱");
+          logCustomerActivity(historyItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱", "WaitLink Twilio Bot (Automated)");
         }
       });
   }
@@ -1470,7 +1474,8 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
     };
 
     const byDesk = (cancelledBy === "desk");
-    logCustomerActivity(historyItem, "cancelled", "Cancelled Visit", byDesk ? "Cancelled / marked No-Show by Front Desk" : "Customer tapped Leave Line on phone", "✕");
+    const cancelActor = byDesk ? getCurrentOperatorLabel() : "Customer (Mobile Ticket)";
+    logCustomerActivity(historyItem, "cancelled", "Cancelled Visit", byDesk ? `Cancelled / marked No-Show by ${operatorName}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
 
     state.queue.splice(index, 1);
     state.history.unshift(historyItem);
@@ -1492,6 +1497,8 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
     item.cancelledBy = cancelledBy;
     item.completedAt = Date.now();
     item.waitDurationMin = 0;
+    const cancelActor = (cancelledBy === "desk") ? getCurrentOperatorLabel() : "Customer (Mobile Ticket)";
+    logCustomerActivity(item, "cancelled", "Cancelled Visit", (cancelledBy === "desk") ? `Marked No-Show / Cancelled by ${cancelActor}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
     saveData();
     renderAll();
     showToast(`Cancelled ${item.customerName}`);
@@ -3040,26 +3047,112 @@ async function markCalledAsNoShow(id) {
   }
 }
 
-function logCustomerActivity(item, action, title, detail, icon = "📌") {
+function getCurrentOperatorLabel() {
+  if (state.isStaffSession && state.staffUser) {
+    const name = state.staffUser.displayName || state.staffUser.username || "Staff";
+    const role = state.staffUser.roleTitle || "Front Desk Staff";
+    return `${name} (${role})`;
+  }
+  if (state.user) {
+    if (typeof isSuperAdmin === "function" && isSuperAdmin()) {
+      return `${state.user.displayName || state.user.email} (SuperAdmin)`;
+    }
+    const name = state.user.displayName || state.user.email || "Owner";
+    return `${name} (Shop Owner)`;
+  }
+  return "Front Desk Staff";
+}
+
+function resolveActivityActor(act, item) {
+  if (act && act.actor) return act.actor;
+
+  const action = (act && act.action) || "";
+  const detail = (act && act.detail) || "";
+
+  // 1. If detail mentions "by [Name]" (e.g. "Called to front desk for service by Sarah (Waited 1m)")
+  const byMatch = detail.match(/by\s+([A-Za-z0-9@._ -]+?)(?:\s*\(|\s*$)/i);
+  if (byMatch && byMatch[1]) {
+    const raw = byMatch[1].trim();
+    if (!raw.toLowerCase().includes("front desk") && !raw.toLowerCase().includes("customer") && !raw.toLowerCase().includes("desk")) {
+      return `${raw} (Front Desk Staff)`;
+    }
+  }
+
+  // 2. Action-specific heuristic matching
+  if (action === "check_in") {
+    if (detail.includes("Self check-in") || (item && item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr"))) {
+      return "Customer (Self Check-in via QR)";
+    }
+    if (item && item.checkedInBy) {
+      return `${item.checkedInBy} (Front Desk)`;
+    }
+    return "Customer (Self Check-in)";
+  }
+
+  if (action.startsWith("running_late")) {
+    return "Customer (Live QR Ticket)";
+  }
+
+  if (action.startsWith("sms")) {
+    return "WaitLink Twilio Bot (Automated)";
+  }
+
+  if (action === "called") {
+    if (item && (item.calledBy || item.completedBy)) {
+      return `${item.calledBy || item.completedBy} (Front Desk Staff)`;
+    }
+    return "Front Desk Staff";
+  }
+
+  if (action === "cancelled") {
+    if (detail.includes("Leave Line") || (item && item.cancelledBy === "customer")) {
+      return "Customer (Mobile Ticket)";
+    }
+    if (item && item.cancelledBy && item.cancelledBy !== "desk") {
+      return `${item.cancelledBy} (Front Desk)`;
+    }
+    return "Front Desk Staff";
+  }
+
+  if (action === "requeue" || action === "reinstate") {
+    if (item && (item.calledBy || item.completedBy)) {
+      return `${item.calledBy || item.completedBy} (Front Desk Staff)`;
+    }
+    return "Front Desk Staff";
+  }
+
+  return "Front Desk Staff";
+}
+
+function logCustomerActivity(item, action, title, detail, icon = "📌", actor = null) {
   if (!item) return;
+
+  const resolvedActor = actor || (action.startsWith("running_late") ? "Customer (Live QR Ticket)" : getCurrentOperatorLabel());
+
   if (!Array.isArray(item.activities)) {
     item.activities = [];
     if (item.checkedInAt) {
+      const checkInActor = item.checkedInBy 
+        ? item.checkedInBy 
+        : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : (item.checkedInVia ? `Customer (${item.checkedInVia})` : "Customer (Self Check-in)"));
       item.activities.push({
         action: "check_in",
         title: "Customer Checked In",
         detail: item.checkedInVia ? `Checked in via ${item.checkedInVia}` : "Customer initial check-in",
         timestamp: item.checkedInAt,
-        icon: "📝"
+        icon: "📝",
+        actor: checkInActor
       });
     }
   }
+
   item.activities.push({
     action,
     title,
     detail,
     timestamp: Date.now(),
-    icon
+    icon,
+    actor: resolvedActor
   });
 }
 
@@ -3071,12 +3164,16 @@ function getItemActivities(item) {
 
   const list = [];
   if (item.checkedInAt) {
+    const checkInActor = item.checkedInBy 
+      ? item.checkedInBy 
+      : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : "Customer (Self Check-in)");
     list.push({
       action: "check_in",
       title: "Customer Checked In",
-      detail: item.selectedServiceName ? `Selected ${item.selectedServiceName}` : (item.checkedInVia ? `Checked in via ${item.checkedInVia}` : "Customer initial check-in"),
+      detail: item.selectedServiceName ? `Selected Service: ${item.selectedServiceName}` : (item.checkedInVia ? `Checked in via ${item.checkedInVia}` : "Customer initial check-in"),
       timestamp: item.checkedInAt,
-      icon: "📝"
+      icon: "📝",
+      actor: checkInActor
     });
   }
 
@@ -3084,31 +3181,36 @@ function getItemActivities(item) {
     list.push({
       action: "running_late",
       title: `Running Late (+${item.delayedMinutes || 10}m)`,
-      detail: `Notified front desk of +${item.delayedMinutes || 10} minutes delay`,
+      detail: `Customer notified front desk of +${item.delayedMinutes || 10} minutes delay from mobile ticket`,
       timestamp: item.lateReportedAt,
-      icon: "🏃"
+      icon: "🏃",
+      actor: "Customer (Live QR Ticket)"
     });
   }
 
   if (item.calledAt && item.status === "called") {
+    const calledActor = item.calledBy || item.completedBy || "Front Desk Staff";
     list.push({
       action: "called",
       title: "Called Customer",
       detail: `Called to front desk for service (Waited ${item.waitDurationMin || 0}m)`,
       timestamp: item.calledAt,
-      icon: "📞"
+      icon: "📞",
+      actor: calledActor
     });
   }
 
   if (item.cancelledAt || item.status === "cancelled") {
     const ts = item.cancelledAt || item.calledAt || Date.now();
     const byDesk = item.cancelledBy === "desk";
+    const cancelActor = byDesk ? (item.calledBy || item.completedBy || "Front Desk Staff") : (item.cancelledBy || "Customer (Mobile Ticket)");
     list.push({
       action: "cancelled",
       title: "Cancelled Visit",
       detail: byDesk ? "Cancelled / marked No-Show by Front Desk" : "Customer tapped Leave Line on phone",
       timestamp: ts,
-      icon: "✕"
+      icon: "✕",
+      actor: cancelActor
     });
   }
 
@@ -8632,8 +8734,9 @@ function reportRunningLate(minutes) {
       historyItem,
       "running_late_called",
       `Running Late to Call (+${minutes}m)`,
-      `Customer notified front desk of ~${minutes} mins delay after being called to chair`,
-      "🏃"
+      `Customer notified front desk of ~${minutes} mins arrival delay from mobile QR ticket after being called`,
+      "🏃",
+      "Customer (Self-Service QR Ticket)"
     );
     playFrontDeskChime();
     showToast(`🕒 Front desk notified: You will arrive in ~${minutes} mins! Staff will hold your spot.`);
@@ -8642,8 +8745,9 @@ function reportRunningLate(minutes) {
       queueItem,
       "running_late",
       `Running Late (+${minutes} mins)`,
-      `Customer notified front desk of +${minutes} minutes delay`,
-      "🏃"
+      `Customer notified front desk of +${minutes} minutes arrival delay from mobile QR ticket`,
+      "🏃",
+      "Customer (Self-Service QR Ticket)"
     );
     showToast(`🕒 Notified venue: Running ~${minutes} mins late!`);
   }
@@ -8950,7 +9054,9 @@ async function requeueActiveCustomerToEnd(id) {
   if (confirmed) {
     item.checkedInAt = Date.now();
     item.requeued = true;
-    logCustomerActivity(item, "requeue", "Re-queued to End of Line", "Moved customer to end of active waiting line", "⬇️");
+    const operatorLabel = getCurrentOperatorLabel();
+    item.requeuedBy = operatorLabel;
+    logCustomerActivity(item, "requeue", "Re-queued to End of Line", `Moved customer to end of active waiting line by ${operatorLabel}`, "⬇️", operatorLabel);
 
     state.queue.sort((a, b) => (a.checkedInAt || 0) - (b.checkedInAt || 0));
 
@@ -8984,7 +9090,9 @@ function requeueCustomer(id, mode = "end") {
   delete item.cancelledBy;
   delete item.waitDurationMin;
   item.requeued = true;
-  logCustomerActivity(item, "reinstate", "Reinstated to Queue", `Restored customer back into active line (${mode === 'end' ? 'Moved to End' : 'Original Position'})`, "↩️");
+  const operatorLabel = getCurrentOperatorLabel();
+  item.reinstatedBy = operatorLabel;
+  logCustomerActivity(item, "reinstate", "Reinstated to Queue", `Restored customer back into active line (${mode === 'end' ? 'Moved to End' : 'Original Position'}) by ${operatorLabel}`, "↩️", operatorLabel);
 
   if (mode === "end") {
     item.checkedInAt = Date.now();
@@ -9059,16 +9167,43 @@ function openCustomerAuditModal(id) {
       if (isPiiMasked && item.phone) {
         detailText = detailText.replace(item.phone, modalPhone);
       }
+
+      const actorName = resolveActivityActor(act, item);
+      const isCustomerActor = actorName.toLowerCase().includes("customer");
+      const isBotActor = actorName.toLowerCase().includes("bot") || actorName.toLowerCase().includes("twilio");
+      const actorBadgeStyle = isCustomerActor 
+        ? "background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);" 
+        : (isBotActor 
+          ? "background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35);" 
+          : "background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);");
+      const actorIcon = isCustomerActor ? "📱" : (isBotActor ? "🤖" : "👤");
+
       html += `
-        <div style="position: relative; padding-left: 2.2rem; padding-bottom: ${isLast ? '0.5rem' : '1.35rem'}; border-left: ${isLast ? '2px solid transparent' : '2px solid rgba(6, 182, 212, 0.35)'};">
-          <div style="position: absolute; left: -12px; top: 0; background: #0f172a; border: 2px solid #06b6d4; color: #fff; border-radius: 50%; width: 22px; height: 22px; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);">
+        <div class="audit-timeline-node" style="position: relative; padding-left: 2.5rem; padding-bottom: ${isLast ? '0.2rem' : '1.15rem'}; border-left: ${isLast ? '2px solid transparent' : '2px solid rgba(6, 182, 212, 0.35)'};">
+          <div style="position: absolute; left: -14px; top: 4px; background: #0f172a; border: 2px solid #06b6d4; color: #fff; border-radius: 50%; width: 26px; height: 26px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(6, 182, 212, 0.45); z-index: 2;">
             ${act.icon || '📌'}
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-            <strong style="color: #fff; font-size: 0.92rem;">${escapeHtml(act.title)}</strong>
-            <span style="font-size: 0.75rem; color: #06b6d4; font-weight: 600; font-family: monospace; background: rgba(6, 182, 212, 0.1); padding: 0.15rem 0.45rem; border-radius: 4px;">🕒 ${formattedTime}</span>
+          
+          <div class="audit-event-card" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.9rem 1.15rem; transition: transform 0.15s ease, border-color 0.15s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <span style="color: #fff; font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em;">${escapeHtml(act.title)}</span>
+              <span style="font-size: 0.76rem; color: #38bdf8; font-weight: 600; font-family: monospace; background: rgba(56, 189, 248, 0.1); padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25);">🕒 ${formattedTime}</span>
+            </div>
+            
+            <div style="font-size: 0.86rem; color: #cbd5e1; margin-top: 0.45rem; line-height: 1.45;">
+              ${escapeHtml(detailText)}
+            </div>
+
+            <div style="margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px dashed rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.78rem;">
+              <div style="display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span style="color: var(--text-muted); font-size: 0.76rem;">Performed by:</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.65rem; border-radius: 9999px; font-weight: 600; font-size: 0.76rem; ${actorBadgeStyle}">
+                  <span>${actorIcon}</span> <span>${escapeHtml(actorName)}</span>
+                </span>
+              </div>
+              <span style="color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Action ID: ${escapeHtml(act.action || 'event')}</span>
+            </div>
           </div>
-          <div style="font-size: 0.83rem; color: var(--text-light); margin-top: 0.3rem; line-height: 1.4;">${escapeHtml(detailText)}</div>
         </div>
       `;
     });
