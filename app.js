@@ -49,9 +49,40 @@ const state = {
   historyPageSize: 20,
   deskViewMode: localStorage.getItem("waitlink_desk_view_mode") || "grid",
   stageFocusedIndex: 0,
-  revealedPhoneIds: new Set()
+  revealedPhoneIds: new Set(),
+  retentionConfig: {
+    starter_retention_days: 7,
+    pro_retention_days: 90,
+    enterprise_retention_days: 365,
+    pii_mask_after_days: 30,
+    auto_purge_expired: true,
+    preserve_first_name: true,
+    last_cleanup_timestamp: 0,
+    updatedAt: Date.now(),
+    updatedBy: "System Default"
+  }
 };
 window.state = state;
+
+// Cache pre-load for retention config
+const DEFAULT_RETENTION_CONFIG = {
+  starter_retention_days: 7,
+  pro_retention_days: 90,
+  enterprise_retention_days: 365,
+  pii_mask_after_days: 30,
+  auto_purge_expired: true,
+  preserve_first_name: true,
+  last_cleanup_timestamp: 0,
+  updatedAt: Date.now(),
+  updatedBy: "System Default"
+};
+
+try {
+  const cachedRet = localStorage.getItem("waitlink_retention_config");
+  if (cachedRet) {
+    state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...JSON.parse(cachedRet) };
+  }
+} catch (e) {}
 
 // Plan Tier Identification & Paywall Enforcement Helpers
 function getActivePlanInfo() {
@@ -72,6 +103,67 @@ function isPaidTier() {
 function isEnterpriseTier() {
   const { isEnterprise, isSuper } = getActivePlanInfo();
   return isEnterprise || isSuper;
+}
+
+// Step 3: Retention & Privacy Helpers
+function getRetentionWindowDays(planInfo = null) {
+  const info = planInfo || getActivePlanInfo();
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+  if (info.isEnterprise) {
+    return Number(cfg.enterprise_retention_days) || 365;
+  }
+  if (info.isPro) {
+    return Number(cfg.pro_retention_days) || 90;
+  }
+  return Number(cfg.starter_retention_days) || 7;
+}
+
+function isRecordSubjectToPiiMasking(timestamp) {
+  if (!timestamp) return false;
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+  const thresholdDays = Number(cfg.pii_mask_after_days) || 30;
+  const ageMs = Date.now() - timestamp;
+  return ageMs >= (thresholdDays * 24 * 60 * 60 * 1000);
+}
+
+function maskHistoricalPhone(phone) {
+  if (!phone) return "";
+  const cleaned = String(phone).trim();
+  if (!cleaned) return "";
+
+  const digits = cleaned.replace(/\D/g, "");
+  if (digits.length < 4) {
+    return "***-****";
+  }
+  const last4 = digits.slice(-4);
+  
+  if (cleaned.startsWith("+1") || (digits.length === 11 && digits.startsWith("1"))) {
+    return `+1 (***) ***-${last4}`;
+  } else if (digits.length === 10) {
+    return `(***) ***-${last4}`;
+  } else if (cleaned.startsWith("+")) {
+    const countryPrefix = cleaned.split(" ")[0] || "+*";
+    return `${countryPrefix} (***) ***-${last4}`;
+  }
+  return `(***) ***-${last4}`;
+}
+
+function maskHistoricalName(fullName, preserveFirstName = true) {
+  if (!fullName) return "Customer";
+  const str = String(fullName).trim();
+  if (!str) return "Customer";
+
+  if (!preserveFirstName) {
+    return "Customer";
+  }
+
+  const parts = str.split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  const firstName = parts[0];
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${firstName} ${lastInitial}.`;
 }
 
 function checkMonthlyCheckinLimit() {
@@ -236,6 +328,7 @@ function initFirestore() {
     if (statusLabel) statusLabel.textContent = `Connected to Cloud Firestore (${fbConfig.projectId})`;
     subscribeFirestore();
     initPricingConfigRealtimeSync();
+    initRetentionConfigRealtimeSync();
   } catch (e) {
     console.warn("Firestore initialization error:", e);
   }
@@ -885,7 +978,18 @@ function saveData() {
         queue: state.queue,
         history: state.history,
         updatedAt: Date.now()
-      }, { merge: true }).catch(err => {
+      }, { merge: true }).then(() => {
+        // Step 3 Two-Tier Storage: Persist latest history item to subcollection
+        if (Array.isArray(state.history) && state.history.length > 0) {
+          const latestItem = state.history[0];
+          if (latestItem && latestItem.id) {
+            db.collection("shops").doc(state.config.slug)
+              .collection("history").doc(String(latestItem.id))
+              .set(latestItem, { merge: true })
+              .catch(subErr => console.warn("Subcollection history write note:", subErr));
+          }
+        }
+      }).catch(err => {
         console.warn("Firestore save warning:", err);
         showToast("⚠️ Cloud Sync Warning: Saved locally. Sync pending.");
       });
@@ -1192,6 +1296,7 @@ function callCustomer(id) {
     ...item,
     status: "called",
     calledAt: now,
+    completedAt: now,
     waitDurationMin: durationMin
   };
 
@@ -1232,12 +1337,14 @@ function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
 
   if (index !== -1) {
     const item = state.queue[index];
+    const nowTs = Date.now();
     const historyItem = {
       ...item,
       status: "cancelled",
       cancelledBy: cancelledBy,
-      calledAt: Date.now(),
-      cancelledAt: Date.now(),
+      calledAt: nowTs,
+      completedAt: nowTs,
+      cancelledAt: nowTs,
       waitDurationMin: 0
     };
 
@@ -1262,6 +1369,7 @@ function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
     const item = state.history[hIndex];
     item.status = "cancelled";
     item.cancelledBy = cancelledBy;
+    item.completedAt = Date.now();
     item.waitDurationMin = 0;
     saveData();
     renderAll();
@@ -2674,13 +2782,29 @@ function getFilteredHistoryList(isOwner = false) {
   const yesterdayDate = new Date(todayDate);
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
 
-  return state.history.filter(item => {
-    // Search query filter
-    if (searchVal && !item.customerName.toLowerCase().includes(searchVal)) {
+  // Step 3: Tier-governed maximum retention cutoff
+  const retentionDays = getRetentionWindowDays();
+  const maxRetentionCutoff = Date.now() - (retentionDays * 24 * 60 * 60 * 1000);
+
+  return (state.history || []).filter(item => {
+    const targetTs = item.completedAt || item.calledAt || item.checkedInAt;
+
+    // Exclude items older than tier allowance
+    if (targetTs && targetTs < maxRetentionCutoff) {
       return false;
     }
 
-    const targetTs = item.calledAt || item.checkedInAt;
+    // Search query filter (matches raw name, masked name, ticket ID, or service)
+    if (searchVal) {
+      const rawName = (item.customerName || '').toLowerCase();
+      const ticketId = (item.id || '').toLowerCase();
+      const service = (item.selectedServiceName || '').toLowerCase();
+      const maskedName = maskHistoricalName(item.customerName).toLowerCase();
+      if (!rawName.includes(searchVal) && !ticketId.includes(searchVal) && !service.includes(searchVal) && !maskedName.includes(searchVal)) {
+        return false;
+      }
+    }
+
     if (!targetTs) return true;
 
     const itemDate = new Date(targetTs);
@@ -2693,6 +2817,15 @@ function getFilteredHistoryList(isOwner = false) {
     } else if (filterVal === "7days") {
       const sevenDaysAgo = todayDate.getTime() - 6 * 24 * 60 * 60 * 1000;
       return targetTs >= sevenDaysAgo;
+    } else if (filterVal === "30days") {
+      const thirtyDaysAgo = todayDate.getTime() - 29 * 24 * 60 * 60 * 1000;
+      return targetTs >= thirtyDaysAgo;
+    } else if (filterVal === "90days") {
+      const ninetyDaysAgo = todayDate.getTime() - 89 * 24 * 60 * 60 * 1000;
+      return targetTs >= ninetyDaysAgo;
+    } else if (filterVal === "365days") {
+      const oneYearAgo = todayDate.getTime() - 364 * 24 * 60 * 60 * 1000;
+      return targetTs >= oneYearAgo;
     } else if (filterVal === "custom" && customDateVal) {
       const [y, m, d] = customDateVal.split("-").map(Number);
       return itemDate.getFullYear() === y && (itemDate.getMonth() + 1) === m && itemDate.getDate() === d;
@@ -2734,6 +2867,7 @@ function markCalledAsNoShow(id) {
   if (confirm(`Mark "${item.customerName}" as No-Show / Cancelled?`)) {
     item.status = "cancelled";
     item.cancelledBy = "desk";
+    item.completedAt = Date.now();
     item.waitDurationMin = 0;
     saveData();
     renderAll();
@@ -2862,16 +2996,28 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     </div>
   `;
 
+  // Step 3: PII Auto-Masking Check
+  const targetTs = item.completedAt || item.calledAt || item.checkedInAt;
+  const isPiiMasked = isRecordSubjectToPiiMasking(targetTs);
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
   const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+
+  let rawName = item.customerName || "Customer";
+  if (isPiiMasked) {
+    rawName = maskHistoricalName(rawName, cfg.preserve_first_name !== false);
+  }
+
   const displayName = isOwnerView 
-    ? item.customerName 
-    : formatPatientDisplayName(item.customerName, isClinical);
+    ? rawName 
+    : formatPatientDisplayName(rawName, isClinical);
+
+  const maskedBadgeHtml = isPiiMasked ? ` <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3); vertical-align: middle;" title="Patron PII auto-masked in compliance with data privacy policy">🛡️ MASKED</span>` : '';
 
   const customerNameCell = isOwnerView ? `
-    <strong data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" style="cursor: pointer; color: #06b6d4; text-decoration: underline;" title="Click to view lifecycle audit log">
-      ${isClinical ? '🩺 ' : ''}${escapeHtml(item.customerName)}
+    <strong data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" style="cursor: pointer; color: #06b6d4; text-decoration: underline;" title="${isPiiMasked ? 'PII auto-masked (>30 days old). Click to view lifecycle audit log.' : 'Click to view lifecycle audit log.'}">
+      ${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}${maskedBadgeHtml}
     </strong>
-  ` : `<strong>${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}</strong>`;
+  ` : `<strong>${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}${isPiiMasked ? ' <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">🛡️</span>' : ''}</strong>`;
 
   return `
     <tr>
@@ -2928,8 +3074,86 @@ function updatePaginationUI(prefix, currentPage, maxPage, totalCount, startIndex
   }
 }
 
+// Step 3: Update Retention Policy Banners & CSV Badges
+function updateRetentionNotices() {
+  const planInfo = getActivePlanInfo();
+  const deskBanner = document.getElementById("desk-retention-banner");
+  const ownerBanner = document.getElementById("owner-retention-banner");
+  const deskCsvBadge = document.getElementById("desk-csv-pro-badge");
+  const ownerCsvBadge = document.getElementById("owner-csv-pro-badge");
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+
+  const starterDays = cfg.starter_retention_days || 7;
+  const proDays = cfg.pro_retention_days || 90;
+  const enterpriseDays = cfg.enterprise_retention_days || 365;
+  const piiDays = cfg.pii_mask_after_days || 30;
+
+  // 1. CSV Button Badges
+  if (planInfo.isStarter) {
+    if (deskCsvBadge) deskCsvBadge.classList.remove("hidden");
+    if (ownerCsvBadge) ownerCsvBadge.classList.remove("hidden");
+  } else {
+    if (deskCsvBadge) deskCsvBadge.classList.add("hidden");
+    if (ownerCsvBadge) ownerCsvBadge.classList.add("hidden");
+  }
+
+  // 2. Retention Banners
+  let bannerHtml = "";
+  let bannerClass = "retention-tier-banner";
+
+  if (planInfo.isEnterprise) {
+    bannerClass += " enterprise";
+    bannerHtml = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.1rem;">🏢</span>
+        <span><strong>Enterprise Tier</strong>: Full <strong>${enterpriseDays}-day annual</strong> customer visit history retention active across your location(s).</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 0.75rem; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700; border: 1px solid rgba(99, 102, 241, 0.4);">${enterpriseDays}d Retention</span>
+        <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✓ Multi-Shop CSV</span>
+      </div>
+    `;
+  } else if (planInfo.isPro) {
+    bannerClass += " pro";
+    bannerHtml = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.1rem;">ℹ️</span>
+        <span><strong>Pro Business Tier</strong>: Retaining <strong>${proDays} days</strong> of visit history. PII older than ${piiDays} days is auto-masked for privacy.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 0.75rem; background: rgba(6, 182, 212, 0.2); color: #22d3ee; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">${proDays}d Retention</span>
+        <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✓ Unlimited CSV</span>
+      </div>
+    `;
+  } else {
+    bannerClass += " starter";
+    bannerHtml = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.1rem;">🔒</span>
+        <span><strong>Starter Tier (Free)</strong> stores the past <strong>${starterDays} days</strong> of customer visit history. Need extended records & business CSV reports?</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()" style="padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 700;">
+        Upgrade to Pro ($15/mo)
+      </button>
+    `;
+  }
+
+  if (deskBanner) {
+    deskBanner.className = bannerClass;
+    deskBanner.innerHTML = bannerHtml;
+    deskBanner.style.display = "flex";
+  }
+  if (ownerBanner) {
+    ownerBanner.className = bannerClass;
+    ownerBanner.innerHTML = bannerHtml;
+    ownerBanner.style.display = "flex";
+  }
+}
+
 // Render History Table (Front Desk and Owner Views with 20-record pagination)
 function renderHistory() {
+  updateRetentionNotices();
+
   const tbody = document.getElementById("history-tbody");
   const ownerTbody = document.getElementById("owner-history-tbody");
   const emptyRow = '<tr class="empty-row"><td colspan="7">No customer visit logs found for selected filter.</td></tr>';
@@ -2976,76 +3200,121 @@ function renderHistory() {
   }
 }
 
-// Export History Log to CSV (Includes Full Lifecycle Audit Trail)
+// Export History Log to CSV (Step 3: Tier-Gated, PII-Masked, UTF-8 BOM RFC 4180 Format)
 function exportHistoryCSV() {
-  if (!isPaidTier()) {
+  const planInfo = getActivePlanInfo();
+  if (planInfo.isStarter) {
     showToast("🔒 Unlimited CSV History Export is a Pro Business feature ($15/mo). Upgrade to download your visit logs!");
     openUpgradeModal();
     return;
   }
 
-  if (!state.history || state.history.length === 0) {
-    showToast("No history records available to export.");
+  const retentionDays = getRetentionWindowDays(planInfo);
+  const cutoff = Date.now() - (retentionDays * 86400000);
+  const filteredHistory = (state.history || []).filter(item => {
+    const ts = item.completedAt || item.calledAt || item.checkedInAt;
+    return !ts || ts >= cutoff;
+  });
+
+  if (filteredHistory.length === 0) {
+    showToast("No history records available within your active retention window to export.");
     return;
   }
 
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+
+  // RFC 4180 standard headers according to Section 7.2 of spec
   const headers = [
+    "Ticket ID",
     "Customer Name",
     "Phone Number",
-    "Service Selected",
-    "Check-In Source",
+    "Service Name",
+    "Party Size",
+    "Check-In Time",
+    "Called Time",
+    "Completed Time",
+    "Wait Time (Minutes)",
+    "Service Duration (Min)",
     "Status",
-    "Cancelled By",
-    "Checked In Timestamp",
-    "Called Timestamp",
-    "Cancelled Timestamp",
-    "Wait Duration (Minutes)",
-    "Full Lifecycle Audit Trail Log"
+    "Audit Trail Log"
   ];
 
-  const rows = state.history.map(item => {
-    const checkInStr = item.checkedInAt ? new Date(item.checkedInAt).toLocaleString() : "";
-    const calledStr = item.calledAt ? new Date(item.calledAt).toLocaleString() : "";
-    const cancelledStr = item.cancelledAt 
-      ? new Date(item.cancelledAt).toLocaleString() 
-      : (item.status === 'cancelled' && item.calledAt ? new Date(item.calledAt).toLocaleString() : "");
-    const cancelledByStr = item.status === "cancelled" ? (item.cancelledBy === "customer" ? "Customer (Left Line)" : "Front Desk") : "--";
-    const duration = item.status === "called" ? (item.waitDurationMin || 0) : 0;
-    const phoneStr = item.phone || "Not Provided";
-    const serviceStr = item.selectedServiceName || "General Service";
-    const sourceStr = item.checkedInVia ? (item.checkedInVia === "QR Code" ? "Customer (QR Code)" : "Front Desk") : "Customer Mobile";
+  const rows = filteredHistory.map(item => {
+    const targetTs = item.completedAt || item.calledAt || item.checkedInAt;
+    const isPiiMasked = isRecordSubjectToPiiMasking(targetTs);
 
-    // Format full audit trail as pipe-separated entries
+    const ticketId = item.id || "--";
+    let name = item.customerName || "Customer";
+    if (isPiiMasked) {
+      name = maskHistoricalName(name, cfg.preserve_first_name !== false);
+    }
+    let phone = item.phone || "Not Provided";
+    if (isPiiMasked && item.phone) {
+      phone = maskHistoricalPhone(item.phone);
+    }
+
+    const service = item.selectedServiceName || "General Service";
+    const partySize = item.partySize || 1;
+    const checkInStr = item.checkedInAt ? new Date(item.checkedInAt).toLocaleString() : "--";
+    const calledStr = item.calledAt ? new Date(item.calledAt).toLocaleString() : "--";
+    const completedStr = item.completedAt 
+      ? new Date(item.completedAt).toLocaleString() 
+      : (item.calledAt ? new Date(item.calledAt).toLocaleString() : "--");
+
+    const waitMin = item.waitDurationMin !== undefined ? item.waitDurationMin : 0;
+    const servMin = item.serviceDurationMin !== undefined ? item.serviceDurationMin : (item.completedAt && item.calledAt ? Math.max(1, Math.round((item.completedAt - item.calledAt)/60000)) : 0);
+    
+    let statusStr = "Served";
+    if (item.status === "cancelled") {
+      statusStr = item.cancelledBy === "customer" ? "Left Line (Customer)" : "Desk Cancelled / No-Show";
+    } else if (item.status === "called") {
+      statusStr = "Served";
+    }
+
+    // Format audit trail activities (redact phone in activity if masked)
     const activities = getItemActivities(item);
     const auditTrailText = activities.map(act => {
       const timeStr = formatHistoryDateTime(act.timestamp);
-      return `[${timeStr}] ${act.title}: ${act.detail}`;
+      let detail = act.detail || "";
+      if (isPiiMasked && item.phone) {
+        detail = detail.replace(item.phone, phone);
+      }
+      return `[${timeStr}] ${act.title}: ${detail}`;
     }).join(" | ");
 
     return [
-      `"${(item.customerName || '').replace(/"/g, '""')}"`,
-      `"${phoneStr.replace(/"/g, '""')}"`,
-      `"${serviceStr.replace(/"/g, '""')}"`,
-      `"${sourceStr.replace(/"/g, '""')}"`,
-      `"${(item.status || '').replace(/"/g, '""')}"`,
-      `"${cancelledByStr.replace(/"/g, '""')}"`,
+      `"${String(ticketId).replace(/"/g, '""')}"`,
+      `"${name.replace(/"/g, '""')}"`,
+      `"${phone.replace(/"/g, '""')}"`,
+      `"${service.replace(/"/g, '""')}"`,
+      partySize,
       `"${checkInStr}"`,
       `"${calledStr}"`,
-      `"${cancelledStr}"`,
-      duration,
+      `"${completedStr}"`,
+      waitMin,
+      servMin,
+      `"${statusStr.replace(/"/g, '""')}"`,
       `"${auditTrailText.replace(/"/g, '""')}"`
     ];
   });
 
-  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
+  // UTF-8 BOM (\uFEFF) for Microsoft Excel compatibility (Section 7.3)
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `waitlink_visit_history_audit_${state.config.slug || 'export'}_${new Date().toISOString().slice(0,10)}.csv`);
+  const shopSlug = (state.config && state.config.slug) || "shop";
+  const nowStr = new Date().toISOString().slice(0, 10);
+  const earliestTs = filteredHistory[filteredHistory.length - 1].checkedInAt || cutoff;
+  const startStr = new Date(earliestTs).toISOString().slice(0, 10);
+  
+  link.href = url;
+  link.download = `WaitLink_${shopSlug}_History_${startStr}_to_${nowStr}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  showToast("📥 Exported Customer Visit & Audit History to CSV");
+  URL.revokeObjectURL(url);
+  showToast(`📥 Exported ${rows.length} visit records to CSV (${planInfo.isEnterprise ? 'Enterprise 365d' : 'Pro 90d'})`);
 }
 
 // Render Public View
@@ -3322,6 +3591,14 @@ function switchView(viewName, isSilent = false) {
   if (currentModeLabel) {
     if (viewName === "desk") currentModeLabel.innerHTML = "Front Desk ⇆";
     if (viewName === "owner") currentModeLabel.innerHTML = "Business Owner ⇆";
+  }
+
+  if (viewName === "desk" || viewName === "owner") {
+    performClientSideLazyCleanup();
+  }
+
+  if (viewName === "superadmin") {
+    loadRetentionConfigUI();
   }
 
   if (viewName === "poster") {
@@ -6879,7 +7156,7 @@ function handlePublicSelfCheckIn(event) {
 // ==========================================
 
 function switchSuperTab(tabName) {
-  const panels = ["shops", "pricing", "support"];
+  const panels = ["shops", "pricing", "support", "retention"];
   panels.forEach(p => {
     const panelEl = document.getElementById(`superpanel-${p}`);
     const tabEl = document.getElementById(`supertab-${p}`);
@@ -6894,6 +7171,10 @@ function switchSuperTab(tabName) {
 
   if (tabName === "support") {
     loadSupportInquiries();
+  } else if (tabName === "retention") {
+    loadRetentionConfigUI();
+  } else if (tabName === "pricing") {
+    loadPricingConfigUI();
   }
 }
 
@@ -7098,6 +7379,250 @@ function handleSendSupportReply(event) {
     closeSupportReplyModal();
     loadSupportInquiries();
   });
+}
+
+// ==========================================
+// STEP 3: DATA RETENTION & PRIVACY GOVERNANCE
+// ==========================================
+
+let retentionConfigUnsubscribe = null;
+function initRetentionConfigRealtimeSync() {
+  if (!db || retentionConfigUnsubscribe) return;
+  try {
+    retentionConfigUnsubscribe = db.collection("settings").doc("retention_config").onSnapshot(doc => {
+      if (doc.exists) {
+        state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...doc.data() };
+        localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+      } else {
+        state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG };
+      }
+
+      const panelRetention = document.getElementById("superpanel-retention");
+      if (panelRetention && !panelRetention.classList.contains("hidden")) {
+        const activeEl = document.activeElement;
+        const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+        if (!isTyping) {
+          loadRetentionConfigUI();
+        }
+      }
+
+      if (state.activeView === "desk" || state.activeView === "owner") {
+        renderHistory();
+      }
+    }, err => {
+      console.warn("Retention config realtime listener note:", err);
+    });
+  } catch (e) {
+    console.warn("Failed to init retention config realtime listener:", e);
+  }
+}
+
+function loadRetentionConfigUI() {
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+  const elStarter = document.getElementById("retention-starter-days");
+  const elPro = document.getElementById("retention-pro-days");
+  const elEnterprise = document.getElementById("retention-enterprise-days");
+  const elPii = document.getElementById("retention-pii-days");
+  const elAutoPurge = document.getElementById("retention-auto-purge");
+  const elPreserve = document.getElementById("retention-name-preserve");
+  const elFull = document.getElementById("retention-name-full");
+  const elLastUpdated = document.getElementById("retention-last-updated");
+  const elUpdatedBy = document.getElementById("retention-updated-by");
+  const elLastPurge = document.getElementById("retention-last-purge");
+
+  if (elStarter) elStarter.value = cfg.starter_retention_days || 7;
+  if (elPro) elPro.value = cfg.pro_retention_days || 90;
+  if (elEnterprise) elEnterprise.value = cfg.enterprise_retention_days || 365;
+  if (elPii) elPii.value = cfg.pii_mask_after_days || 30;
+  if (elAutoPurge) elAutoPurge.checked = (cfg.auto_purge_expired !== false);
+  if (elPreserve && elFull) {
+    if (cfg.preserve_first_name === false) {
+      elFull.checked = true;
+    } else {
+      elPreserve.checked = true;
+    }
+  }
+
+  if (elLastUpdated) {
+    elLastUpdated.textContent = cfg.updatedAt ? new Date(cfg.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : "Default Initial Policy";
+  }
+  if (elUpdatedBy) {
+    elUpdatedBy.textContent = cfg.updatedBy || SUPERADMIN_EMAIL;
+  }
+  if (elLastPurge) {
+    elLastPurge.textContent = cfg.last_cleanup_timestamp ? new Date(cfg.last_cleanup_timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : "Never (Pending Trigger)";
+  }
+}
+
+function saveRetentionConfig() {
+  if (!isSuperAdmin()) {
+    showToast("⚠️ SuperAdmin privileges required to save retention policy.");
+    return;
+  }
+  const starterDays = Math.max(1, parseInt(document.getElementById("retention-starter-days").value) || 7);
+  const proDays = Math.max(7, parseInt(document.getElementById("retention-pro-days").value) || 90);
+  const enterpriseDays = Math.max(30, parseInt(document.getElementById("retention-enterprise-days").value) || 365);
+  const piiDays = Math.max(1, parseInt(document.getElementById("retention-pii-days").value) || 30);
+  const autoPurge = document.getElementById("retention-auto-purge") ? document.getElementById("retention-auto-purge").checked : true;
+  const preserveName = document.getElementById("retention-name-preserve") ? document.getElementById("retention-name-preserve").checked : true;
+
+  const payload = {
+    starter_retention_days: starterDays,
+    pro_retention_days: proDays,
+    enterprise_retention_days: enterpriseDays,
+    pii_mask_after_days: piiDays,
+    auto_purge_expired: autoPurge,
+    preserve_first_name: preserveName,
+    last_cleanup_timestamp: state.retentionConfig.last_cleanup_timestamp || 0,
+    updatedAt: Date.now(),
+    updatedBy: state.user ? state.user.email : SUPERADMIN_EMAIL
+  };
+
+  if (db) {
+    db.collection("settings").doc("retention_config").set(payload, { merge: true })
+      .then(() => {
+        state.retentionConfig = { ...state.retentionConfig, ...payload };
+        localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+        loadRetentionConfigUI();
+        renderHistory();
+        showToast("✅ Retention & privacy policy saved and broadcasted to all shops!");
+      })
+      .catch(err => {
+        console.error("Error saving retention config:", err);
+        showToast("❌ Failed to save retention policy: " + err.message);
+      });
+  } else {
+    state.retentionConfig = { ...state.retentionConfig, ...payload };
+    localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+    loadRetentionConfigUI();
+    renderHistory();
+    showToast("Saved retention policy locally.");
+  }
+}
+
+async function triggerSuperAdminPurge() {
+  if (!isSuperAdmin()) {
+    showToast("⚠️ SuperAdmin privileges required.");
+    return;
+  }
+  if (!confirm("Execute cloud cleanup now across all shops?\n\nThis will permanently purge historical records older than each shop's active retention tier from Firestore.")) {
+    return;
+  }
+  showToast("⏳ Running cloud history cleanup across tenant shops...");
+
+  try {
+    const shopsSnap = await db.collection("shops").get();
+    let totalPurgedDocs = 0;
+    let totalShopsProcessed = 0;
+    const now = Date.now();
+    const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+
+    for (const shopDoc of shopsSnap.docs) {
+      const sData = shopDoc.data() || {};
+      const slug = shopDoc.id;
+      totalShopsProcessed++;
+
+      const planPrice = sData.planPrice !== undefined ? sData.planPrice : 0;
+      const planTitle = (sData.planTitle || "").toLowerCase();
+      let retentionDays = Number(cfg.starter_retention_days) || 7;
+      if (planPrice === 49 || planTitle.includes("enterprise")) {
+        retentionDays = Number(cfg.enterprise_retention_days) || 365;
+      } else if (planPrice === 15 || planTitle.includes("pro")) {
+        retentionDays = Number(cfg.pro_retention_days) || 90;
+      }
+
+      const cutoffTs = now - (retentionDays * 86400000);
+
+      // 1. Clean subcollection history
+      try {
+        const histCol = db.collection("shops").doc(slug).collection("history");
+        const expiredSnap = await histCol.where("calledAt", "<", cutoffTs).limit(100).get();
+        if (!expiredSnap.empty) {
+          const batch = db.batch();
+          expiredSnap.docs.forEach(d => {
+            batch.delete(d.ref);
+            totalPurgedDocs++;
+          });
+          await batch.commit();
+        }
+      } catch (subErr) {
+        console.warn(`Subcollection purge note for ${slug}:`, subErr);
+      }
+
+      // 2. Clean monolithic array if present on shop document
+      if (Array.isArray(sData.history) && sData.history.length > 0) {
+        const keptHistory = sData.history.filter(item => {
+          const ts = item.completedAt || item.calledAt || item.checkedInAt;
+          return !ts || ts >= cutoffTs;
+        });
+        if (keptHistory.length !== sData.history.length) {
+          totalPurgedDocs += (sData.history.length - keptHistory.length);
+          await db.collection("shops").doc(slug).update({
+            history: keptHistory,
+            updatedAt: Date.now()
+          });
+        }
+      }
+    }
+
+    // Update last_cleanup_timestamp
+    const cleanupTs = Date.now();
+    await db.collection("settings").doc("retention_config").set({
+      last_cleanup_timestamp: cleanupTs,
+      updatedAt: cleanupTs,
+      updatedBy: state.user ? state.user.email : SUPERADMIN_EMAIL
+    }, { merge: true });
+
+    state.retentionConfig.last_cleanup_timestamp = cleanupTs;
+    loadRetentionConfigUI();
+    showToast(`✅ Cloud Purge Complete: Processed ${totalShopsProcessed} shops, removed ${totalPurgedDocs} expired records.`);
+  } catch (err) {
+    console.error("Purge error:", err);
+    showToast("❌ Purge failed: " + err.message);
+  }
+}
+
+let lazyCleanupRanForCurrentSession = false;
+async function performClientSideLazyCleanup() {
+  if (lazyCleanupRanForCurrentSession) return;
+  if (!db || !state.config.slug) return;
+  const isOwner = state.user && state.config.ownerEmail && (state.user.email.toLowerCase() === state.config.ownerEmail.toLowerCase());
+  const isSuper = isSuperAdmin();
+  if (!isOwner && !isSuper) return;
+
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+  if (cfg.auto_purge_expired === false) return;
+
+  lazyCleanupRanForCurrentSession = true;
+  const retentionDays = getRetentionWindowDays();
+  const cutoff = Date.now() - (retentionDays * 86400000);
+
+  try {
+    // 1. Check state.history array
+    if (Array.isArray(state.history) && state.history.length > 0) {
+      const beforeCount = state.history.length;
+      state.history = state.history.filter(item => {
+        const ts = item.completedAt || item.calledAt || item.checkedInAt;
+        return !ts || ts >= cutoff;
+      });
+      if (state.history.length !== beforeCount) {
+        saveData();
+        renderHistory();
+      }
+    }
+
+    // 2. Query expired subcollection items (batched, max 50)
+    const histRef = db.collection("shops").doc(state.config.slug).collection("history");
+    const expiredSnap = await histRef.where("calledAt", "<", cutoff).limit(50).get();
+    if (!expiredSnap.empty) {
+      const batch = db.batch();
+      expiredSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      console.log(`🧹 Lazy cleanup pruned ${expiredSnap.docs.length} expired history items for ${state.config.slug}`);
+    }
+  } catch (e) {
+    console.warn("Client lazy cleanup note:", e);
+  }
 }
 
 // ==========================================
@@ -7888,7 +8413,15 @@ function openCustomerAuditModal(id) {
   }
 
   const activities = getItemActivities(item);
-  setElText("audit-modal-customer-name", item.customerName || "Customer");
+  
+  // Step 3: PII Auto-Masking in Audit Log
+  const targetTs = item.completedAt || item.calledAt || item.checkedInAt;
+  const isPiiMasked = isRecordSubjectToPiiMasking(targetTs);
+  const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
+  const modalName = isPiiMasked ? maskHistoricalName(item.customerName, cfg.preserve_first_name !== false) : (item.customerName || "Customer");
+  const modalPhone = isPiiMasked ? (item.phone ? maskHistoricalPhone(item.phone) : "Not Provided") : (item.phone || "Not Provided");
+
+  setElText("audit-modal-customer-name", modalName + (isPiiMasked ? " (🛡️ Masked)" : ""));
   setElText("audit-modal-subtitle", `Complete Lifecycle Activity Audit Log • ${state.config.shopName || 'Shop'}`);
   
   const statusTag = item.status === "called" ? "Called (Completed)" : (item.status === "cancelled" ? (item.cancelledBy === "desk" ? "Desk Cancelled" : "Left Line (Customer)") : "In Active Queue");
@@ -7901,7 +8434,7 @@ function openCustomerAuditModal(id) {
   }
 
   setElText("audit-modal-waited", item.waitDurationMin ? `${item.waitDurationMin} mins` : (item.checkedInAt ? `${Math.round((Date.now() - item.checkedInAt)/(1000*60))} mins so far` : "--"));
-  setElText("audit-modal-phone", item.phone || "Not Provided");
+  setElText("audit-modal-phone", modalPhone);
   setElText("audit-modal-count", `${activities.length} Recorded ${activities.length === 1 ? 'Event' : 'Events'}`);
 
   const container = document.getElementById("audit-modal-timeline-container");
@@ -7910,6 +8443,10 @@ function openCustomerAuditModal(id) {
     activities.forEach((act, index) => {
       const formattedTime = formatHistoryDateTime(act.timestamp);
       const isLast = (index === activities.length - 1);
+      let detailText = act.detail || "";
+      if (isPiiMasked && item.phone) {
+        detailText = detailText.replace(item.phone, modalPhone);
+      }
       html += `
         <div style="position: relative; padding-left: 2.2rem; padding-bottom: ${isLast ? '0.5rem' : '1.35rem'}; border-left: ${isLast ? '2px solid transparent' : '2px solid rgba(6, 182, 212, 0.35)'};">
           <div style="position: absolute; left: -12px; top: 0; background: #0f172a; border: 2px solid #06b6d4; color: #fff; border-radius: 50%; width: 22px; height: 22px; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);">
@@ -7919,7 +8456,7 @@ function openCustomerAuditModal(id) {
             <strong style="color: #fff; font-size: 0.92rem;">${escapeHtml(act.title)}</strong>
             <span style="font-size: 0.75rem; color: #06b6d4; font-weight: 600; font-family: monospace; background: rgba(6, 182, 212, 0.1); padding: 0.15rem 0.45rem; border-radius: 4px;">🕒 ${formattedTime}</span>
           </div>
-          <div style="font-size: 0.83rem; color: var(--text-light); margin-top: 0.3rem; line-height: 1.4;">${escapeHtml(act.detail)}</div>
+          <div style="font-size: 0.83rem; color: var(--text-light); margin-top: 0.3rem; line-height: 1.4;">${escapeHtml(detailText)}</div>
         </div>
       `;
     });

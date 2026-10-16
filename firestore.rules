@@ -87,6 +87,15 @@ service cloud.firestore {
 
       // Delete shop: SuperAdmin only
       allow delete: if isSuperAdmin();
+
+      // Step 3: Queue History Subcollection (Tier-retained visit records)
+      match /history/{ticketId} {
+        allow read, write: if isSuperAdmin() || (
+          isAuthenticated() && (
+            isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
+          )
+        );
+      }
     }
 
     // 2. Outbound SMS Messages (Twilio Extension Trigger Queue)

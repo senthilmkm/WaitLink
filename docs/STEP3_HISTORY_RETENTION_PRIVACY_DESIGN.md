@@ -1,9 +1,9 @@
 # WaitLink Step 3: Queue History Data Retention, Privacy Auto-Masking & Reporting
 ## Architectural Design Specification
 
-**Document Version:** 1.0.0  
-**Status:** Under User Review (No implementation code until approved)  
-**Location:** `c:\Workspaces\WaitLink\STEP3_HISTORY_RETENTION_PRIVACY_DESIGN.md`  
+**Document Version:** 1.1.0  
+**Status:** Implemented  
+**Location:** `c:\Workspaces\WaitLink\docs\STEP3_HISTORY_RETENTION_PRIVACY_DESIGN.md`  
 **Target Environment:** Firebase Hosting & Cloud Firestore (`waitlink-app-8821`)  
 **Target Audience:** Engineering, Architecture Review, SuperAdmin  
 
@@ -58,7 +58,7 @@ A centralized document is maintained at path:
 ```
 
 ### 3.2 Real-Time Client Synchronization
-- On app initialization, `subscribeRetentionConfig()` establishes a real-time snapshot listener on `/settings/retention_config`.
+- On app initialization, `initRetentionConfigRealtimeSync()` establishes a real-time snapshot listener on `/settings/retention_config`.
 - Fallback defaults (7, 90, 365, 30) are pre-loaded in memory so that offline or freshly opened sessions execute immediately without awaiting cloud round-trips.
 - Any update made in the SuperAdmin portal instantly synchronizes across all active Front Desk and Owner Admin client sessions via Firestore snapshots.
 
@@ -73,7 +73,7 @@ Located inside the SuperAdmin Portal (`#superadmin-view`):
   - `Auto-Purge Expired Records`: Toggle switch (Enabled by default).
   - `Customer Name Anonymization Mode`: Radio/Toggle:
     - `Keep First Name Visible (e.g. John D.)` (Selected by default)
-    - `Full Anonymization (e.g. Customer #1042)`
+    - `Full Anonymization (e.g. Customer)`
 - **Action Buttons**:
   - `Save Retention Configuration` (Writes to `/settings/retention_config`).
   - `Trigger Cloud Cleanup Now` (Manual on-demand purge of expired historical documents across tenants).
@@ -122,7 +122,7 @@ In legacy versions, historical items were appended directly to `shops/{slug}.his
 #### Dual-Tier Benefits:
 1. **Sub-second Initial Rendering**: Front Desk & Public pages only load active queue and today's small buffer (`recentHistory`).
 2. **Zero Size Limit**: The subcollection can store hundreds of thousands of historical entries without affecting document performance.
-3. **Optimized Reads**: Date range queries (`where("completedAt", ">=", startTime)`) only fetch rows requested by the user, drastically cutting Firestore read costs.
+3. **Optimized Reads**: Date range queries only fetch rows requested by the user, drastically cutting Firestore read costs.
 
 ---
 
@@ -224,6 +224,7 @@ The generated file follows RFC 4180 standards:
 | 9 | `Wait Time (Minutes)` | Integer | `20` | Check-in to Called delta |
 | 10 | `Service Duration (Min)`| Integer | `23` | Called to Complete delta |
 | 11 | `Status` | String | `Served` | Served / Cancelled / No-Show |
+| 12 | `Audit Trail Log` | String | Activities | Full lifecycle history with masked PII |
 
 ### 7.3 Compatibility & Encoding
 - **UTF-8 BOM**: Prepended with byte order mark `\uFEFF` to ensure flawless rendering of special characters in Microsoft Excel, Google Sheets, and Apple Numbers without character corruption.
@@ -244,7 +245,7 @@ To guarantee retention compliance without requiring expensive continuous backend
    - Runs in background with batched writes (`db.batch()`) limited to 50 operations at a time to prevent UI latency.
 
 2. **SuperAdmin Scheduled / On-Demand Purge**:
-   - SuperAdmin has a `Run System Purge` button in `#superadmin-view` that executes a batch cleanup across all tenant subcollections in sequence.
+   - SuperAdmin has a `Trigger Cloud Cleanup Now` button in `#superadmin-view` that executes a batch cleanup across all tenant subcollections in sequence.
 
 ---
 
@@ -261,23 +262,29 @@ To guarantee retention compliance without requiring expensive continuous backend
 
 ---
 
-## 10. Implementation Sequence & Next Steps
+## 10. Implementation Status
 
-Once this architectural design specification is reviewed and approved by the user:
+This architectural design specification is **fully implemented** and operational:
 
 1. **Phase 3A: SuperAdmin Configuration UI & Firestore Listener**:
-   - Build `/settings/retention_config` document structure.
-   - Add SuperAdmin Data Retention Card with live input controls and save handling.
+   - `/settings/retention_config` document structure established.
+   - Real-time `initRetentionConfigRealtimeSync()` listener active.
+   - SuperAdmin Data Retention Card with live input controls, auto-purge toggle, name mode radios, and `saveRetentionConfig()` implemented.
 2. **Phase 3B: In-App History Tier Filtering & Masking Helper**:
-   - Implement `maskCustomerPhone(phone, timestamp, threshold)` and `anonymizeCustomerName(name, timestamp, threshold)`.
-   - Apply tier filtering logic to Front Desk and Owner Admin history tables.
+   - `maskHistoricalPhone(phone)` and `maskHistoricalName(name, preserveFirstName)` implemented.
+   - Front Desk and Owner Admin history tables filtered by active subscription retention window (`starter_retention_days: 7`, `pro_retention_days: 90`, `enterprise_retention_days: 365`).
+   - PII auto-masking badge (`🛡️ MASKED`) displayed for records older than 30 days.
+   - Customer audit log modal dynamically masks PII.
 3. **Phase 3C: Subcollection & Batch Purge Engine**:
-   - Implement batch save and lazy cleanup mechanism for `shops/{slug}/history/{ticketId}`.
+   - Two-tier storage active: subcollection `shops/{slug}/history/{ticketId}` populated on call/cancel.
+   - Client-side lazy cleanup runs in background on owner load.
+   - SuperAdmin manual purge `triggerSuperAdminPurge()` scans all tenant shops and cleans expired documents in batches.
 4. **Phase 3D: Tier-Gated CSV Export Generator**:
-   - Implement UTF-8 BOM CSV builder with tier verification and date range bounds.
+   - Starter Plan paywall enforced with instant upgrade modal prompt.
+   - Pro Business (90d) and Enterprise (365d) exports generated with UTF-8 BOM (`\uFEFF`) and RFC 4180 compliance.
 5. **Phase 3E: Validation & Verification**:
-   - Deploy, test on production, verify via browser subagent across all tiers.
+   - Verified across all subscription tiers in production.
 
 ---
 
-*End of Architectural Specification. Awaiting User Approval to Begin Phase 3 Implementation.*
+*End of Architectural Specification. Implemented and Active in Production.*

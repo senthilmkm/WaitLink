@@ -514,6 +514,9 @@
         <button id="desk-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV <span id="desk-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
       </div>
 
+      <!-- Front Desk Retention & Privacy Notice Banner -->
+      <div id="desk-retention-banner" class="retention-tier-banner starter" style="display: none;"></div>
+
       <div class="history-toolbar">
         <div class="history-filter-group">
           <select id="history-date-filter" class="filter-select" onchange="onDeskFilterChange()">
@@ -521,10 +524,13 @@
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days (Pro+)</option>
+            <option value="90days">Last 90 Days (Pro+)</option>
+            <option value="365days">Full Year / 365 Days (Enterprise)</option>
             <option value="custom">Pick Specific Date...</option>
           </select>
           <input type="date" id="history-date-picker" class="filter-date-input hidden" onchange="onDeskFilterChange()">
-          <input type="text" id="history-search-input" class="filter-search-input" placeholder="🔍 Search customer..." oninput="onDeskFilterChange()">
+          <input type="text" id="history-search-input" class="filter-search-input" placeholder="🔍 Search customer or ticket..." oninput="onDeskFilterChange()">
         </div>
       </div>
 
@@ -994,6 +1000,9 @@
         <button id="owner-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">📥 Export CSV <span id="owner-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
       </div>
 
+      <!-- Business Owner Retention & Privacy Notice Banner -->
+      <div id="owner-retention-banner" class="retention-tier-banner starter" style="display: none;"></div>
+
       <div class="history-toolbar">
         <div class="history-filter-group">
           <select id="owner-history-date-filter" class="filter-select" onchange="onOwnerFilterChange()">
@@ -1001,10 +1010,13 @@
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days (Pro+)</option>
+            <option value="90days">Last 90 Days (Pro+)</option>
+            <option value="365days">Full Year / 365 Days (Enterprise)</option>
             <option value="custom">Pick Specific Date...</option>
           </select>
           <input type="date" id="owner-history-date-picker" class="filter-date-input hidden" onchange="onOwnerFilterChange()">
-          <input type="text" id="owner-history-search-input" class="filter-search-input" placeholder="🔍 Search customer..." oninput="onOwnerFilterChange()">
+          <input type="text" id="owner-history-search-input" class="filter-search-input" placeholder="🔍 Search customer or ticket..." oninput="onOwnerFilterChange()">
         </div>
         <button class="btn-text" onclick="clearDailyHistory()">Reset Today's Analytics</button>
       </div>
@@ -1327,6 +1339,9 @@
         <button class="tab-btn" id="supertab-support" onclick="switchSuperTab('support')">
           📩 Support Inquiries Inbox
         </button>
+        <button class="tab-btn" id="supertab-retention" onclick="switchSuperTab('retention')">
+          🛡️ Data Retention & Privacy
+        </button>
       </div>
 
       <!-- SuperPanel 1: Master Tenant Shop Directory -->
@@ -1522,6 +1537,161 @@ Dedicated Support Manager
         </div>
         <div id="support-inquiries-list" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
           <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading support inquiries...</div>
+        </div>
+      </div>
+
+      <!-- SuperPanel 4: History Retention & Privacy Governance (Step 3) -->
+      <div id="superpanel-retention" class="hidden">
+        <div class="section-header">
+          <div>
+            <h2>🛡️ History Retention & Privacy Governance</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+              Configure automated data lifecycle limits, PII anonymization thresholds, and manual purge controls across all tenant shops.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="triggerSuperAdminPurge()" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.08);" title="Execute manual on-demand cleanup across all tenant subcollections">
+              🧹 Trigger Cloud Cleanup Now
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveRetentionConfig()">
+              💾 Save Retention Policy
+            </button>
+          </div>
+        </div>
+
+        <!-- Retention Settings Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+          
+          <!-- Card 1: Tier Retention Windows -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+              <span style="font-size: 1.4rem;">⏳</span>
+              <div>
+                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Tier Data Retention Windows</h3>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Max history duration accessible per plan tier</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label for="retention-starter-days" style="display: flex; justify-content: space-between;">
+                <span>Starter (Free Forever) Tier</span>
+                <span style="color: var(--text-muted); font-size: 0.75rem;">Default: 7 Days</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="number" id="retention-starter-days" min="1" max="30" value="7" style="flex: 1;">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Days</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label for="retention-pro-days" style="display: flex; justify-content: space-between;">
+                <span>Pro Business Tier ($15/mo)</span>
+                <span style="color: var(--text-muted); font-size: 0.75rem;">Default: 90 Days</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="number" id="retention-pro-days" min="7" max="180" value="90" style="flex: 1;">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Days</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="retention-enterprise-days" style="display: flex; justify-content: space-between;">
+                <span>Enterprise Tier ($49/mo)</span>
+                <span style="color: var(--text-muted); font-size: 0.75rem;">Default: 365 Days</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="number" id="retention-enterprise-days" min="30" max="730" value="365" style="flex: 1;">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Days</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Privacy & PII Auto-Masking -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+              <span style="font-size: 1.4rem;">🔐</span>
+              <div>
+                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Privacy & PII Auto-Masking</h3>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Redact patron phone numbers & last names</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label for="retention-pii-days" style="display: flex; justify-content: space-between;">
+                <span>Auto-Mask PII After Record Age</span>
+                <span style="color: var(--text-muted); font-size: 0.75rem;">Default: 30 Days</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="number" id="retention-pii-days" min="1" max="90" value="30" style="flex: 1;">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Days</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label style="display: block; margin-bottom: 0.4rem;">Customer Name Anonymization Mode</label>
+              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
+                  <input type="radio" name="retention-name-mode" id="retention-name-preserve" value="preserve" checked>
+                  <span>Keep First Name Visible (e.g., <strong>John D.</strong>)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
+                  <input type="radio" name="retention-name-mode" id="retention-name-full" value="full">
+                  <span>Full Anonymization (e.g., <strong>Customer</strong>)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color);">
+              <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <div>
+                  <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Auto-Purge Expired Records</span>
+                  <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.15rem 0 0 0;">Automatically prune historical records exceeding active tier window</p>
+                </div>
+                <input type="checkbox" id="retention-auto-purge" checked style="width: 1.2rem; height: 1.2rem; accent-color: var(--primary);">
+              </label>
+            </div>
+          </div>
+
+          <!-- Card 3: Cloud Compliance Status & Operational Summary -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+              <span style="font-size: 1.4rem;">📋</span>
+              <div>
+                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Policy Sync & Governance Status</h3>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Real-time snapshot synchronization</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.82rem; color: var(--text-light);">
+              <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
+                <span style="color: var(--text-muted);">Firestore Path:</span>
+                <code style="color: #06b6d4;">/settings/retention_config</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
+                <span style="color: var(--text-muted);">Last Policy Update:</span>
+                <span id="retention-last-updated" style="font-weight: 600; color: #fff;">--</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
+                <span style="color: var(--text-muted);">Updated By:</span>
+                <span id="retention-updated-by" style="font-weight: 600; color: #a5b4fc;">--</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
+                <span style="color: var(--text-muted);">Last Manual Cloud Purge:</span>
+                <span id="retention-last-purge" style="font-weight: 600; color: #10b981;">Never</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Storage Layer:</span>
+                <span style="font-weight: 600; color: #10b981;">✓ Two-Tier Subcollection Active</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 1.25rem;">
+              <button class="btn btn-primary" style="width: 100%; font-weight: 700;" onclick="saveRetentionConfig()">
+                💾 Save & Broadcast Retention Policy
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
