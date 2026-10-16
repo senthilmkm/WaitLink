@@ -43,10 +43,6 @@
           <div id="shop-dropdown" class="dropdown-menu hidden">
             <div class="dropdown-header-title">MY SHOPS</div>
             <div style="padding: 10px 14px; font-size: 13px; color: var(--text-muted); font-style: italic;">Loading your shops...</div>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item" onclick="openCreateShopModal(); closeAllDropdowns();">
-              <span>⚡ + Create New Shop Waitlist</span>
-            </button>
           </div>
         </div>
       </div>
@@ -443,9 +439,14 @@
           <h1 class="shop-title" id="desk-shop-name">Main St Barbers</h1>
           <p class="shop-subtitle" id="desk-shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
         </div>
-        <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
-          <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
-          <span id="desk-operator-role-pill" class="hidden" style="margin-left: 6px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);"></span>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
+            <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
+            <span id="desk-operator-role-pill" class="hidden" style="margin-left: 6px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);"></span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="desk-staff-logout-btn" onclick="staffSignOut()" title="Log out from Front Desk" style="display: none; gap: 0.35rem; border-color: rgba(244, 63, 94, 0.4); color: #f43f5e; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm);">
+            🚪 Log Out
+          </button>
         </div>
       </div>
 
