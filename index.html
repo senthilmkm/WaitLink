@@ -2742,6 +2742,49 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- Universal Modern Cosmetic Dialog Modal (Industry-Standard Confirm/Alert/Prompt) -->
+  <div id="waitlink-dialog-backdrop" class="modal-backdrop hidden" onclick="if(event.target === this) waitlinkDialogDismiss()">
+    <div class="waitlink-dialog-card dialog-theme-primary" id="waitlink-dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      
+      <!-- Top Glow Accent Line -->
+      <div class="dialog-glow-bar" id="dialog-glow-bar"></div>
+
+      <div class="dialog-header">
+        <div class="dialog-icon-badge" id="dialog-icon-badge">
+          <span id="dialog-icon">⚠️</span>
+        </div>
+        <div class="dialog-header-text">
+          <span class="dialog-category-tag" id="dialog-category-tag">Confirmation</span>
+          <h3 class="dialog-title" id="dialog-title">Confirm Action</h3>
+        </div>
+        <button type="button" class="dialog-close-btn" onclick="waitlinkDialogDismiss()" title="Close dialog (Esc)" aria-label="Close dialog">✕</button>
+      </div>
+
+      <div class="dialog-body">
+        <p class="dialog-message" id="dialog-message">Are you sure you want to proceed?</p>
+        
+        <!-- Optional Prompt Input Container -->
+        <div id="dialog-input-container" class="hidden" style="margin-top: 1rem;">
+          <label id="dialog-input-label" for="dialog-input" class="dialog-input-label">Enter details:</label>
+          <div class="dialog-input-wrapper">
+            <input type="text" id="dialog-input" class="dialog-input" autocomplete="off" spellcheck="false">
+          </div>
+          <div id="dialog-input-hint" class="dialog-input-hint hidden" style="font-size: 0.75rem; color: var(--text-subtle); margin-top: 0.35rem;"></div>
+        </div>
+      </div>
+
+      <div class="dialog-footer" id="dialog-footer">
+        <button type="button" class="btn btn-secondary" id="dialog-btn-cancel" onclick="waitlinkDialogCancel()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="dialog-btn-confirm" onclick="waitlinkDialogConfirm()">
+          Confirm
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
@@ -2754,6 +2797,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=4.3"></script>
+  <script src="app.js?v=4.4"></script>
 </body>
 </html>

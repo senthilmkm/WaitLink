@@ -1314,7 +1314,14 @@ async function sendTestSmsUI() {
   const targetPhone = (ownerPhoneInput && ownerPhoneInput.value.trim()) || state.config.phone || "9802531359";
   
   if (!targetPhone || targetPhone.length < 7) {
-    alert("⚠️ Please enter your Business Phone Number under Shop Settings above before sending a test SMS.");
+    await showAlertDialog({
+      title: "Business Phone Required",
+      message: "Please enter your Business Phone Number under Shop Settings above before sending a test SMS.",
+      buttonText: "Open Settings",
+      type: "warning",
+      icon: "📱",
+      category: "Twilio Configuration"
+    });
     if (ownerPhoneInput) ownerPhoneInput.focus();
     return;
   }
@@ -1328,17 +1335,45 @@ async function sendTestSmsUI() {
   const result = await sendTwilioSms(targetPhone, testMsg, { isTest: true });
   if (result.success) {
     showToast(`✅ Test SMS sent successfully to ${targetPhone}! SID: ${result.sid}`);
-    alert(`🎉 Success!\n\nTest SMS dispatched via Twilio to your Business Phone (${targetPhone}).\nTwilio Message SID: ${result.sid}`);
+    await showAlertDialog({
+      title: "Test SMS Dispatched!",
+      message: `Test SMS dispatched successfully via Twilio to your Business Phone (${targetPhone}).\n\nTwilio Message SID: ${result.sid}`,
+      buttonText: "Great, Got It!",
+      type: "success",
+      icon: "🎉",
+      category: "Twilio Verified"
+    });
   } else {
     const errMsg = result.error || "Unknown error";
     showToast(`⚠️ Twilio Notice: ${errMsg}`);
     
     if (result.code === 20003 || errMsg.includes("Primary compliance profile") || errMsg.includes("KYC")) {
-      alert(`⚠️ Twilio Compliance Action Required:\n\nTwilio Error Notice: "${errMsg}"\n\nHow to complete (2 Minutes):\n1. Log into https://console.twilio.com\n2. Click "Trust Hub" (or "Regulatory Compliance -> Trust Hub" in the left sidebar menu).\n3. Click "Customer Profiles" -> Fill in your name/business name & address -> Submit.\n\nOnce approved by Twilio, your number +1 (803) 902-7464 will start delivering live SMS text messages to all your customers!`);
+      await showAlertDialog({
+        title: "Twilio Compliance Required",
+        message: `Twilio Notice: "${errMsg}"\n\nHow to complete (2 Minutes):\n1. Log into console.twilio.com\n2. Click "Trust Hub" -> "Customer Profiles"\n3. Submit your business profile details.\n\nOnce approved by Twilio, your registered number will start delivering live SMS text messages to all your customers!`,
+        buttonText: "Understood",
+        type: "warning",
+        icon: "🛡️",
+        category: "Twilio Compliance"
+      });
     } else if (result.code === 572006 || errMsg.includes("predefined SMS templates") || errMsg.includes("Trial accounts")) {
-      alert(`⚠️ Twilio Trial Account Restriction Notice:\n\nTwilio Error 572006: "${errMsg}"\n\nWhy this happens:\nUn-upgraded Twilio Trial accounts restrict API-driven custom text bodies.\n\nHow to solve:\nLog into https://console.twilio.com and click "Upgrade" (add a balance deposit). Once upgraded, Twilio instantly unlocks custom SMS text delivery from +1 (803) 902-7464 to all your walk-in customers!`);
+      await showAlertDialog({
+        title: "Twilio Trial Restriction",
+        message: `Twilio Error 572006: "${errMsg}"\n\nWhy this happens:\nUn-upgraded Twilio Trial accounts restrict API-driven custom text bodies.\n\nHow to solve:\nLog into console.twilio.com and click "Upgrade" (add a small balance deposit). Twilio will instantly unlock custom SMS delivery to all your walk-in customers!`,
+        buttonText: "Understood",
+        type: "warning",
+        icon: "⚡",
+        category: "Twilio Trial Mode"
+      });
     } else {
-      alert(`⚠️ Twilio Integration Status:\n\nMessage dispatch result: "${errMsg}"\n\nPlease ensure your Twilio From Phone Number is configured.`);
+      await showAlertDialog({
+        title: "Twilio Integration Notice",
+        message: `Message dispatch result: "${errMsg}"\n\nPlease ensure your Twilio phone number and credentials are properly configured.`,
+        buttonText: "Close",
+        type: "warning",
+        icon: "⚠️",
+        category: "SMS Status"
+      });
     }
   }
 }
@@ -1451,9 +1486,19 @@ function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
 }
 
 // Reset Daily History Log for Current Shop
-function clearDailyHistory() {
+async function clearDailyHistory() {
   const shopName = state.config.shopName || "this shop";
-  if (confirm(`Clear all visitor history log records for "${shopName}"?`)) {
+  const confirmed = await showConfirmDialog({
+    title: "Clear Daily History Log?",
+    message: `Clear all visitor history log records for "${shopName}"?\n\nThis will reset today's completed calls from the local session view. Historical cloud analytics remain securely preserved.`,
+    confirmText: "Clear History Log",
+    cancelText: "Keep Records",
+    type: "danger",
+    icon: "🧹",
+    category: "History Log Reset"
+  });
+
+  if (confirmed) {
     state.history = [];
     saveData();
     renderAll();
@@ -2581,14 +2626,21 @@ function removeShopLogo() {
 }
 
 
-function saveOwnerFirestoreConfig() {
+async function saveOwnerFirestoreConfig() {
   const rawConfig = document.getElementById("owner-firestore-json").value.trim();
   let firebaseConfig = null;
   if (rawConfig) {
     try {
       firebaseConfig = JSON.parse(rawConfig);
     } catch (e) {
-      alert("Invalid JSON format in Firestore config box.");
+      await showAlertDialog({
+        title: "Invalid JSON Format",
+        message: "The text entered in the Firestore configuration box is not valid JSON. Please verify quotes, braces, and commas.",
+        buttonText: "Review JSON",
+        type: "danger",
+        icon: "⚠️",
+        category: "Syntax Error"
+      });
       return;
     }
   }
@@ -2949,11 +3001,21 @@ function findCustomerRecord(idRaw) {
 }
 
 // Mark a Called Customer as No-Show / Cancelled
-function markCalledAsNoShow(id) {
+async function markCalledAsNoShow(id) {
   const item = findCustomerRecord(id);
   if (!item) return;
 
-  if (confirm(`Mark "${item.customerName}" as No-Show / Cancelled?`)) {
+  const confirmed = await showConfirmDialog({
+    title: "Mark as No-Show / Cancel?",
+    message: `Mark "${item.customerName}" as No-Show / Cancelled?\n\nThis will remove them from the active call list and log their visit as missed.`,
+    confirmText: "Mark No-Show",
+    cancelText: "Cancel",
+    type: "danger",
+    icon: "❌",
+    category: "Visitor Call Status"
+  });
+
+  if (confirmed) {
     item.status = "cancelled";
     item.cancelledBy = "desk";
     item.completedAt = Date.now();
@@ -4422,7 +4484,7 @@ function closeSettingsModal() {
   document.getElementById("settings-modal").classList.add("hidden");
 }
 
-function saveSettings() {
+async function saveSettings() {
   const shopName = document.getElementById("setting-shop-name").value.trim() || "Main St Barbers";
   const slug = document.getElementById("setting-slug").value.trim() || "main-st-barbers";
   const baseWait = parseInt(document.getElementById("setting-base-wait").value) || 20;
@@ -4433,7 +4495,14 @@ function saveSettings() {
     try {
       firebaseConfig = JSON.parse(rawConfig);
     } catch (e) {
-      alert("Invalid JSON in Firebase config field.");
+      await showAlertDialog({
+        title: "Invalid Firebase Config JSON",
+        message: "The text entered in the Firebase config field is not valid JSON. Please verify quotes, braces, and commas.",
+        buttonText: "Review JSON",
+        type: "danger",
+        icon: "⚠️",
+        category: "Syntax Error"
+      });
       return;
     }
   }
@@ -6367,7 +6436,7 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
 }
 
 // SuperAdmin: Scan and purge duplicate shop records
-function cleanDuplicateShops() {
+async function cleanDuplicateShops() {
   if (!db || state.userRole !== "SuperAdmin") {
     showToast("⚠️ SuperAdmin access required.");
     return;
@@ -6433,7 +6502,17 @@ function cleanDuplicateShops() {
     duplicatesToDelete.map(d => `• Delete ghost "${d.ghost.slug || d.ghost.id}" (keeping canonical "${d.canonical.slug || d.canonical.id}")`).join("\n") +
     `\n\nProceed with cloud cleanup?`;
 
-  if (!confirm(confirmMsg)) return;
+  const confirmed = await showConfirmDialog({
+    title: "Clean Duplicate Cloud Records?",
+    message: confirmMsg,
+    confirmText: "Proceed with Cleanup",
+    cancelText: "Cancel",
+    type: "warning",
+    icon: "🧹",
+    category: "Database Maintenance"
+  });
+
+  if (!confirmed) return;
 
   const deletePromises = duplicatesToDelete.map(d => {
     const ghostDocId = String(d.ghost.id || '').trim();
@@ -7025,8 +7104,17 @@ function closePricingAuditModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function clearPricingAuditLogs() {
-  if (!confirm("Are you sure you want to clear local pricing audit history?")) return;
+async function clearPricingAuditLogs() {
+  const confirmed = await showConfirmDialog({
+    title: "Clear Pricing Audit History?",
+    message: "Are you sure you want to permanently clear local pricing audit history logs?",
+    confirmText: "Clear Audit Logs",
+    cancelText: "Cancel",
+    type: "danger",
+    icon: "🗑️",
+    category: "SuperAdmin Action"
+  });
+  if (!confirmed) return;
   localStorage.removeItem("waitlink_pricing_audits");
   openPricingAuditModal();
   showToast("Local audit history cleared.");
@@ -7710,8 +7798,17 @@ function loadSupportInquiries() {
   }
 }
 
-function deleteSupportInquiry(msgId) {
-  if (!confirm("Are you sure you want to delete this support inquiry?")) return;
+async function deleteSupportInquiry(msgId) {
+  const confirmed = await showConfirmDialog({
+    title: "Delete Support Message?",
+    message: "Are you sure you want to permanently delete this customer inquiry from the database?",
+    confirmText: "Delete Message",
+    cancelText: "Cancel",
+    type: "danger",
+    icon: "🗑️",
+    category: "Support Inquiries"
+  });
+  if (!confirmed) return;
 
   // 1. Immediately remove from local cache and update UI optimistically
   try {
@@ -7966,9 +8063,16 @@ async function triggerSuperAdminPurge() {
     showToast("⚠️ SuperAdmin privileges required.");
     return;
   }
-  if (!confirm("Execute cloud cleanup now across all shops?\n\nThis will permanently purge historical records older than each shop's active retention tier from Firestore.")) {
-    return;
-  }
+  const confirmed = await showConfirmDialog({
+    title: "Execute Cloud History Cleanup?",
+    message: "Execute cloud cleanup now across all shops?\n\nThis will permanently purge historical records older than each shop's active retention tier from Google Cloud Firestore.",
+    confirmText: "Execute Cloud Purge",
+    cancelText: "Cancel",
+    type: "danger",
+    icon: "⚡",
+    category: "SuperAdmin Cloud Purge"
+  });
+  if (!confirmed) return;
   showToast("⏳ Running cloud history cleanup across tenant shops...");
 
   try {
@@ -8430,7 +8534,7 @@ function copyMyTicketLink() {
   });
 }
 
-function cancelMyTicket() {
+async function cancelMyTicket() {
   let ticketId = state.myTicket ? state.myTicket.id : null;
   let customerName = state.myTicket ? state.myTicket.customerName : null;
 
@@ -8450,7 +8554,17 @@ function cancelMyTicket() {
     return;
   }
 
-  if (!confirm("Are you sure you want to leave the waitlist?")) return;
+  const confirmed = await showConfirmDialog({
+    title: "Leave Waitlist?",
+    message: "Are you sure you want to cancel your spot in line?\n\nYou will lose your current queue position and will need to check in again if you return.",
+    confirmText: "Yes, Leave Waitlist",
+    cancelText: "Stay in Line",
+    type: "danger",
+    icon: "🚪",
+    category: "Queue Cancellation"
+  });
+
+  if (!confirmed) return;
 
   cancelCustomer(ticketId, customerName, "customer");
   state.myTicket = null;
@@ -8783,27 +8897,43 @@ function updateTickingTimers() {
 // RE-QUEUE & REINSTATE CUSTOMER HANDLERS
 // ==========================================
 
-function promptRequeueCustomer(id) {
+async function promptRequeueCustomer(id) {
   const item = state.history.find(h => h.id === id) || state.queue.find(q => q.id === id);
   if (!item) {
     showToast("⚠️ Record not found.");
     return;
   }
 
-  const mode = confirm(
-    `Put "${item.customerName}" back into the Active Queue?\n\n` +
-    `• OK = Move to End of Line (Recommended to protect lobby order)\n` +
-    `• Cancel = Restore Original Priority Spot`
-  ) ? "end" : "original";
+  const confirmed = await showConfirmDialog({
+    title: "Reinstate Customer to Queue?",
+    message: `Put "${item.customerName}" back into the active waiting queue at the end of the line?\n\nThis restores their ticket while protecting existing lobby order for waiting guests.`,
+    confirmText: "Put Back in Queue",
+    cancelText: "Cancel",
+    type: "warning",
+    icon: "🔄",
+    category: "Queue Reinstatement"
+  });
 
-  requeueCustomer(id, mode);
+  if (confirmed) {
+    requeueCustomer(id, "end");
+  }
 }
 
-function requeueActiveCustomerToEnd(id) {
+async function requeueActiveCustomerToEnd(id) {
   const item = state.queue.find(q => q.id === id);
   if (!item) return;
 
-  if (confirm(`Move "${item.customerName}" to the end of the active waiting line?`)) {
+  const confirmed = await showConfirmDialog({
+    title: "Move to End of Line?",
+    message: `Move "${item.customerName}" to the end of the active waiting line?\n\nTheir queue position will be shifted to the back, allowing customers in front of them to be served first.`,
+    confirmText: "Move to End of Line",
+    cancelText: "Keep Position",
+    type: "warning",
+    icon: "⬇️",
+    category: "Queue Priority Shift"
+  });
+
+  if (confirmed) {
     item.checkedInAt = Date.now();
     item.requeued = true;
     logCustomerActivity(item, "requeue", "Re-queued to End of Line", "Moved customer to end of active waiting line", "⬇️");
@@ -9231,9 +9361,22 @@ function staffSignOut() {
 }
 
 // PIN Switcher on Front Desk Header for shift handovers
-function promptStaffPinSwitch() {
+async function promptStaffPinSwitch() {
   if (!state.isStaffSession || !state.staffUser) return;
-  const pin = prompt(`Enter 4-digit PIN to switch active operator (Current: ${state.staffUser.displayName || state.staffUser.username}):`);
+  const currentName = state.staffUser.displayName || state.staffUser.username;
+
+  const pin = await showPromptDialog({
+    title: "Switch Shift Operator",
+    message: `Enter your 4-digit PIN to switch active counter operator:\n(Currently logged in: ${currentName})`,
+    placeholder: "e.g. 8636",
+    inputType: "password",
+    confirmText: "Unlock Operator",
+    cancelText: "Cancel",
+    type: "primary",
+    icon: "👤",
+    category: "Front Desk Shift Handover"
+  });
+
   if (!pin) return;
   
   if (!db) return;
@@ -10092,10 +10235,18 @@ function handleSaveStaffRole(event) {
 }
 
 // Delete staff profile
-function deleteStaffRole(shopSlug, staffId, staffName) {
-  if (!confirm(`Are you sure you want to remove the front desk role for "${staffName}"? This will immediately revoke their station access.`)) {
-    return;
-  }
+async function deleteStaffRole(shopSlug, staffId, staffName) {
+  const confirmed = await showConfirmDialog({
+    title: "Revoke Staff Account?",
+    message: `Are you sure you want to remove the front desk role for "${staffName}"?\n\nThis will immediately deactivate their login and revoke their 1-Click Station Link.`,
+    confirmText: "Revoke Staff Account",
+    cancelText: "Keep Account",
+    type: "danger",
+    icon: "🗑️",
+    category: "Staff Account Permissions"
+  });
+
+  if (!confirmed) return;
   if (!db) return;
 
   db.collection("shops").doc(shopSlug).collection("staff_roles").doc(staffId).delete()
@@ -10116,10 +10267,28 @@ function copyStaffStationLink(shopSlug, username, passcode) {
     navigator.clipboard.writeText(stationUrl).then(() => {
       showToast("📋 1-Click Station Link copied to clipboard!");
     }).catch(() => {
-      prompt("Copy Station Link:", stationUrl);
+      showPromptDialog({
+        title: "1-Click Station Link",
+        message: "Copy this URL to bookmark on your front-desk tablet or counter iPad:",
+        defaultValue: stationUrl,
+        confirmText: "Done",
+        cancelText: "Close",
+        type: "primary",
+        icon: "🔗",
+        category: "iPad Station Access"
+      });
     });
   } else {
-    prompt("Copy Station Link:", stationUrl);
+    showPromptDialog({
+      title: "1-Click Station Link",
+      message: "Copy this URL to bookmark on your front-desk tablet or counter iPad:",
+      defaultValue: stationUrl,
+      confirmText: "Done",
+      cancelText: "Close",
+      type: "primary",
+      icon: "🔗",
+      category: "iPad Station Access"
+    });
   }
 }
 
@@ -10279,7 +10448,233 @@ function loadStaffActivityLog() {
   }).join("");
 }
 
+/* ==========================================================================
+   Universal Modern Cosmetic Dialog System (Confirm / Alert / Prompt)
+   ========================================================================== */
+
+let _waitlinkDialogResolve = null;
+
+function applyDialogTheme(type, customIcon) {
+  const card = document.getElementById("waitlink-dialog-card");
+  const iconEl = document.getElementById("dialog-icon");
+  if (!card) return;
+
+  card.classList.remove("dialog-theme-primary", "dialog-theme-danger", "dialog-theme-warning", "dialog-theme-success");
+
+  let defaultIcon = "ℹ️";
+  let themeClass = "dialog-theme-primary";
+
+  if (type === "danger") {
+    themeClass = "dialog-theme-danger";
+    defaultIcon = "🗑️";
+  } else if (type === "warning") {
+    themeClass = "dialog-theme-warning";
+    defaultIcon = "⚠️";
+  } else if (type === "success") {
+    themeClass = "dialog-theme-success";
+    defaultIcon = "✅";
+  } else {
+    themeClass = "dialog-theme-primary";
+    defaultIcon = "💬";
+  }
+
+  card.classList.add(themeClass);
+  if (iconEl) iconEl.textContent = customIcon || defaultIcon;
+}
+
+function showConfirmDialog({
+  title = "Confirm Action",
+  message = "Are you sure you want to proceed?",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  type = "primary",
+  icon = null,
+  category = "Action Required"
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = resolve;
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) {
+      btnCancel.textContent = cancelText;
+      btnCancel.style.display = "inline-flex";
+    }
+    if (btnConfirm) btnConfirm.textContent = confirmText;
+    if (inputContainer) inputContainer.classList.add("hidden");
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      if (btnConfirm) btnConfirm.focus();
+    }, 50);
+  });
+}
+
+function showAlertDialog({
+  title = "Notice",
+  message = "",
+  buttonText = "Got It",
+  type = "primary",
+  icon = null,
+  category = "Notice"
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = () => resolve();
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop) {
+      window.alert(message);
+      resolve();
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) btnCancel.style.display = "none";
+    if (btnConfirm) btnConfirm.textContent = buttonText;
+    if (inputContainer) inputContainer.classList.add("hidden");
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      if (btnConfirm) btnConfirm.focus();
+    }, 50);
+  });
+}
+
+function showPromptDialog({
+  title = "Enter Information",
+  message = "Please enter the required information:",
+  placeholder = "",
+  defaultValue = "",
+  inputType = "text",
+  confirmText = "Submit",
+  cancelText = "Cancel",
+  type = "primary",
+  icon = "✏️",
+  category = "Input Required"
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = resolve;
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const inputEl = document.getElementById("dialog-input");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop || !inputEl) {
+      resolve(window.prompt(message, defaultValue));
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) {
+      btnCancel.textContent = cancelText;
+      btnCancel.style.display = "inline-flex";
+    }
+    if (btnConfirm) btnConfirm.textContent = confirmText;
+
+    if (inputContainer) inputContainer.classList.remove("hidden");
+    inputEl.type = inputType;
+    inputEl.placeholder = placeholder;
+    inputEl.value = defaultValue;
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      inputEl.focus();
+      inputEl.select();
+    }, 50);
+  });
+}
+
+function waitlinkDialogConfirm() {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  const inputContainer = document.getElementById("dialog-input-container");
+  const inputEl = document.getElementById("dialog-input");
+
+  if (backdrop) backdrop.classList.add("hidden");
+
+  if (_waitlinkDialogResolve) {
+    if (inputContainer && !inputContainer.classList.contains("hidden")) {
+      _waitlinkDialogResolve(inputEl ? inputEl.value : "");
+    } else {
+      _waitlinkDialogResolve(true);
+    }
+    _waitlinkDialogResolve = null;
+  }
+}
+
+function waitlinkDialogCancel() {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  if (backdrop) backdrop.classList.add("hidden");
+
+  if (_waitlinkDialogResolve) {
+    _waitlinkDialogResolve(false);
+    _waitlinkDialogResolve = null;
+  }
+}
+
+function waitlinkDialogDismiss() {
+  waitlinkDialogCancel();
+}
+
+// Global Keyboard navigation for modern dialogs (Escape to dismiss, Enter to submit)
+window.addEventListener("keydown", e => {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  if (!backdrop || backdrop.classList.contains("hidden")) return;
+
+  if (e.key === "Escape") {
+    e.preventDefault();
+    waitlinkDialogDismiss();
+  } else if (e.key === "Enter") {
+    const inputContainer = document.getElementById("dialog-input-container");
+    if (inputContainer && !inputContainer.classList.contains("hidden")) {
+      e.preventDefault();
+      waitlinkDialogConfirm();
+    }
+  }
+});
+
 // Explicit window assignments for Owner Directory & Staff RBAC
+window.showConfirmDialog = showConfirmDialog;
+window.showAlertDialog = showAlertDialog;
+window.showPromptDialog = showPromptDialog;
+window.waitlinkDialogConfirm = waitlinkDialogConfirm;
+window.waitlinkDialogCancel = waitlinkDialogCancel;
+window.waitlinkDialogDismiss = waitlinkDialogDismiss;
 window.hasStaffPermission = hasStaffPermission;
 window.restoreStaffSessionIfPresent = restoreStaffSessionIfPresent;
 window.checkStaffAutoLogin = checkStaffAutoLogin;
