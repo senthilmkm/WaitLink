@@ -9933,7 +9933,7 @@ function renderOwnerShopsTable(shopsList) {
     const isSandbox = shopSlug === "main-st-barbers";
     const isActiveShop = state.config.slug === shopSlug;
     const currentWait = isActiveShop ? (state.queue ? state.queue.length : 0) : "0";
-    const todayServed = isActiveShop ? (state.history ? state.history.filter(h => h.status === "called").length : 0) : "--";
+    const todayServed = isActiveShop ? getTodayCalledVisits().length : "--";
 
     return `
       <tr>

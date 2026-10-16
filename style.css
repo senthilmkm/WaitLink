@@ -3966,4 +3966,40 @@ body.drawer-open {
   }
 }
 
+/* Directory and Superadmin Tabs Mobile Scrolling */
+.superadmin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.35rem;
+}
+
+.superadmin-tabs .tab-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Dialog Mobile Adaptations */
+@media (max-width: 480px) {
+  .dialog-footer {
+    flex-direction: column-reverse !important;
+    gap: 0.6rem !important;
+    padding: 0.85rem 1rem 1.15rem 1rem !important;
+  }
+  .dialog-footer .btn {
+    width: 100% !important;
+  }
+  .staff-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dialog-header {
+    padding: 1.15rem 1rem 0.5rem 1rem !important;
+  }
+  .dialog-body {
+    padding: 0.65rem 1rem 1rem 1rem !important;
+  }
+}
+
+
 
