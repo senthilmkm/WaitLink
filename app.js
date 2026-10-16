@@ -394,7 +394,8 @@ function subscribeFirestore(forceResubscribe = false) {
         db.collection("shops").where("slug", "==", state.config.slug).limit(1).get()
           .then(querySnap => {
             if (!querySnap.empty) {
-              const data = querySnap.docs[0].data();
+              const docSnap = querySnap.docs[0];
+              const data = docSnap.data();
               if (data.shopName) state.config.shopName = data.shopName;
               if (data.name) state.config.shopName = data.name;
               if (data.address !== undefined) state.config.address = data.address;
@@ -405,6 +406,13 @@ function subscribeFirestore(forceResubscribe = false) {
               if (Array.isArray(data.history)) state.history = data.history;
               updateConfigUI();
               renderAll();
+
+              // Auto-heal / alias: If authenticated as the owner, write the alias document so future direct lookups are instantaneous!
+              const currentEmail = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+              const ownerEmailClean = (data.ownerEmail || "").trim().toLowerCase();
+              if (currentEmail && currentEmail === ownerEmailClean && docSnap.id !== state.config.slug) {
+                db.collection("shops").doc(state.config.slug).set(data, { merge: true }).catch(console.warn);
+              }
             } else {
               // Non-existent shop: never overwrite or pollute cloud Firestore with demo data!
               if (state.config.slug !== "main-st-barbers" && !state.isDemoMode) {
@@ -3157,7 +3165,28 @@ function switchView(viewName) {
   // Cross-Tenant Front Desk & Owner Analytics Barrier (P1-3)
   if (viewName === "desk" || viewName === "owner") {
     const isSuper = isSuperAdmin();
-    const isOwner = state.user && state.config.ownerEmail && (state.user.email.toLowerCase() === state.config.ownerEmail.toLowerCase());
+    const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+    const configOwnerEmail = (state.config.ownerEmail || "").trim().toLowerCase();
+
+    // Check direct config match OR check if registeredShops / myShops contains this active shop with matching owner
+    const isRegisteredOwner = (Array.isArray(state.registeredShops) && state.registeredShops.some(s => {
+      const matchSlug = s.slug === state.config.slug || s.id === state.config.slug;
+      const matchOwner = (s.ownerEmail || "").trim().toLowerCase() === userEmailClean || (s.ownerUid && s.ownerUid === state.user.uid);
+      return matchSlug && matchOwner;
+    })) || (Array.isArray(state.myShops) && state.myShops.some(s => {
+      const matchSlug = s.slug === state.config.slug;
+      const matchOwner = (s.ownerEmail || "").trim().toLowerCase() === userEmailClean;
+      return matchSlug && matchOwner;
+    }));
+
+    if (isRegisteredOwner && !state.config.ownerEmail && state.user) {
+      state.config.ownerEmail = state.user.email;
+    }
+
+    const isOwner = state.user && (
+      (configOwnerEmail && userEmailClean === configOwnerEmail) ||
+      isRegisteredOwner
+    );
     const isSandboxDemo = !state.user && (state.isDemoMode || state.config.slug === "main-st-barbers");
 
     if (!isSuper && !isOwner && !isSandboxDemo) {
@@ -4038,8 +4067,17 @@ function syncUserShopSelection(fetchedShops, isSuper) {
   state.registeredShops = fetchedShops;
   renderShopDropdown();
 
-  // 1. If user has registered shops in Firestore, auto-select their non-demo shop
+  // 1. If user has registered shops in Firestore, check if currently viewed shop belongs to them
   if (fetchedShops.length > 0) {
+    const currentOwned = fetchedShops.find(s => (s.slug === state.config.slug || s.id === state.config.slug));
+    if (currentOwned) {
+      state.config.ownerEmail = currentOwned.ownerEmail || (state.user ? state.user.email : "");
+      if (currentOwned.name || currentOwned.shopName) {
+        state.config.shopName = currentOwned.name || currentOwned.shopName;
+      }
+      return;
+    }
+
     const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
     if (nonDemoShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
       inspectShop(nonDemoShop.slug);
@@ -4099,6 +4137,7 @@ function applyUserRole(user) {
     if (demoBanner) demoBanner.classList.add("hidden");
 
     fetchUserShopsAndSync(email);
+    subscribeFirestore(true);
 
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
     if (deskTab) deskTab.classList.remove("hidden");
