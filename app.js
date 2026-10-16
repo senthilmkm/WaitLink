@@ -3224,7 +3224,7 @@ function switchView(viewName, isSilent = false) {
       (configOwnerEmail && userEmailClean === configOwnerEmail) ||
       isRegisteredOwner
     );
-    const isSandboxDemo = !state.user && (state.isDemoMode || state.config.slug === "main-st-barbers");
+    const isSandboxDemo = state.isDemoMode || state.config.slug === "main-st-barbers";
 
     if (!isSuper && !isOwner && !isSandboxDemo) {
       if (!isSilent) {
@@ -4142,7 +4142,12 @@ function syncUserShopSelection(fetchedShops, isSuper) {
 
     const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
     if (nonDemoShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
-      inspectShop(nonDemoShop.slug);
+      inspectShop(nonDemoShop.slug, true);
+      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+        const targetView = state.pendingInitialView || "desk";
+        state.pendingInitialView = null;
+        switchView(targetView);
+      }
       return fetchedShops;
     }
   }
@@ -4151,7 +4156,12 @@ function syncUserShopSelection(fetchedShops, isSuper) {
   if (!isSuper && state.user && state.user.email) {
     const localShop = (state.myShops || []).find(s => s && s.slug && s.slug !== "main-st-barbers");
     if (localShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
-      inspectShop(localShop.slug);
+      inspectShop(localShop.slug, true);
+      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+        const targetView = state.pendingInitialView || "desk";
+        state.pendingInitialView = null;
+        switchView(targetView);
+      }
       return fetchedShops;
     }
 
@@ -4295,6 +4305,8 @@ function applyUserRole(user) {
       if (superAdminEmailLabel) superAdminEmailLabel.textContent = "Platform Administrator";
       loadSuperAdminShops();
     }
+    updateCreateShopButtonsVisibility();
+    return syncPromise || Promise.resolve();
   } else if (state.isDemoMode) {
     state.userRole = "Guest";
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
@@ -5282,17 +5294,23 @@ function loadSuperAdminShops() {
 }
 
 // Inspect a specific shop's Front Desk
-function inspectShop(slug) {
+function inspectShop(slug, isSilent = false) {
   if (!slug) return;
   
   let targetName = slug;
   if (Array.isArray(state.registeredShops)) {
     const found = state.registeredShops.find(s => (s.slug || s.id) === slug);
-    if (found) targetName = found.name || found.shopName || slug;
+    if (found) {
+      targetName = found.name || found.shopName || slug;
+      if (found.ownerEmail) state.config.ownerEmail = found.ownerEmail;
+    }
   }
   if (targetName === slug && Array.isArray(state.myShops)) {
     const foundMy = state.myShops.find(s => s.slug === slug);
-    if (foundMy) targetName = foundMy.shopName || slug;
+    if (foundMy) {
+      targetName = foundMy.shopName || slug;
+      if (foundMy.ownerEmail) state.config.ownerEmail = foundMy.ownerEmail;
+    }
   }
 
   // Reset in-memory queue & history before switching to target shop
@@ -5317,8 +5335,10 @@ function inspectShop(slug) {
 
   renderAll();
   generateQRCode();
-  switchView("desk");
-  showToast(`💈 Switched to "${targetName}"`);
+  if (!isSilent) {
+    switchView("desk");
+    showToast(`💈 Switched to "${targetName}"`);
+  }
 }
 
 function openSettingsForShop(slug) {
