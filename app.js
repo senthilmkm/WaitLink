@@ -290,6 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   if (shopParam && staffParam && keyParam) {
+    switchView("desk", true);
     checkStaffAutoLogin(shopParam, staffParam, keyParam);
   } else if (restoreStaffSessionIfPresent()) {
     // Staff session restored from active tablet session storage
@@ -4509,6 +4510,18 @@ function initAuth() {
   } catch (e) {}
 
   firebase.auth().onAuthStateChanged(async user => {
+    // If this terminal is currently running an active Staff session or in the middle of station link auto-login,
+    // do not let the background Firebase auth listener clobber the front desk staff operator role!
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasStationParams = urlParams.get("staff") && (urlParams.get("key") || urlParams.get("passcode"));
+    if (state.isStaffSession || sessionStorage.getItem("waitlink_staff_session") || hasStationParams) {
+      if (user) {
+        state.user = user;
+        sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
+      }
+      return;
+    }
+
     if (!user) {
       state.user = null;
       applyUserRole(null);
@@ -4704,7 +4717,84 @@ function applyUserRole(user) {
   const mobileDrawerShopBadge = document.getElementById("mobile-drawer-shop-badge");
   const mobileItemMainStDemo = document.getElementById("mobile-item-main-st-demo");
 
-  if (user && user.email) {
+  // 1. FRONT DESK STAFF OPERATOR MODE TAKES ABSOLUTE PRECEDENCE ON THIS TERMINAL
+  if (state.isStaffSession && state.staffUser) {
+    state.userRole = "FrontDeskStaff";
+    if (shopChipContainer) shopChipContainer.classList.remove("hidden");
+    if (deskTab) deskTab.classList.remove("hidden");
+    if (ownerTab) ownerTab.classList.add("hidden");
+    if (superAdminTab) superAdminTab.classList.add("hidden");
+    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
+    if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
+
+    if (authBtnLabel) {
+      authBtnLabel.innerHTML = `<span>🖥️ ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ▾</span>`;
+    }
+    if (dropdownUserEmail) {
+      dropdownUserEmail.textContent = `🖥️ Staff: ${state.staffUser.displayName || state.staffUser.username} (${state.staffUser.assignedShopName || state.staffUser.assignedShop})`;
+    }
+    const tierBadge = document.getElementById("dropdown-tier-badge");
+    if (tierBadge) {
+      tierBadge.innerHTML = `<span class="pulse-dot" style="background:#38bdf8;"></span> Staff Operator`;
+      tierBadge.style.color = "#38bdf8";
+      tierBadge.style.background = "rgba(56, 189, 248, 0.15)";
+      tierBadge.style.borderColor = "rgba(56, 189, 248, 0.35)";
+    }
+    if (mobileDrawerUserEmail) {
+      mobileDrawerUserEmail.textContent = `Staff: ${state.staffUser.displayName || state.staffUser.username}`;
+    }
+    if (mobileDrawerAvatarIcon) {
+      mobileDrawerAvatarIcon.textContent = "🖥️";
+    }
+    if (itemAuthActionLabel) {
+      itemAuthActionLabel.textContent = "🚪 Staff Sign Out";
+    }
+    if (mobileItemAuthActionLabel) {
+      mobileItemAuthActionLabel.textContent = "🚪 Staff Sign Out";
+    }
+
+    const itemAuthAction = document.getElementById("item-auth-action");
+    if (itemAuthAction) {
+      itemAuthAction.style.color = "#f43f5e";
+      itemAuthAction.style.fontWeight = "700";
+    }
+    const mobileItemAuthAction = document.getElementById("mobile-item-auth-action");
+    if (mobileItemAuthAction) {
+      mobileItemAuthAction.style.color = "#f43f5e";
+      mobileItemAuthAction.style.fontWeight = "700";
+    }
+
+    // Show Front Desk 1-Tap Logout button
+    const deskStaffLogoutBtn = document.getElementById("desk-staff-logout-btn");
+    if (deskStaffLogoutBtn) deskStaffLogoutBtn.style.display = "inline-flex";
+
+    // Strictly suppress all upgrade buttons, banners & billing items for staff
+    const subUpgradeItem = document.getElementById("dropdown-item-subscription");
+    if (subUpgradeItem) subUpgradeItem.classList.add("hidden");
+    const headerUpgradeBtn = document.getElementById("header-upgrade-btn");
+    if (headerUpgradeBtn) headerUpgradeBtn.style.display = "none";
+    const mobileUpgradeBtn = document.getElementById("mobile-upgrade-btn");
+    if (mobileUpgradeBtn) mobileUpgradeBtn.style.display = "none";
+    const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
+    if (ownerStarterCallout) ownerStarterCallout.classList.add("hidden");
+    const deskRetBanner = document.getElementById("desk-retention-banner");
+    if (deskRetBanner) deskRetBanner.style.display = "none";
+
+    const sectionOwnerDir = document.getElementById("section-owner-directory");
+    if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
+    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
+    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.add("hidden");
+    if (sectionSuperAdmin) sectionSuperAdmin.classList.add("hidden");
+    if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
+    if (itemSettings) itemSettings.classList.add("hidden");
+    if (itemArchitecture) itemArchitecture.classList.add("hidden");
+    if (settingsBtn) settingsBtn.classList.add("hidden");
+    if (mobileItemMainStDemo) mobileItemMainStDemo.classList.add("hidden");
+
+    renderShopDropdown();
+    return Promise.resolve();
+  } else if (user && user.email) {
     const email = user.email;
     const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
     state.userRole = isSuper ? "SuperAdmin" : "ShopOwner";
@@ -4828,81 +4918,6 @@ function applyUserRole(user) {
 
     updateCreateShopButtonsVisibility();
     return syncPromise || Promise.resolve();
-  } else if (state.isStaffSession && state.staffUser) {
-    state.userRole = "FrontDeskStaff";
-    if (shopChipContainer) shopChipContainer.classList.remove("hidden");
-    if (deskTab) deskTab.classList.remove("hidden");
-    if (ownerTab) ownerTab.classList.add("hidden");
-    if (superAdminTab) superAdminTab.classList.add("hidden");
-    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
-    if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
-    if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
-
-    if (authBtnLabel) {
-      authBtnLabel.innerHTML = `<span>🖥️ ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ▾</span>`;
-    }
-    if (dropdownUserEmail) {
-      dropdownUserEmail.textContent = `🖥️ Staff: ${state.staffUser.displayName || state.staffUser.username} (${state.staffUser.assignedShopName || state.staffUser.assignedShop})`;
-    }
-    const tierBadge = document.getElementById("dropdown-tier-badge");
-    if (tierBadge) {
-      tierBadge.innerHTML = `<span class="pulse-dot" style="background:#38bdf8;"></span> Staff Operator`;
-      tierBadge.style.color = "#38bdf8";
-      tierBadge.style.background = "rgba(56, 189, 248, 0.15)";
-      tierBadge.style.borderColor = "rgba(56, 189, 248, 0.35)";
-    }
-    if (mobileDrawerUserEmail) {
-      mobileDrawerUserEmail.textContent = `Staff: ${state.staffUser.displayName || state.staffUser.username}`;
-    }
-    if (mobileDrawerAvatarIcon) {
-      mobileDrawerAvatarIcon.textContent = "🖥️";
-    }
-    if (itemAuthActionLabel) {
-      itemAuthActionLabel.textContent = "🚪 Staff Sign Out";
-    }
-    if (mobileItemAuthActionLabel) {
-      mobileItemAuthActionLabel.textContent = "🚪 Staff Sign Out";
-    }
-
-    const itemAuthAction = document.getElementById("item-auth-action");
-    if (itemAuthAction) {
-      itemAuthAction.style.color = "#f43f5e";
-      itemAuthAction.style.fontWeight = "700";
-    }
-    const mobileItemAuthAction = document.getElementById("mobile-item-auth-action");
-    if (mobileItemAuthAction) {
-      mobileItemAuthAction.style.color = "#f43f5e";
-      mobileItemAuthAction.style.fontWeight = "700";
-    }
-
-    // Show Front Desk 1-Tap Logout button
-    const deskStaffLogoutBtn = document.getElementById("desk-staff-logout-btn");
-    if (deskStaffLogoutBtn) deskStaffLogoutBtn.style.display = "inline-flex";
-
-    // Strictly suppress all upgrade buttons, banners & billing items for staff
-    const subUpgradeItem = document.getElementById("dropdown-item-subscription");
-    if (subUpgradeItem) subUpgradeItem.classList.add("hidden");
-    const headerUpgradeBtn = document.getElementById("header-upgrade-btn");
-    if (headerUpgradeBtn) headerUpgradeBtn.style.display = "none";
-    const mobileUpgradeBtn = document.getElementById("mobile-upgrade-btn");
-    if (mobileUpgradeBtn) mobileUpgradeBtn.style.display = "none";
-    const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
-    if (ownerStarterCallout) ownerStarterCallout.classList.add("hidden");
-    const deskRetBanner = document.getElementById("desk-retention-banner");
-    if (deskRetBanner) deskRetBanner.style.display = "none";
-
-    const sectionOwnerDir = document.getElementById("section-owner-directory");
-    if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
-    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
-    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.add("hidden");
-    if (sectionSuperAdmin) sectionSuperAdmin.classList.add("hidden");
-    if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
-    if (itemSettings) itemSettings.classList.add("hidden");
-    if (itemArchitecture) itemArchitecture.classList.add("hidden");
-    if (settingsBtn) settingsBtn.classList.add("hidden");
-    if (mobileItemMainStDemo) mobileItemMainStDemo.classList.add("hidden");
-
-    renderShopDropdown();
   } else if (state.isDemoMode) {
     state.userRole = "Guest";
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
@@ -9091,7 +9106,7 @@ function restoreStaffSessionIfPresent() {
 // 1-Click Station Link Auto-Login via URL query parameters (?s=slug&staff=user&key=pass)
 function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
   if (!ensureFirebaseInitialized() || !db) {
-    if (retryCount < 10) {
+    if (retryCount < 12) {
       setTimeout(() => checkStaffAutoLogin(shopSlug, username, passcode, retryCount + 1), 250);
     }
     return;
@@ -9101,17 +9116,47 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
   const cleanUser = String(username || "").trim().toLowerCase();
   const cleanPass = String(passcode || "").trim();
 
-  db.collection("shops").doc(cleanSlug).collection("staff_roles")
-    .where("username", "==", cleanUser)
-    .get()
-    .then(snap => {
+  async function resolveStationStaff() {
+    try {
       let matched = null;
-      snap.forEach(doc => {
-        const d = doc.data();
-        if (d.passcode === cleanPass) {
-          matched = { ...d, id: doc.id };
+
+      // 1. Try querying staff_roles under cleanSlug doc ID
+      try {
+        const snap = await db.collection("shops").doc(cleanSlug).collection("staff_roles")
+          .where("username", "==", cleanUser)
+          .get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          if (String(d.passcode || "").trim() === cleanPass) {
+            matched = { ...d, id: doc.id };
+          }
+        });
+      } catch (err) {
+        console.warn("Direct doc query note:", err);
+      }
+
+      // 2. Fallback: Search shops collection by slug field in case doc ID differs
+      if (!matched) {
+        try {
+          const shopBySlugSnap = await db.collection("shops").where("slug", "==", cleanSlug).limit(1).get();
+          if (!shopBySlugSnap.empty) {
+            const targetShopDocId = shopBySlugSnap.docs[0].id;
+            if (targetShopDocId !== cleanSlug) {
+              const fallbackSnap = await db.collection("shops").doc(targetShopDocId).collection("staff_roles")
+                .where("username", "==", cleanUser)
+                .get();
+              fallbackSnap.forEach(doc => {
+                const d = doc.data();
+                if (String(d.passcode || "").trim() === cleanPass) {
+                  matched = { ...d, id: doc.id };
+                }
+              });
+            }
+          }
+        } catch (err2) {
+          console.warn("Slug fallback query note:", err2);
         }
-      });
+      }
 
       if (matched) {
         loginAsStaff(matched, cleanSlug, true);
@@ -9130,10 +9175,12 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
       } else {
         showToast("⚠️ Station passcode invalid or expired. Please sign in.");
       }
-    })
-    .catch(err => {
-      console.warn("Staff auto-login verification notice:", err);
-    });
+    } catch (e) {
+      console.warn("Staff auto-login verification notice:", e);
+    }
+  }
+
+  resolveStationStaff();
 }
 
 // Establish an active staff operator session
@@ -9151,7 +9198,7 @@ function loginAsStaff(staffData, shopSlug, isAutoLogin = false) {
   switchView("desk", false);
 
   if (isAutoLogin) {
-    showToast(`🚀 Terminal Unlocked: Welcome, ${staffData.displayName || staffData.username}!`);
+    showToast(`🚀 Terminal Unlocked: Welcome, ${staffData.displayName || staffData.username}! (PIN sanitized from address bar for counter security)`);
     try {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("staff");
@@ -9516,6 +9563,44 @@ async function loadOwnerDirectory(forceRefresh = false) {
     : 0;
   if (totalWaitingEl) totalWaitingEl.textContent = totalWaitingCount;
 
+  const tabStaffCount = document.getElementById("owner-dir-tab-staff-count");
+  if (state.staffRolesList && Array.isArray(state.staffRolesList)) {
+    if (totalStaffEl) totalStaffEl.textContent = state.staffRolesList.length;
+    if (tabStaffCount) tabStaffCount.textContent = state.staffRolesList.length;
+  }
+
+  // Pre-fetch staff accounts across all owned shops so counters show immediately on initial load
+  if (db && ownedShops.length > 0) {
+    const staffPromises = ownedShops.map(s => {
+      const slug = s.slug || s.id;
+      return db.collection("shops").doc(slug).collection("staff_roles").get().then(snap => {
+        let shopStaff = [];
+        snap.forEach(doc => {
+          shopStaff.push({
+            id: doc.id,
+            ...doc.data(),
+            assignedShop: slug,
+            assignedShopName: s.shopName || s.name || slug
+          });
+        });
+        return shopStaff;
+      }).catch(err => {
+        console.warn("Staff prefetch error for shop:", slug, err);
+        return [];
+      });
+    });
+
+    Promise.all(staffPromises).then(results => {
+      const allStaff = results.flat();
+      state.staffRolesList = allStaff;
+      if (totalStaffEl) totalStaffEl.textContent = allStaff.length;
+      if (tabStaffCount) tabStaffCount.textContent = allStaff.length;
+    }).catch(console.warn);
+  } else {
+    if (totalStaffEl) totalStaffEl.textContent = 0;
+    if (tabStaffCount) tabStaffCount.textContent = 0;
+  }
+
   renderOwnerShopsTable(ownedShops);
 }
 
@@ -9652,7 +9737,11 @@ async function loadStaffRoles() {
     return;
   }
 
-  container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">⏳ Loading staff roles...</div>`;
+  if (state.staffRolesList && state.staffRolesList.length > 0) {
+    renderStaffCards(state.staffRolesList);
+  } else {
+    container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">⏳ Loading staff roles...</div>`;
+  }
 
   let allStaff = [];
   if (db) {
