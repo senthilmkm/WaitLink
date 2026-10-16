@@ -140,7 +140,34 @@
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
-          <p>Yes! Signed-in shop owners can create and switch between multiple shop waitlists using the top <strong>MY SHOPS</strong> dropdown selector. Each shop retains its own independent queue, visit history log, and shareable QR poster link.</p>
+          <p>Yes! Signed-in shop owners can create and switch between multiple shop waitlists using the top <strong>MY SHOPS</strong> dropdown selector or the centralized <strong>🏢 My Shops & Staff Directory</strong>. Each shop retains its own independent queue, visit history log, staff accounts, and shareable QR poster link.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>How do staff roles and 1-Click iPad Station Links work?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Shop owners can provision dedicated staff logins under <strong>Account &rarr; 🏢 My Shops & Staff Directory &rarr; Manage Staff & Roles</strong>. Each staff member is assigned a Role Title (e.g. <em>Front Desk Receptionist</em>, <em>Intake Greeter</em>, <em>Service Caller</em>) with customizable permission checkboxes. WaitLink generates a unique <strong>1-Click Station Link</strong> and on-screen <strong>iPad QR Code</strong> for each staff member. Counter staff simply point the tablet camera at the QR code or bookmark the URL to log in instantly without sharing master owner passwords.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Do front desk staff have to enter the shop slug when signing in?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>In almost all daily operations, NO.</strong> WaitLink eliminates friction through a 3-layer smart detection architecture:
+            <ul>
+              <li><strong>1-Click Station Link / QR Scan:</strong> Tablet scans bypass the sign-in modal entirely, opening Front Desk instantly with zero typing.</li>
+              <li><strong>Automatic URL & Device Detection:</strong> If staff open the sign-in modal on a tablet or shop URL, the Store Location is <strong>automatically pre-filled</strong> and labeled (e.g. <em>Active: Stomada Clinic</em>).</li>
+              <li><strong>Smart Name Matching:</strong> If staff ever type manually, they can type either their business name (e.g. <em>"Stomada Clinic"</em>) or slug, or pick from the 1-tap autocomplete datalist.</li>
+            </ul>
+            <em>Why is a shop scope needed behind the scenes?</em> In a cloud multi-tenant architecture with thousands of shops, multiple stores employ staff named "reception" or "sarah". Scoping to the shop protects privacy and prevents cross-store account collisions while maintaining zero friction for staff.
+          </p>
         </div>
       </div>
 

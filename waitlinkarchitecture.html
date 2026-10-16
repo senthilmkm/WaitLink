@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaitLink — Comprehensive Architecture, Process Flows & Developer Manual (SuperAdmin Only)</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Firebase SDKs for SuperAdmin RBAC Access Control -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="config.secrets.js" onerror="console.info('config.secrets.js not found')"></script>
+  <style>
+    :root {
+      --code-bg: #0b1120;
+      --code-border: rgba(255, 255, 255, 0.1);
+      --code-color: #38bdf8;
+    }
+
+    /* Protected Gate Styles */
+    #architecture-content {
+      display: none;
+    }
+    #auth-gate-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: radial-gradient(circle at 50% 25%, rgba(99, 102, 241, 0.2) 0%, #030712 85%);
+    }
+    .gate-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 24px;
+      padding: 2.75rem 2.25rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+    .gate-icon-wrap {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.25rem auto;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 0 24px rgba(99, 102, 241, 0.35);
+    }
+    .gate-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #a5b4fc;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+    .gate-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0 0 0.5rem 0;
+      letter-spacing: -0.5px;
+    }
+    .gate-desc {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .gate-error-box {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fca5a5;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    .doc-nav-sticky {
+      position: sticky;
+      top: 70px;
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.65rem 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .doc-nav-scroll {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .doc-nav-scroll::-webkit-scrollbar { display: none; }
+
+    .doc-pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .doc-pill:hover {
+      color: #fff;
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .section-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 2.25rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.85rem;
+    }
+
+    .section-num {
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      color: #042f2e;
+      font-weight: 800;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .section-heading {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .flow-step-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .flow-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+      margin-bottom: 0.5rem;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+      position: relative;
+    }
+
+    .code-copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .code-copy-btn:hover {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border-color: #10b981;
+    }
+
+    .kpi-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+
+    .kpi-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .kpi-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #10b981;
+      font-family: var(--font-family-heading);
+    }
+
+    .kpi-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.2rem;
+    }
+
+    .url-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+    .url-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: rgba(30, 41, 59, 0.8);
+      color: #cbd5e1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .url-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+    }
+    .url-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #e2e8f0;
+    }
+
+    @media (max-width: 768px) {
+      .section-card { padding: 1.5rem 1rem; }
+      .section-heading { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SuperAdmin Security Gate (Platform Administrator ONLY) -->
+  <div id="auth-gate-screen">
+    <div class="gate-card">
+      <div class="gate-icon-wrap">🔒</div>
+      <span class="gate-badge">👑 Administrator RBAC Protected</span>
+      <h1 class="gate-title">Architecture Specification</h1>
+      <p class="gate-desc">
+        Internal database blueprints, security rules, and deployment manual. Access is strictly restricted to verified Platform Administrators.
+      </p>
+
+      <!-- Status Indicator -->
+      <div id="gate-checking" style="padding: 1rem 0; color: #a5b4fc; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+        <span class="pulse-dot" style="background: #6366f1;"></span>
+        <span>Verifying Administrator credentials...</span>
+      </div>
+
+      <!-- Error Box -->
+      <div id="gate-error" class="gate-error-box hidden"></div>
+
+      <!-- Unauthorized Box (logged in as wrong user) -->
+      <div id="gate-unauthorized" class="hidden" style="margin-bottom: 1.5rem;">
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⛔</div>
+          <strong style="color: #fca5a5; font-size: 0.95rem;">Access Denied</strong>
+          <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0.4rem 0 0 0;">
+            Signed in as <code id="unauthorized-user-email" style="color: #f87171;">--</code>. This account does not have Platform Administrator authorization.
+          </p>
+        </div>
+        <button onclick="signOutSuperAdmin()" class="btn btn-secondary" style="width: 100%; justify-content: center; margin-bottom: 0.75rem;">
+          🚪 Sign Out & Switch Account
+        </button>
+        <a href="index.html" class="btn btn-secondary" style="width: 100%; justify-content: center; text-decoration: none;">
+          ← Return to WaitLink App
+        </a>
+      </div>
+
+      <!-- Login Form (if not logged in) -->
+      <div id="gate-login-form" class="hidden">
+        <button type="button" class="btn btn-primary" onclick="loginWithGoogle()" style="width: 100%; justify-content: center; font-size: 0.92rem; padding: 0.75rem; background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); margin-bottom: 1rem; border: none; font-weight: 700;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.4rem;"><path d="M12.24 10.285V13.4h6.887C18.2 16.14 15.64 18 12.24 18c-3.315 0-6-2.685-6-6s2.685-6 6-6c1.65 0 3.03.6 4.12 1.58l2.5-2.5C17.34 3.65 14.97 2.7 12.24 2.7 7.15 2.7 3 6.85 3 11.94s4.15 9.24 9.24 9.24c5.38 0 8.94-3.78 8.94-9.09 0-.61-.06-1.07-.17-1.805H12.24z"/></svg>
+          Sign In with Google
+        </button>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0; color: #64748b; font-size: 0.72rem; text-transform: uppercase; font-weight: 700;">
+          <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+          <span>Or Admin Email & Password</span>
+          <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+        </div>
+
+        <form onsubmit="loginWithEmail(event)" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left;">
+          <div>
+            <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.25rem;">Administrator Email</label>
+            <input type="email" id="gate-email" placeholder="admin@waitlink.app" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.6); color: #fff; font-size: 0.88rem; outline: none; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.25rem;">Password</label>
+            <input type="password" id="gate-password" placeholder="••••••••" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.6); color: #fff; font-size: 0.88rem; outline: none; box-sizing: border-box;">
+          </div>
+          <button type="submit" id="gate-submit-btn" class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 0.7rem; font-weight: 700; margin-top: 0.5rem;">
+            🔓 Authenticate & Unlock Blueprint
+          </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; text-align: center;">
+          <a href="index.html" style="color: #94a3b8; font-size: 0.82rem; text-decoration: none;">← Return to WaitLink App</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protected Architecture Document (Rendered only for verified SuperAdmin) -->
+  <div id="architecture-content">
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="index.html" class="brand" style="text-decoration: none;">
+          <div class="logo-icon">⏳</div>
+          <span class="brand-name">WaitLink</span>
+        </a>
+        <span style="font-size: 0.72rem; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.4); padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700; margin-left: 0.5rem;">
+          SUPERADMIN SPECIFICATION
+        </span>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Return to App</a>
+        <span id="superadmin-badge-header" style="font-size: 0.72rem; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.4); padding: 0.25rem 0.65rem; border-radius: 9999px; font-weight: 700;">👑 Platform Administrator</span>
+        <button onclick="signOutSuperAdmin()" class="btn btn-secondary btn-sm-header">🚪 Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Sub-Navigation Quick Jump Bar -->
+  <div class="doc-nav-sticky">
+    <div class="doc-nav-scroll">
+      <a href="#purpose" class="doc-pill">🎯 Purpose & Value</a>
+      <a href="#features" class="doc-pill">✨ Core Features</a>
+      <a href="#roles" class="doc-pill">🔄 Role Workflows</a>
+      <a href="#architecture" class="doc-pill">🏗️ System Architecture</a>
+      <a href="#security" class="doc-pill">🔒 Security & Rules</a>
+      <a href="#developer" class="doc-pill">🚀 Deploy & CLI</a>
+      <a href="#urls" class="doc-pill">🌐 Public URLs</a>
+      <a href="#comparison" class="doc-pill">⚖️ Competitor Matrix</a>
+      <a href="#pricing-matrix" class="doc-pill">💎 Pricing & Tier Matrix</a>
+      <a href="#rbac-audit" class="doc-pill">🛡️ RBAC & Tier Audit</a>
+    </div>
+  </div>
+
+  <main class="main-content" style="max-width: 1200px; padding: 0 1.5rem 3rem 1.5rem; margin: 0 auto;">
+    
+    <!-- Hero Header -->
+    <div style="text-align: center; margin-bottom: 2.5rem;">
+      <div style="display: inline-block; padding: 6px 18px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 9999px; color: #06b6d4; font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">
+        🏛️ ARCHITECTURAL SPECIFICATION & DEVELOPER MANUAL
+      </div>
+      <h1 style="font-size: clamp(2rem, 5vw + 0.5rem, 3rem); font-weight: 800; background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; letter-spacing: -1px;">
+        WaitLink Architecture & Technical Blueprint
+      </h1>
+      <p style="color: #94a3b8; max-width: 780px; margin: 0 auto; font-size: 1.1rem; line-height: 1.6;">
+        The definitive guide to WaitLink’s cloud synchronization, real-time Firestore database schema, Twilio SMS messaging engine, role-based workflows, developer deployment commands, and competitive industry benchmark.
+      </p>
+    </div>
+
+    <!-- Quick Metrics Highlight Bar -->
+    <div class="kpi-stat-grid">
+      <div class="kpi-card">
+        <div class="kpi-val">&lt; 2s</div>
+        <div class="kpi-lbl">QR Check-In Velocity</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">100%</div>
+        <div class="kpi-lbl">Zero App Installs Needed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">&lt; 500ms</div>
+        <div class="kpi-lbl">Firestore Real-time Sync</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">1-Tap</div>
+        <div class="kpi-lbl">SERVE NOW SMS + Link</div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: PURPOSE -->
+    <section id="purpose" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">01</span>
+        <h2 class="section-heading">Purpose of WaitLink & The Problem Solved</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; line-height: 1.6; color: #cbd5e1;">
+        <div>
+          <h3 style="color: #f43f5e; font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            ⚠️ The Walk-Away Revenue Loss Crisis
+          </h3>
+          <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">
+            Walk-in service businesses (barbershops, urgent care clinics, pet groomers, auto service bays, DMV offices) lose up to <strong>30% of peak rush revenue</strong> simply because prospective customers look at a crowded waiting room and walk away without ever checking in.
+          </p>
+          <p style="font-size: 0.95rem;">
+            Traditional solutions fail because they require <strong>costly iPad kiosks</strong> ($800+), cumbersome native app downloads with accounts and passwords, or expensive enterprise contracts with $300/mo minimums.
+          </p>
+        </div>
+
+        <div>
+          <h3 style="color: #10b981; font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            💡 The Zero-Barrier WaitLink Solution
+          </h3>
+          <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">
+            WaitLink replaces physical buzzers and kiosks with a simple, high-resolution <strong>printable Window QR Poster</strong>. Customers scan the flyer with their native mobile phone camera, enter their name and optional mobile number in 2 seconds, and immediately track their live spot in line with a real-time ticking clock.
+          </p>
+          <p style="font-size: 0.95rem;">
+            When their turn is ready, front desk staff tap <strong>"SERVE NOW"</strong>, and WaitLink automatically dispatches an instant transactional SMS with their <strong>direct live ticket link</strong>, enabling customers to step outside, grab coffee, and return exactly when called.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: FEATURES -->
+    <section id="features" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">02</span>
+        <h2 class="section-heading">Platform Features & Operational Capabilities</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+        
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">⏱️</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">1-Tap "SERVE NOW" Control</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Front desk staff manage incoming visitors on any device (tablet, smartphone, PC). One tap instantly updates the cloud queue, advances waiting counters, and triggers customer notifications.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📲</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Turn-Ready SMS with Ticket Link</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Integrated with enterprise Twilio SMS gateway. Dispatches personalized texts containing the customer's direct tracking URL (<code style="color: #38bdf8;">https://waitlink.app?s=slug&view=public&ticket=id</code>).
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🖨️</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">8.5"x11" Printable Window Poster</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Generates high-resolution vector printable flyers with custom shop logo, business name, and dynamic QR code ready to print directly onto cardstock and hang on storefront glass.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🔄</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">3D Stage Rotator & Grid Views</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Front desk staff can switch dynamically between a high-efficiency Compact Grid view and a carousel-style 3D Stage Rotator designed for fast stylus navigation on iPads.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📊</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Business Intelligence & Audit Trail</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Automatically calculates Walk-Away Loss % (cancellations), Peak Rush Windows, Staff Throughput (Visits/Hr), Average Wait Time, and provides 11-column CSV export logs.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🏢</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Multi-Tenant Shop Management</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Shop owners can create, configure, and switch between multiple locations under a single account. Each store has an independent URL slug, queue, services menu, and QR poster.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🏥</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Clinical & Healthcare Privacy Mode</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Tailored for urgent care clinics, medical walk-ins, and wellness practices. Auto-masks patient full names (e.g. Jonathan E.), hides sensitive medical service names on public customer screens, generates anonymous ticket IDs (Patient #104), and protects phone numbers with staff tap-to-reveal toggles.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">🛡️</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Queue History Retention & PII Auto-Masking</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Centralized SuperAdmin policy governance (Starter: 7d, Pro: 90d, Enterprise: 365d). Automatically redacts customer phone numbers and last names after 30 days while preserving 100% of operational throughput and turnaround metrics.
+          </p>
+        </div>
+
+        <div class="flow-step-card">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📥</div>
+          <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 1.05rem;">Tier-Gated RFC 4180 CSV Reporting</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+            Exports historical queue logs adhering to RFC 4180 standards with UTF-8 BOM (<code style="color: #38bdf8;">\uFEFF</code>) for flawless opening in Microsoft Excel and Google Sheets. Enforces PII auto-masking rules and tier retention boundaries.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 3: ROLE WORKFLOWS -->
+    <section id="roles" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">03</span>
+        <h2 class="section-heading">Process Flows by Role (End-to-End)</h2>
+      </div>
+
+      <!-- Role 1: Customer -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #38bdf8; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          👤 1. Customer End-User Journey
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 1: Scan</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Arrive & Point Camera</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Customer approaches storefront and points mobile phone camera at the WaitLink Window Poster QR code. Opens directly in mobile Safari/Chrome.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 2: Check-In</span>
+            <strong style="color: #fff; font-size: 0.95rem;">2-Second Self Check-In</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Types name/initials, chooses desired service chip (e.g. Haircut 20m), and enters optional mobile number with CTIA/TCPA SMS consent disclosure.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Step 3: Track</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Live Dynamic Ticket</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Receives a personal live ticket showing real-time ticking wait timer, position in line (e.g., #3 in line), and a "🕒 Running Late" action button.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 4: Turn Ready</span>
+            <strong style="color: #fff; font-size: 0.95rem;">SMS Delivered &amp; Visit In Progress</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              When desk calls, receives instant SMS with live ticket link. Ticket updates to <strong>Visit In Progress</strong> with quick <em>+5m / +10m Running Late</em> grace chips to alert staff if delayed parking, preventing premature No-Show marks.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 2: Front Desk Staff -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #10b981; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          💈 2. Front Desk Staff Workflow &amp; Station RBAC
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 1: Provision</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Role Title &amp; Permission Presets</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Owner provisions account with assigned Role Title (<em>Front Desk Receptionist</em>, <em>Intake Greeter / Host</em>, <em>Service Caller / Stylist</em>) and applies 1-tap permission presets governing check-in, calling, phone reveal, and history.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 2: Launch</span>
+            <strong style="color: #fff; font-size: 0.95rem;">1-Click Station URL &amp; iPad QR</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Staff scan the on-screen Station QR with an iPad camera or open their bookmarked 1-Click URL (<code style="color: #38bdf8;">?s=slug&amp;staff=user&amp;key=pin</code>). Station instantly unlocks Front Desk with zero typing. Add to Home Screen creates a full-screen counter kiosk.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 3: Shift Swap</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Active Role Pill &amp; PIN Switcher</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Front Desk header displays active operator name + assigned role title chip (e.g. <span style="color:#38bdf8; font-weight:700;">[Front Desk Receptionist]</span>). Tapping the chip triggers a 2-second PIN switcher (<code style="color:#10b981;">promptStaffPinSwitch()</code>) for seamless operator handovers.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Step 4: Boundary</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Strict Role Isolation &amp; Lockouts</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Governed strictly by <code style="color:#10b981;">hasStaffPermission()</code>. Check-in, calling, and phone unmasking are gated. Staff are permanently locked out of business settings, Stripe billing, and shop deletion.
+            </p>
+          </div>
+        </div>
+
+        <!-- Justification Architecture Box: Staff Sign-In & Store Location Slug -->
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 1.25rem; margin-top: 1.25rem;">
+          <h4 style="color: #38bdf8; font-size: 1rem; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <span>💡</span> Architecture Justification: Staff Sign-In &amp; Store Location Slug
+          </h4>
+          <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; margin: 0 0 0.75rem 0;">
+            <strong>Why Multi-Tenancy Scopes Staff by Shop Slug:</strong> WaitLink hosts thousands of independent storefronts. Multiple shops routinely employ staff named <em>"reception"</em> or <em>"sarah"</em> with standard 4-digit PINs. Scoping staff roles to <code style="color: #38bdf8;">/shops/{slug}/staff_roles</code> guarantees absolute tenant isolation, prevents cross-shop username collisions, and allows counter operators to use clean, simple usernames without forced global prefixes.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.85rem; font-size: 0.82rem;">
+            <div style="background: rgba(0, 0, 0, 0.25); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+              <strong style="color: #34d399;">1. Automatic Detection &amp; Pre-Fill:</strong>
+              <div style="color: var(--text-muted); margin-top: 0.25rem;">
+                When opening the app at a store URL or on a previously signed-in tablet, the Store Location is auto-detected from active state or <code style="color: #38bdf8;">localStorage</code>. Staff never have to type the slug.
+              </div>
+            </div>
+            <div style="background: rgba(0, 0, 0, 0.25); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+              <strong style="color: #34d399;">2. Datalist &amp; Name Fallback:</strong>
+              <div style="color: var(--text-muted); margin-top: 0.25rem;">
+                A 1-tap suggestion datalist is provided. If staff type the human business name (e.g. <em>"Stomada Clinic"</em>), smart query resolution matches the shop document automatically.
+              </div>
+            </div>
+            <div style="background: rgba(0, 0, 0, 0.25); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+              <strong style="color: #34d399;">3. 1-Click Station Links / QR Bypass:</strong>
+              <div style="color: var(--text-muted); margin-top: 0.25rem;">
+                Front desk iPads using the 1-Click Station URL or scanning the Station QR bypass credentials entirely, unlocking Front Desk in under 1 second with 0 keystrokes.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 3: Shop Owner -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #c084fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          🔑 3. Shop Owner Administration &amp; The 3-Tab Owner Directory
+        </h3>
+        <p style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 1rem; line-height: 1.5;">
+          Owners manage multiple locations and staff delegations from a unified entry point in their account chip dropdown (<code style="color: #c084fc;">👤 Account &bull; My Shops &amp; Staff Directory</code>):
+        </p>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Tab 1: Directory</span>
+            <strong style="color: #fff; font-size: 0.95rem;">🏪 My Shops Directory</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Real-time multi-store dashboard displaying live line occupancy, today's served count, Open/Closed status, and direct shortcuts to Front Desk, Settings, QR Posters, and safe 2-step Shop Deletion.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Tab 2: Roles</span>
+            <strong style="color: #fff; font-size: 0.95rem;">👥 Manage Staff &amp; Roles</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Provisions dedicated counter logins with assigned Role Titles (<code style="color: #c084fc;">Front Desk Receptionist</code>, <code style="color: #c084fc;">Intake Greeter</code>) and 8 granular feature checkboxes. Eliminates sharing master Google/owner passwords.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Tab 3: Terminals</span>
+            <strong style="color: #fff; font-size: 0.95rem;">📋 Terminal Links &amp; Live QRs</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Generates 1-click station URLs and live iPad camera QR codes for each staff member. Includes step-by-step iOS "Add to Home Screen" instructions and a real-time timeline of staff queue actions.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Guardrail: Security</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Deletion Safeguards &amp; Billing</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Protects against accidental deletion via two-step confirmation modal and sandbox immunity (<code style="color: #c084fc;">main-st-barbers</code>). Controls Stripe billing upgrades between Starter, Pro, and Enterprise tiers.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role 4: SuperAdmin -->
+      <div>
+        <h3 style="color: #f59e0b; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          👑 4. SuperAdmin Platform Governance Flow
+        </h3>
+        <div class="flow-grid">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 1: Auth</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Cryptographic Auth</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Locked to verified Platform Administrator via Firebase Auth and Firestore security rule validation on every request.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 2: Directory</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Multi-Tenant Directory</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Inspects all registered businesses across the database, monitoring active queue lengths, shop configurations, and active plans.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 3: Pricing</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Dynamic Pricing Manager</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Live configurator updates feature checklists and prices across pricing tables and checkout modals. Records immutable audit logs in Firestore.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Step 4: Support</span>
+            <strong style="color: #fff; font-size: 0.95rem;">Support Inquiry Center</strong>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4;">
+              Reads incoming support inquiries from <code style="color: #f59e0b;">contact.html</code>, writes replies, and triggers direct email dispatch to the user.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 4: ARCHITECTURE -->
+    <section id="architecture" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">04</span>
+        <h2 class="section-heading">Cloud & Data Architecture Blueprint</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+        WaitLink uses an ultra-responsive, serverless micro-architecture designed for sub-second UI updates, real-time multi-device synchronization, and zero local hardware dependencies.
+      </p>
+
+      <!-- Data Model Schema & Read / Write / Update Matrix Table -->
+      <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 0.75rem;">📦 Google Cloud Firestore Collections Read / Write / Update Matrix</h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1rem;">
+        Comprehensive security and data mutation matrix governing all multi-tenant collections, subcollections, and client/server mutation boundaries:
+      </p>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 2rem;">
+        <table class="url-table" style="min-width: 900px;">
+          <thead>
+            <tr>
+              <th>Firestore Path</th>
+              <th>Primary Fields / Schema</th>
+              <th>Read Scope</th>
+              <th>Write / Update Scope</th>
+              <th>Concurrency &amp; Race Protections</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color: #10b981;">/shops/{slug}</strong></td>
+              <td><code>shopName, slug, queue[], history[], services[], twilio{}, planTitle, planPrice, ownerEmail, clinicalPrivacyMode, storeOpen</code></td>
+              <td>Public Read single doc (no wildcard scraping)</td>
+              <td>Owner/SuperAdmin Full Write &bull; Customer atomic queue append only via <code>affectedKeys().hasOnly(['queue', 'stats'])</code></td>
+              <td><code>addQueueItemAtomic()</code> Firestore transaction &bull; high-entropy IDs (<code style="color:#38bdf8;">q_timestamp_rnd</code>) &bull; eliminates dropouts</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #38bdf8;">/shops/{slug}/staff_roles/{staffId}</strong></td>
+              <td><code>staffId, displayName, roleTitle, username, passcode, assignedShop, permissions{canCheckIn, canCallNext, canComplete, canCancel, canRevealPhone, canViewHistory, canToggleStoreStatus, canExportCSV}, createdAt, createdBy</code></td>
+              <td>Public Read single doc (for fast terminal/station auth verification)</td>
+              <td>Shop Owner (matching <code>ownerEmail</code>) &bull; SuperAdmin &bull; Full CRUD</td>
+              <td>Unique <code>staffId</code> keys &bull; Atomic single-doc updates &bull; Instant token/passcode revocation</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #10b981;">/shops/{slug}/history/{ticketId}</strong></td>
+              <td><code>ticketId, name, phone, service, joinedAt, calledAt, completedAt, status, waitMins, serviceMins, piiMasked</code></td>
+              <td>Shop Owner &bull; SuperAdmin (Public queries blocked)</td>
+              <td>Shop Owner &bull; SuperAdmin &bull; Front Desk Staff (via operator console)</td>
+              <td>Discrete subcollection docs eliminate 1MB shop doc limit &bull; 30d PII sanitization pipeline</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #38bdf8;">/messages/{msgId}</strong></td>
+              <td><code>to, from, body, ticketId, ticketUrl, shopSlug, triggerType, createdAt, status</code></td>
+              <td>SuperAdmin Read Only (Outbound SMS table blocked from public)</td>
+              <td>Authenticated Users &bull; SuperAdmin (Write-only queue triggers Twilio)</td>
+              <td>Automated write-once queue &bull; idempotent message dispatch</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #c084fc;">/contact_messages/{id}</strong></td>
+              <td><code>name, email, subject, message, sentAt, status, repliesCount</code></td>
+              <td>SuperAdmin Read Only</td>
+              <td>Public Create (strictly validated strings) &bull; SuperAdmin Update/Delete</td>
+              <td>Rate-limited contact submissions &bull; Triggers <code>sendContactSupportAlert</code></td>
+            </tr>
+            <tr>
+              <td><strong style="color: #f59e0b;">/support_replies/{id}</strong></td>
+              <td><code>inquiryId, recipientEmail, replyText, sentAt, sender</code></td>
+              <td>SuperAdmin Read Only</td>
+              <td>SuperAdmin Write Only</td>
+              <td>Atomically dispatches email via <code>sendSupportReply</code> Cloud Function</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #60a5fa;">/settings/pricing_config</strong></td>
+              <td><code>tiers: { starter[], pro[], enterprise[] }, updatedAt, lastModifiedBy</code></td>
+              <td>Public Read (Live pricing sync)</td>
+              <td>SuperAdmin Write Only</td>
+              <td>Single-source-of-truth &bull; Records immutable audit log in <code>/pricing_audits</code></td>
+            </tr>
+            <tr>
+              <td><strong style="color: #6366f1;">/settings/retention_config</strong></td>
+              <td><code>starterDays, proDays, enterpriseDays, piiMaskThresholdDays, autoPurgeExpired, updatedAt</code></td>
+              <td>Public Read (Client policy sync)</td>
+              <td>SuperAdmin Write Only</td>
+              <td>Centralized CCPA/GDPR compliance governor</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #f43f5e;">/pricing_audits/{auditId}</strong></td>
+              <td><code>author, timestamp, changes[], previousState, newState</code></td>
+              <td>SuperAdmin Read Only</td>
+              <td>SuperAdmin Write Only (Append-only immutable log)</td>
+              <td>Cryptographic audit ledger &bull; zero tampering possible</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #a78bfa;">/users/{uid}/checkout_sessions</strong></td>
+              <td><code>price, mode, success_url, cancel_url, sessionId, status</code></td>
+              <td>Authenticated User (UID match)</td>
+              <td>Authenticated User &bull; Stripe Webhooks</td>
+              <td>Stripe Checkout session lifecycle tracking</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Subsection: All 8 Cloud Functions Architectural Specification -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>⚡</span> All 8 Serverless Cloud Functions (Node.js 20 &bull; 2nd Gen)
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          WaitLink deploys 8 enterprise serverless micro-functions hosted in Google Cloud (<code>us-central1</code>). Each function runs on <strong>Node.js 20</strong>, enforces CORS validation, executes within a concurrency limit of <code>maxInstances: 10</code> to prevent cost overruns, and interacts with third-party APIs (Twilio, Stripe, Brevo) using secure environment secrets:
+        </p>
+
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
+          <table class="url-table" style="min-width: 900px;">
+            <thead>
+              <tr>
+                <th>Cloud Function</th>
+                <th>Trigger / Protocol</th>
+                <th>Integration Service</th>
+                <th>Payload Inputs</th>
+                <th>Security &amp; Responsibilities</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color: #10b981;">sendTwilioSms</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Twilio REST API</td>
+                <td><code>to, message, shopSlug, ticketId</code></td>
+                <td>Normalizes numbers to E.164 &bull; Dispatches turn-ready SMS alerts &bull; Logs delivery status to <code>/messages</code></td>
+              </tr>
+              <tr>
+                <td><strong style="color: #6366f1;">createStripeCheckoutSession</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Stripe Billing API</td>
+                <td><code>slug, price, planTitle, ownerEmail</code></td>
+                <td>Creates cryptographically signed Stripe Checkout sessions with dynamic tier metadata and return URLs</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #06b6d4;">verifyStripeSessionAndUpgrade</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Stripe API &bull; Firestore</td>
+                <td><code>sessionId, slug</code></td>
+                <td>Verifies payment completion directly with Stripe &bull; Atomically upgrades shop tier in Firestore with fraud protection</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #f59e0b;">sendBrevoPasswordReset</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Brevo API v3 (Sendinblue)</td>
+                <td><code>email, resetLink</code></td>
+                <td>Sends high-deliverability branded password reset emails with cryptographic action links and spam protection</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #38bdf8;">sendShopWelcomeEmail</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Brevo API v3</td>
+                <td><code>ownerEmail, shopName, shopSlug</code></td>
+                <td>Dispatches onboarding welcome pack containing live waitlist URL, printable QR poster link, and desk console shortcut</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #f43f5e;">sendContactSupportAlert</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Brevo API v3</td>
+                <td><code>name, email, subject, message</code></td>
+                <td>Instant admin notification email when a customer or business submits an inquiry via <code>contact.html</code></td>
+              </tr>
+              <tr>
+                <td><strong style="color: #818cf8;">sendSubscriptionUpgradeEmail</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Brevo API v3</td>
+                <td><code>ownerEmail, shopName, planTitle, planPrice</code></td>
+                <td>Sends customer confirmation receipt and feature unlocking guide upon successful plan upgrade (Pro / Enterprise)</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #10b981;">sendSupportReply</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Brevo API v3 &bull; Firestore</td>
+                <td><code>inquiryId, recipientEmail, replyText</code></td>
+                <td>SuperAdmin resolution dispatch &bull; Emails customer directly from WaitLink Support and marks inquiry resolved</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Subsection: Two-Tier Data Storage & 1MB Boundary Safeguard -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🧱</span> Two-Tier Storage Architecture & 1MB Document Boundary Safeguard
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          High-volume storefronts accumulate tens of thousands of customer visits per year. A monolithic array inside a single Firestore document hits Cloud Firestore's <strong>1 MB document limit</strong> at ~2,500 records. WaitLink resolves this with an active cache + partitioned subcollection pattern:
+        </p>
+        <div class="flow-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">Tier 1: In-Memory / Document Cache</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">Recent History Buffer</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              The most recent completed visits reside inside the primary shop document (capped at 200 items). This enables instant <strong>&lt; 50ms</strong> UI loads when operators open the Front Desk or Visit History logs, with zero secondary network lookups.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.4);">Tier 2: Partitioned Subcollection</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">/shops/{slug}/history/{ticketId}</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              Every completed, cancelled, or no-show customer visit is atomically synchronized to a discrete subcollection document. This eliminates the 1MB ceiling entirely, scaling to hundreds of thousands of historical records without degrading shop document performance.
+            </p>
+          </div>
+          <div class="flow-step-card">
+            <span class="flow-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">Client-Side Lazy Reconciliation</span>
+            <h4 style="color: #fff; margin: 0.4rem 0 0.5rem 0; font-size: 1rem;">State Reconciliation & Cleanup</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+              During live sync and owner view activation, <code>performClientSideLazyCleanup()</code> prunes expired records beyond tier retention windows (7d / 90d / 365d) while maintaining seamless pagination and zero disruption to active line callers.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subsection: Automated PII Anonymization & Data Sanitization Pipeline -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #a5b4fc; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🛡️</span> Automated PII Anonymization & Data Sanitization Pipeline
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          To comply with CCPA, TCPA, and GDPR data minimization requirements, customer personal information is subject to a strict 30-day anonymization boundary governed centrally via <code>/settings/retention_config</code>:
+        </p>
+        <div class="flow-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          <div class="flow-step-card">
+            <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 0.95rem;">📱 Phone Number Masking</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem;">
+              Regex pipeline <code>maskHistoricalPhone(phone)</code> preserves standard country prefix and terminal digits while redacting the exchange:
+            </p>
+            <div class="code-block" style="margin: 0; font-size: 0.78rem;">"+1 (555) 234-5689" → "+1 (555) •••-••89"</div>
+          </div>
+          <div class="flow-step-card">
+            <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 0.95rem;">👤 Customer Name Masking</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem;">
+              String tokenizer <code>maskHistoricalName(name)</code> preserves first name or initials while irrevocably masking family surnames:
+            </p>
+            <div class="code-block" style="margin: 0; font-size: 0.78rem;">"Jonathan Edwards" → "Jonathan E••••"</div>
+          </div>
+          <div class="flow-step-card">
+            <h4 style="color: #fff; margin-bottom: 0.4rem; font-size: 0.95rem;">📈 Metric Integrity Safeguard</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem;">
+              Anonymization operates non-destructively on timing metrics. Throughput analytics retain 100% precision:
+            </p>
+            <div class="code-block" style="margin: 0; font-size: 0.78rem;">{ waitMins: 14, serviceMins: 22, status: "completed" }</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subsection: Clinical & Healthcare Privacy Mode Architecture -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #06b6d4; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🏥</span> Clinical & Healthcare Privacy Mode System Architecture
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          Urgent care walk-in clinics, outpatient centers, and wellness practices operate under strict HIPAA confidentiality mandates. When <code>clinicalPrivacyMode: true</code> is activated in shop settings:
+        </p>
+        <ul style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.7; padding-left: 1.25rem;">
+          <li><strong>Public Screen Isolation:</strong> Public TV monitors and mobile customer web cards strictly truncate full patient names to first name and last initial (e.g. <em>"Jonathan E."</em>).</li>
+          <li><strong>Front Desk Tap-to-Reveal Phone Protection:</strong> Front desk tablets mask patient phone numbers by default (e.g. <code>+1 (•••) •••-1359</code>). Receptionists tap a secure badge to reveal the number for 10 seconds during patient check-in or telephone verification.</li>
+          <li><strong>Anonymous Patient Ticket Identifiers:</strong> Ticket numbers render as anonymous health codes (e.g. <em>"Patient #104"</em>), avoiding public exposure of patron identities.</li>
+          <li><strong>Medical Service Concealment:</strong> Specific medical consultation and clinical treatment service tags are suppressed on public customer views, keeping health visit categories private.</li>
+        </ul>
+      </div>
+
+      <!-- Subsection: Tier-Gated RFC 4180 CSV Export Engine -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #10b981; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>📥</span> Tier-Gated RFC 4180 CSV Reporting Engine
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+          The client-side export utility <code>exportHistoryCSV()</code> streams sanitized records into RFC 4180 standard spreadsheet format with cross-platform Unicode byte-order mark (<code style="color: #38bdf8;">\uFEFF</code>) protection:
+        </p>
+        <div class="code-block" style="font-size: 0.8rem;">
+Ticket ID,Customer Name,Phone Number,Service,Joined At,Called At,Completed At,Status,Wait Time (mins),Service Time (mins),Audit Status
+WL-8821,"Jonathan E••••","+1 (555) •••-••89","Urgent Consultation","2026-09-12 09:14","2026-09-12 09:28","2026-09-12 09:50","completed",14,22,"PII Anonymized (30d+)"
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 5: SECURITY -->
+    <section id="security" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">05</span>
+        <h2 class="section-heading">Security Architecture & Rules Enforcement</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+        <div>
+          <h3 style="color: #10b981; font-size: 1.15rem; margin-bottom: 0.5rem;">🛡️ Firestore Security Rules Isolation</h3>
+          <p style="margin-bottom: 0.75rem;">
+            WaitLink eliminates open wildcard access. Access is strictly constrained by authentication state and role:
+          </p>
+          <ul style="padding-left: 1.25rem; margin: 0; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><strong>No Open Scraping:</strong> Direct <code style="color: #38bdf8;">allow list</code> queries across the entire <code style="color: #38bdf8;">/shops</code> collection are blocked for unauthenticated users.</li>
+            <li><strong>Customer Check-In Safeguard:</strong> Unauthenticated customer check-ins are restricted to updating only the <code style="color: #10b981;">queue</code> and <code style="color: #10b981;">stats</code> fields via <code style="color: #10b981;">affectedKeys().hasOnly(...)</code>. Customers cannot overwrite owner email, settings, or plans.</li>
+            <li><strong>History Subcollection Partitioning:</strong> The <code style="color: #10b981;">/shops/{shopId}/history/{ticketId}</code> subcollection restricts read, write, and delete permissions exclusively to authenticated shop owners (<code style="color: #38bdf8;">isOwner(shopId)</code>) and Platform SuperAdmins (<code style="color: #a5b4fc;">isSuperAdmin()</code>). Public customer queries are rejected.</li>
+            <li><strong>Retention Policy Governance:</strong> The centralized <code style="color: #6366f1;">/settings/retention_config</code> document permits public read for client-side policy synchronization, but write mutations are strictly locked to verified SuperAdmins.</li>
+            <li><strong>SMS & Inquiry Protection:</strong> Outbound SMS and contact inquiry tables are blocked from public reads.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="color: #06b6d4; font-size: 1.15rem; margin-bottom: 0.5rem;">🔑 Git & Secrets Management Architecture</h3>
+          <p style="margin-bottom: 0.75rem;">
+            Credentials and operational API keys are permanently decoupled from Git:
+          </p>
+          <ul style="padding-left: 1.25rem; margin: 0; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><code style="color: #06b6d4;">config.secrets.js</code> holds local credentials and is excluded via <code style="color: #f43f5e;">.gitignore</code> and <code style="color: #f43f5e;">firebase.json</code>.</li>
+            <li><code style="color: #06b6d4;">config.secrets.example.js</code> is tracked in Git as a placeholder template.</li>
+            <li>Source files (<code style="color: #38bdf8;">app.js</code>, <code style="color: #38bdf8;">index.html</code>) use the dynamic <code style="color: #10b981;">window.WAITLINK_SECRETS</code> loader with zero hardcoded secret strings.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: DEVELOPER CLI -->
+    <section id="developer" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">06</span>
+        <h2 class="section-heading">Developer CLI & Deployment Commands</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1rem;">
+        Copy and execute these commands directly in your terminal for maintenance, deployments, and testing:
+      </p>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">1. Full Production Deployment (Hosting + Version Pruning)</strong>
+          <span style="font-size: 0.75rem; color: #10b981;">Primary Deploy Workflow</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npm run deploy
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">2. Deploy Cloud Firestore Security Rules Only</strong>
+          <span style="font-size: 0.75rem; color: #38bdf8;">Database Security Release</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npx firebase-tools deploy --only firestore:rules --project waitlink-app-8821
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">3. Deploy Firebase Hosting Files Only</strong>
+          <span style="font-size: 0.75rem; color: #c084fc;">CDN Static Assets</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+npx firebase-tools deploy --only hosting --project waitlink-app-8821
+        </div>
+      </div>
+
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <strong style="color: #fff; font-size: 0.88rem;">4. Run Automatic Hosting Version Pruning Script</strong>
+          <span style="font-size: 0.75rem; color: #f59e0b;">Keep 5 Most Recent Versions</span>
+        </div>
+        <div class="code-block">
+          <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+node scripts/prune-firebase-versions.js
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: PUBLIC URLS -->
+    <section id="urls" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">07</span>
+        <h2 class="section-heading">Public URLs & Search Engine Indexing Directory</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1rem;">
+        All public-facing routes deployed on <strong style="color: #fff;">waitlink.app</strong>, registered in <code style="color: #38bdf8;">sitemap.xml</code> and submitted to Google Search Console:
+      </p>
+
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+        <table class="url-table" style="min-width: 700px;">
+          <thead>
+            <tr>
+              <th>Web Page</th>
+              <th>Production URL</th>
+              <th>SEO Priority</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Homepage</strong></td>
+              <td><a href="https://waitlink.app/" target="_blank" style="color: #10b981;">https://waitlink.app/</a></td>
+              <td><span style="color: #10b981; font-weight: 700;">1.0 (Daily)</span></td>
+              <td>Main SaaS landing page with QR check-in demo and live queue ticker</td>
+            </tr>
+            <tr>
+              <td><strong>Pricing</strong></td>
+              <td><a href="https://waitlink.app/pricing.html" target="_blank" style="color: #38bdf8;">https://waitlink.app/pricing.html</a></td>
+              <td><span style="color: #38bdf8; font-weight: 700;">0.9 (Weekly)</span></td>
+              <td>Transparent tier comparison: Free Starter, Pro ($15), Enterprise ($49)</td>
+            </tr>
+            <tr>
+              <td><strong>Comparison Matrix</strong></td>
+              <td><a href="https://waitlink.app/comparison.html" target="_blank" style="color: #38bdf8;">https://waitlink.app/comparison.html</a></td>
+              <td><span style="color: #38bdf8; font-weight: 700;">0.9 (Weekly)</span></td>
+              <td>Head-to-head comparison vs Waitwhile, Waitlist Me, QLess, Qminder</td>
+            </tr>
+            <tr>
+              <td><strong>About Us</strong></td>
+              <td><a href="https://waitlink.app/about.html" target="_blank" style="color: #c084fc;">https://waitlink.app/about.html</a></td>
+              <td>0.8 (Monthly)</td>
+              <td>Our mission, local business revenue optimization, and team story</td>
+            </tr>
+            <tr>
+              <td><strong>FAQ</strong></td>
+              <td><a href="https://waitlink.app/faq.html" target="_blank" style="color: #c084fc;">https://waitlink.app/faq.html</a></td>
+              <td>0.8 (Weekly)</td>
+              <td>Detailed answers on SMS delivery, hardware requirements, Stripe billing</td>
+            </tr>
+            <tr>
+              <td><strong>Help Center</strong></td>
+              <td><a href="https://waitlink.app/help.html" target="_blank" style="color: #c084fc;">https://waitlink.app/help.html</a></td>
+              <td>0.8 (Weekly)</td>
+              <td>Step-by-step guides for window flyers, front desk iPads, and owner settings</td>
+            </tr>
+            <tr>
+              <td><strong>Contact Page</strong></td>
+              <td><a href="https://waitlink.app/contact.html" target="_blank" style="color: #f59e0b;">https://waitlink.app/contact.html</a></td>
+              <td>0.7 (Monthly)</td>
+              <td>Direct inquiry form connected to Cloud Firestore support inbox</td>
+            </tr>
+            <tr>
+              <td><strong>Architecture Blueprint</strong></td>
+              <td><a href="https://waitlink.app/waitlinkarchitecture.html" target="_blank" style="color: #06b6d4;">https://waitlink.app/waitlinkarchitecture.html</a></td>
+              <td><span style="color: #94a3b8; font-weight: 600;">Unlisted / Direct</span></td>
+              <td>Internal technical blueprint, process flows & developer manual (excluded from sitemap.xml)</td>
+            </tr>
+            <tr>
+              <td><strong>Privacy Policy</strong></td>
+              <td><a href="https://waitlink.app/privacy.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/privacy.html</a></td>
+              <td>0.4 (Monthly)</td>
+              <td>TCPA & CTIA compliant cellular mobile SMS text messaging disclosures</td>
+            </tr>
+            <tr>
+              <td><strong>Terms of Service</strong></td>
+              <td><a href="https://waitlink.app/terms.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/terms.html</a></td>
+              <td>0.4 (Monthly)</td>
+              <td>Software as a service subscription and user licensing agreement</td>
+            </tr>
+            <tr>
+              <td><strong>Cookie Policy</strong></td>
+              <td><a href="https://waitlink.app/cookies.html" target="_blank" style="color: #94a3b8;">https://waitlink.app/cookies.html</a></td>
+              <td>0.3 (Monthly)</td>
+              <td>Client-side HTML5 LocalStorage caching and analytics disclosure</td>
+            </tr>
+            <tr>
+              <td><strong>XML Sitemap</strong></td>
+              <td><a href="https://waitlink.app/sitemap.xml" target="_blank" style="color: #10b981;">https://waitlink.app/sitemap.xml</a></td>
+              <td>Search Index</td>
+              <td>Google Search Console indexable XML feed</td>
+            </tr>
+            <tr>
+              <td><strong>Robots Directives</strong></td>
+              <td><a href="https://waitlink.app/robots.txt" target="_blank" style="color: #10b981;">https://waitlink.app/robots.txt</a></td>
+              <td>Crawler Index</td>
+              <td>Search crawler permissions and sitemap pointer</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 8: COMPARISON MATRIX -->
+    <section id="comparison" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">08</span>
+        <h2 class="section-heading">Competitive Comparison Matrix (WaitLink vs Industry)</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.25rem;">
+        Comprehensive benchmarking comparing WaitLink against traditional queue management systems:
+      </p>
+
+      <div class="matrix-table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);">
+        <table class="comparison-table" style="width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; color: #e2e8f0; font-size: 0.92rem;">
+          <thead>
+            <tr style="background: rgba(30, 41, 59, 0.9);">
+              <th style="padding: 1.1rem 1rem; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 28%; font-weight: 700; color: #f8fafc;">Feature / Capability</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 2px solid #10b981; background: rgba(16, 185, 129, 0.15); width: 20%; font-weight: 800; color: #10b981; font-size: 1.1rem; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                🚀 WaitLink
+                <div style="font-size: 0.72rem; font-weight: 500; color: #a7f3d0; margin-top: 2px;">Built for Speed & Value</div>
+              </th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitwhile</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitlist Me</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">QLess</th>
+              <th style="padding: 1.1rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Qminder</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Category 1 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                1. Setup & Customer Friction
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">App Download Required</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">❌ None (Web Instant)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">⚠️ App Often Preferred</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">❌ None</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Account Setup Time</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">⚡ Under 2 Minutes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">30+ Mins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">15+ Mins</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">Days / Onboarding Call</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">30+ Mins</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Hardware Requirements</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">📱 Any Phone/Browser</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Tablet Kiosk</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Tablet Kiosk</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">Custom Hardware</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">iPad Kiosk</td>
+            </tr>
+
+            <!-- Category 2 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                2. Core Queue & Customer Experience
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Live Queue Tracker (Customer Phone)</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Real-Time Sync</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">⚠️ SMS Link Only</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #94a3b8;">⚠️ Basic SMS</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Lobby Digital TV Display Mode</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Included Free</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Enterprise Addon</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">💲 Paid Addon</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Twilio SMS Integration</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Built-in Toggle & Compliance</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #10b981;">✅ Yes</td>
+            </tr>
+
+            <!-- Category 3 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                3. Analytics & Operational Intelligence
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Walk-Away Loss % Analytics</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ Instant KPI Dashboard</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Higher Tier Only</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #f43f5e;">❌ No</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Enterprise Tier</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #e2e8f0;">Custom Reports</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.85rem 1rem; font-weight: 600;">Customer Lifecycle CSV Audit Export</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981;">✅ 11-Column Detailed Audit</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Basic CSV</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Basic CSV</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Enterprise SQL</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #cbd5e1;">Limited Export</td>
+            </tr>
+
+            <!-- Category 4 -->
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <td colspan="6" style="padding: 0.65rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
+                4. Pricing & Value
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 1rem 1rem; font-weight: 700;">Starting Price</td>
+              <td style="padding: 1rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.12); font-weight: 800; color: #10b981; font-size: 1.05rem; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">💎 High Value / Free Start</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $199 / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $49 / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$100+ / mo</td>
+              <td style="padding: 1rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$299+ / mo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 09: SAAS PRICING TIERS, FEATURE LOCKOUT MATRIX & DUAL-LAYER PAYWALL ARCHITECTURE -->
+    <section id="pricing-matrix" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">09</span>
+        <h2 class="section-heading">SaaS Pricing Tiers, Available vs Locked Features & Dynamic SuperAdmin Engine</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 1.05rem; line-height: 1.7; margin-bottom: 2rem;">
+        WaitLink enforces a frictionless three-tier subscription model engineered specifically for independent walk-in businesses up to regional multi-location chains. Features and operational capabilities are dynamically governed through a <strong>Dual-Layer Paywall Architecture</strong> and a <strong>Real-Time Cloud Configurator Engine</strong> managed directly by the Platform SuperAdmin.
+      </p>
+
+      <!-- 3 Tier Architectural Cards Overview -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; margin-bottom: 2.5rem;">
+        
+        <!-- Tier 1 Card -->
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 1.75rem; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.2rem 0.65rem; border-radius: 9999px; text-transform: uppercase;">Tier 1: Starter</span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #fff;">$0 <span style="font-size: 0.8rem; font-weight: 400; color: #94a3b8;">/ mo</span></span>
+            </div>
+            <h3 style="color: #fff; font-size: 1.35rem; margin: 0 0 0.5rem 0;">Free Forever</h3>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.5; margin-bottom: 1.25rem;">
+              Targeted at solo barbers, independent stylists, and pop-up clinics testing zero-friction digital walk-in queue management.
+            </p>
+
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                ✅ Available & Enabled Features
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: #cbd5e1;">
+                <li><strong style="color: #fff;">✓ 1 Active Shop Location</strong> (Strict single-shop limit)</li>
+                <li>✓ <strong>Up to 100 Check-ins</strong> per calendar month</li>
+                <li>✓ 7-Day Rolling Queue History Retention Window</li>
+                <li>✓ Printable High-Res Window QR Poster (Instant scan)</li>
+                <li>✓ 1-Tap Front Desk Queue Control (Add, Serve, Done, Cancel)</li>
+                <li>✓ Real-Time Waiting Time Estimator Algorithm</li>
+                <li>✓ Anonymous Public Customer Wait Page (Masked privacy)</li>
+                <li>✓ Audible Turn Chimes & Sound Synthesizer Alerts</li>
+              </ul>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 0.85rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                🔒 Locked / Paywalled Capabilities
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: #94a3b8;">
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Automated Twilio SMS "Turn Ready" Alerts</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Custom Shop Logo Branding & Accent Customizer</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Promotional Offer Banners on Public Screen</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Owner Business Intelligence Dashboard</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Peak Rush Window & Walk-Away Cancellation Analytics</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> RFC 4180 CSV History Audit Export (Requires Pro)</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Extended History Retention (> 7 Days requires Pro)</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Multiple Shop Creation (&gt; 1 Shop requires Pro)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tier 2 Card -->
+        <div style="background: rgba(6, 182, 212, 0.08); border: 2px solid #06b6d4; border-radius: 16px; padding: 1.75rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);">
+          <div style="position: absolute; top: -12px; right: 20px; background: #06b6d4; color: #fff; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 9999px; text-transform: uppercase;">
+            Most Popular
+          </div>
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #06b6d4; background: rgba(6, 182, 212, 0.2); padding: 0.2rem 0.65rem; border-radius: 9999px; text-transform: uppercase;">Tier 2: Pro Business</span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #10b981;">$15 <span style="font-size: 0.8rem; font-weight: 400; color: #94a3b8;">/ mo</span></span>
+            </div>
+            <h3 style="color: #fff; font-size: 1.35rem; margin: 0 0 0.5rem 0;">Standard Shop</h3>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.5; margin-bottom: 1.25rem;">
+              Designed for established single-location barbershops, high-traffic salons, and walk-in studios wanting zero walk-away revenue loss.
+            </p>
+
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #06b6d4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                ✅ Available & Enabled Features
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: #cbd5e1;">
+                <li><strong style="color: #fff;">✓ Everything in Starter Tier</strong></li>
+                <li>✓ <strong style="color: #10b981;">Unlimited Monthly Check-Ins</strong> (No throttling)</li>
+                <li>✓ 📱 <strong style="color: #06b6d4;">Automated Twilio SMS Alerts</strong> ("Your turn is ready!")</li>
+                <li>✓ 📷 Custom Shop Logo Upload & Brand Accent Colors</li>
+                <li>✓ 🎁 Promotional Offer Banners on Public Screen</li>
+                <li>✓ 📊 Owner Business Intelligence Dashboard & Turnaround KPIs</li>
+                <li>✓ 📉 Peak Rush Window & Walk-Away Cancellation Tracking</li>
+                <li>✓ 📥 <strong style="color: #10b981;">90-Day History Retention & RFC 4180 CSV Export</strong></li>
+                <li>✓ 🛡️ <strong style="color: #38bdf8;">Automated 30-Day PII Masking</strong> (TCPA/CCPA/GDPR)</li>
+                <li>✓ 🏥 <strong style="color: #06b6d4;">Clinical & Healthcare Privacy Mode</strong> (Urgent care)</li>
+                <li>✓ 🔄 Multi-Device Front Desk Sync (Real-time Firestore)</li>
+                <li>✓ ⚡ Priority Cloud Firestore Latency & Replication</li>
+              </ul>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 0.85rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                🔒 Locked / Paywalled Capabilities
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: #94a3b8;">
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Multi-Location Network (&gt; 1 Shop requires Enterprise)</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Multiple Staff Accounts with Role-Based ACLs</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Custom Domain Slugs & CNAME White-Labeling</li>
+                <li style="text-decoration: line-through; opacity: 0.75;"><span style="color: #f43f5e; font-weight: 700; text-decoration: none;">✕</span> Dedicated Account Manager & SLA Guarantee</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tier 3 Card -->
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid rgba(99, 102, 241, 0.45); border-radius: 16px; padding: 1.75rem; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 0.2rem 0.65rem; border-radius: 9999px; text-transform: uppercase;">Tier 3: Enterprise</span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #818cf8;">$49 <span style="font-size: 0.8rem; font-weight: 400; color: #94a3b8;">/ mo</span></span>
+            </div>
+            <h3 style="color: #fff; font-size: 1.35rem; margin: 0 0 0.5rem 0;">Multi-Location</h3>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.5; margin-bottom: 1.25rem;">
+              Engineered for regional chains, franchise barber networks, urgent care centers, and multi-branch operations requiring centralized control.
+            </p>
+
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                ✅ Available & Enabled Features
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: #cbd5e1;">
+                <li><strong style="color: #fff;">✓ Everything in Pro Business Tier</strong></li>
+                <li>✓ 🏢 <strong style="color: #818cf8;">Multi-Location Network (Unlimited Shops)</strong></li>
+                <li>✓ 🛡️ <strong style="color: #10b981;">365-Day History Retention Window</strong> across all branches</li>
+                <li>✓ 📥 <strong style="color: #10b981;">Full Enterprise Multi-Location CSV Export</strong></li>
+                <li>✓ 👥 Multiple Staff Front Desk Accounts & Granular Permissions</li>
+                <li>✓ 📱 High-Volume Dedicated Twilio SMS Routing (Custom Senders)</li>
+                <li>✓ 🔗 Custom Domain Slugs & CNAME White-Label Routing</li>
+                <li>✓ 👑 Multi-Tenant Platform SuperAdmin Directory Access</li>
+                <li>✓ 💬 Dedicated Support Manager & Priority Hotline</li>
+                <li>✓ 🛡️ 99.99% Cloud Uptime SLA Guarantee</li>
+              </ul>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 0.85rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                🔒 Locked / Paywalled Capabilities
+              </div>
+              <div style="font-size: 0.85rem; color: #10b981; font-weight: 600; padding: 0.35rem 0;">
+                ✨ Complete Unrestricted Access (No Feature Locks)
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dual-Layer Paywall Architecture Technical Specification -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; margin-bottom: 2.5rem;">
+        <h3 style="color: #fff; font-size: 1.25rem; font-weight: 800; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          🛡️ Dual-Layer Paywall Enforcement Mechanism
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.5rem;">
+          WaitLink prevents unauthorized capability access using a synchronized two-stage defense model: client-side deep UI disablement and server-side state enforcement.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+          
+          <div style="background: rgba(0, 0, 0, 0.25); border-left: 3px solid #06b6d4; padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #06b6d4; font-size: 0.95rem; margin-bottom: 0.5rem;">Layer 1: Deep UI Control Gating</div>
+            <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin: 0 0 0.75rem 0;">
+              Features gated to Pro or Enterprise are completely locked in the DOM:
+            </p>
+            <ul style="font-size: 0.82rem; color: #94a3b8; padding-left: 1.2rem; margin: 0; line-height: 1.5;">
+              <li><strong>Custom Shop Logo:</strong> File upload button is disabled, file picker events are suppressed, URL textfield is marked <code>readonly</code>, and a visible Pro Paywall banner is rendered.</li>
+              <li><strong>Promotional Offer Banners:</strong> Textfield and start/end datetime pickers are disabled (<code>disabled="true"</code>, <code>cursor: not-allowed</code>).</li>
+              <li><strong>CSV Export & Analytics:</strong> Export triggers the in-app <code>#upgrade-modal</code> with 1-click upgrade options.</li>
+              <li><strong>Shop Creation Gate:</strong> Solo tier checks active tenant count; creating a 2nd shop triggers a paywall upgrade modal.</li>
+            </ul>
+          </div>
+
+          <div style="background: rgba(0, 0, 0, 0.25); border-left: 3px solid #10b981; padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #10b981; font-size: 0.95rem; margin-bottom: 0.5rem;">Layer 2: Cloud Firestore & Rule Enforcement</div>
+            <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin: 0 0 0.75rem 0;">
+              Backend security rules and cloud function gates ensure data integrity:
+            </p>
+            <ul style="font-size: 0.82rem; color: #94a3b8; padding-left: 1.2rem; margin: 0; line-height: 1.5;">
+              <li><strong>Twilio SMS Trigger Gate:</strong> Backend check verifies <code>planPrice &gt;= 15</code> before calling Twilio REST endpoints; prevents unauthorized SMS billing charges.</li>
+              <li><strong>Tenant Multi-Tenancy:</strong> Firestore security rules validate that tenant shop documents can only be instantiated beyond 1 if the user profile contains an Enterprise subscription.</li>
+              <li><strong>Audit Logging:</strong> All subscription transitions and upgrade events are logged to <code>pricing_audits</code> with administrator/user email and timestamps.</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Real-Time SuperAdmin Dynamic Pricing Engine -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; margin-bottom: 2.5rem;">
+        <h3 style="color: #fff; font-size: 1.25rem; font-weight: 800; margin-top: 0; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          ⚙️ Dynamic SuperAdmin Pricing Config Engine & Real-Time Sync Pipeline
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.25rem;">
+          SuperAdmin has complete programmatic and visual control over all pricing tiers via the <strong>Pricing Config & Tiers</strong> tab. Changes publish directly to Firestore and reflect instantly across all active user sessions without requiring a page reload or deployment.
+        </p>
+
+        <!-- Reactive Flow Diagram -->
+        <div style="background: #030712; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; font-family: monospace; font-size: 0.85rem; color: #38bdf8; overflow-x: auto;">
+          [SuperAdmin View: Pricing Config & Tiers]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;│<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;├── 1. Toggle feature: [✓ Enabled] ➔ [✕ Disabled (Strikethrough)]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;├── 2. Edit feature text inline or click [+ Add Feature]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;├── 3. Click [💾 Save & Publish Pricing Tiers]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;│<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+          [Google Cloud Firestore: /settings/pricing_config]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└── Document updated with { tiers: [...], updatedAt: timestamp }<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└── Diff written to /pricing_audits audit collection<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+          [Firestore onSnapshot Reactive Listeners across all clients]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;├── pricing.html ➔ renderPricingTiers() runs immediately (✓ Green vs ✕ Red Strikethrough)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;└── index.html & app.js ➔ renderUpgradeModalTiers() dynamically updates modal cards
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; font-size: 0.85rem;">
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 1rem; border-radius: 8px;">
+            <strong style="color: #10b981;">✓ Enabled Features:</strong>
+            <p style="color: #94a3b8; margin: 0.4rem 0 0 0;">Rendered with high-contrast green checkmark (<code style="color:#10b981;">✓</code>) and crisp white text across both public pricing and in-app upgrade modals.</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 1rem; border-radius: 8px;">
+            <strong style="color: #ef4444;">✕ Disabled / Strikethrough Features:</strong>
+            <p style="color: #94a3b8; margin: 0.4rem 0 0 0;">Rendered with red cross (<code style="color:#ef4444;">✕</code>), 65% subtle opacity, and distinct strikethrough text to clearly communicate locked or excluded capabilities.</p>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 1rem; border-radius: 8px;">
+            <strong style="color: #38bdf8;">🔄 Instant Rollback / Defaults:</strong>
+            <p style="color: #94a3b8; margin: 0.4rem 0 0 0;">SuperAdmin can click <code style="color:#38bdf8;">🔄 Restore Defaults</code> on any tier to revert back to canonical architectural defaults at any time.</p>
+          </div>
+        </div>
+
+        <!-- Master Multi-Tenant Shop Directory Plan Control -->
+        <div style="margin-top: 1.5rem; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 1.25rem;">
+          <h4 style="color: #818cf8; font-size: 1rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            🏬 Master Multi-Tenant Shop Directory — Instant Plan Assignment Engine
+          </h4>
+          <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.75rem;">
+            SuperAdmin can reassign any tenant shop's subscription tier directly from the <strong>Master Multi-Tenant Shop Directory</strong> table using the interactive, color-coded <code style="color:#818cf8;">&lt;select class="superadmin-plan-select"&gt;</code> dropdown:
+          </p>
+          <ul style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; margin: 0; padding-left: 1.25rem;">
+            <li><strong style="color: #10b981;">Starter ($0/mo):</strong> Green badge/select border. Restricts pro branding, SMS alerts, and deep analytics.</li>
+            <li><strong style="color: #06b6d4;">Pro Business ($15/mo):</strong> Cyan badge/select border. Unlocks full logo uploads, custom theme colors, automated SMS chimes, and BI analytics.</li>
+            <li><strong style="color: #818cf8;">Enterprise ($49/mo):</strong> Indigo badge/select border. Unlocks multi-location network management, custom domain CNAMEs, and platform SuperAdmin views.</li>
+            <li><strong>Automated Platform MRR Update:</strong> Changing any shop immediately recalculates the top-level <code style="color:#fff;">$X / mo</code> platform MRR metric.</li>
+            <li><strong>Atomic Firestore Sync & Audit:</strong> Updates <code style="color:#38bdf8;">/shops/{slug}</code> with <code style="color:#38bdf8;">planTitle</code> and <code style="color:#38bdf8;">planPrice</code>, simultaneously recording an entry in <code style="color:#38bdf8;">/pricing_audits</code> with admin timestamp.</li>
+            <li><strong style="color: #ef4444;">Duplicate Prevention &amp; Purge Tool:</strong> The shop creation wizard strictly validates that no shop can be registered with the same name and physical business address. SuperAdmin can delete obsolete shops (<code style="color:#f43f5e;">🗑️ Delete</code>) or run the automated 1-click duplicate scanner (<code style="color:#f59e0b;">🧹 Purge Duplicates</code>) to purge ghost/test entries.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Complete Feature Lockout Comparison Matrix -->
+      <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <span style="font-size: 0.75rem; font-weight: 800; color: #06b6d4; background: rgba(6, 182, 212, 0.15); padding: 0.2rem 0.65rem; border-radius: 9999px; text-transform: uppercase;">EXHAUSTIVE SPECIFICATION</span>
+          <h3 style="font-size: 1.5rem; color: #fff; margin: 0.5rem 0 0.25rem 0;">Exhaustive Tier Feature Availability & Lockout Matrix</h3>
+          <p style="color: #94a3b8; font-size: 0.88rem; margin: 0;">Comprehensive architectural reference of what is available vs paywalled across every tier.</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 1rem; color: #fff; font-weight: 700; width: 40%;">Platform Feature / Capability</th>
+              <th style="padding: 1rem; color: #10b981; font-weight: 700; text-align: center; width: 20%; background: rgba(16, 185, 129, 0.05);">Tier 1: Starter ($0)</th>
+              <th style="padding: 1rem; color: #06b6d4; font-weight: 800; text-align: center; width: 20%; background: rgba(6, 182, 212, 0.08);">Tier 2: Pro Business ($15)</th>
+              <th style="padding: 1rem; color: #818cf8; font-weight: 700; text-align: center; width: 20%; background: rgba(99, 102, 241, 0.05);">Tier 3: Enterprise ($49)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Category 1: Operations -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.65rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">1. Shop Operations & Queue Management</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Number of Shop Locations</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">1 Location (Single Shop)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.05);">1 Dedicated Shop</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">Unlimited Locations</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Monthly Walk-in Check-in Volume</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">Up to 100 / mo</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Unlimited</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Unlimited</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">1-Tap Front Desk Queue Control</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Printable High-Res Window QR Poster</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Real-Time Waiting Time Estimator</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Anonymous Customer Public Wait Page</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Audible Turn Chimes & Sound Synthesizer</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+
+            <!-- Category 2: Communications & Branding -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.65rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">2. Customer Communications & Branding</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Automated Twilio SMS "Turn Ready" Alerts</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked (Requires Pro)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Included (Standard)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ High-Volume Dedicated</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Custom Shop Logo & Accent Colors</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked (Disabled UI)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Promotional Offer Banners on Public Screen</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked (Disabled UI)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Custom Domain Slugs & CNAME Routing</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(6, 182, 212, 0.05);">🔒 Locked</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+
+            <!-- Category 3: Analytics & Exports -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.65rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">3. Analytics, Reporting & Data Portability</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Owner Business Intelligence Dashboard</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked (Basic Only)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Full BI Dashboard</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Cross-Shop Network BI</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Peak Rush Window & Turnaround Insights</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Walk-Away Cancellation Loss Tracking</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Available</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Available</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Queue History Retention Window</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">7 Days Rolling</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.05);">90 Days Rolling (3 Mos)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">365 Days Rolling (1 Yr)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Automated PII Anonymization (> 30 Days)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #94a3b8; background: rgba(16, 185, 129, 0.03);">N/A (7-Day Limit)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Phone & Name Masking</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Phone & Name Masking</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Clinical & Healthcare Privacy Mode</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; background: rgba(16, 185, 129, 0.03);">✓ Included</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ Included (Urgent Care)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Included (Multi-Branch)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">RFC 4180 CSV History Audit Export</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Locked (Requires Pro)</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(6, 182, 212, 0.05);">✓ 90-Day Full Export</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Annual Network Export</td>
+            </tr>
+
+            <!-- Category 4: Multi-User & SLAs -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="4" style="padding: 0.65rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">4. Multi-User, Staff Accounts & SLA Guarantee</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Staff Front Desk Logins</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">1 Device Active</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.05);">Multi-Device Sync</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">Unlimited Staff Logins</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Multi-Tenant Platform SuperAdmin Directory</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(16, 185, 129, 0.03);">🔒 Excluded</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #f43f5e; background: rgba(6, 182, 212, 0.05);">🔒 Excluded</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">✓ Included</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff;">Support Level</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">Help Center &amp; Community</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.05);">Priority Email Support</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">Dedicated Support Manager</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.75rem 1rem; color: #fff;">Cloud Availability SLA</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">Standard Cloud</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #fff; background: rgba(6, 182, 212, 0.05);">Priority Sync</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #10b981; font-weight: 800; background: rgba(99, 102, 241, 0.03);">99.99% Guaranteed SLA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- SECTION 10: COMPREHENSIVE ROLE-BASED ACCESS CONTROL (RBAC) & TIER GATING AUDIT -->
+    <section id="rbac-audit" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">10</span>
+        <h2 class="section-heading">Comprehensive Role-Based Access Control (RBAC) & Tier Gating Security Audit</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 1.05rem; line-height: 1.7; margin-bottom: 2rem;">
+        WaitLink enforces an airtight multi-tenant security architecture that maps user profiles (Guest, Front Desk Staff, Shop Owner, SuperAdmin) to strictly isolated operational views and feature sets based on subscription tiers (Starter, Pro Business, Enterprise). This audit documents how UI presentation, client state controllers, and serverless Cloud Firestore security rules collaboratively eliminate unauthorized cross-tenant data access, paywall bypasses, and forever-free loopholes.
+      </p>
+
+      <!-- The 4 User Archetypes Breakdown -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        👥 1. The Four User Profiles & Operational Boundaries
+      </h3>
+      <div class="flow-grid" style="margin-bottom: 2.5rem;">
+        <div class="flow-step-card" style="border-top: 3px solid #38bdf8;">
+          <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Profile 1: Guest</span>
+          <strong style="color: #fff; font-size: 1rem;">Anonymous Public Visitor / Walk-in Customer</strong>
+          <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
+            Unauthenticated visitor accessing the app or scanning the storefront window QR code. Restricted exclusively to the public waitlist customer view (<code style="color: #38bdf8;">?view=public</code>).
+          </p>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
+            <strong>UI Visibility:</strong> Sees only <code>🏠 Home</code>, <code>⚡ + Create Shop</code>, <code>🔑 Sign In</code>, and Theme Toggle. <strong>Upgrade button and administrative tabs (Front Desk, Owner, SuperAdmin) are strictly hidden.</strong>
+          </div>
+        </div>
+
+        <div class="flow-step-card" style="border-top: 3px solid #10b981;">
+          <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Profile 2: Front Desk</span>
+          <strong style="color: #fff; font-size: 1rem;">Receptionist / Staff Queue Controller</strong>
+          <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
+            Front desk operator stationed at a lobby tablet, iPad, or mobile smartphone running the real-time queue console (<code style="color: #10b981;">?view=desk</code>).
+          </p>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
+            <strong>Capabilities:</strong> 1-tap <code>SERVE NOW</code> / <code>SERVE NEXT</code> customer calling, delay grace extensions, audio chime alerts, manual walk-in intake. <strong>No access to billing, pricing, or platform-wide settings.</strong>
+          </div>
+        </div>
+
+        <div class="flow-step-card" style="border-top: 3px solid #c084fc;">
+          <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Profile 3: Owner</span>
+          <strong style="color: #fff; font-size: 1rem;">Registered Business Owner (Starter / Pro / Enterprise)</strong>
+          <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
+            Authenticated account owner linked to their business document in Firestore (<code style="color: #c084fc;">ownerEmail</code> / <code style="color: #c084fc;">ownerUid</code>). Full access to Front Desk and Owner Analytics (<code style="color: #c084fc;">?view=owner</code>).
+          </p>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
+            <strong>Tier Enforcement:</strong> Starter owners see Upgrade buttons in header/drawer; Pro/Enterprise owners enjoy a clean uncluttered header with active tier badges. Features unlock dynamically based on paid status.
+          </div>
+        </div>
+
+        <div class="flow-step-card" style="border-top: 3px solid #f59e0b;">
+          <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Profile 4: SuperAdmin</span>
+          <strong style="color: #fff; font-size: 1rem;">Platform Administrator (Master Authority)</strong>
+          <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
+            Cryptographically verified account (<code style="color: #f59e0b;">senthil930@gmail.com</code>) with master override authority across all multi-tenant collections, Cloud Functions, and SuperAdmin screens (<code style="color: #f59e0b;">?view=superadmin</code>).
+          </p>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
+            <strong>Capabilities:</strong> Tenant directory inspection, live pricing engine updates, instant shop tier reassignment, cloud duplicate purge engine, and immutable audit logs.
+          </div>
+        </div>
+      </div>
+
+      <!-- Master RBAC Permissions & Surface Matrix Table -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        🛡️ 2. Master RBAC Surface Visibility & Feature Access Matrix
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Detailed audit showing what each user profile and subscription tier can view, click, or execute across WaitLink.
+      </p>
+
+      <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; margin-bottom: 2.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.84rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 0.85rem 1rem; color: #fff; width: 30%;">Surface / Action</th>
+              <th style="padding: 0.85rem 0.65rem; color: #38bdf8; text-align: center;">Guest</th>
+              <th style="padding: 0.85rem 0.65rem; color: #10b981; text-align: center;">Front Desk</th>
+              <th style="padding: 0.85rem 0.65rem; color: #cbd5e1; text-align: center;">Starter ($0)</th>
+              <th style="padding: 0.85rem 0.65rem; color: #06b6d4; text-align: center;">Pro ($15)</th>
+              <th style="padding: 0.85rem 0.65rem; color: #818cf8; text-align: center;">Enterprise ($49)</th>
+              <th style="padding: 0.85rem 0.65rem; color: #f59e0b; text-align: center;">SuperAdmin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="7" style="padding: 0.5rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.72rem;">Navigation & Global Header Controls</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">💎 Header "Upgrade" Button</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Visible</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">⚡ "+ Create Shop" Header Button</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Visible</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden (if 1 owned)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">❌ Hidden (if 1 owned)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Visible (Multi)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Visible (Multi)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Navigation Tabs (Front Desk / Owner)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Desk Only</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Both Visible</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Both Visible</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Both Visible</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ All Visible</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">👑 SuperAdmin Directory Tab</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Unlocked</td>
+            </tr>
+
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="7" style="padding: 0.5rem 1rem; font-weight: 800; color: #10b981; text-transform: uppercase; font-size: 0.72rem;">Queue Operations & Cross-Tenant Isolation</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Public Customer Check-In</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Allowed</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Call Customers (<code>SERVE NOW</code>)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Active Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Own Shops</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Any Shop</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Cross-Tenant Front Desk Barrier</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Auto-Redirect</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Enforced</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Enforced</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Enforced</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Enforced</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b;">Master Override</td>
+            </tr>
+
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="7" style="padding: 0.5rem 1rem; font-weight: 800; color: #06b6d4; text-transform: uppercase; font-size: 0.72rem;">Subscription Features & Paywalls</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Monthly Walk-in Limit</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">100 / mo Cap</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">Unlimited</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">Unlimited</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">Unlimited</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Automated Twilio "Turn Ready" SMS</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Tier-bound</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 Paywalled</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Active</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Dedicated Route</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Active</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Custom Logo Branding & Theme Colors</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Read Only</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 Paywalled</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Unlocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Promotional Offer Banners</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Read Only</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 Paywalled</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Unlocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Staff Speed & Walk-Away Analytics</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 Paywalled</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full BI</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full BI</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Full BI</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Unlimited CSV Visit History Export</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 Paywalled</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Unlocked</td>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">Multi-Location Shop Creation</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Prompt Reg</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 1 Shop Limit</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">🔒 1 Shop Limit</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlimited</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlimited</td>
+            </tr>
+
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="7" style="padding: 0.5rem 1rem; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 0.72rem;">Owner Directory &amp; Front Desk Staff RBAC</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">🏢 "My Shops &amp; Staff Directory" Entry</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hidden</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unlocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master View</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">👥 Provision Counter Staff Roles</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ All Locations</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Platform-wide</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">📋 1-Click Station Links &amp; Live iPad QRs</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8; font-weight: 700;">✅ Station Token</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Active</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Active</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Active</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Active</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">🗑️ Safe Shop Deletion (with Confirmation)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Own Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Own Shops</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Any Shop</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.7rem 1rem; color: #fff;">⚙️ Shop Settings &amp; Stripe Billing Control</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Hard Locked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Control</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Control</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Control</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Admin</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Triple-Layer Anti-Abuse Architecture -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        🔒 3. Triple-Layer Anti-Abuse Architecture: Sealing "Forever-Free" Loopholes
+      </h3>
+      <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.25rem;">
+        WaitLink uses a defense-in-depth model to ensure malicious or clever users cannot bypass paywalls, forge subscription plans, or spin up multiple shops indefinitely for free:
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 1.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.4rem;">Layer 1: Presentation &amp; UI Gating</div>
+          <strong style="color: #fff; font-size: 0.95rem;">Context-Aware Elements</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-top: 0.4rem;">
+            <code>renderSubscriptionBadges()</code> hides the header & drawer Upgrade buttons for all guest visitors. <code>updateCreateShopButtonsVisibility()</code> automatically hides all "+ Create Shop" buttons on desktop and mobile once an owner registers 1 shop, replacing the dropdown action with an Enterprise upsell chip.
+          </p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 1.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 800; color: #10b981; text-transform: uppercase; margin-bottom: 0.4rem;">Layer 2: Client State &amp; Cross-Tenant Barrier</div>
+          <strong style="color: #fff; font-size: 0.95rem;">Controller Paywall Checks</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-top: 0.4rem;">
+            <code>openCreateShopModal()</code> and <code>submitCreateShop()</code> strictly check <code>ownedShops.length &gt;= 1</code>. If a Starter or Pro user attempts to register a second shop, execution halts immediately and routes to the Enterprise upgrade modal. <code>switchView()</code> blocks unauthorized users from viewing another tenant's front desk.
+          </p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 1.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 800; color: #818cf8; text-transform: uppercase; margin-bottom: 0.4rem;">Layer 3: Cryptographic Backend &amp; Firestore Rules</div>
+          <strong style="color: #fff; font-size: 0.95rem;">Zero-Trust Cloud Authority</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-top: 0.4rem;">
+            Even if an attacker modifies client JavaScript:
+            <br>• <strong>Stripe Upgrade</strong> (<code>verifyStripeSessionAndUpgrade</code>) cryptographically queries the Stripe REST API server-to-server and verifies payment before updating tiers.
+            <br>• <strong>Twilio SMS</strong> (<code>sendTwilioSms</code>) rejects dispatch if shop <code>planPrice &lt; 15</code>.
+            <br>• <strong>Firestore Rules</strong> disallow client SDK writes to <code>planPrice</code>, <code>planTitle</code>, or Stripe fields.
+          </p>
+        </div>
+      </div>
+
+      <!-- Cloud Duplicate Purge Engine -->
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 1.5rem;">
+        <h4 style="color: #fbbf24; font-size: 1.05rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+          🧹 4. SuperAdmin Multi-Tenant Ghost Document Cleanup Engine
+        </h4>
+        <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.75rem;">
+          In Google Cloud Firestore, documents are keyed by their <strong>Document ID (<code>doc.id</code>)</strong>, which can differ from an internal <code>slug</code> field (e.g., legacy test documents created with spaces or un-slugified IDs such as <code>"Amy Dental clinic"</code> or <code>"stomada"</code>).
+        </p>
+        <p style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; margin: 0;">
+          The updated <code>cleanDuplicateShops()</code> engine identifies duplicates by grouping normalized <code>(shopName + ownerEmail)</code> pairs, picks the canonical kebab-case document to preserve, and purges ghost documents using their exact <strong>Firestore Document ID</strong> (<code>d.ghost.id</code>). This permanently purges obsolete cloud documents and prevents ghost shops from re-appearing after session logout or page reload.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- Call to Action Banner -->
+    <div style="margin-top: 1rem; padding: 2.5rem; text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px;">
+      <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Explore the Live WaitLink Platform</h2>
+      <p style="color: #cbd5e1; margin-bottom: 20px;">Experience 1-tap queue control, real-time wait times, and automated SMS turn notifications.</p>
+      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <a href="index.html" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">🚀 Open WaitLink Application</a>
+        <a href="https://github.com/senthilmkm/WaitLink" target="_blank" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">⭐ View on GitHub</a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- App Footer -->
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-logo-icon">⏳</span>
+            <span class="footer-brand-title">WaitLink</span>
+          </div>
+          <p class="footer-tagline">Zero-friction queue management SaaS.</p>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Company</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="about.html" style="color: var(--text-muted); text-decoration: none;">About Us</a></li>
+            <li><a href="contact.html" style="color: var(--text-muted); text-decoration: none;">Contact Page</a></li>
+            <li><a href="pricing.html" style="color: var(--text-muted); text-decoration: none;">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Legal</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy Policy</a></li>
+            <li><a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of Service</a></li>
+            <li><a href="cookies.html" style="color: var(--text-muted); text-decoration: none;">Cookie Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 style="color: #fff; margin-bottom: 1rem;">Resources & Tech</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li><a href="waitlinkarchitecture.html" style="color: #10b981; text-decoration: none; font-weight: 600;">System Architecture</a></li>
+            <li><a href="comparison.html" style="color: var(--text-muted); text-decoration: none;">Comparison Matrix</a></li>
+            <li><a href="help.html" style="color: var(--text-muted); text-decoration: none;">Help Center</a></li>
+            <li><a href="faq.html" style="color: var(--text-muted); text-decoration: none;">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom-bar" style="margin-top: 2rem;">
+        <div>&copy; 2026 WaitLink Cloud Sync. All rights reserved. &bull; <a href="https://github.com/senthilmkm/WaitLink" target="_blank" style="color: #10b981; text-decoration: none;">Open Source Repository on GitHub</a></div>
+      </div>
+    </div>
+  </footer>
+  </div> <!-- Close architecture-content -->
+
+  <script>
+    const DEFAULT_FIREBASE_CONFIG = {
+      projectId: "waitlink-app-8821",
+      appId: "1:397413980014:web:6a2265cca9a4b2635e937f",
+      storageBucket: "waitlink-app-8821.firebasestorage.app",
+      apiKey: "AIzaSyCXKhwN-ah8GX8knAipTF8QcPD5iTtODDE",
+      authDomain: "waitlink-app-8821.firebaseapp.com",
+      messagingSenderId: "397413980014"
+    };
+
+    const SECRETS = (typeof window !== "undefined" && window.WAITLINK_SECRETS) ? window.WAITLINK_SECRETS : {};
+    const fbConfig = SECRETS.FIREBASE_CONFIG || DEFAULT_FIREBASE_CONFIG;
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(fbConfig);
+    }
+    const auth = firebase.auth();
+    const SUPERADMIN_EMAIL = "senthil930@gmail.com";
+
+    function showGateError(msg) {
+      const errBox = document.getElementById("gate-error");
+      if (errBox) {
+        errBox.textContent = msg;
+        errBox.classList.remove("hidden");
+      }
+    }
+
+    function checkAuthUser(user) {
+      const gateScreen = document.getElementById("auth-gate-screen");
+      const archContent = document.getElementById("architecture-content");
+      const gateChecking = document.getElementById("gate-checking");
+      const gateUnauthorized = document.getElementById("gate-unauthorized");
+      const gateLoginForm = document.getElementById("gate-login-form");
+      const unauthorizedEmail = document.getElementById("unauthorized-user-email");
+      const headerEmailBadge = document.getElementById("superadmin-badge-header");
+
+      if (gateChecking) gateChecking.classList.add("hidden");
+
+      if (user && user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+        // Authorized SuperAdmin
+        if (gateScreen) gateScreen.style.display = "none";
+        if (archContent) archContent.style.display = "block";
+        if (headerEmailBadge) headerEmailBadge.textContent = "👑 Platform Administrator";
+        sessionStorage.setItem("waitlink_session_user", JSON.stringify({ email: user.email, uid: user.uid }));
+      } else if (user && user.email) {
+        // Logged in as unauthorized account
+        if (gateScreen) gateScreen.style.display = "flex";
+        if (archContent) archContent.style.display = "none";
+        if (gateLoginForm) gateLoginForm.classList.add("hidden");
+        if (gateUnauthorized) gateUnauthorized.classList.remove("hidden");
+        if (unauthorizedEmail) unauthorizedEmail.textContent = user.email;
+      } else {
+        // Not logged in
+        if (gateScreen) gateScreen.style.display = "flex";
+        if (archContent) archContent.style.display = "none";
+        if (gateUnauthorized) gateUnauthorized.classList.add("hidden");
+        if (gateLoginForm) gateLoginForm.classList.remove("hidden");
+      }
+    }
+
+    // Check existing session if available
+    try {
+      const stored = sessionStorage.getItem("waitlink_session_user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.email && parsed.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+          checkAuthUser(parsed);
+        }
+      }
+    } catch(e) {}
+
+    // Process redirect result if any
+    try {
+      auth.getRedirectResult().then(res => {
+        if (res && res.user) {
+          checkAuthUser(res.user);
+        }
+      }).catch(err => {
+        console.warn("Redirect result error:", err);
+      });
+    } catch (e) {}
+
+    // Listen to Firebase Auth state
+    auth.onAuthStateChanged(user => {
+      checkAuthUser(user);
+    });
+
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(res => {
+        checkAuthUser(res.user);
+      }).catch(err => {
+        console.warn("Popup error:", err);
+        auth.signInWithRedirect(provider).catch(e => {
+          showGateError(e.message || "Google authentication failed.");
+        });
+      });
+    }
+
+    function loginWithEmail(e) {
+      if (e) e.preventDefault();
+      const email = document.getElementById("gate-email").value.trim();
+      const password = document.getElementById("gate-password").value;
+      const btn = document.getElementById("gate-submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+      const errBox = document.getElementById("gate-error");
+      if (errBox) errBox.classList.add("hidden");
+
+      auth.signInWithEmailAndPassword(email, password).then(res => {
+        btn.disabled = false;
+        btn.textContent = "🔓 Authenticate & Unlock Blueprint";
+        checkAuthUser(res.user);
+      }).catch(err => {
+        btn.disabled = false;
+        btn.textContent = "🔓 Authenticate & Unlock Blueprint";
+        showGateError(err.message || "Invalid authentication credentials.");
+      });
+    }
+
+    function signOutSuperAdmin() {
+      sessionStorage.removeItem("waitlink_session_user");
+      auth.signOut().then(() => {
+        window.location.reload();
+      }).catch(() => {
+        window.location.reload();
+      });
+    }
+
+    function copyCode(btn) {
+      const parent = btn.parentElement;
+      const codeText = parent.innerText.replace('Copy', '').trim();
+      navigator.clipboard.writeText(codeText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

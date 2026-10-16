@@ -443,8 +443,9 @@
           <h1 class="shop-title" id="desk-shop-name">Main St Barbers</h1>
           <p class="shop-subtitle" id="desk-shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
         </div>
-        <div class="mode-badge-toggle" onclick="switchView('owner')" title="Click to switch mode">
+        <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
           <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
+          <span id="desk-operator-role-pill" class="hidden" style="margin-left: 6px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);"></span>
         </div>
       </div>
 
@@ -2095,13 +2096,25 @@ Dedicated Support Manager
 
         <!-- FRONT DESK STAFF LOGIN CONTAINER -->
         <div id="auth-staff-container" class="hidden">
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
             Sign in with your assigned counter Username and Passcode:
           </p>
+
+          <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.8rem; color: #bae6fd; display: flex; align-items: center; gap: 0.5rem;">
+            <span>💡</span>
+            <span><strong>iPad Counter Tablet?</strong> Use your 1-Click Station URL or scan the Station QR from the Owner Directory for instant login without typing.</span>
+          </div>
+
           <form id="staff-auth-form" onsubmit="handleStaffAuthSubmit(event)">
             <div class="form-group">
-              <label for="staff-login-shop">Shop URL Slug or Business Name *</label>
-              <input type="text" id="staff-login-shop" placeholder="e.g. main-st-barbers or stomada-clinic" required autocomplete="off">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <label for="staff-login-shop" style="margin-bottom: 0;">Store Location *</label>
+                <span id="staff-shop-autodetect-hint" style="font-size: 0.75rem; color: #38bdf8; font-weight: 600;"></span>
+              </div>
+              <input type="text" id="staff-login-shop" list="staff-shops-datalist" placeholder="e.g. Stomada Clinic or stomada-clinic" required autocomplete="off">
+              <datalist id="staff-shops-datalist">
+                <!-- Dynamically populated from active shops -->
+              </datalist>
             </div>
             <div class="form-group" style="margin-top: 0.75rem;">
               <label for="staff-login-username">Staff Username *</label>
@@ -2141,7 +2154,7 @@ Dedicated Support Manager
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div class="form-group">
-              <label for="staff-display-name">Staff Name / Title *</label>
+              <label for="staff-display-name">Staff Full Name *</label>
               <input type="text" id="staff-display-name" placeholder="e.g. Sarah Jenkins" required>
             </div>
             <div class="form-group">
@@ -2150,6 +2163,18 @@ Dedicated Support Manager
                 <!-- Populated dynamically with owner's shops -->
               </select>
             </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label for="staff-role-title">Assigned Role Title *</label>
+            <input type="text" id="staff-role-title" list="staff-role-presets-list" placeholder="e.g. Front Desk Receptionist" value="Front Desk Receptionist" required>
+            <datalist id="staff-role-presets-list">
+              <option value="Front Desk Receptionist"></option>
+              <option value="Intake Greeter / Host"></option>
+              <option value="Service Caller / Stylist"></option>
+              <option value="Clinical Triage Assistant"></option>
+              <option value="Front Counter Operator"></option>
+            </datalist>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
@@ -2170,9 +2195,9 @@ Dedicated Support Manager
           <div style="margin: 1.25rem 0 0.5rem 0;">
             <label style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Role Permission Presets</label>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStaffPreset('full')">🌟 Full Desk Operator</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStaffPreset('intake')">📝 Intake / Check-In Only</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStaffPreset('caller')">📢 Caller / Service Only</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-btn-full" onclick="applyStaffPreset('full')">🌟 Full Desk Operator</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-btn-intake" onclick="applyStaffPreset('intake')">📝 Intake / Check-In Only</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-btn-caller" onclick="applyStaffPreset('caller')">📢 Caller / Service Only</button>
             </div>
           </div>
 

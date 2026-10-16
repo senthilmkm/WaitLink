@@ -15,7 +15,3 @@ npm-debug.log*
 scratch/
 .DS_Store
 .firebase/
-
-# Internal Architecture & Developer Manual (SuperAdmin Only - Excluded from Git)
-waitlinkarchitecture.html
-waitarchitecture.html

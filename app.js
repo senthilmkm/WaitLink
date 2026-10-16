@@ -3695,13 +3695,20 @@ function switchView(viewName, isSilent = false) {
 
   // Update banner mode indicators
   const currentModeLabel = document.getElementById("current-mode-label");
+  const deskRolePill = document.getElementById("desk-operator-role-pill");
   if (currentModeLabel) {
     if (state.isStaffSession && state.staffUser) {
       currentModeLabel.innerHTML = `👤 Operator: ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ⇄`;
+      if (deskRolePill) {
+        deskRolePill.textContent = state.staffUser.roleTitle || "Front Desk Receptionist";
+        deskRolePill.classList.remove("hidden");
+      }
     } else if (viewName === "desk") {
       currentModeLabel.innerHTML = "Front Desk ⇆";
+      if (deskRolePill) deskRolePill.classList.add("hidden");
     } else if (viewName === "owner") {
       currentModeLabel.innerHTML = "Business Owner ⇆";
+      if (deskRolePill) deskRolePill.classList.add("hidden");
     }
   }
 
@@ -9072,6 +9079,8 @@ function switchAuthTab(tab) {
   const ownerContainer = document.getElementById("auth-owner-container");
   const staffContainer = document.getElementById("auth-staff-container");
   const authTitle = document.getElementById("auth-modal-title");
+  const hintEl = document.getElementById("staff-shop-autodetect-hint");
+  const datalist = document.getElementById("staff-shops-datalist");
 
   if (tab === "staff") {
     if (staffTab) staffTab.classList.add("active");
@@ -9081,8 +9090,36 @@ function switchAuthTab(tab) {
     if (authTitle) authTitle.textContent = "🖥️ Front Desk Staff Login";
 
     const shopInput = document.getElementById("staff-login-shop");
-    if (shopInput && (!shopInput.value || shopInput.value === "main-st-barbers") && state.config && state.config.slug) {
-      shopInput.value = state.config.slug;
+    const rememberedSlug = (typeof localStorage !== "undefined" ? localStorage.getItem("waitlink_last_shop_slug") : null) || (state.config && state.config.slug);
+    if (shopInput && (!shopInput.value || shopInput.value === "main-st-barbers") && rememberedSlug) {
+      shopInput.value = rememberedSlug;
+    }
+
+    if (hintEl) {
+      if (state.config && state.config.slug && state.config.slug !== "main-st-barbers") {
+        hintEl.textContent = `(Active: ${state.config.shopName || state.config.slug})`;
+      } else if (rememberedSlug) {
+        hintEl.textContent = `(Remembered: ${rememberedSlug})`;
+      } else {
+        hintEl.textContent = "(Auto-detected from active URL)";
+      }
+    }
+
+    if (datalist) {
+      const shops = (state.ownerDirectoryShops && state.ownerDirectoryShops.length > 0)
+        ? state.ownerDirectoryShops
+        : (state.registeredShops || []);
+      const opts = [];
+      if (state.config && state.config.slug) {
+        opts.push(`<option value="${escapeHtml(state.config.slug)}">${escapeHtml(state.config.shopName || state.config.slug)}</option>`);
+      }
+      shops.forEach(s => {
+        const slug = s.slug || s.id;
+        if (slug && (!state.config || slug !== state.config.slug)) {
+          opts.push(`<option value="${escapeHtml(slug)}">${escapeHtml(s.shopName || s.name || slug)}</option>`);
+        }
+      });
+      datalist.innerHTML = opts.join("");
     }
   } else {
     if (ownerTab) ownerTab.classList.add("active");
@@ -9093,8 +9130,19 @@ function switchAuthTab(tab) {
   }
 }
 
+// Handle clicking the front desk header mode chip
+function handleDeskModeChipClick() {
+  if (state.isStaffSession && state.staffUser) {
+    promptStaffPinSwitch();
+  } else if (state.userRole === "ShopOwner" || isSuperAdmin()) {
+    switchView("owner");
+  } else {
+    switchView("owner");
+  }
+}
+
 // Handle submission of Front Desk Staff login form
-function handleStaffAuthSubmit(event) {
+async function handleStaffAuthSubmit(event) {
   event.preventDefault();
   if (!db) {
     showAuthError("Cloud database not connected.");
@@ -9106,12 +9154,12 @@ function handleStaffAuthSubmit(event) {
   const passInput = document.getElementById("staff-login-passcode");
   const btn = document.getElementById("btn-staff-login");
 
-  const shopSlug = (shopSlugInput ? shopSlugInput.value.trim().toLowerCase() : "");
+  const rawShop = (shopSlugInput ? shopSlugInput.value.trim() : "");
   const username = (userInput ? userInput.value.trim().toLowerCase() : "");
   const passcode = (passInput ? passInput.value.trim() : "");
 
-  if (!shopSlug || !username || !passcode) {
-    showAuthError("Please fill in shop slug, username, and passcode.");
+  if (!rawShop || !username || !passcode) {
+    showAuthError("Please fill in Store Location, Staff Username, and Passcode.");
     return;
   }
 
@@ -9120,7 +9168,28 @@ function handleStaffAuthSubmit(event) {
     btn.textContent = "⏳ Verifying Staff Credentials...";
   }
 
-  db.collection("shops").doc(shopSlug).collection("staff_roles")
+  // Smart Shop Resolution: direct slug, or search by business name
+  let cleanSlug = rawShop.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  try {
+    const directDoc = await db.collection("shops").doc(cleanSlug).get();
+    if (!directDoc.exists) {
+      const snapName = await db.collection("shops").where("shopName", "==", rawShop).limit(1).get();
+      if (!snapName.empty) {
+        cleanSlug = snapName.docs[0].id;
+      } else {
+        const snapName2 = await db.collection("shops").where("name", "==", rawShop).limit(1).get();
+        if (!snapName2.empty) cleanSlug = snapName2.docs[0].id;
+      }
+    }
+  } catch (e) {
+    console.warn("Shop resolution notice:", e);
+  }
+
+  try {
+    localStorage.setItem("waitlink_last_shop_slug", cleanSlug);
+  } catch (e) {}
+
+  db.collection("shops").doc(cleanSlug).collection("staff_roles")
     .where("username", "==", username)
     .get()
     .then(snap => {
@@ -9133,7 +9202,7 @@ function handleStaffAuthSubmit(event) {
       });
 
       if (!matched) {
-        showAuthError("⚠️ Invalid Shop Slug, Staff Username, or Passcode.");
+        showAuthError("⚠️ Invalid Store Location, Staff Username, or Passcode.");
         if (btn) {
           btn.disabled = false;
           btn.textContent = "🚀 Unlock Front Desk Terminal";
@@ -9141,7 +9210,7 @@ function handleStaffAuthSubmit(event) {
         return;
       }
 
-      loginAsStaff(matched, shopSlug, false);
+      loginAsStaff(matched, cleanSlug, false);
       closeAuthModal();
       if (btn) {
         btn.disabled = false;
@@ -9503,8 +9572,13 @@ function renderStaffCards(staffList) {
           <div class="staff-card-header">
             <div class="staff-avatar-chip">👤</div>
             <div class="staff-details-meta">
-              <h3 class="staff-name-title">${escapeHtml(staff.displayName || staff.username)}</h3>
-              <div class="staff-shop-tag">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <h3 class="staff-name-title" style="margin: 0;">${escapeHtml(staff.displayName || staff.username)}</h3>
+                <span style="font-size: 0.72rem; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 2px 8px; border-radius: 9999px;">
+                  ${escapeHtml(staff.roleTitle || "Front Desk Receptionist")}
+                </span>
+              </div>
+              <div class="staff-shop-tag" style="margin-top: 0.25rem;">
                 <span>🏪</span>
                 <strong>${escapeHtml(shopName)}</strong>
               </div>
@@ -9573,6 +9647,7 @@ function openStaffRoleModal(staffId, shopSlug) {
   const titleEl = document.getElementById("staff-modal-title");
   const editIdEl = document.getElementById("staff-edit-id");
   const nameEl = document.getElementById("staff-display-name");
+  const roleTitleEl = document.getElementById("staff-role-title");
   const shopSelect = document.getElementById("staff-assigned-shop");
   const userEl = document.getElementById("staff-username");
   const passEl = document.getElementById("staff-passcode");
@@ -9599,6 +9674,7 @@ function openStaffRoleModal(staffId, shopSlug) {
       if (titleEl) titleEl.textContent = `👥 Edit Staff Role: ${staff.displayName}`;
       if (editIdEl) editIdEl.value = staff.id;
       if (nameEl) nameEl.value = staff.displayName || "";
+      if (roleTitleEl) roleTitleEl.value = staff.roleTitle || "Front Desk Receptionist";
       if (shopSelect && staff.assignedShop) shopSelect.value = staff.assignedShop;
       if (userEl) userEl.value = staff.username || "";
       if (passEl) passEl.value = staff.passcode || "";
@@ -9621,6 +9697,7 @@ function openStaffRoleModal(staffId, shopSlug) {
   if (titleEl) titleEl.textContent = "👥 Provision Front Desk Staff Role";
   if (editIdEl) editIdEl.value = "";
   if (nameEl) nameEl.value = "";
+  if (roleTitleEl) roleTitleEl.value = "Front Desk Receptionist";
   if (userEl) userEl.value = "";
   
   const randomPin = String(Math.floor(1000 + Math.random() * 9000));
@@ -9641,7 +9718,28 @@ function setCheckboxChecked(id, isChecked) {
 }
 
 function applyStaffPreset(preset) {
+  const roleTitleEl = document.getElementById("staff-role-title");
+  const fullBtn = document.getElementById("preset-btn-full");
+  const intakeBtn = document.getElementById("preset-btn-intake");
+  const callerBtn = document.getElementById("preset-btn-caller");
+
+  if (fullBtn) {
+    fullBtn.style.borderColor = preset === "full" ? "#38bdf8" : "rgba(255, 255, 255, 0.15)";
+    fullBtn.style.background = preset === "full" ? "rgba(56, 189, 248, 0.15)" : "";
+  }
+  if (intakeBtn) {
+    intakeBtn.style.borderColor = preset === "intake" ? "#38bdf8" : "rgba(255, 255, 255, 0.15)";
+    intakeBtn.style.background = preset === "intake" ? "rgba(56, 189, 248, 0.15)" : "";
+  }
+  if (callerBtn) {
+    callerBtn.style.borderColor = preset === "caller" ? "#38bdf8" : "rgba(255, 255, 255, 0.15)";
+    callerBtn.style.background = preset === "caller" ? "rgba(56, 189, 248, 0.15)" : "";
+  }
+
   if (preset === "full") {
+    if (roleTitleEl && (!roleTitleEl.value || roleTitleEl.value === "Intake Greeter / Host" || roleTitleEl.value === "Service Caller / Stylist")) {
+      roleTitleEl.value = "Front Desk Receptionist";
+    }
     setCheckboxChecked("perm-checkin", true);
     setCheckboxChecked("perm-call", true);
     setCheckboxChecked("perm-complete", true);
@@ -9651,6 +9749,7 @@ function applyStaffPreset(preset) {
     setCheckboxChecked("perm-store-status", true);
     setCheckboxChecked("perm-export-csv", false);
   } else if (preset === "intake") {
+    if (roleTitleEl) roleTitleEl.value = "Intake Greeter / Host";
     setCheckboxChecked("perm-checkin", true);
     setCheckboxChecked("perm-call", false);
     setCheckboxChecked("perm-complete", false);
@@ -9660,6 +9759,7 @@ function applyStaffPreset(preset) {
     setCheckboxChecked("perm-store-status", false);
     setCheckboxChecked("perm-export-csv", false);
   } else if (preset === "caller") {
+    if (roleTitleEl) roleTitleEl.value = "Service Caller / Stylist";
     setCheckboxChecked("perm-checkin", false);
     setCheckboxChecked("perm-call", true);
     setCheckboxChecked("perm-complete", true);
@@ -9681,6 +9781,7 @@ function handleSaveStaffRole(event) {
 
   const editId = document.getElementById("staff-edit-id").value.trim();
   const displayName = document.getElementById("staff-display-name").value.trim();
+  const roleTitle = (document.getElementById("staff-role-title") ? document.getElementById("staff-role-title").value.trim() : "") || "Front Desk Receptionist";
   const assignedShop = document.getElementById("staff-assigned-shop").value.trim();
   const username = document.getElementById("staff-username").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
   const passcode = document.getElementById("staff-passcode").value.trim();
@@ -9713,6 +9814,7 @@ function handleSaveStaffRole(event) {
     id: staffId,
     staffId: staffId,
     displayName: displayName,
+    roleTitle: roleTitle,
     username: username,
     passcode: passcode,
     assignedShop: assignedShop,
@@ -9732,7 +9834,7 @@ function handleSaveStaffRole(event) {
     .set(staffRecord, { merge: true })
     .then(() => {
       closeStaffRoleModal();
-      showToast(`✅ Staff account "${displayName}" saved!`);
+      showToast(`✅ Staff account "${displayName}" saved as ${roleTitle}!`);
       loadStaffRoles();
       if (saveBtn) {
         saveBtn.disabled = false;
@@ -9829,7 +9931,12 @@ function loadOwnerTerminals() {
         <div>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
             <div>
-              <h3 style="color: #fff; font-size: 1.1rem; margin: 0 0 0.2rem 0;">${escapeHtml(staff.displayName || staff.username)}'s Station</h3>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <h3 style="color: #fff; font-size: 1.1rem; margin: 0 0 0.2rem 0;">${escapeHtml(staff.displayName || staff.username)}'s Station</h3>
+                <span style="font-size: 0.7rem; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 1px 7px; border-radius: 9999px;">
+                  ${escapeHtml(staff.roleTitle || "Front Desk Receptionist")}
+                </span>
+              </div>
               <div style="font-size: 0.8rem; color: #94a3b8;">🏪 Location: <strong>${escapeHtml(shopName)}</strong></div>
             </div>
             <span class="status-pill" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
@@ -9957,6 +10064,7 @@ window.copyStaffStationLink = copyStaffStationLink;
 window.togglePasscodeBlur = togglePasscodeBlur;
 window.loadOwnerTerminals = loadOwnerTerminals;
 window.loadStaffActivityLog = loadStaffActivityLog;
+window.handleDeskModeChipClick = handleDeskModeChipClick;
 
 
 
