@@ -641,16 +641,47 @@ function subscribeSmsUsage(slug) {
   }
   try {
     smsUsageUnsubscribe = db.collection("shops").doc(slug).collection("billing").doc("smsUsage").onSnapshot(doc => {
+      // Determine what base quota this shop should have based on its current plan
+      const planPrice = (state.config && state.config.planPrice !== undefined) ? state.config.planPrice : 15;
+      const planTitle = String((state.config && state.config.planTitle) || "").toLowerCase();
+      const isEnterprise = planPrice >= 49 || planTitle.includes("enterprise");
+      const isPro = planPrice >= 15 || planTitle.includes("pro");
+      const expectedBase = (state.config && state.config.customMonthlyQuota)
+        ? parseInt(state.config.customMonthlyQuota, 10)
+        : (isEnterprise ? 2500 : (isPro ? 500 : 0));
+
       if (doc.exists) {
-        state.smsUsage = doc.data() || {};
+        let uData = doc.data() || {};
+        const currentBase = uData.baseMonthlyQuota || (uData.monthlyAllowance > 1000 ? 2500 : (uData.monthlyAllowance > 0 ? 500 : 0));
+
+        // If tier changed mid-cycle (e.g. Enterprise 2500 -> Pro 500), reconcile immediately
+        if (currentBase !== expectedBase) {
+          const delta = expectedBase - currentBase;
+          const updatedAllowance = delta > 0
+            ? (uData.monthlyAllowance || currentBase) + delta
+            : Math.min(expectedBase, uData.monthlyAllowance || expectedBase);
+
+          uData.monthlyAllowance = updatedAllowance;
+          uData.baseMonthlyQuota = expectedBase;
+          uData.tierPrice = planPrice;
+          uData.tierTitle = state.config.planTitle || (isEnterprise ? "Enterprise Tier" : "Pro Business Tier");
+          uData.totalAvailable = Math.max(0, updatedAllowance - (uData.monthlyUsed || 0)) + (uData.topUpBalance || 0);
+          uData.updatedAt = Date.now();
+
+          // Sync back to Firestore quietly
+          doc.ref.set(uData, { merge: true }).catch(() => {});
+        }
+
+        state.smsUsage = uData;
         renderSmsWalletUI(state.smsUsage);
       } else {
         state.smsUsage = {
-          monthlyAllowance: 500,
+          monthlyAllowance: expectedBase,
+          baseMonthlyQuota: expectedBase,
           rolledOverFromPriorMonth: 0,
           monthlyUsed: 0,
           topUpBalance: 0,
-          totalAvailable: 500,
+          totalAvailable: expectedBase,
           lifetimeSent: 0,
           recentDispatches: []
         };
@@ -7073,6 +7104,47 @@ function changeTenantShopPlan(shopSlug, newTierKey) {
       updatedBy: (state.user && state.user.email) ? state.user.email : "SuperAdmin"
     }, { merge: true }).catch(err => {
       console.warn("Tenant plan Firestore update warning:", err);
+    });
+
+    // Synchronize smsUsage subcollection immediately
+    const newAllowance = newTierKey === "enterprise" ? 2500 : (newTierKey === "pro" ? 500 : 0);
+    const usageRef = db.collection("shops").doc(shopSlug).collection("billing").doc("smsUsage");
+    usageRef.get().then(snap => {
+      let uData = snap.exists ? snap.data() : {
+        monthlyAllowance: newAllowance,
+        baseMonthlyQuota: newAllowance,
+        rolledOverFromPriorMonth: 0,
+        monthlyUsed: 0,
+        topUpBalance: 0,
+        totalAvailable: newAllowance,
+        billingCycleStart: Date.now(),
+        billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        lifetimeSent: 0,
+        lastAlertThreshold: 0,
+        recentDispatches: []
+      };
+
+      const oldBase = uData.baseMonthlyQuota || (uData.monthlyAllowance > 1000 ? 2500 : (uData.monthlyAllowance > 0 ? 500 : 0));
+      const delta = newAllowance - oldBase;
+      const updatedAllowance = delta > 0
+        ? (uData.monthlyAllowance || oldBase) + delta
+        : Math.min(newAllowance, uData.monthlyAllowance || newAllowance);
+
+      uData.monthlyAllowance = updatedAllowance;
+      uData.baseMonthlyQuota = newAllowance;
+      uData.tierTitle = newTitle;
+      uData.tierPrice = newPrice;
+      uData.totalAvailable = Math.max(0, updatedAllowance - (uData.monthlyUsed || 0)) + (uData.topUpBalance || 0);
+      uData.updatedAt = Date.now();
+
+      return usageRef.set(uData, { merge: true }).then(() => {
+        if (state.config.slug === shopSlug) {
+          state.smsUsage = uData;
+          renderSmsWalletUI(uData);
+        }
+      });
+    }).catch(err => {
+      console.warn("Could not sync smsUsage on tenant plan change:", err);
     });
 
     // Record audit entry in pricing_audits
