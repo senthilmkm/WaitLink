@@ -50,6 +50,11 @@ const state = {
   deskViewMode: localStorage.getItem("waitlink_desk_view_mode") || "grid",
   stageFocusedIndex: 0,
   revealedPhoneIds: new Set(),
+  // Staff RBAC & Multi-Tenant Owner Directory
+  isStaffSession: false,
+  staffUser: null,
+  ownerDirectoryShops: [],
+  staffRolesList: [],
   retentionConfig: {
     starter_retention_days: 7,
     pro_retention_days: 90,
@@ -63,6 +68,18 @@ const state = {
   }
 };
 window.state = state;
+
+// Check for persistent staff session in sessionStorage
+try {
+  const cachedStaff = sessionStorage.getItem("waitlink_staff_session");
+  if (cachedStaff) {
+    const parsedStaff = JSON.parse(cachedStaff);
+    if (parsedStaff && parsedStaff.username && parsedStaff.assignedShop) {
+      state.isStaffSession = true;
+      state.staffUser = parsedStaff;
+    }
+  }
+} catch (e) {}
 
 // Cache pre-load for retention config
 const DEFAULT_RETENTION_CONFIG = {
@@ -257,8 +274,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const shopParam = params.get("shop") || params.get("s");
   const modeParam = params.get("mode") || params.get("view");
+  const staffParam = params.get("staff");
+  const keyParam = params.get("key") || params.get("passcode");
 
-  if (shopParam) {
+  if (shopParam && staffParam && keyParam) {
+    checkStaffAutoLogin(shopParam, staffParam, keyParam);
+  } else if (restoreStaffSessionIfPresent()) {
+    // Staff session restored from active tablet session storage
+  } else if (shopParam) {
     const cleanShopParam = slugify(shopParam);
     state.config.slug = cleanShopParam || shopParam;
     state.isDemoMode = !state.user && (state.config.slug === "main-st-barbers");
@@ -738,6 +761,10 @@ function toggleRevealPhone(itemId, event) {
     event.preventDefault();
     event.stopPropagation();
   }
+  if (!hasStaffPermission("canRevealPhone")) {
+    showToast("🔒 Your staff account does not have permission to reveal customer phone numbers.");
+    return;
+  }
   if (!state.revealedPhoneIds) state.revealedPhoneIds = new Set();
   if (state.revealedPhoneIds.has(itemId)) {
     state.revealedPhoneIds.delete(itemId);
@@ -1009,6 +1036,10 @@ function saveData() {
 // Check-In Handler
 function handleCheckIn(event) {
   event.preventDefault();
+  if (!hasStaffPermission("canCheckIn")) {
+    showToast("🔒 Check-in is disabled for your staff account.");
+    return;
+  }
   const input = document.getElementById("customer-name-input");
   const submitBtn = event.target ? event.target.querySelector("button[type='submit']") : null;
   const name = input ? input.value.trim() : "";
@@ -1032,12 +1063,15 @@ function handleCheckIn(event) {
   const phone = phoneInput ? phoneInput.value.trim() : "";
 
   const isDeskCheckIn = (state.currentView === "desk");
+  const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
+
   const newItem = {
     id: "q_" + Date.now(),
     customerName: name,
     phone: phone || null,
     checkedInAt: Date.now(),
     checkedInVia: isDeskCheckIn ? "Front Desk Terminal" : "Customer QR Code Live Card",
+    checkedInBy: operatorName,
     selectedServiceId: selectedServiceObj ? selectedServiceObj.id : null,
     selectedServiceName: selectedServiceObj ? selectedServiceObj.name : null,
     selectedServiceDurationMin: selectedServiceObj ? selectedServiceObj.estDurationMin : null,
@@ -1045,7 +1079,7 @@ function handleCheckIn(event) {
       {
         action: "check_in",
         title: "Customer Checked In",
-        detail: isDeskCheckIn ? `Added manually by Front Desk${phone ? ' (Cell: ' + phone + ')' : ''}` : `Self check-in via QR Code Live Card${phone ? ' (Cell: ' + phone + ')' : ''}`,
+        detail: isDeskCheckIn ? `Added manually by ${operatorName}${phone ? ' (Cell: ' + phone + ')' : ''}` : `Self check-in via QR Code Live Card${phone ? ' (Cell: ' + phone + ')' : ''}`,
         timestamp: Date.now(),
         icon: "📝"
       }
@@ -1285,22 +1319,29 @@ async function sendTestSmsUI() {
 
 // Call Customer (End Wait Timer)
 function callCustomer(id) {
+  if (!hasStaffPermission("canCallNext")) {
+    showToast("🔒 Calling customers is disabled for your staff account.");
+    return;
+  }
   const index = state.queue.findIndex(item => item.id === id);
   if (index === -1) return;
 
   const item = state.queue[index];
   const now = Date.now();
   const durationMin = Math.max(1, Math.round((now - item.checkedInAt) / (1000 * 60)));
+  const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
 
   const historyItem = {
     ...item,
     status: "called",
     calledAt: now,
     completedAt: now,
+    calledBy: operatorName,
+    completedBy: operatorName,
     waitDurationMin: durationMin
   };
 
-  logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service (Waited ${durationMin}m)`, "📞");
+  logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞");
 
   // Trigger Twilio SMS notification if customer provided cell phone number
   if (item.phone) {
@@ -1329,6 +1370,10 @@ function callCustomer(id) {
 
 // Cancel Customer
 function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
+  if (cancelledBy === "desk" && !hasStaffPermission("canCancel")) {
+    showToast("🔒 Cancelling visits is disabled for your staff account.");
+    return;
+  }
   // 1. Check queue by ID or name
   let index = state.queue.findIndex(item => item.id === id);
   if (index === -1 && nameFallback) {
@@ -1338,10 +1383,11 @@ function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
   if (index !== -1) {
     const item = state.queue[index];
     const nowTs = Date.now();
+    const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : cancelledBy));
     const historyItem = {
       ...item,
       status: "cancelled",
-      cancelledBy: cancelledBy,
+      cancelledBy: operatorName,
       calledAt: nowTs,
       completedAt: nowTs,
       cancelledAt: nowTs,
@@ -2646,11 +2692,14 @@ function renderQueue() {
     let phoneDisplayHtml = '';
     if (item.phone) {
       if (isClinical) {
+        const canReveal = hasStaffPermission("canRevealPhone");
         const isRevealed = state.revealedPhoneIds && state.revealedPhoneIds.has(item.id);
-        if (isRevealed) {
+        if (isRevealed && canReveal) {
           phoneDisplayHtml = `<span class="details-divider">&bull;</span><a href="tel:${escapeHtml(phoneDigits || item.phone)}" class="customer-phone-link" onclick="handlePhoneClick(event, this)" title="Direct phone line">📞 ${escapeHtml(item.phone)}</a> <button type="button" class="btn-text-link" onclick="toggleRevealPhone('${escapeHtml(item.id)}', event)" style="font-size:0.75rem; margin-left:4px; padding:1px 6px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="Hide phone">🔒 Hide</button>`;
-        } else {
+        } else if (canReveal) {
           phoneDisplayHtml = `<span class="details-divider">&bull;</span><span class="customer-phone-link" style="color:var(--text-muted); cursor:default;" title="Masked for patient privacy">📞 ${escapeHtml(maskPhone(item.phone))}</span> <button type="button" class="btn-text-link" onclick="toggleRevealPhone('${escapeHtml(item.id)}', event)" style="font-size:0.75rem; margin-left:4px; padding:1px 6px; border:1px solid rgba(14,165,233,0.4); border-radius:4px; color:#0284c7; cursor:pointer;" title="Staff click to reveal phone">👁️ Reveal</button>`;
+        } else {
+          phoneDisplayHtml = `<span class="details-divider">&bull;</span><span class="customer-phone-link" style="color:var(--text-muted); cursor:default;" title="Protected phone number">📞 ${escapeHtml(maskPhone(item.phone))}</span>`;
         }
       } else {
         phoneDisplayHtml = `<span class="details-divider">&bull;</span><a href="tel:${escapeHtml(phoneDigits || item.phone)}" data-phone="${escapeHtml(item.phone)}" data-label="${escapeHtml(item.customerName)}" class="customer-phone-link" onclick="handlePhoneClick(event, this)" title="Tap to call ${escapeHtml(item.customerName)}">📞 ${escapeHtml(item.phone)}</a>`;
@@ -2690,16 +2739,18 @@ function renderQueue() {
         </div>
 
         <div class="queue-item-actions">
+          ${hasStaffPermission("canCallNext") ? `
           <button class="btn btn-call ${isNextUp ? 'btn-hero' : ''}" onclick="callCustomer('${escapeHtml(item.id)}')" title="Serve customer and dispatch turn-ready SMS with live ticket link">
             ${isClinical ? '🩺 CALL ' + (isNextUp ? 'PATIENT' : 'NEXT') : '⏱️ SERVE ' + (isNextUp ? 'NOW' : 'NEXT')}
-          </button>
+          </button>` : ''}
           ${showMoveToEnd ? `
           <button class="btn btn-requeue" onclick="requeueActiveCustomerToEnd('${escapeHtml(item.id)}')" title="Move customer to end of active line">
             ⬇️ Move to End
           </button>` : ''}
+          ${hasStaffPermission("canCancel") ? `
           <button class="btn btn-cancel" onclick="cancelCustomer('${escapeHtml(item.id)}')">
             ✕ Cancel
-          </button>
+          </button>` : ''}
         </div>
       </div>
     `;
@@ -3202,6 +3253,10 @@ function renderHistory() {
 
 // Export History Log to CSV (Step 3: Tier-Gated, PII-Masked, UTF-8 BOM RFC 4180 Format)
 function exportHistoryCSV() {
+  if (!hasStaffPermission("canExportCSV")) {
+    showToast("🔒 Your staff account does not have permission to export CSV records.");
+    return;
+  }
   const planInfo = getActivePlanInfo();
   if (planInfo.isStarter) {
     showToast("🔒 Unlimited CSV History Export is a Pro Business feature ($15/mo). Upgrade to download your visit logs!");
@@ -3495,8 +3550,31 @@ function switchView(viewName, isSilent = false) {
     return;
   }
 
+  // Owner Directory Access Validation
+  if (viewName === "owner-directory") {
+    if (state.isStaffSession) {
+      if (!isSilent) showToast("🔒 Restricted: Front Desk Staff accounts cannot access Business Owner Directory.");
+      switchView("desk", isSilent);
+      return;
+    }
+    if (!state.user && !isSuperAdmin()) {
+      if (!isSilent) showToast("🔒 Please sign in as a Business Owner to access your Shops & Staff Directory.");
+      openAuthModal();
+      return;
+    }
+  }
+
+  // Staff Session View Isolation
+  if (state.isStaffSession) {
+    if (viewName === "owner" || viewName === "superadmin" || viewName === "owner-directory") {
+      if (!isSilent) showToast("🔒 Restricted: Front Desk Staff accounts are restricted to Front Desk Operator mode.");
+      switchView("desk", isSilent);
+      return;
+    }
+  }
+
   // Cross-Tenant Front Desk & Owner Analytics Barrier (P1-3)
-  if (viewName === "desk" || viewName === "owner") {
+  if (!state.isStaffSession && (viewName === "desk" || viewName === "owner")) {
     const isSuper = isSuperAdmin();
     const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
     const configOwnerEmail = (state.config.ownerEmail || "").trim().toLowerCase();
@@ -3589,8 +3667,17 @@ function switchView(viewName, isSilent = false) {
   // Update banner mode indicators
   const currentModeLabel = document.getElementById("current-mode-label");
   if (currentModeLabel) {
-    if (viewName === "desk") currentModeLabel.innerHTML = "Front Desk ⇆";
-    if (viewName === "owner") currentModeLabel.innerHTML = "Business Owner ⇆";
+    if (state.isStaffSession && state.staffUser) {
+      currentModeLabel.innerHTML = `👤 Operator: ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ⇄`;
+    } else if (viewName === "desk") {
+      currentModeLabel.innerHTML = "Front Desk ⇆";
+    } else if (viewName === "owner") {
+      currentModeLabel.innerHTML = "Business Owner ⇆";
+    }
+  }
+
+  if (viewName === "owner-directory") {
+    loadOwnerDirectory();
   }
 
   if (viewName === "desk" || viewName === "owner") {
@@ -4381,7 +4468,9 @@ document.addEventListener("click", (e) => {
 
 function handleAccountDropdownAction() {
   closeAllDropdowns();
-  if (state.user) {
+  if (state.isStaffSession) {
+    staffSignOut();
+  } else if (state.user) {
     handleSignOut();
   } else {
     openAuthModal();
@@ -4624,8 +4713,63 @@ function applyUserRole(user) {
       if (superAdminEmailLabel) superAdminEmailLabel.textContent = "Platform Administrator";
       loadSuperAdminShops();
     }
+
+    // Owner Directory Menu in Account Dropdown & Mobile Drawer
+    const sectionOwnerDir = document.getElementById("section-owner-directory");
+    if (sectionOwnerDir) sectionOwnerDir.classList.remove("hidden");
+    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
+    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.remove("hidden");
+    const ownerDirRoleBadge = document.getElementById("owner-dir-role-badge");
+    if (ownerDirRoleBadge) ownerDirRoleBadge.textContent = isSuper ? "SuperAdmin 👑" : "Shop Owner 💈";
+
     updateCreateShopButtonsVisibility();
     return syncPromise || Promise.resolve();
+  } else if (state.isStaffSession && state.staffUser) {
+    state.userRole = "FrontDeskStaff";
+    if (shopChipContainer) shopChipContainer.classList.remove("hidden");
+    if (deskTab) deskTab.classList.remove("hidden");
+    if (ownerTab) ownerTab.classList.add("hidden");
+    if (superAdminTab) superAdminTab.classList.add("hidden");
+    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
+    if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
+
+    if (authBtnLabel) {
+      authBtnLabel.innerHTML = `<span>🖥️ ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ▾</span>`;
+    }
+    if (dropdownUserEmail) {
+      dropdownUserEmail.textContent = `🖥️ Staff: ${state.staffUser.displayName || state.staffUser.username} (${state.staffUser.assignedShopName || state.staffUser.assignedShop})`;
+    }
+    const tierBadge = document.getElementById("dropdown-tier-badge");
+    if (tierBadge) {
+      tierBadge.innerHTML = `<span class="pulse-dot"></span> Staff Operator`;
+    }
+    if (mobileDrawerUserEmail) {
+      mobileDrawerUserEmail.textContent = `Staff: ${state.staffUser.displayName || state.staffUser.username}`;
+    }
+    if (mobileDrawerAvatarIcon) {
+      mobileDrawerAvatarIcon.textContent = "🖥️";
+    }
+    if (itemAuthActionLabel) {
+      itemAuthActionLabel.textContent = "🚪 Staff Sign Out";
+    }
+    if (mobileItemAuthActionLabel) {
+      mobileItemAuthActionLabel.textContent = "🚪 Staff Sign Out";
+    }
+
+    const subUpgradeItem = document.getElementById("dropdown-item-subscription");
+    if (subUpgradeItem) subUpgradeItem.classList.add("hidden");
+
+    const sectionOwnerDir = document.getElementById("section-owner-directory");
+    if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
+    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
+    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.add("hidden");
+    if (sectionSuperAdmin) sectionSuperAdmin.classList.add("hidden");
+    if (itemSuperAdmin) itemSuperAdmin.classList.add("hidden");
+    if (itemSettings) itemSettings.classList.add("hidden");
+    if (itemArchitecture) itemArchitecture.classList.add("hidden");
+    if (settingsBtn) settingsBtn.classList.add("hidden");
+    if (mobileItemMainStDemo) mobileItemMainStDemo.classList.add("hidden");
   } else if (state.isDemoMode) {
     state.userRole = "Guest";
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
@@ -4651,6 +4795,11 @@ function applyUserRole(user) {
     if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
     if (mobileItemMainStDemo) mobileItemMainStDemo.classList.remove("hidden");
+
+    const sectionOwnerDir = document.getElementById("section-owner-directory");
+    if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
+    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
+    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.add("hidden");
 
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
@@ -4680,6 +4829,11 @@ function applyUserRole(user) {
     if (itemArchitecture) itemArchitecture.classList.add("hidden");
     if (settingsBtn) settingsBtn.classList.add("hidden");
     if (mobileItemMainStDemo) mobileItemMainStDemo.classList.add("hidden");
+
+    const sectionOwnerDir = document.getElementById("section-owner-directory");
+    if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
+    const mobileItemOwnerDir = document.getElementById("mobile-item-owner-directory");
+    if (mobileItemOwnerDir) mobileItemOwnerDir.classList.add("hidden");
 
     if (itemAuthActionLabel) {
       itemAuthActionLabel.textContent = "🔑 Sign In / Register";
@@ -5884,9 +6038,12 @@ function executeDeleteShop(shopSlug, shopName, shopDocId) {
     saveConfig();
   }
 
-  // Re-render SuperAdmin directory and navbar dropdown
+  // Re-render SuperAdmin directory, navbar dropdown, and Owner Directory
   renderSuperAdminShopsTable();
   renderShopDropdown();
+  if (state.activeView === "owner-directory") {
+    loadOwnerDirectory();
+  }
 
   // 2. Delete from Google Cloud Firestore
   if (db) {
@@ -5904,10 +6061,13 @@ function executeDeleteShop(shopSlug, shopName, shopDocId) {
         id: "audit_" + Date.now(),
         timestamp: Date.now(),
         adminEmail: (state.user && state.user.email) ? state.user.email : "SuperAdmin",
-        changes: [`SuperAdmin deleted tenant shop "${shopName || cleanSlug}" (slug: ${cleanSlug}, docId: ${cleanDocId})`]
+        changes: [`Deleted shop "${shopName || cleanSlug}" (slug: ${cleanSlug}, docId: ${cleanDocId})`]
       };
       db.collection("pricing_audits").add(auditEntry).catch(console.warn);
       showToast(`🗑️ Shop "${shopName || cleanSlug}" successfully deleted!`);
+      if (state.activeView === "owner-directory") {
+        loadOwnerDirectory();
+      }
     }).catch(err => {
       console.error("Firestore delete tenant shop error:", err);
       showToast(`⚠️ Error deleting shop from cloud: ${err.message}`);
@@ -8546,7 +8706,9 @@ function handleMobileNavClick(viewName) {
 
 function handleMobileAuthAction() {
   closeMobileNavDrawer();
-  if (state.user) {
+  if (state.isStaffSession) {
+    staffSignOut();
+  } else if (state.user) {
     handleSignOut();
   } else {
     openAuthModal();
@@ -8600,6 +8762,1011 @@ window.changeTenantShopPlan = changeTenantShopPlan;
 window.cleanDuplicateShops = cleanDuplicateShops;
 window.openCreateShopModal = openCreateShopModal;
 window.updateCreateShopButtonsVisibility = updateCreateShopButtonsVisibility;
+
+/* ==========================================================================
+   Owner Directory, Front Desk Staff RBAC & 1-Click Station Terminals
+   ========================================================================== */
+
+// Check staff permission flag (Full access for ShopOwner & SuperAdmin)
+function hasStaffPermission(permKey) {
+  if (!state.isStaffSession) return true;
+  if (!state.staffUser) return true;
+  if (!state.staffUser.permissions) return true;
+  return state.staffUser.permissions[permKey] !== false;
+}
+
+// Restore staff session from sessionStorage on page load/reload
+function restoreStaffSessionIfPresent() {
+  try {
+    const saved = sessionStorage.getItem("waitlink_staff_session");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.username && parsed.assignedShop) {
+        state.isStaffSession = true;
+        state.staffUser = parsed;
+        state.userRole = "FrontDeskStaff";
+        inspectShop(parsed.assignedShop, true);
+        applyUserRole(null);
+        switchView("desk", true);
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+}
+
+// 1-Click Station Link Auto-Login via URL query parameters (?s=slug&staff=user&key=pass)
+function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
+  if (!ensureFirebaseInitialized() || !db) {
+    if (retryCount < 10) {
+      setTimeout(() => checkStaffAutoLogin(shopSlug, username, passcode, retryCount + 1), 250);
+    }
+    return;
+  }
+
+  const cleanSlug = slugify(shopSlug) || shopSlug;
+  const cleanUser = String(username || "").trim().toLowerCase();
+  const cleanPass = String(passcode || "").trim();
+
+  db.collection("shops").doc(cleanSlug).collection("staff_roles")
+    .where("username", "==", cleanUser)
+    .get()
+    .then(snap => {
+      let matched = null;
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (d.passcode === cleanPass) {
+          matched = { ...d, id: doc.id };
+        }
+      });
+
+      if (matched) {
+        loginAsStaff(matched, cleanSlug, true);
+      } else {
+        showToast("⚠️ Station passcode invalid or expired. Please sign in.");
+      }
+    })
+    .catch(err => {
+      console.warn("Staff auto-login verification notice:", err);
+    });
+}
+
+// Establish an active staff operator session
+function loginAsStaff(staffData, shopSlug, isAutoLogin = false) {
+  state.isStaffSession = true;
+  state.staffUser = staffData;
+  state.userRole = "FrontDeskStaff";
+
+  try {
+    sessionStorage.setItem("waitlink_staff_session", JSON.stringify(staffData));
+  } catch (e) {}
+
+  inspectShop(shopSlug, true);
+  applyUserRole(null);
+  switchView("desk", false);
+
+  if (isAutoLogin) {
+    showToast(`🚀 Terminal Unlocked: Welcome, ${staffData.displayName || staffData.username}!`);
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("staff");
+      cleanUrl.searchParams.delete("key");
+      cleanUrl.searchParams.delete("passcode");
+      window.history.replaceState({}, document.title, cleanUrl.toString());
+    } catch (e) {}
+  } else {
+    showToast(`🚀 Welcome, ${staffData.displayName || staffData.username}! Front Desk ready.`);
+  }
+}
+
+// Sign out from staff operator mode
+function staffSignOut() {
+  state.isStaffSession = false;
+  state.staffUser = null;
+  state.userRole = "Guest";
+  try {
+    sessionStorage.removeItem("waitlink_staff_session");
+  } catch (e) {}
+  applyUserRole(null);
+  switchView("public", false);
+  showToast("👋 Front Desk staff signed out.");
+}
+
+// PIN Switcher on Front Desk Header for shift handovers
+function promptStaffPinSwitch() {
+  if (!state.isStaffSession || !state.staffUser) return;
+  const pin = prompt(`Enter 4-digit PIN to switch active operator (Current: ${state.staffUser.displayName || state.staffUser.username}):`);
+  if (!pin) return;
+  
+  if (!db) return;
+  const shopSlug = state.staffUser.assignedShop || state.config.slug;
+  db.collection("shops").doc(shopSlug).collection("staff_roles")
+    .where("passcode", "==", pin.trim())
+    .get()
+    .then(snap => {
+      let matched = null;
+      snap.forEach(doc => { matched = { ...doc.data(), id: doc.id }; });
+      if (matched) {
+        loginAsStaff(matched, shopSlug, false);
+        showToast(`👤 Operator switched to ${matched.displayName || matched.username}`);
+      } else {
+        showToast("⚠️ PIN not found for this shop location.");
+      }
+    })
+    .catch(console.warn);
+}
+
+// Auth Switcher Tab between Business Owner and Front Desk Staff
+function switchAuthTab(tab) {
+  const ownerTab = document.getElementById("auth-tab-owner");
+  const staffTab = document.getElementById("auth-tab-staff");
+  const ownerContainer = document.getElementById("auth-owner-container");
+  const staffContainer = document.getElementById("auth-staff-container");
+  const authTitle = document.getElementById("auth-modal-title");
+
+  if (tab === "staff") {
+    if (staffTab) staffTab.classList.add("active");
+    if (ownerTab) ownerTab.classList.remove("active");
+    if (staffContainer) staffContainer.classList.remove("hidden");
+    if (ownerContainer) ownerContainer.classList.add("hidden");
+    if (authTitle) authTitle.textContent = "🖥️ Front Desk Staff Login";
+
+    const shopInput = document.getElementById("staff-login-shop");
+    if (shopInput && (!shopInput.value || shopInput.value === "main-st-barbers") && state.config && state.config.slug) {
+      shopInput.value = state.config.slug;
+    }
+  } else {
+    if (ownerTab) ownerTab.classList.add("active");
+    if (staffTab) staffTab.classList.remove("active");
+    if (ownerContainer) ownerContainer.classList.remove("hidden");
+    if (staffContainer) staffContainer.classList.add("hidden");
+    if (authTitle) authTitle.textContent = "🔑 Sign In to WaitLink";
+  }
+}
+
+// Handle submission of Front Desk Staff login form
+function handleStaffAuthSubmit(event) {
+  event.preventDefault();
+  if (!db) {
+    showAuthError("Cloud database not connected.");
+    return;
+  }
+
+  const shopSlugInput = document.getElementById("staff-login-shop");
+  const userInput = document.getElementById("staff-login-username");
+  const passInput = document.getElementById("staff-login-passcode");
+  const btn = document.getElementById("btn-staff-login");
+
+  const shopSlug = (shopSlugInput ? shopSlugInput.value.trim().toLowerCase() : "");
+  const username = (userInput ? userInput.value.trim().toLowerCase() : "");
+  const passcode = (passInput ? passInput.value.trim() : "");
+
+  if (!shopSlug || !username || !passcode) {
+    showAuthError("Please fill in shop slug, username, and passcode.");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Verifying Staff Credentials...";
+  }
+
+  db.collection("shops").doc(shopSlug).collection("staff_roles")
+    .where("username", "==", username)
+    .get()
+    .then(snap => {
+      let matched = null;
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (d.passcode === passcode) {
+          matched = { ...d, id: doc.id };
+        }
+      });
+
+      if (!matched) {
+        showAuthError("⚠️ Invalid Shop Slug, Staff Username, or Passcode.");
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "🚀 Unlock Front Desk Terminal";
+        }
+        return;
+      }
+
+      loginAsStaff(matched, shopSlug, false);
+      closeAuthModal();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "🚀 Unlock Front Desk Terminal";
+      }
+    })
+    .catch(err => {
+      console.error("Staff auth error:", err);
+      showAuthError("Login failed: " + err.message);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "🚀 Unlock Front Desk Terminal";
+      }
+    });
+}
+
+// Owner Directory Tab Navigation (Shops, Roles, Terminals)
+function switchOwnerDirTab(tabName) {
+  const tabs = ["shops", "roles", "terminals"];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`ownertab-${t}`);
+    const panel = document.getElementById(`ownerpanel-${t}`);
+    if (btn) btn.classList.toggle("active", t === tabName);
+    if (panel) panel.classList.toggle("hidden", t !== tabName);
+  });
+
+  if (tabName === "shops") {
+    loadOwnerDirectory();
+  } else if (tabName === "roles") {
+    loadStaffRoles();
+  } else if (tabName === "terminals") {
+    loadOwnerTerminals();
+    loadStaffActivityLog();
+  }
+}
+
+// Fetch all shops owned by the logged-in user and populate metrics & table
+async function loadOwnerDirectory(forceRefresh = false) {
+  if (!state.user && !isSuperAdmin()) {
+    return;
+  }
+
+  const tbody = document.getElementById("owner-shops-tbody");
+  const totalShopsEl = document.getElementById("owner-dir-total-shops");
+  const totalWaitingEl = document.getElementById("owner-dir-total-waiting");
+  const totalStaffEl = document.getElementById("owner-dir-total-staff");
+  const planBadgeEl = document.getElementById("owner-dir-plan-badge");
+  const tabShopCount = document.getElementById("owner-dir-tab-shop-count");
+  const staffShopFilter = document.getElementById("owner-staff-filter-shop");
+
+  const emailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+  const isSuper = isSuperAdmin();
+
+  let ownedShops = [];
+
+  if (db) {
+    try {
+      const query = isSuper
+        ? db.collection("shops").limit(100)
+        : db.collection("shops").where("ownerEmail", "==", state.user.email).limit(50);
+      
+      const snap = await query.get();
+      snap.forEach(doc => {
+        const d = doc.data();
+        ownedShops.push({
+          id: doc.id,
+          slug: d.slug || doc.id,
+          shopName: d.name || d.shopName || d.slug || doc.id,
+          ...d
+        });
+      });
+
+      if (ownedShops.length === 0 && !isSuper && state.user.email !== emailClean) {
+        const snapLower = await db.collection("shops").where("ownerEmail", "==", emailClean).limit(50).get();
+        snapLower.forEach(doc => {
+          const d = doc.data();
+          ownedShops.push({
+            id: doc.id,
+            slug: d.slug || doc.id,
+            shopName: d.name || d.shopName || d.slug || doc.id,
+            ...d
+          });
+        });
+      }
+    } catch (e) {
+      console.warn("Owner directory fetch notice:", e);
+    }
+  }
+
+  // Fallback to locally cached registered shops
+  if (ownedShops.length === 0) {
+    if (isSuper && Array.isArray(state.registeredShops) && state.registeredShops.length > 0) {
+      ownedShops = state.registeredShops;
+    } else if (Array.isArray(state.registeredShops)) {
+      ownedShops = state.registeredShops.filter(s => {
+        const sOwner = (s.ownerEmail || "").trim().toLowerCase();
+        return sOwner === emailClean;
+      });
+    }
+    if (ownedShops.length === 0 && state.config && state.config.slug) {
+      ownedShops = [{
+        id: state.config.slug,
+        slug: state.config.slug,
+        shopName: state.config.shopName || "My Business",
+        ownerEmail: emailClean,
+        planTitle: state.config.planTitle || "Starter Tier (Free)",
+        planPrice: state.config.planPrice || 0
+      }];
+    }
+  }
+
+  state.ownerDirectoryShops = ownedShops;
+
+  if (totalShopsEl) totalShopsEl.textContent = ownedShops.length;
+  if (tabShopCount) tabShopCount.textContent = ownedShops.length;
+
+  const planInfo = getActivePlanInfo();
+  if (planBadgeEl) {
+    planBadgeEl.textContent = planInfo.isEnterprise ? "Enterprise Tier" : (planInfo.isPro ? "Pro Business Tier" : "Starter Tier");
+    planBadgeEl.style.color = planInfo.isEnterprise ? "#818cf8" : (planInfo.isPro ? "#06b6d4" : "#10b981");
+  }
+
+  if (staffShopFilter) {
+    const prevVal = staffShopFilter.value;
+    staffShopFilter.innerHTML = `<option value="">-- All Owned Shops (${ownedShops.length}) --</option>` + 
+      ownedShops.map(s => `<option value="${escapeHtml(s.slug || s.id)}">${escapeHtml(s.shopName || s.name || s.slug)}</option>`).join("");
+    if (prevVal) staffShopFilter.value = prevVal;
+  }
+
+  let totalWaitingCount = (state.queue && state.config.slug && ownedShops.some(s => s.slug === state.config.slug))
+    ? state.queue.length
+    : 0;
+  if (totalWaitingEl) totalWaitingEl.textContent = totalWaitingCount;
+
+  renderOwnerShopsTable(ownedShops);
+}
+
+// Render Owner Shops Directory Grid Table
+function renderOwnerShopsTable(shopsList) {
+  const tbody = document.getElementById("owner-shops-tbody");
+  if (!tbody) return;
+
+  const shops = shopsList || state.ownerDirectoryShops || [];
+  if (shops.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏪</div>
+          <strong>No shops registered under your owner account yet.</strong>
+          <div style="margin-top: 0.75rem;">
+            <button class="btn btn-primary btn-sm" onclick="openCreateShopModal()">+ Register Your First Shop</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = shops.map(shop => {
+    const rawSlug = shop.slug || shop.id || "main-st-barbers";
+    const shopSlug = String(rawSlug).trim();
+    const shopName = String(shop.shopName || shop.name || shopSlug).trim();
+    const docId = String(shop.id || shopSlug).trim();
+    const price = shop.planPrice !== undefined ? shop.planPrice : 0;
+    const isEnterprise = price >= 49 || (shop.planTitle && shop.planTitle.includes("Enterprise"));
+    const isPro = price >= 15 || (shop.planTitle && shop.planTitle.includes("Pro"));
+    
+    const tierPillColor = isEnterprise ? "#818cf8" : (isPro ? "#06b6d4" : "#10b981");
+    const tierPillBg = isEnterprise ? "rgba(129, 140, 248, 0.15)" : (isPro ? "rgba(6, 182, 212, 0.15)" : "rgba(16, 185, 129, 0.15)");
+    const tierLabel = isEnterprise ? "Enterprise" : (isPro ? "Pro Business" : "Starter");
+
+    const isSandbox = shopSlug === "main-st-barbers";
+    const isActiveShop = state.config.slug === shopSlug;
+    const currentWait = isActiveShop ? (state.queue ? state.queue.length : 0) : "0";
+    const todayServed = isActiveShop ? (state.history ? state.history.filter(h => h.status === "called").length : 0) : "--";
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; border: 1px solid rgba(6, 182, 212, 0.3);">
+              🏪
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #fff;">${escapeHtml(shopName)} ${isActiveShop ? '<span class="status-pill" style="font-size:0.68rem; padding: 2px 6px;">Active</span>' : ''}</div>
+              <a href="/?s=${encodeURIComponent(shopSlug)}&mode=public" target="_blank" style="font-family: monospace; font-size: 0.78rem; color: #38bdf8; text-decoration: none;">
+                waitlink.app?s=${escapeHtml(shopSlug)} ↗
+              </a>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span style="font-size: 0.78rem; font-weight: 700; color: ${tierPillColor}; background: ${tierPillBg}; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid ${tierPillColor};">
+            ${tierLabel}
+          </span>
+        </td>
+        <td>
+          <span style="font-weight: 700; color: #06b6d4;">${currentWait} waiting</span>
+        </td>
+        <td>
+          <span style="font-size: 0.85rem; color: #cbd5e1;">${todayServed} served today</span>
+        </td>
+        <td>
+          <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+            <span class="pulse-dot"></span> Open
+          </span>
+        </td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(shopSlug)}'); switchView('desk');" title="Open Front Desk Operator">
+              🖥️ Front Desk
+            </button>
+            <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(shopSlug)}'); openSettingsModal();" title="Configure Shop Settings">
+              ⚙️ Settings
+            </button>
+            <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(shopSlug)}'); switchView('poster');" title="Print Storefront QR Poster">
+              🖨️ Poster
+            </button>
+            ${!isSandbox ? `
+              <button class="btn-text-sm" 
+                data-slug="${encodeURIComponent(shopSlug)}" 
+                data-name="${encodeURIComponent(shopName)}" 
+                data-docid="${encodeURIComponent(docId)}" 
+                onclick="handleDeleteShopClick(this)" 
+                style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
+                title="Delete this shop">🗑️ Delete</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// Filter Owned Shops Table by search query
+function filterOwnerShops(keyword) {
+  if (!state.ownerDirectoryShops) return;
+  const q = (keyword || "").trim().toLowerCase();
+  if (!q) {
+    renderOwnerShopsTable(state.ownerDirectoryShops);
+    return;
+  }
+  const filtered = state.ownerDirectoryShops.filter(s => {
+    const sName = (s.shopName || s.name || "").toLowerCase();
+    const sSlug = (s.slug || s.id || "").toLowerCase();
+    return sName.includes(q) || sSlug.includes(q);
+  });
+  renderOwnerShopsTable(filtered);
+}
+
+// Load staff roles across all owned shops
+async function loadStaffRoles() {
+  const container = document.getElementById("owner-staff-list");
+  const tabStaffCount = document.getElementById("owner-dir-tab-staff-count");
+  const totalStaffEl = document.getElementById("owner-dir-total-staff");
+  if (!container) return;
+
+  const shops = state.ownerDirectoryShops || [];
+  if (shops.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1; padding: 2.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👥</div>
+        <h3>No Shops Available</h3>
+        <p style="color: var(--text-muted);">Please create or register a shop first before provisioning staff accounts.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">⏳ Loading staff roles...</div>`;
+
+  let allStaff = [];
+  if (db) {
+    try {
+      const promises = shops.map(s => {
+        const slug = s.slug || s.id;
+        return db.collection("shops").doc(slug).collection("staff_roles").get().then(snap => {
+          let shopStaff = [];
+          snap.forEach(doc => {
+            shopStaff.push({
+              id: doc.id,
+              ...doc.data(),
+              assignedShop: slug,
+              assignedShopName: s.shopName || s.name || slug
+            });
+          });
+          return shopStaff;
+        }).catch(err => {
+          console.warn("Error fetching staff for shop", slug, err);
+          return [];
+        });
+      });
+
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        allStaff = allStaff.concat(res);
+      });
+    } catch (e) {
+      console.warn("Staff roles load notice:", e);
+    }
+  }
+
+  state.staffRolesList = allStaff;
+  if (tabStaffCount) tabStaffCount.textContent = allStaff.length;
+  if (totalStaffEl) totalStaffEl.textContent = allStaff.length;
+
+  renderStaffCards(allStaff);
+}
+
+// Render staff profile cards in Manage Staff tab
+function renderStaffCards(staffList) {
+  const container = document.getElementById("owner-staff-list");
+  if (!container) return;
+
+  if (!staffList || staffList.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1; padding: 2.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👥</div>
+        <h3>No Staff Roles Provisioned Yet</h3>
+        <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 1.25rem;">
+          Create dedicated username & passcode logins for counter staff so they can manage the queue without sharing your owner password.
+        </p>
+        <button class="btn btn-primary" onclick="openStaffRoleModal()">+ Add New Staff Role</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = staffList.map(staff => {
+    const sId = staff.id || staff.staffId;
+    const p = staff.permissions || {};
+    const shopSlug = staff.assignedShop;
+    const shopName = staff.assignedShopName || shopSlug;
+
+    return `
+      <div class="staff-card">
+        <div>
+          <div class="staff-card-header">
+            <div class="staff-avatar-chip">👤</div>
+            <div class="staff-details-meta">
+              <h3 class="staff-name-title">${escapeHtml(staff.displayName || staff.username)}</h3>
+              <div class="staff-shop-tag">
+                <span>🏪</span>
+                <strong>${escapeHtml(shopName)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="staff-cred-box" style="margin-top: 0.85rem;">
+            <div>
+              <div class="staff-cred-label">Login Username:</div>
+              <div class="staff-cred-val">${escapeHtml(staff.username)}</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="staff-cred-label">Passcode / PIN:</div>
+              <div class="staff-cred-val">
+                <span id="passcode-disp-${escapeHtml(sId)}" data-passcode="${escapeHtml(staff.passcode)}" style="filter: blur(4px); cursor: pointer;" onclick="togglePasscodeBlur('${escapeHtml(sId)}')">••••</span>
+                <button type="button" class="btn-text-sm" onclick="togglePasscodeBlur('${escapeHtml(sId)}')" title="Reveal/Hide PIN" style="padding: 2px 4px; font-size: 0.9rem;">👁️</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.85rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.35rem;">Permissions:</div>
+            <div class="staff-perms-list">
+              <span class="perm-pill ${p.canCheckIn !== false ? '' : 'disabled'}">${p.canCheckIn !== false ? '✓' : '✕'} Check-In</span>
+              <span class="perm-pill ${p.canCallNext !== false ? '' : 'disabled'}">${p.canCallNext !== false ? '✓' : '✕'} Call Next</span>
+              <span class="perm-pill ${p.canComplete !== false ? '' : 'disabled'}">${p.canComplete !== false ? '✓' : '✕'} Mark Done</span>
+              <span class="perm-pill ${p.canCancel !== false ? '' : 'disabled'}">${p.canCancel !== false ? '✓' : '✕'} Cancel</span>
+              <span class="perm-pill ${p.canViewHistory !== false ? '' : 'disabled'}">${p.canViewHistory !== false ? '✓' : '✕'} History</span>
+              <span class="perm-pill ${p.canRevealPhone ? '' : 'disabled'}">${p.canRevealPhone ? '✓' : '✕'} Phone Reveal</span>
+              <span class="perm-pill ${p.canToggleStoreStatus !== false ? '' : 'disabled'}">${p.canToggleStoreStatus !== false ? '✓' : '✕'} Open/Close</span>
+              <span class="perm-pill ${p.canExportCSV ? '' : 'disabled'}">${p.canExportCSV ? '✓' : '✕'} Export CSV</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="staff-card-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openStaffRoleModal('${escapeHtml(sId)}', '${escapeHtml(shopSlug)}')" style="flex: 1;">
+            ✏️ Edit
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="copyStaffStationLink('${escapeHtml(shopSlug)}', '${escapeHtml(staff.username)}', '${escapeHtml(staff.passcode)}')" title="Copy 1-Click Station URL" style="flex: 1.5; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+            📋 Station URL
+          </button>
+          <button class="btn-text-sm" onclick="deleteStaffRole('${escapeHtml(shopSlug)}', '${escapeHtml(sId)}', '${escapeHtml(staff.displayName || staff.username)}')" style="color: #f43f5e; padding: 0.4rem 0.6rem; border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 6px; background: rgba(244, 63, 94, 0.1);" title="Delete staff account">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Filter staff cards by selected shop
+function filterStaffByShop(shopSlug) {
+  if (!state.staffRolesList) return;
+  if (!shopSlug) {
+    renderStaffCards(state.staffRolesList);
+    return;
+  }
+  const filtered = state.staffRolesList.filter(s => s.assignedShop === shopSlug);
+  renderStaffCards(filtered);
+}
+
+// Open modal to create or edit staff profile
+function openStaffRoleModal(staffId, shopSlug) {
+  const modal = document.getElementById("staff-role-modal");
+  const titleEl = document.getElementById("staff-modal-title");
+  const editIdEl = document.getElementById("staff-edit-id");
+  const nameEl = document.getElementById("staff-display-name");
+  const shopSelect = document.getElementById("staff-assigned-shop");
+  const userEl = document.getElementById("staff-username");
+  const passEl = document.getElementById("staff-passcode");
+
+  if (!modal) return;
+
+  if (shopSelect) {
+    const shops = (state.ownerDirectoryShops && state.ownerDirectoryShops.length > 0)
+      ? state.ownerDirectoryShops
+      : (state.registeredShops || [{ slug: state.config.slug, shopName: state.config.shopName }]);
+    
+    shopSelect.innerHTML = shops.map(s => {
+      const sSlug = s.slug || s.id;
+      const sName = s.shopName || s.name || sSlug;
+      return `<option value="${escapeHtml(sSlug)}">${escapeHtml(sName)} (${escapeHtml(sSlug)})</option>`;
+    }).join("");
+    if (shopSlug) shopSelect.value = shopSlug;
+    else if (state.config.slug) shopSelect.value = state.config.slug;
+  }
+
+  if (staffId && state.staffRolesList) {
+    const staff = state.staffRolesList.find(s => s.id === staffId);
+    if (staff) {
+      if (titleEl) titleEl.textContent = `👥 Edit Staff Role: ${staff.displayName}`;
+      if (editIdEl) editIdEl.value = staff.id;
+      if (nameEl) nameEl.value = staff.displayName || "";
+      if (shopSelect && staff.assignedShop) shopSelect.value = staff.assignedShop;
+      if (userEl) userEl.value = staff.username || "";
+      if (passEl) passEl.value = staff.passcode || "";
+
+      const p = staff.permissions || {};
+      setCheckboxChecked("perm-checkin", p.canCheckIn !== false);
+      setCheckboxChecked("perm-call", p.canCallNext !== false);
+      setCheckboxChecked("perm-complete", p.canComplete !== false);
+      setCheckboxChecked("perm-cancel", p.canCancel !== false);
+      setCheckboxChecked("perm-history", p.canViewHistory !== false);
+      setCheckboxChecked("perm-reveal-phone", !!p.canRevealPhone);
+      setCheckboxChecked("perm-store-status", p.canToggleStoreStatus !== false);
+      setCheckboxChecked("perm-export-csv", !!p.canExportCSV);
+
+      modal.classList.remove("hidden");
+      return;
+    }
+  }
+
+  if (titleEl) titleEl.textContent = "👥 Provision Front Desk Staff Role";
+  if (editIdEl) editIdEl.value = "";
+  if (nameEl) nameEl.value = "";
+  if (userEl) userEl.value = "";
+  
+  const randomPin = String(Math.floor(1000 + Math.random() * 9000));
+  if (passEl) passEl.value = randomPin;
+
+  applyStaffPreset("full");
+  modal.classList.remove("hidden");
+}
+
+function closeStaffRoleModal() {
+  const modal = document.getElementById("staff-role-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function setCheckboxChecked(id, isChecked) {
+  const el = document.getElementById(id);
+  if (el) el.checked = !!isChecked;
+}
+
+function applyStaffPreset(preset) {
+  if (preset === "full") {
+    setCheckboxChecked("perm-checkin", true);
+    setCheckboxChecked("perm-call", true);
+    setCheckboxChecked("perm-complete", true);
+    setCheckboxChecked("perm-cancel", true);
+    setCheckboxChecked("perm-history", true);
+    setCheckboxChecked("perm-reveal-phone", false);
+    setCheckboxChecked("perm-store-status", true);
+    setCheckboxChecked("perm-export-csv", false);
+  } else if (preset === "intake") {
+    setCheckboxChecked("perm-checkin", true);
+    setCheckboxChecked("perm-call", false);
+    setCheckboxChecked("perm-complete", false);
+    setCheckboxChecked("perm-cancel", false);
+    setCheckboxChecked("perm-history", true);
+    setCheckboxChecked("perm-reveal-phone", false);
+    setCheckboxChecked("perm-store-status", false);
+    setCheckboxChecked("perm-export-csv", false);
+  } else if (preset === "caller") {
+    setCheckboxChecked("perm-checkin", false);
+    setCheckboxChecked("perm-call", true);
+    setCheckboxChecked("perm-complete", true);
+    setCheckboxChecked("perm-cancel", true);
+    setCheckboxChecked("perm-history", true);
+    setCheckboxChecked("perm-reveal-phone", false);
+    setCheckboxChecked("perm-store-status", true);
+    setCheckboxChecked("perm-export-csv", false);
+  }
+}
+
+// Persist staff profile and feature permissions to Firestore
+function handleSaveStaffRole(event) {
+  event.preventDefault();
+  if (!db) {
+    showToast("⚠️ Cloud database not initialized.");
+    return;
+  }
+
+  const editId = document.getElementById("staff-edit-id").value.trim();
+  const displayName = document.getElementById("staff-display-name").value.trim();
+  const assignedShop = document.getElementById("staff-assigned-shop").value.trim();
+  const username = document.getElementById("staff-username").value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  const passcode = document.getElementById("staff-passcode").value.trim();
+
+  if (!displayName || !assignedShop || !username || !passcode) {
+    showToast("⚠️ Please fill in all required fields.");
+    return;
+  }
+
+  const staffId = editId || ("staff_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6));
+
+  let assignedShopName = assignedShop;
+  if (state.ownerDirectoryShops) {
+    const s = state.ownerDirectoryShops.find(sh => (sh.slug || sh.id) === assignedShop);
+    if (s) assignedShopName = s.shopName || s.name || assignedShop;
+  }
+
+  const permissions = {
+    canCheckIn: document.getElementById("perm-checkin").checked,
+    canCallNext: document.getElementById("perm-call").checked,
+    canComplete: document.getElementById("perm-complete").checked,
+    canCancel: document.getElementById("perm-cancel").checked,
+    canViewHistory: document.getElementById("perm-history").checked,
+    canRevealPhone: document.getElementById("perm-reveal-phone").checked,
+    canToggleStoreStatus: document.getElementById("perm-store-status").checked,
+    canExportCSV: document.getElementById("perm-export-csv").checked
+  };
+
+  const staffRecord = {
+    id: staffId,
+    staffId: staffId,
+    displayName: displayName,
+    username: username,
+    passcode: passcode,
+    assignedShop: assignedShop,
+    assignedShopName: assignedShopName,
+    permissions: permissions,
+    updatedAt: Date.now(),
+    createdBy: (state.user && state.user.email) ? state.user.email : "owner"
+  };
+
+  const saveBtn = document.getElementById("btn-save-staff-role");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
+  db.collection("shops").doc(assignedShop).collection("staff_roles").doc(staffId)
+    .set(staffRecord, { merge: true })
+    .then(() => {
+      closeStaffRoleModal();
+      showToast(`✅ Staff account "${displayName}" saved!`);
+      loadStaffRoles();
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "💾 Save Staff Account";
+      }
+    })
+    .catch(err => {
+      console.error("Save staff error:", err);
+      showToast("⚠️ Error saving staff role: " + err.message);
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "💾 Save Staff Account";
+      }
+    });
+}
+
+// Delete staff profile
+function deleteStaffRole(shopSlug, staffId, staffName) {
+  if (!confirm(`Are you sure you want to remove the front desk role for "${staffName}"? This will immediately revoke their station access.`)) {
+    return;
+  }
+  if (!db) return;
+
+  db.collection("shops").doc(shopSlug).collection("staff_roles").doc(staffId).delete()
+    .then(() => {
+      showToast(`🗑️ Staff role for "${staffName}" removed.`);
+      loadStaffRoles();
+    })
+    .catch(err => {
+      console.error("Delete staff role error:", err);
+      showToast("⚠️ Error deleting staff role: " + err.message);
+    });
+}
+
+// Copy 1-Click Station URL to clipboard
+function copyStaffStationLink(shopSlug, username, passcode) {
+  const stationUrl = `${window.location.origin}/?s=${encodeURIComponent(shopSlug)}&staff=${encodeURIComponent(username)}&key=${encodeURIComponent(passcode)}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(stationUrl).then(() => {
+      showToast("📋 1-Click Station Link copied to clipboard!");
+    }).catch(() => {
+      prompt("Copy Station Link:", stationUrl);
+    });
+  } else {
+    prompt("Copy Station Link:", stationUrl);
+  }
+}
+
+// Blur/Reveal passcode on staff card
+function togglePasscodeBlur(staffId) {
+  const el = document.getElementById(`passcode-disp-${staffId}`);
+  if (!el) return;
+  const isBlurred = el.style.filter === "blur(4px)" || !el.getAttribute("data-revealed");
+  if (isBlurred) {
+    el.style.filter = "none";
+    el.textContent = el.getAttribute("data-passcode") || "••••";
+    el.setAttribute("data-revealed", "true");
+  } else {
+    el.style.filter = "blur(4px)";
+    el.textContent = "••••";
+    el.removeAttribute("data-revealed");
+  }
+}
+
+// Render 1-Click iPad Station Terminals with live QR codes
+function loadOwnerTerminals() {
+  const container = document.getElementById("owner-terminals-grid");
+  if (!container) return;
+
+  const staffList = state.staffRolesList || [];
+  if (staffList.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1; padding: 2.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📋</div>
+        <h3>No Station Terminals Provisioned</h3>
+        <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 1.25rem;">
+          To generate 1-click station links and iPad QR codes, please first provision a staff role under the "Manage Staff & Roles" tab.
+        </p>
+        <button class="btn btn-primary" onclick="switchOwnerDirTab('roles'); openStaffRoleModal();">+ Add Staff Role</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = staffList.map((staff, idx) => {
+    const sId = staff.id || staff.staffId;
+    const safeId = "term_qr_" + idx;
+    const shopSlug = staff.assignedShop;
+    const shopName = staff.assignedShopName || shopSlug;
+    const stationUrl = `${window.location.origin}/?s=${encodeURIComponent(shopSlug)}&staff=${encodeURIComponent(staff.username)}&key=${encodeURIComponent(staff.passcode)}`;
+
+    return `
+      <div class="terminal-card">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <div>
+              <h3 style="color: #fff; font-size: 1.1rem; margin: 0 0 0.2rem 0;">${escapeHtml(staff.displayName || staff.username)}'s Station</h3>
+              <div style="font-size: 0.8rem; color: #94a3b8;">🏪 Location: <strong>${escapeHtml(shopName)}</strong></div>
+            </div>
+            <span class="status-pill" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
+              Front Desk iPad
+            </span>
+          </div>
+
+          <div class="terminal-qr-container" id="${safeId}" data-url="${escapeHtml(stationUrl)}" title="Scan with iPad to log in instantly">
+          </div>
+
+          <div style="text-align: center; margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
+            Scan with tablet camera to unlock Front Desk
+          </div>
+        </div>
+
+        <div class="terminal-url-bar">
+          <span class="terminal-url-text">${escapeHtml(stationUrl)}</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyStaffStationLink('${escapeHtml(shopSlug)}', '${escapeHtml(staff.username)}', '${escapeHtml(staff.passcode)}')" style="flex-shrink: 0;">
+            📋 Copy Link
+          </button>
+        </div>
+
+        <div class="terminal-tip-box">
+          💡 <strong>iPad Setup Guide:</strong> Open this URL in Safari on your front desk iPad &rarr; Tap the Share button &rarr; Tap <strong>"Add to Home Screen"</strong> for a full-screen, 1-tap counter app.
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="${escapeHtml(stationUrl)}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; text-align: center; text-decoration: none; padding: 0.6rem;">
+            🚀 Open Station
+          </a>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Render QR codes
+  setTimeout(() => {
+    staffList.forEach((_, idx) => {
+      const safeId = "term_qr_" + idx;
+      const el = document.getElementById(safeId);
+      if (el) {
+        const url = el.getAttribute("data-url");
+        el.innerHTML = "";
+        let rendered = false;
+        if (window.QRCode) {
+          try {
+            new QRCode(el, {
+              text: url,
+              width: 140,
+              height: 140,
+              colorDark: "#090d16",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+            if (el.children && el.children.length > 0) rendered = true;
+          } catch (e) {
+            console.warn("QRCode error:", e);
+          }
+        }
+        if (!rendered) {
+          el.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}" alt="Station QR" style="width:140px; height:140px; border-radius:6px;" />`;
+        }
+      }
+    });
+  }, 50);
+}
+
+// Render Recent Staff Activity Timeline
+function loadStaffActivityLog() {
+  const container = document.getElementById("owner-staff-activity-timeline");
+  if (!container) return;
+
+  const history = state.history || [];
+  if (history.length === 0) {
+    container.innerHTML = `<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">No activity logged yet today. Completed customer visits will appear here.</div>`;
+    return;
+  }
+
+  container.innerHTML = history.slice(0, 15).map(item => {
+    const timeStr = item.calledAt ? new Date(item.calledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (item.checkedInAt ? new Date(item.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--');
+    const isCancelled = item.status === "cancelled";
+    const actionBadge = isCancelled 
+      ? `<span style="color: #f43f5e; font-weight: 700;">✕ Cancelled</span>` 
+      : `<span style="color: #10b981; font-weight: 700;">✓ Served</span>`;
+    
+    const staffActor = item.calledBy || item.completedBy || item.cancelledBy || item.checkedInBy || "Front Desk Staff";
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.1rem;">${isCancelled ? '❌' : '📞'}</span>
+          <div>
+            <div><strong>${escapeHtml(item.customerName || 'Customer')}</strong> ${actionBadge}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Staff: <strong style="color: #38bdf8;">${escapeHtml(staffActor)}</strong> &bull; Waited: ${item.waitDurationMin || 0}m</div>
+          </div>
+        </div>
+        <div style="font-family: monospace; font-size: 0.78rem; color: var(--text-muted);">${timeStr}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Explicit window assignments for Owner Directory & Staff RBAC
+window.hasStaffPermission = hasStaffPermission;
+window.restoreStaffSessionIfPresent = restoreStaffSessionIfPresent;
+window.checkStaffAutoLogin = checkStaffAutoLogin;
+window.loginAsStaff = loginAsStaff;
+window.staffSignOut = staffSignOut;
+window.promptStaffPinSwitch = promptStaffPinSwitch;
+window.switchAuthTab = switchAuthTab;
+window.handleStaffAuthSubmit = handleStaffAuthSubmit;
+window.switchOwnerDirTab = switchOwnerDirTab;
+window.loadOwnerDirectory = loadOwnerDirectory;
+window.renderOwnerShopsTable = renderOwnerShopsTable;
+window.filterOwnerShops = filterOwnerShops;
+window.loadStaffRoles = loadStaffRoles;
+window.renderStaffCards = renderStaffCards;
+window.filterStaffByShop = filterStaffByShop;
+window.openStaffRoleModal = openStaffRoleModal;
+window.closeStaffRoleModal = closeStaffRoleModal;
+window.applyStaffPreset = applyStaffPreset;
+window.handleSaveStaffRole = handleSaveStaffRole;
+window.deleteStaffRole = deleteStaffRole;
+window.copyStaffStationLink = copyStaffStationLink;
+window.togglePasscodeBlur = togglePasscodeBlur;
+window.loadOwnerTerminals = loadOwnerTerminals;
+window.loadStaffActivityLog = loadStaffActivityLog;
 
 
 

@@ -85,8 +85,8 @@ service cloud.firestore {
         isValidPublicShopUpdate()
       );
 
-      // Delete shop: SuperAdmin only
-      allow delete: if isSuperAdmin();
+      // Delete shop: SuperAdmin or verified Shop Owner
+      allow delete: if isSuperAdmin() || isShopOwner(resource.data);
 
       // Step 3: Queue History Subcollection (Tier-retained visit records)
       match /history/{ticketId} {
@@ -95,6 +95,14 @@ service cloud.firestore {
             isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
           )
         );
+      }
+
+      // Step 4: Staff Roles & Permissions Subcollection (Front Desk RBAC)
+      match /staff_roles/{staffId} {
+        allow write: if isSuperAdmin() || (
+          isAuthenticated() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
+        );
+        allow read: if true;
       }
     }
 
