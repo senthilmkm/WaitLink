@@ -659,6 +659,10 @@ function onClinicalPrivacyToggleChange() {
   const check = document.getElementById("owner-clinical-privacy-checkbox");
   if (!check) return;
   state.config.clinicalPrivacyEnabled = check.checked;
+  const hoursLabel = document.getElementById("owner-label-hours");
+  if (hoursLabel) {
+    hoursLabel.textContent = check.checked ? "Today's Clinic Hours (Optional)" : "Today's Store Hours (Optional)";
+  }
   showToast(`🏥 Clinical Privacy Mode: ${state.config.clinicalPrivacyEnabled ? "ENABLED (Patient Names & PHI Protected)" : "DISABLED"}`);
   renderAll();
 }
@@ -719,6 +723,10 @@ function updateConfigUI() {
   // Set Clinical Privacy toggle
   const clinicalCheck = document.getElementById("owner-clinical-privacy-checkbox");
   if (clinicalCheck) clinicalCheck.checked = !!state.config.clinicalPrivacyEnabled;
+  const hoursLabel = document.getElementById("owner-label-hours");
+  if (hoursLabel) {
+    hoursLabel.textContent = state.config.clinicalPrivacyEnabled ? "Today's Clinic Hours (Optional)" : "Today's Store Hours (Optional)";
+  }
 
   // Set Twilio Settings inputs
   const twilio = state.config.twilio || {};
@@ -2102,6 +2110,28 @@ function populateOwnerInputs() {
   updateTierFeatureLockdown();
 }
 
+// Switch Shop Settings Sub-Tab
+function switchSettingsSubTab(subTabName) {
+  if (!subTabName) return;
+  const navButtons = document.querySelectorAll(".settings-subtab-btn");
+  navButtons.forEach(btn => {
+    if (btn.dataset.subtab === subTabName) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  const panes = document.querySelectorAll(".settings-subtab-pane");
+  panes.forEach(pane => {
+    if (pane.id === `settings-pane-${subTabName}`) {
+      pane.classList.remove("hidden");
+    } else {
+      pane.classList.add("hidden");
+    }
+  });
+}
+
 // Save Owner Dashboard Settings (Option 1: Modern SaaS Micro-Feedback)
 async function saveOwnerSettings() {
   const saveBtn = document.getElementById("btn-save-owner-settings");
@@ -3051,10 +3081,11 @@ function renderPublicView() {
     tcpaShopName.textContent = state.config.shopName || "this business";
   }
 
-  // Render Store Hours
+  // Render Store / Clinic Hours
   const hoursText = state.config.hours || "9:00 AM - 7:00 PM (Open Today 🟢)";
+  setElText("public-hours-label", isClinical ? "🕒 Today's Clinic Hours:" : "🕒 Today's Store Hours:");
   setElText("public-hours-text", hoursText);
-  setElText("ticket-hours-reassurance", `Store open today: ${state.config.hours || '9:00 AM - 7:00 PM'}`);
+  setElText("ticket-hours-reassurance", `${isClinical ? 'Clinic' : 'Store'} open today: ${state.config.hours || '9:00 AM - 7:00 PM'}`);
 
   // Render Address & Phone Bar
   renderPublicContactBar();
@@ -3158,6 +3189,7 @@ function updateActiveTicketTimer() {
   const ticketCard = document.getElementById("public-active-ticket-card");
 
   if (queuePos !== -1) {
+    if (badgeEl) badgeEl.style.display = "block";
     if (queuePos === 0) {
       if (badgeEl) { badgeEl.textContent = "⚡ #1 YOU ARE NEXT UP!"; badgeEl.style.color = "#06b6d4"; }
       if (posEl) { posEl.textContent = "Head to the Front Desk"; posEl.style.color = "#06b6d4"; }
@@ -3170,9 +3202,19 @@ function updateActiveTicketTimer() {
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
     }
   } else {
-    if (badgeEl) { badgeEl.textContent = "🎉 YOU'RE BEING SERVED!"; badgeEl.style.color = "#3b82f6"; }
-    if (posEl) { posEl.textContent = "Visit In Progress"; posEl.style.color = "#3b82f6"; }
-    if (subEl) subEl.textContent = `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`;
+    // Visit / Consultation In Progress: Hide redundant top badge so only bolded status below name shows
+    if (badgeEl) badgeEl.style.display = "none";
+    const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+    if (posEl) {
+      posEl.textContent = isClinical ? "Consultation In Progress" : "Visit In Progress";
+      posEl.style.color = "#3b82f6";
+    }
+    if (subEl) {
+      subEl.textContent = isClinical
+        ? `Please proceed to examination room or front desk at ${state.config.shopName || 'Healthcare Clinic'}.`
+        : `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`;
+    }
+    if (ticketCard) ticketCard.style.border = "2px solid #3b82f6";
   }
 }
 
@@ -7247,6 +7289,8 @@ function restoreActiveTicket() {
       if (infoBox) infoBox.classList.add("hidden"); // Hide 3-point trust box on active ticket card
       
       if (ticketCard) {
+        const badgeEl = document.getElementById("ticket-badge-display");
+        if (badgeEl) badgeEl.style.display = "block";
         if (isClinical) {
           setElText("ticket-badge-display", state.myTicket.requeued ? "🔒 PATIENT TICKET (RE-QUEUED)" : "🔒 CONFIDENTIAL PATIENT TICKET");
           setElText("ticket-customer-name", `${displayName} • ID #${ticketIdShort}`);
@@ -7313,13 +7357,15 @@ function restoreActiveTicket() {
     } else if (historyItem && historyItem.status === "called") {
       state.myTicket = historyItem;
       if (ticketCard) {
+        // Hide redundant upper-case top badge when visit is in progress; the bold status below customer name is displayed
+        const badgeEl = document.getElementById("ticket-badge-display");
+        if (badgeEl) badgeEl.style.display = "none";
+
         if (isClinical) {
-          setElText("ticket-badge-display", "🩺 CONSULTATION IN PROGRESS");
           setElText("ticket-customer-name", `${displayName} • ID #${ticketIdShort}`);
           setElText("ticket-position-display", "Consultation In Progress");
           setElText("ticket-subtitle-display", `Please proceed to examination room or front desk at ${state.config.shopName || 'Healthcare Clinic'}.`);
         } else {
-          setElText("ticket-badge-display", "🎉 VISIT IN PROGRESS");
           setElText("ticket-customer-name", state.myTicket.customerName);
           setElText("ticket-position-display", "Visit In Progress");
           setElText("ticket-subtitle-display", `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`);
