@@ -339,11 +339,11 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       }
     }
 
-    const { to, body, from, accountSid, authToken, slug, staffUsername, staffPasscode } = req.body || {};
+    const { to, body, from, accountSid, authToken, slug, staffUsername, staffPasscode, staffPasscodeHash } = req.body || {};
     const cleanSlug = String(slug || "main-st-barbers").trim().toLowerCase();
 
     // Check staff terminal credentials if no valid ID token
-    if (!decodedToken && staffUsername && staffPasscode && cleanSlug) {
+    if (!decodedToken && staffUsername && (staffPasscode || staffPasscodeHash) && cleanSlug) {
       try {
         const staffSnap = await admin.firestore().collection("shops").doc(cleanSlug)
           .collection("staff_roles")
@@ -352,7 +352,14 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
           .get();
         if (!staffSnap.empty) {
           const staffData = staffSnap.docs[0].data();
-          if (staffData.passcode === String(staffPasscode).trim()) {
+          const crypto = require("crypto");
+          const computedHash = staffPasscode ? crypto.createHash("sha256").update(String(staffPasscode).trim()).digest("hex") : "";
+          const providedHash = staffPasscodeHash ? String(staffPasscodeHash).trim().toLowerCase() : "";
+
+          if (
+            (staffData.passcodeHash && (staffData.passcodeHash === computedHash || staffData.passcodeHash === providedHash)) ||
+            (staffData.passcode && staffPasscode && staffData.passcode === String(staffPasscode).trim())
+          ) {
             isStaffAuthenticated = true;
           }
         }

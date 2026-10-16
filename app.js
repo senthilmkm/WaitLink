@@ -22,6 +22,166 @@ const DEFAULT_TWILIO_FROM = SECRETS.TWILIO_FROM_PHONE || "+18039027464";
 const DEFAULT_TWILIO_FROM_DISPLAY = "+1 (803) 902-7464";
 const DEFAULT_SERVE_NOW_SMS = "Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}";
 
+// =========================================================================
+// RUNTIME ERROR BOUNDARIES & RESILIENCE GUARDS
+// =========================================================================
+if (typeof window !== "undefined") {
+  // Global Unhandled Error Boundary
+  window.addEventListener("error", function (event) {
+    if (!event) return;
+    const msg = String(event.message || "").toLowerCase();
+    // Suppress benign browser/extension noise
+    if (msg.includes("resizeobserver") || msg.includes("script error") || msg.includes("extension context") || msg.includes("interrupted by a call to pause")) {
+      return;
+    }
+    console.warn("[WaitLink Error Boundary Caught]", event.error || event.message);
+  });
+
+  // Global Unhandled Promise Rejection Boundary
+  window.addEventListener("unhandledrejection", function (event) {
+    if (!event || !event.reason) return;
+    const reasonMsg = String(event.reason && event.reason.message ? event.reason.message : event.reason).toLowerCase();
+    if (reasonMsg.includes("quotaexceeded") || reasonMsg.includes("notallowederror") || reasonMsg.includes("aborted")) {
+      console.warn("[WaitLink Handled Rejection Notice]", event.reason);
+      try { event.preventDefault(); } catch (e) {}
+      return;
+    }
+    console.warn("[WaitLink Unhandled Rejection Caught]", event.reason);
+    try { event.preventDefault(); } catch (e) {}
+  });
+}
+
+// Safe localStorage abstraction (defends against iOS private browsing / QuotaExceededError)
+const SafeStorage = {
+  get(key, fallback = null) {
+    try {
+      const item = localStorage.getItem(key);
+      return item !== null ? item : fallback;
+    } catch (e) {
+      console.warn("Storage read note:", e);
+      return fallback;
+    }
+  },
+  getJSON(key, fallback = null) {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : fallback;
+    } catch (e) {
+      console.warn("Storage parse note:", e);
+      return fallback;
+    }
+  },
+  set(key, value) {
+    try {
+      const valStr = typeof value === "string" ? value : JSON.stringify(value);
+      localStorage.setItem(key, valStr);
+      return true;
+    } catch (e) {
+      console.warn("Storage write note (quota or private mode):", e);
+      return false;
+    }
+  },
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
+// Pure JavaScript Standard SHA-256 Hasher (Deterministic Fallback)
+function sha256(ascii) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let lengthProperty = 'length';
+  let i, j;
+  let result = '';
+  const words = [];
+  const asciiBitLength = ascii[lengthProperty] * 8;
+  const hash = [
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+  ];
+  const k = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ];
+  ascii += '\x80';
+  while (ascii[lengthProperty] % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii[lengthProperty]; i++) {
+    j = ascii.charCodeAt(i);
+    if (j >> 8) return '';
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words[lengthProperty]] = ((asciiBitLength / maxWord) | 0);
+  words[words[lengthProperty]] = (asciiBitLength) | 0;
+  for (j = 0; j < words[lengthProperty];) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash.slice(0);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0
+        );
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash[7] = hash[6];
+      hash[6] = hash[5];
+      hash[5] = hash[4];
+      hash[4] = (hash[3] + temp1) | 0;
+      hash[3] = hash[2];
+      hash[2] = hash[1];
+      hash[1] = hash[0];
+      hash[0] = (temp1 + temp2) | 0;
+    }
+    for (i = 0; i < 8; i++) {
+      hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+// Cryptographic Staff Passcode Hasher
+async function hashStaffPasscode(passcode) {
+  const clean = String(passcode || "").trim();
+  if (!clean) return "";
+  if (typeof crypto !== "undefined" && crypto.subtle && typeof TextEncoder !== "undefined") {
+    try {
+      const msgBuffer = new TextEncoder().encode(clean);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    } catch (e) {
+      console.warn("crypto.subtle note, using fallback:", e);
+    }
+  }
+  return sha256(clean);
+}
+
 // Application State
 const state = {
   activeView: "home", // "home" | "desk" | "owner" | "public" | "poster" | "superadmin"
@@ -991,10 +1151,125 @@ function loadData() {
   }
 }
 
+// Helper to persist visit record to shops/{slug}/history/{ticketId} subcollection
+function persistHistoryItemToSubcollection(slug, item) {
+  if (!db || !slug || !item || !item.id) return;
+  try {
+    db.collection("shops").doc(slug).collection("history").doc(String(item.id))
+      .set(item, { merge: true })
+      .catch(subErr => console.warn("Subcollection history write note:", subErr));
+  } catch (e) {
+    console.warn("Subcollection history error:", e);
+  }
+}
+
+/**
+ * Atomic Queue Mutation Engine
+ * Protects against race conditions between multiple front desk tablets,
+ * counter staff, and customer self-service kiosks by executing state transitions
+ * inside a transactional read-modify-write block.
+ *
+ * @param {Function} mutatorFn - (serverQueue, serverHistory) => ({ queue, history, affectedItem? } | null)
+ * @returns {Promise<{ success: boolean, aborted?: boolean, queue?: Array, history?: Array, affectedItem?: any }>}
+ */
+async function mutateQueueAtomic(mutatorFn) {
+  if (!db || !state.config.slug) {
+    // Local / Offline fallback execution
+    try {
+      const currentQ = Array.isArray(state.queue) ? [...state.queue] : [];
+      const currentH = Array.isArray(state.history) ? [...state.history] : [];
+      const mutation = mutatorFn(currentQ, currentH);
+      if (!mutation) {
+        return { success: false, aborted: true };
+      }
+      if (Array.isArray(mutation.queue)) state.queue = mutation.queue;
+      if (Array.isArray(mutation.history)) state.history = mutation.history;
+      saveData();
+      renderAll();
+      return { success: true, queue: state.queue, history: state.history, affectedItem: mutation.affectedItem };
+    } catch (localErr) {
+      console.warn("Local mutation error:", localErr);
+      return { success: false, error: localErr.message };
+    }
+  }
+
+  const shopRef = db.collection("shops").doc(state.config.slug);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(shopRef);
+      if (!doc.exists) {
+        throw new Error("Shop document not found");
+      }
+      const data = doc.data() || {};
+      const serverQueue = Array.isArray(data.queue) ? [...data.queue] : [];
+      const serverHistory = Array.isArray(data.history) ? [...data.history] : [];
+
+      const mutation = mutatorFn(serverQueue, serverHistory);
+      if (!mutation) {
+        return { aborted: true };
+      }
+
+      const updatedQueue = Array.isArray(mutation.queue) ? mutation.queue : serverQueue;
+      const updatedHistory = Array.isArray(mutation.history) ? mutation.history : serverHistory;
+      // Cap root document history to 50 items so the 1MB Firestore document limit is never exceeded
+      const cappedHistory = updatedHistory.slice(0, 50);
+
+      transaction.update(shopRef, {
+        queue: updatedQueue,
+        history: cappedHistory,
+        updatedAt: Date.now()
+      });
+
+      return {
+        aborted: false,
+        queue: updatedQueue,
+        history: updatedHistory,
+        affectedItem: mutation.affectedItem
+      };
+    });
+
+    if (result && !result.aborted) {
+      state.queue = result.queue;
+      state.history = result.history;
+
+      // Persist affected visit to subcollection
+      if (result.affectedItem && result.affectedItem.id) {
+        persistHistoryItemToSubcollection(state.config.slug, result.affectedItem);
+      }
+
+      // Update local storage
+      const { queueKey, historyKey } = getStorageKeys();
+      SafeStorage.set(queueKey, state.queue);
+      SafeStorage.set(historyKey, state.history);
+
+      renderAll();
+      return { success: true, ...result };
+    } else {
+      return { success: false, aborted: true };
+    }
+  } catch (txErr) {
+    console.warn("Atomic queue transaction warning, applying optimistic local fallback:", txErr);
+    try {
+      const currentQ = Array.isArray(state.queue) ? [...state.queue] : [];
+      const currentH = Array.isArray(state.history) ? [...state.history] : [];
+      const mutation = mutatorFn(currentQ, currentH);
+      if (mutation) {
+        if (Array.isArray(mutation.queue)) state.queue = mutation.queue;
+        if (Array.isArray(mutation.history)) state.history = mutation.history;
+        saveData();
+        renderAll();
+        return { success: true, fallback: true, ...mutation };
+      }
+    } catch (e) {}
+    return { success: false, error: txErr.message };
+  }
+}
+
 function saveData() {
   const { queueKey, historyKey } = getStorageKeys();
-  localStorage.setItem(queueKey, JSON.stringify(state.queue));
-  localStorage.setItem(historyKey, JSON.stringify(state.history));
+  SafeStorage.set(queueKey, state.queue);
+  SafeStorage.set(historyKey, state.history);
 
   if (db && state.config.slug) {
     const isSuper = isSuperAdmin();
@@ -1006,6 +1281,9 @@ function saveData() {
       (Array.isArray(state.ownerDirectoryShops) && state.ownerDirectoryShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
       (Array.isArray(state.myShops) && state.myShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean))
     ));
+
+    // Cap root document history to 50 most recent items to guarantee it NEVER exceeds Firestore 1MB limit!
+    const cappedHistory = (Array.isArray(state.history) ? state.history : []).slice(0, 50);
 
     if (isOwner) {
       if (!state.config.ownerEmail && userEmailClean) {
@@ -1027,29 +1305,37 @@ function saveData() {
         services: state.config.services || [],
         logoUrl: state.config.logoUrl || "",
         queue: state.queue,
-        history: state.history,
+        history: cappedHistory,
         updatedAt: Date.now()
       }, { merge: true }).then(() => {
-        // Step 3 Two-Tier Storage: Persist latest history item to subcollection
+        // Step 3 Two-Tier Storage: Persist top 5 recent history items to subcollection
         if (Array.isArray(state.history) && state.history.length > 0) {
-          const latestItem = state.history[0];
-          if (latestItem && latestItem.id) {
-            db.collection("shops").doc(state.config.slug)
-              .collection("history").doc(String(latestItem.id))
-              .set(latestItem, { merge: true })
-              .catch(subErr => console.warn("Subcollection history write note:", subErr));
-          }
+          const recentItems = state.history.slice(0, 5);
+          recentItems.forEach(item => {
+            if (item && item.id) {
+              persistHistoryItemToSubcollection(state.config.slug, item);
+            }
+          });
         }
       }).catch(err => {
         console.warn("Firestore save warning:", err);
         showToast("⚠️ Cloud Sync Warning: Saved locally. Sync pending.");
       });
     } else {
-      // Unauthenticated public actions: strictly update queue and history only
+      // Unauthenticated public / Front Desk actions: strictly update queue and history only
       db.collection("shops").doc(state.config.slug).update({
         queue: state.queue,
-        history: state.history,
+        history: cappedHistory,
         updatedAt: Date.now()
+      }).then(() => {
+        if (Array.isArray(state.history) && state.history.length > 0) {
+          const recentItems = state.history.slice(0, 5);
+          recentItems.forEach(item => {
+            if (item && item.id) {
+              persistHistoryItemToSubcollection(state.config.slug, item);
+            }
+          });
+        }
       }).catch(err => {
         console.warn("Firestore public queue sync note:", err);
       });
@@ -1288,7 +1574,8 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
         body: messageBody,
         slug: state.config.slug || "main-st-barbers",
         staffUsername: (state.isStaffSession && state.staffUser) ? (state.staffUser.username || null) : null,
-        staffPasscode: (state.isStaffSession && state.staffUser) ? (state.staffUser.passcode || null) : null
+        staffPasscode: (state.isStaffSession && state.staffUser) ? (state.staffUser.passcode || null) : null,
+        staffPasscodeHash: (state.isStaffSession && state.staffUser) ? (state.staffUser.passcodeHash || await hashStaffPasscode(state.staffUser.passcode)) : null
       })
     });
 
@@ -1381,128 +1668,172 @@ async function sendTestSmsUI() {
   }
 }
 
-// Call Customer (End Wait Timer)
-function callCustomer(id) {
+// Call Customer (End Wait Timer - Concurrency Protected)
+async function callCustomer(id) {
   if (!hasStaffPermission("canCallNext")) {
     showToast("🔒 Calling customers is disabled for your staff account.");
     return;
   }
-  const index = state.queue.findIndex(item => item.id === id);
-  if (index === -1) return;
+  const localIndex = state.queue.findIndex(item => item.id === id);
+  if (localIndex === -1) {
+    showToast("⚠️ Customer is no longer waiting in the active queue.");
+    return;
+  }
 
-  const item = state.queue[index];
+  const localItem = state.queue[localIndex];
   const now = Date.now();
-  const durationMin = Math.max(1, Math.round((now - item.checkedInAt) / (1000 * 60)));
   const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
-
-  const historyItem = {
-    ...item,
-    status: "called",
-    calledAt: now,
-    completedAt: now,
-    calledBy: operatorName,
-    completedBy: operatorName,
-    waitDurationMin: durationMin
-  };
-
   const operatorLabel = getCurrentOperatorLabel();
-  logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞", operatorLabel);
+
+  let dispatchedHistoryItem = null;
+
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const idx = serverQueue.findIndex(item => item.id === id);
+    if (idx === -1) return null; // Already called by another counter station
+
+    const item = serverQueue[idx];
+    const durationMin = Math.max(1, Math.round((now - (item.checkedInAt || now)) / (1000 * 60)));
+    const historyItem = {
+      ...item,
+      status: "called",
+      calledAt: now,
+      completedAt: now,
+      calledBy: operatorName,
+      completedBy: operatorName,
+      waitDurationMin: durationMin
+    };
+
+    logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞", operatorLabel);
+
+    serverQueue.splice(idx, 1);
+    serverHistory.unshift(historyItem);
+    dispatchedHistoryItem = historyItem;
+
+    return {
+      queue: serverQueue,
+      history: serverHistory,
+      affectedItem: historyItem
+    };
+  });
+
+  if (!mutationResult.success) {
+    if (mutationResult.aborted) {
+      showToast("⚠️ Notice: This customer was already called or removed by another counter station.");
+    }
+    return;
+  }
+
+  const targetItem = dispatchedHistoryItem || localItem;
+  const durationMin = targetItem.waitDurationMin || Math.max(1, Math.round((now - (targetItem.checkedInAt || now)) / (1000 * 60)));
 
   // Trigger Twilio SMS notification if customer provided cell phone number
-  if (item.phone) {
+  if (targetItem.phone) {
     const shopName = state.config.shopName || "our shop";
     const baseUrl = getPublicUrl();
-    const ticketUrl = `${baseUrl}&ticket=${item.id}`;
+    const ticketUrl = `${baseUrl}&ticket=${targetItem.id}`;
     const customTpl = (state.config.twilio && state.config.twilio.serveNowSmsTemplate) || DEFAULT_SERVE_NOW_SMS;
-    const smsMsg = formatServeNowSms(customTpl, item.customerName, shopName, item.selectedServiceName, ticketUrl);
-    sendTwilioSms(item.phone, smsMsg, { ticketId: item.id, triggerType: "CALLED_NOW", ticketUrl })
+    const smsMsg = formatServeNowSms(customTpl, targetItem.customerName, shopName, targetItem.selectedServiceName, ticketUrl);
+    sendTwilioSms(targetItem.phone, smsMsg, { ticketId: targetItem.id, triggerType: "CALLED_NOW", ticketUrl })
       .then(res => {
         if (res.success) {
-          logCustomerActivity(historyItem, "sms_sent", "SMS Notification Sent", `Delivered SMS text message with live ticket link to ${item.phone} via Twilio`, "📲", "WaitLink Twilio Bot (Automated)");
-          showToast(`📱 SMS with ticket link sent to ${item.customerName} (${item.phone})`);
+          logCustomerActivity(targetItem, "sms_sent", "SMS Notification Sent", `Delivered SMS text message with live ticket link to ${targetItem.phone} via Twilio`, "📲", "WaitLink Twilio Bot (Automated)");
+          showToast(`📱 SMS with ticket link sent to ${targetItem.customerName} (${targetItem.phone})`);
         } else {
-          logCustomerActivity(historyItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱", "WaitLink Twilio Bot (Automated)");
+          logCustomerActivity(targetItem, "sms_attempt", "SMS Notification Attempted", `Twilio Dispatch: ${res.error}`, "📱", "WaitLink Twilio Bot (Automated)");
         }
       });
   }
 
-  state.queue.splice(index, 1);
-  state.history.unshift(historyItem);
-  saveData();
-  renderAll();
-  showToast(`Called ${item.customerName} (Waited ${durationMin}m)`);
+  showToast(`Called ${targetItem.customerName} (Waited ${durationMin}m)`);
 }
 
-// Cancel Customer
+// Cancel Customer (Concurrency Protected)
 async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
   if (cancelledBy === "desk" && !hasStaffPermission("canCancel")) {
     showToast("🔒 Cancelling visits is disabled for your staff account.");
     return;
   }
-  // 1. Check queue by ID or name
-  let index = state.queue.findIndex(item => item.id === id);
-  if (index === -1 && nameFallback) {
-    index = state.queue.findIndex(item => item.customerName && item.customerName.toLowerCase() === nameFallback.toLowerCase());
+
+  // Pre-find item for confirm dialog prompt
+  let existingItem = state.queue.find(item => item.id === id);
+  if (!existingItem && nameFallback) {
+    existingItem = state.queue.find(item => item.customerName && item.customerName.toLowerCase() === nameFallback.toLowerCase());
+  }
+  if (!existingItem) {
+    existingItem = state.history.find(item => item.id === id);
   }
 
-  if (index !== -1) {
-    const item = state.queue[index];
+  if (cancelledBy === "desk") {
+    const custDisplayName = (existingItem && existingItem.customerName) || nameFallback || "Customer";
+    const confirmed = await showConfirmDialog({
+      title: "Cancel Waiting Customer?",
+      message: `Remove "${custDisplayName}" from the active waitlist?\n\nThis will remove them from the queue and log the visit as cancelled.`,
+      confirmText: "Yes, Cancel Visit",
+      cancelText: "Keep in Line",
+      type: "danger",
+      icon: "✕",
+      category: "Queue Cancellation"
+    });
+    if (!confirmed) return;
+  }
 
-    if (cancelledBy === "desk") {
-      const confirmed = await showConfirmDialog({
-        title: "Cancel Waiting Customer?",
-        message: `Remove "${item.customerName || 'Customer'}" from the active waitlist?\n\nThis will remove them from the queue and log the visit as cancelled.`,
-        confirmText: "Yes, Cancel Visit",
-        cancelText: "Keep in Line",
-        type: "danger",
-        icon: "✕",
-        category: "Queue Cancellation"
-      });
-      if (!confirmed) return;
+  const nowTs = Date.now();
+  const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : cancelledBy));
+  const byDesk = (cancelledBy === "desk");
+  const cancelActor = byDesk ? getCurrentOperatorLabel() : "Customer (Mobile Ticket)";
+
+  let cancelledRecordName = (existingItem && existingItem.customerName) || nameFallback || "Customer";
+
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    // 1. Check server queue first
+    let qIdx = serverQueue.findIndex(item => item.id === id);
+    if (qIdx === -1 && nameFallback) {
+      qIdx = serverQueue.findIndex(item => item.customerName && item.customerName.toLowerCase() === nameFallback.toLowerCase());
     }
 
-    const nowTs = Date.now();
-    const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : cancelledBy));
-    const historyItem = {
-      ...item,
-      status: "cancelled",
-      cancelledBy: operatorName,
-      calledAt: nowTs,
-      completedAt: nowTs,
-      cancelledAt: nowTs,
-      waitDurationMin: 0
-    };
+    if (qIdx !== -1) {
+      const item = serverQueue[qIdx];
+      cancelledRecordName = item.customerName || cancelledRecordName;
+      const historyItem = {
+        ...item,
+        status: "cancelled",
+        cancelledBy: operatorName,
+        calledAt: nowTs,
+        completedAt: nowTs,
+        cancelledAt: nowTs,
+        waitDurationMin: 0
+      };
+      logCustomerActivity(historyItem, "cancelled", "Cancelled Visit", byDesk ? `Cancelled / marked No-Show by ${operatorName}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
 
-    const byDesk = (cancelledBy === "desk");
-    const cancelActor = byDesk ? getCurrentOperatorLabel() : "Customer (Mobile Ticket)";
-    logCustomerActivity(historyItem, "cancelled", "Cancelled Visit", byDesk ? `Cancelled / marked No-Show by ${operatorName}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
+      serverQueue.splice(qIdx, 1);
+      serverHistory.unshift(historyItem);
+      return { queue: serverQueue, history: serverHistory, affectedItem: historyItem };
+    }
 
-    state.queue.splice(index, 1);
-    state.history.unshift(historyItem);
-    saveData();
-    renderAll();
-    showToast(`Cancelled ${item.customerName}`);
-    return;
-  }
+    // 2. Check server history (e.g. called visit cancelled / no-show)
+    let hIdx = serverHistory.findIndex(item => item.id === id);
+    if (hIdx === -1 && nameFallback) {
+      hIdx = serverHistory.findIndex(item => item.customerName && item.customerName.toLowerCase() === nameFallback.toLowerCase());
+    }
 
-  // 2. Check history by ID or name (e.g. status "called" / Visit In Progress)
-  let hIndex = state.history.findIndex(item => item.id === id);
-  if (hIndex === -1 && nameFallback) {
-    hIndex = state.history.findIndex(item => item.customerName && item.customerName.toLowerCase() === nameFallback.toLowerCase());
-  }
+    if (hIdx !== -1) {
+      const item = serverHistory[hIdx];
+      cancelledRecordName = item.customerName || cancelledRecordName;
+      item.status = "cancelled";
+      item.cancelledBy = operatorName;
+      item.completedAt = nowTs;
+      item.waitDurationMin = 0;
+      logCustomerActivity(item, "cancelled", "Cancelled Visit", byDesk ? `Marked No-Show / Cancelled by ${cancelActor}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
+      return { queue: serverQueue, history: serverHistory, affectedItem: item };
+    }
 
-  if (hIndex !== -1) {
-    const item = state.history[hIndex];
-    item.status = "cancelled";
-    item.cancelledBy = cancelledBy;
-    item.completedAt = Date.now();
-    item.waitDurationMin = 0;
-    const cancelActor = (cancelledBy === "desk") ? getCurrentOperatorLabel() : "Customer (Mobile Ticket)";
-    logCustomerActivity(item, "cancelled", "Cancelled Visit", (cancelledBy === "desk") ? `Marked No-Show / Cancelled by ${cancelActor}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
-    saveData();
-    renderAll();
-    showToast(`Cancelled ${item.customerName}`);
-    return;
+    return null; // Not found / already cancelled
+  });
+
+  if (mutationResult.success) {
+    showToast(`Cancelled ${cancelledRecordName}`);
+  } else if (mutationResult.aborted) {
+    showToast("⚠️ Visit was already cancelled or removed.");
   }
 }
 
@@ -8698,66 +9029,66 @@ async function cancelMyTicket() {
   showToast("You have left the waitlist.");
 }
 
-function reportRunningLate(minutes) {
+async function reportRunningLate(minutes) {
   if (!state.myTicket) return;
+  const targetId = state.myTicket.id;
 
-  // 1. Check active waiting queue first
-  const queueItem = state.queue.find(q => q.id === state.myTicket.id);
+  let isCalledTarget = false;
 
-  // 2. If not in active queue, check called visits in history (Visit In Progress)
-  const historyItem = !queueItem ? state.history.find(h => h.id === state.myTicket.id && h.status === "called") : null;
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const queueItem = serverQueue.find(q => q.id === targetId);
+    const historyItem = !queueItem ? serverHistory.find(h => h.id === targetId && h.status === "called") : null;
+    const target = queueItem || historyItem;
+    if (!target) return null;
 
-  if (!queueItem && !historyItem) {
-    showToast("⚠️ Could not locate your queue ticket.");
-    return;
-  }
+    if (target.lateReportCount > 0 || target.delayedMinutes) {
+      return null; // Already reported
+    }
 
-  const target = queueItem || historyItem;
+    target.delayedMinutes = minutes;
+    target.lateReportedAt = Date.now();
+    target.lateReportCount = 1;
 
-  if (target.lateReportCount > 0 || target.delayedMinutes) {
-    showToast("⚠️ Delay notification has already been submitted for this visit.");
-    return;
-  }
+    if (historyItem) {
+      isCalledTarget = true;
+      target.lateDuringCalled = true;
+      logCustomerActivity(
+        historyItem,
+        "running_late_called",
+        `Running Late to Call (+${minutes}m)`,
+        `Customer notified front desk of ~${minutes} mins arrival delay from mobile QR ticket after being called`,
+        "🏃",
+        "Customer (Self-Service QR Ticket)"
+      );
+    } else {
+      logCustomerActivity(
+        queueItem,
+        "running_late",
+        `Running Late (+${minutes} mins)`,
+        `Customer notified front desk of +${minutes} minutes arrival delay from mobile QR ticket`,
+        "🏃",
+        "Customer (Self-Service QR Ticket)"
+      );
+    }
 
-  target.delayedMinutes = minutes;
-  target.lateReportedAt = Date.now();
-  target.lateReportCount = 1;
+    return { queue: serverQueue, history: serverHistory, affectedItem: target };
+  });
 
-  state.myTicket.delayedMinutes = minutes;
-  state.myTicket.lateReportedAt = target.lateReportedAt;
-  state.myTicket.lateReportCount = 1;
-
-  if (historyItem) {
-    target.lateDuringCalled = true;
-    state.myTicket.lateDuringCalled = true;
-    logCustomerActivity(
-      historyItem,
-      "running_late_called",
-      `Running Late to Call (+${minutes}m)`,
-      `Customer notified front desk of ~${minutes} mins arrival delay from mobile QR ticket after being called`,
-      "🏃",
-      "Customer (Self-Service QR Ticket)"
-    );
+  if (mutationResult.success) {
+    state.myTicket.delayedMinutes = minutes;
+    state.myTicket.lateReportedAt = Date.now();
+    state.myTicket.lateReportCount = 1;
+    if (isCalledTarget) state.myTicket.lateDuringCalled = true;
+    SafeStorage.set(`waitlink_ticket_${state.config.slug}`, state.myTicket);
     playFrontDeskChime();
-    showToast(`🕒 Front desk notified: You will arrive in ~${minutes} mins! Staff will hold your spot.`);
+    if (isCalledTarget) {
+      showToast(`🕒 Front desk notified: You will arrive in ~${minutes} mins! Staff will hold your spot.`);
+    } else {
+      showToast(`🕒 Notified venue: Running ~${minutes} mins late!`);
+    }
   } else {
-    logCustomerActivity(
-      queueItem,
-      "running_late",
-      `Running Late (+${minutes} mins)`,
-      `Customer notified front desk of +${minutes} minutes arrival delay from mobile QR ticket`,
-      "🏃",
-      "Customer (Self-Service QR Ticket)"
-    );
-    showToast(`🕒 Notified venue: Running ~${minutes} mins late!`);
+    showToast("⚠️ Delay notification has already been submitted or ticket was not found.");
   }
-
-  try {
-    localStorage.setItem(`waitlink_ticket_${state.config.slug}`, JSON.stringify(state.myTicket));
-  } catch (e) {}
-
-  saveData();
-  renderAll();
 }
 
 // ==========================================
@@ -9051,62 +9382,74 @@ async function requeueActiveCustomerToEnd(id) {
     category: "Queue Priority Shift"
   });
 
-  if (confirmed) {
-    item.checkedInAt = Date.now();
-    item.requeued = true;
-    const operatorLabel = getCurrentOperatorLabel();
-    item.requeuedBy = operatorLabel;
-    logCustomerActivity(item, "requeue", "Re-queued to End of Line", `Moved customer to end of active waiting line by ${operatorLabel}`, "⬇️", operatorLabel);
+  if (!confirmed) return;
 
-    state.queue.sort((a, b) => (a.checkedInAt || 0) - (b.checkedInAt || 0));
+  const operatorLabel = getCurrentOperatorLabel();
 
-    saveData();
-    renderAll();
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const target = serverQueue.find(q => q.id === id);
+    if (!target) return null;
+
+    target.checkedInAt = Date.now();
+    target.requeued = true;
+    target.requeuedBy = operatorLabel;
+    logCustomerActivity(target, "requeue", "Re-queued to End of Line", `Moved customer to end of active waiting line by ${operatorLabel}`, "⬇️", operatorLabel);
+
+    serverQueue.sort((a, b) => (a.checkedInAt || 0) - (b.checkedInAt || 0));
+    return { queue: serverQueue, history: serverHistory, affectedItem: target };
+  });
+
+  if (mutationResult.success) {
     showToast(`⬇️ Moved "${item.customerName}" to end of line.`);
   }
 }
 
-function requeueCustomer(id, mode = "end") {
-  const historyIndex = state.history.findIndex(h => h.id === id);
-  let item = null;
-
-  if (historyIndex !== -1) {
-    item = state.history.splice(historyIndex, 1)[0];
-  } else {
-    const queueIndex = state.queue.findIndex(q => q.id === id);
-    if (queueIndex !== -1) {
-      item = state.queue[queueIndex];
-    }
-  }
-
-  if (!item) {
-    showToast("⚠️ Record not found.");
-    return;
-  }
-
-  item.status = "waiting";
-  delete item.calledAt;
-  delete item.cancelledAt;
-  delete item.cancelledBy;
-  delete item.waitDurationMin;
-  item.requeued = true;
+async function requeueCustomer(id, mode = "end") {
   const operatorLabel = getCurrentOperatorLabel();
-  item.reinstatedBy = operatorLabel;
-  logCustomerActivity(item, "reinstate", "Reinstated to Queue", `Restored customer back into active line (${mode === 'end' ? 'Moved to End' : 'Original Position'}) by ${operatorLabel}`, "↩️", operatorLabel);
+  let custName = "Customer";
 
-  if (mode === "end") {
-    item.checkedInAt = Date.now();
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const historyIndex = serverHistory.findIndex(h => h.id === id);
+    let item = null;
+
+    if (historyIndex !== -1) {
+      item = serverHistory.splice(historyIndex, 1)[0];
+    } else {
+      const queueIndex = serverQueue.findIndex(q => q.id === id);
+      if (queueIndex !== -1) {
+        item = serverQueue[queueIndex];
+      }
+    }
+
+    if (!item) return null;
+    custName = item.customerName || custName;
+
+    item.status = "waiting";
+    delete item.calledAt;
+    delete item.cancelledAt;
+    delete item.cancelledBy;
+    delete item.waitDurationMin;
+    item.requeued = true;
+    item.reinstatedBy = operatorLabel;
+    logCustomerActivity(item, "reinstate", "Reinstated to Queue", `Restored customer back into active line (${mode === 'end' ? 'Moved to End' : 'Original Position'}) by ${operatorLabel}`, "↩️", operatorLabel);
+
+    if (mode === "end") {
+      item.checkedInAt = Date.now();
+    }
+
+    if (!serverQueue.some(q => q.id === item.id)) {
+      serverQueue.push(item);
+    }
+
+    serverQueue.sort((a, b) => (a.checkedInAt || 0) - (b.checkedInAt || 0));
+    return { queue: serverQueue, history: serverHistory, affectedItem: item };
+  });
+
+  if (mutationResult.success) {
+    showToast(`↩️ Reinstated "${custName}" back to active queue!`);
+  } else {
+    showToast("⚠️ Record not found or could not be reinstated.");
   }
-
-  if (!state.queue.some(q => q.id === item.id)) {
-    state.queue.push(item);
-  }
-
-  state.queue.sort((a, b) => (a.checkedInAt || 0) - (b.checkedInAt || 0));
-
-  saveData();
-  renderAll();
-  showToast(`↩️ Reinstated "${item.customerName}" back to active queue!`);
 }
 
 // ==========================================
@@ -9398,6 +9741,7 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
   async function resolveStationStaff() {
     try {
       let matched = null;
+      const inputHash = await hashStaffPasscode(cleanPass);
 
       // 1. Try querying staff_roles under cleanSlug doc ID
       try {
@@ -9406,8 +9750,11 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
           .get();
         snap.forEach(doc => {
           const d = doc.data();
-          if (String(d.passcode || "").trim() === cleanPass) {
+          if ((d.passcodeHash && d.passcodeHash === inputHash) || (String(d.passcode || "").trim() === cleanPass)) {
             matched = { ...d, id: doc.id };
+            if (!d.passcodeHash && inputHash) {
+              doc.ref.update({ passcodeHash: inputHash }).catch(console.warn);
+            }
           }
         });
       } catch (err) {
@@ -9426,8 +9773,11 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
                 .get();
               fallbackSnap.forEach(doc => {
                 const d = doc.data();
-                if (String(d.passcode || "").trim() === cleanPass) {
+                if ((d.passcodeHash && d.passcodeHash === inputHash) || (String(d.passcode || "").trim() === cleanPass)) {
                   matched = { ...d, id: doc.id };
+                  if (!d.passcodeHash && inputHash) {
+                    doc.ref.update({ passcodeHash: inputHash }).catch(console.warn);
+                  }
                 }
               });
             }
@@ -9449,6 +9799,7 @@ function checkStaffAutoLogin(shopSlug, username, passcode, retryCount = 0) {
           assignedShop: "main-st-barbers",
           assignedShopName: "Main St Barbers",
           passcode: cleanPass,
+          passcodeHash: inputHash,
           permissions: { canCheckIn: true, canCallNext: true, canCancel: true, canExportCSV: false, canModifySettings: false }
         }, cleanSlug, true);
       } else {
@@ -9529,13 +9880,22 @@ async function promptStaffPinSwitch() {
   if (!pin) return;
   
   if (!db) return;
+  const cleanPin = pin.trim();
+  const inputHash = await hashStaffPasscode(cleanPin);
   const shopSlug = state.staffUser.assignedShop || state.config.slug;
   db.collection("shops").doc(shopSlug).collection("staff_roles")
-    .where("passcode", "==", pin.trim())
     .get()
     .then(snap => {
       let matched = null;
-      snap.forEach(doc => { matched = { ...doc.data(), id: doc.id }; });
+      snap.forEach(doc => {
+        const d = doc.data();
+        if ((d.passcodeHash && d.passcodeHash === inputHash) || (String(d.passcode || "").trim() === cleanPin)) {
+          matched = { ...d, id: doc.id };
+          if (!d.passcodeHash && inputHash) {
+            doc.ref.update({ passcodeHash: inputHash }).catch(console.warn);
+          }
+        }
+      });
       if (matched) {
         loginAsStaff(matched, shopSlug, false);
         showToast(`👤 Operator switched to ${matched.displayName || matched.username}`);
@@ -9663,6 +10023,8 @@ async function handleStaffAuthSubmit(event) {
     localStorage.setItem("waitlink_last_shop_slug", cleanSlug);
   } catch (e) {}
 
+  const inputHash = await hashStaffPasscode(passcode);
+
   db.collection("shops").doc(cleanSlug).collection("staff_roles")
     .where("username", "==", username)
     .get()
@@ -9670,8 +10032,11 @@ async function handleStaffAuthSubmit(event) {
       let matched = null;
       snap.forEach(doc => {
         const d = doc.data();
-        if (d.passcode === passcode) {
+        if ((d.passcodeHash && d.passcodeHash === inputHash) || (d.passcode === passcode)) {
           matched = { ...d, id: doc.id };
+          if (!d.passcodeHash && inputHash) {
+            doc.ref.update({ passcodeHash: inputHash }).catch(console.warn);
+          }
         }
       });
 
@@ -10304,7 +10669,7 @@ function applyStaffPreset(preset) {
 }
 
 // Persist staff profile and feature permissions to Firestore
-function handleSaveStaffRole(event) {
+async function handleSaveStaffRole(event) {
   event.preventDefault();
   if (!db) {
     showToast("⚠️ Cloud database not initialized.");
@@ -10342,6 +10707,8 @@ function handleSaveStaffRole(event) {
     canExportCSV: document.getElementById("perm-export-csv").checked
   };
 
+  const passcodeHash = await hashStaffPasscode(passcode);
+
   const staffRecord = {
     id: staffId,
     staffId: staffId,
@@ -10349,6 +10716,7 @@ function handleSaveStaffRole(event) {
     roleTitle: roleTitle,
     username: username,
     passcode: passcode,
+    passcodeHash: passcodeHash,
     assignedShop: assignedShop,
     assignedShopName: assignedShopName,
     permissions: permissions,
@@ -10849,9 +11217,49 @@ window.togglePasscodeBlur = togglePasscodeBlur;
 window.loadOwnerTerminals = loadOwnerTerminals;
 window.loadStaffActivityLog = loadStaffActivityLog;
 window.handleDeskModeChipClick = handleDeskModeChipClick;
+window.mutateQueueAtomic = mutateQueueAtomic;
+window.persistHistoryItemToSubcollection = persistHistoryItemToSubcollection;
+window.hashStaffPasscode = hashStaffPasscode;
+window.SafeStorage = SafeStorage;
 
-
-
-
-
-
+// =========================================================================
+// WAITLINK CORE UNIFIED SYSTEM NAMESPACE
+// Provides structured subsystem access while preserving legacy top-level bindings
+// =========================================================================
+window.WaitLink = {
+  version: "4.7.0",
+  state: state,
+  QueueEngine: {
+    mutateQueueAtomic,
+    addQueueItemAtomic,
+    callCustomer,
+    cancelCustomer,
+    requeueCustomer,
+    requeueActiveCustomerToEnd,
+    reportRunningLate
+  },
+  Security: {
+    hashStaffPasscode,
+    sha256,
+    loginAsStaff,
+    staffSignOut,
+    promptStaffPinSwitch,
+    checkStaffAutoLogin
+  },
+  Storage: {
+    saveData,
+    saveConfig,
+    persistHistoryItemToSubcollection,
+    SafeStorage
+  },
+  Dialogs: {
+    showAlertDialog,
+    showConfirmDialog,
+    showPromptDialog,
+    showToast
+  },
+  Audio: {
+    playFrontDeskChime,
+    toggleSoundAlerts
+  }
+};
