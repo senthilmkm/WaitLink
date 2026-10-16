@@ -259,6 +259,9 @@ it("functions/index.js exports all required Cloud Functions", () => {
   assert.ok(fnCode.includes("exports.adjustShopSmsCredits"), "Missing exports.adjustShopSmsCredits");
   assert.ok(fnCode.includes("calculateSmsSegments"), "Missing calculateSmsSegments in functions");
   assert.ok(fnCode.includes("checkAndSendCapacityAlerts"), "Missing checkAndSendCapacityAlerts in functions");
+  assert.ok(fnCode.includes("usageData.monthlyUsed = (usageData.monthlyUsed || 0) + neededSegments;"), "Missing monthlyUsed debit increment");
+  assert.ok(fnCode.includes("usageData.recentDispatches.unshift"), "Missing recentDispatches logging");
+  assert.ok(!fnCode.includes("if (!isSuper) {\n          if (availablePlan >= neededSegments)"), "Quota debit must not be skipped for superadmin/testing accounts");
 });
 
 it("app.js contains real-time listener, checkout handlers, and segment calculator", () => {
@@ -270,6 +273,7 @@ it("app.js contains real-time listener, checkout handlers, and segment calculato
   assert.ok(appJs.includes("function initiateTopUpCheckout"), "Missing initiateTopUpCheckout in app.js");
   assert.ok(appJs.includes("function verifyTopUpSessionBackend"), "Missing verifyTopUpSessionBackend in app.js");
   assert.ok(appJs.includes("function setAdminRolloverPolicy"), "Missing setAdminRolloverPolicy in app.js");
+  assert.ok(appJs.includes("state.smsUsage.recentDispatches.unshift"), "Missing client-side dispatch logging in sendTwilioSms");
 });
 
 it("firestore.rules enforces security on /billing and /top_ups", () => {

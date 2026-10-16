@@ -608,35 +608,37 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
         logger.info(`Twilio SMS sent successfully to ${targetTo}! SID: ${data.sid}, Segments: ${neededSegments}`);
 
         // Debit credits accurately: plan allowance first, then top-up balance
-        if (!isSuper) {
-          if (availablePlan >= neededSegments) {
-            usageData.monthlyUsed = (usageData.monthlyUsed || 0) + neededSegments;
-          } else {
-            const remainder = neededSegments - availablePlan;
-            usageData.monthlyUsed = usageData.monthlyAllowance || 500;
-            usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) - remainder);
-          }
-          usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + (usageData.topUpBalance || 0);
-          usageData.lifetimeSent = (usageData.lifetimeSent || 0) + neededSegments;
-
-          // Record in recent dispatches (keep latest 50)
-          usageData.recentDispatches = usageData.recentDispatches || [];
-          usageData.recentDispatches.unshift({
-            to: targetTo.replace(/(\+\d{1,3}\d{3})\d{4}(\d{4})/, "$1****$2"),
-            segments: neededSegments,
-            sid: data.sid,
-            dispatchedAt: Date.now(),
-            status: data.status || "delivered",
-            caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner")
-          });
-          if (usageData.recentDispatches.length > 50) {
-            usageData.recentDispatches.length = 50;
-          }
-
-          // Check if warning alerts need to be dispatched
-          await checkAndSendCapacityAlerts(cleanSlug, shopData, usageData);
-          await usageRef.set(usageData, { merge: true });
+        if (availablePlan >= neededSegments) {
+          usageData.monthlyUsed = (usageData.monthlyUsed || 0) + neededSegments;
+        } else {
+          const remainder = neededSegments - availablePlan;
+          usageData.monthlyUsed = usageData.monthlyAllowance || 500;
+          usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) - remainder);
         }
+        usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + (usageData.topUpBalance || 0);
+        usageData.lifetimeSent = (usageData.lifetimeSent || 0) + neededSegments;
+
+        // Record in recent dispatches (keep latest 50)
+        const maskedTo = targetTo.length > 7
+          ? targetTo.slice(0, targetTo.length - 7) + "****" + targetTo.slice(-4)
+          : targetTo;
+
+        usageData.recentDispatches = usageData.recentDispatches || [];
+        usageData.recentDispatches.unshift({
+          to: maskedTo,
+          segments: neededSegments,
+          sid: data.sid,
+          dispatchedAt: Date.now(),
+          status: data.status || "delivered",
+          caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner")
+        });
+        if (usageData.recentDispatches.length > 50) {
+          usageData.recentDispatches.length = 50;
+        }
+
+        // Check if warning alerts need to be dispatched
+        await checkAndSendCapacityAlerts(cleanSlug, shopData, usageData);
+        await usageRef.set(usageData, { merge: true });
 
         // Record delivery record in /messages collection with Admin SDK
         try {
@@ -660,6 +662,9 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
           sid: data.sid,
           segments: neededSegments,
           totalAvailable: usageData.totalAvailable,
+          monthlyUsed: usageData.monthlyUsed,
+          monthlyAllowance: usageData.monthlyAllowance || 500,
+          topUpBalance: usageData.topUpBalance || 0,
           status: data.status,
           to: data.to,
           from: data.from

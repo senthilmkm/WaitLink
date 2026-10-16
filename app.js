@@ -830,14 +830,14 @@ async function verifyTopUpSessionBackend(sessionId) {
   }
 }
 
-function openSmsLogsModal() {
+async function openSmsLogsModal() {
   const modal = document.getElementById("modal-sms-logs");
   const tbody = document.getElementById("sms-logs-tbody");
   if (!modal) return;
 
-  if (tbody) {
-    const logs = (state.smsUsage && Array.isArray(state.smsUsage.recentDispatches)) ? state.smsUsage.recentDispatches : [];
-    if (logs.length === 0) {
+  function renderRows(logs) {
+    if (!tbody) return;
+    if (!logs || logs.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
@@ -867,7 +867,24 @@ function openSmsLogsModal() {
     }
   }
 
+  const currentLogs = (state.smsUsage && Array.isArray(state.smsUsage.recentDispatches)) ? state.smsUsage.recentDispatches : [];
+  renderRows(currentLogs);
   modal.classList.remove("hidden");
+
+  const slug = (state.config && state.config.slug) || "main-st-barbers";
+  if (db && slug) {
+    try {
+      const snap = await db.collection("shops").doc(slug).collection("billing").doc("smsUsage").get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        state.smsUsage = data;
+        renderSmsWalletUI(state.smsUsage);
+        renderRows(data.recentDispatches || []);
+      }
+    } catch (e) {
+      console.warn("Could not fetch latest SMS usage for modal:", e.message);
+    }
+  }
 }
 
 function closeSmsLogsModal() {
@@ -1879,6 +1896,54 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
     const data = await cloudRes.json().catch(() => ({}));
     if (cloudRes.ok && data.success && data.sid) {
       console.log("Twilio SMS dispatched successfully via Cloud Function! SID:", data.sid);
+      // Immediately reflect credit usage and append dispatch log optimistically
+      const segs = data.segments || calculateSmsSegments(messageBody) || 1;
+      if (!state.smsUsage) {
+        state.smsUsage = {
+          monthlyAllowance: 500,
+          rolledOverFromPriorMonth: 0,
+          monthlyUsed: 0,
+          topUpBalance: 0,
+          totalAvailable: 500,
+          lifetimeSent: 0,
+          recentDispatches: []
+        };
+      }
+      if (data.monthlyUsed !== undefined) {
+        state.smsUsage.monthlyUsed = data.monthlyUsed;
+      } else {
+        state.smsUsage.monthlyUsed = (state.smsUsage.monthlyUsed || 0) + segs;
+      }
+      if (data.totalAvailable !== undefined) {
+        state.smsUsage.totalAvailable = data.totalAvailable;
+      } else {
+        const allowance = state.smsUsage.monthlyAllowance || 500;
+        const planRemaining = Math.max(0, allowance - state.smsUsage.monthlyUsed);
+        state.smsUsage.totalAvailable = planRemaining + (state.smsUsage.topUpBalance || 0);
+      }
+      if (data.topUpBalance !== undefined) {
+        state.smsUsage.topUpBalance = data.topUpBalance;
+      }
+      state.smsUsage.lifetimeSent = (state.smsUsage.lifetimeSent || 0) + segs;
+
+      const maskedTo = e164Phone.length > 7
+        ? e164Phone.slice(0, e164Phone.length - 7) + "****" + e164Phone.slice(-4)
+        : e164Phone;
+
+      state.smsUsage.recentDispatches = state.smsUsage.recentDispatches || [];
+      state.smsUsage.recentDispatches.unshift({
+        to: maskedTo,
+        segments: segs,
+        sid: data.sid,
+        dispatchedAt: Date.now(),
+        status: data.status || "delivered",
+        caller: (state.isStaffSession && state.staffUser) ? `staff:${state.staffUser.username}` : "owner"
+      });
+      if (state.smsUsage.recentDispatches.length > 50) {
+        state.smsUsage.recentDispatches.length = 50;
+      }
+      renderSmsWalletUI(state.smsUsage);
+
       return { success: true, sid: data.sid, data };
     } else {
       console.warn("Twilio Cloud Function notice:", data);
