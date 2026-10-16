@@ -350,7 +350,9 @@ async function getOrInitSmsUsage(slug, shopData) {
   const planTitle = String((shopData && shopData.planTitle) || "").toLowerCase();
   const isEnterprise = planPrice >= 49 || planTitle.includes("enterprise");
   const isPro = planPrice >= 15 || planTitle.includes("pro");
-  const baseMonthlyQuota = isEnterprise ? 2500 : (isPro ? 500 : 0);
+  const baseMonthlyQuota = (shopData && shopData.customMonthlyQuota !== undefined && shopData.customMonthlyQuota !== null && !isNaN(parseInt(shopData.customMonthlyQuota, 10)))
+    ? parseInt(shopData.customMonthlyQuota, 10)
+    : (isEnterprise ? 2500 : (isPro ? 500 : 0));
 
   let usage = snap.exists ? snap.data() : null;
 
@@ -1532,17 +1534,21 @@ exports.adjustShopSmsCredits = onRequest({ cors: true, maxInstances: 10 }, async
         return res.status(403).json({ success: false, error: "Forbidden: SuperAdmin authentication required." });
       }
 
-      const { slug, amount, reason } = req.body || {};
+      const { slug, amount, customMonthlyQuota, reason } = req.body || {};
       const cleanSlug = String(slug || "").trim().toLowerCase();
-      const delta = parseInt(amount, 10);
-      if (!cleanSlug || isNaN(delta)) {
-        return res.status(400).json({ success: false, error: "Parameters 'slug' and numeric 'amount' are required." });
+      const delta = (amount !== undefined && amount !== null && amount !== "" && !isNaN(parseInt(amount, 10))) ? parseInt(amount, 10) : 0;
+      const parsedQuota = (customMonthlyQuota !== undefined && customMonthlyQuota !== null && customMonthlyQuota !== "" && !isNaN(parseInt(customMonthlyQuota, 10))) ? parseInt(customMonthlyQuota, 10) : null;
+
+      if (!cleanSlug || (delta === 0 && parsedQuota === null)) {
+        return res.status(400).json({ success: false, error: "Parameters 'slug' and either non-zero 'amount' or numeric 'customMonthlyQuota' are required." });
       }
 
-      const usageDocRef = admin.firestore().collection("shops").doc(cleanSlug).collection("billing").doc("smsUsage");
+      const shopDocRef = admin.firestore().collection("shops").doc(cleanSlug);
+      const usageDocRef = shopDocRef.collection("billing").doc("smsUsage");
       const usageSnap = await usageDocRef.get();
       let usageData = usageSnap.exists ? usageSnap.data() : {
         monthlyAllowance: 500,
+        baseMonthlyQuota: 500,
         rolledOverFromPriorMonth: 0,
         monthlyUsed: 0,
         topUpBalance: 0,
@@ -1554,26 +1560,46 @@ exports.adjustShopSmsCredits = onRequest({ cors: true, maxInstances: 10 }, async
         recentDispatches: []
       };
 
-      usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) + delta);
-      usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + usageData.topUpBalance;
+      if (parsedQuota !== null) {
+        usageData.baseMonthlyQuota = parsedQuota;
+        usageData.monthlyAllowance = parsedQuota;
+        await shopDocRef.set({ customMonthlyQuota: parsedQuota }, { merge: true });
+      }
+
+      if (delta !== 0) {
+        usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) + delta);
+      }
+
+      usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + (usageData.topUpBalance || 0);
       usageData.updatedAt = Date.now();
 
       await usageDocRef.set(usageData, { merge: true });
 
-      // Record audit entry
-      await admin.firestore().collection("shops").doc(cleanSlug).collection("credit_audits").add({
+      // Record audit entry in shop credit_audits
+      await shopDocRef.collection("credit_audits").add({
         amount: delta,
+        customMonthlyQuota: parsedQuota,
         reason: String(reason || "SuperAdmin courtesy adjustment").trim(),
         adjustedBy: caller,
         timestamp: Date.now(),
         newTotal: usageData.totalAvailable
       });
 
+      // Record in global pricing_audits
+      await admin.firestore().collection("pricing_audits").add({
+        id: "audit_" + Date.now(),
+        timestamp: Date.now(),
+        adminEmail: caller,
+        changes: [`SuperAdmin override on shop "${cleanSlug}": ${delta ? `Credits: ${delta > 0 ? '+' : ''}${delta} Top-Up SMS. ` : ''}${parsedQuota !== null ? `Custom Monthly Quota: ${parsedQuota} SMS. ` : ''}Reason: ${reason || 'N/A'}`]
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         adjustedAmount: delta,
+        customMonthlyQuota: parsedQuota,
         newBalance: usageData.totalAvailable,
-        topUpBalance: usageData.topUpBalance
+        topUpBalance: usageData.topUpBalance,
+        monthlyAllowance: usageData.monthlyAllowance
       });
     } catch (err) {
       logger.error("Error in adjustShopSmsCredits:", err);

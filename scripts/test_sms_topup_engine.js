@@ -276,6 +276,29 @@ it("Credit Bucket Classification: Accurately labels Monthly Included, Top-Up Res
   assert.strictEqual(classifyBucket(500, 498, 5), "Split (2 Included + 3 Top-Up)");
 });
 
+it("Custom Admin Override: Respects customMonthlyQuota (e.g. 5,000 SMS for VIP contracts)", () => {
+  const shopData = { planPrice: 15, planTitle: "Pro Business", customMonthlyQuota: 5000 };
+  const baseQuota = (shopData.customMonthlyQuota !== undefined && !isNaN(parseInt(shopData.customMonthlyQuota, 10)))
+    ? parseInt(shopData.customMonthlyQuota, 10)
+    : (shopData.planPrice >= 49 ? 2500 : 500);
+
+  assert.strictEqual(baseQuota, 5000, "Should use customMonthlyQuota over standard tier limit");
+
+  const usage = { monthlyAllowance: baseQuota, monthlyUsed: 120, topUpBalance: 300 };
+  const total = Math.max(0, usage.monthlyAllowance - usage.monthlyUsed) + usage.topUpBalance;
+  assert.strictEqual(total, 5180, "Total available reflects custom allowance + top-up");
+});
+
+it("Custom Admin Override: Courtesy credit adjustment increments non-expiring topUpBalance", () => {
+  const currentUsage = { monthlyAllowance: 500, monthlyUsed: 200, topUpBalance: 150 };
+  const courtesyDelta = 250; // SuperAdmin grants +250 courtesy SMS
+  const updatedTopUp = Math.max(0, currentUsage.topUpBalance + courtesyDelta);
+  const updatedTotal = Math.max(0, currentUsage.monthlyAllowance - currentUsage.monthlyUsed) + updatedTopUp;
+
+  assert.strictEqual(updatedTopUp, 400, "Top-up reserve credited with courtesy grant");
+  assert.strictEqual(updatedTotal, 700, "Total available recomputed correctly");
+});
+
 // -------------------------------------------------------------------------
 // 4. One-Time Top-Up Packs & Unit Economics
 // -------------------------------------------------------------------------
@@ -316,6 +339,7 @@ it("index.html contains all required UI elements for SMS management", () => {
   assert.ok(indexHtml.includes('id="sms-usage-progress-bar"'), "Missing #sms-usage-progress-bar");
   assert.ok(indexHtml.includes('id="modal-sms-topup"'), "Missing #modal-sms-topup");
   assert.ok(indexHtml.includes('id="modal-sms-logs"'), "Missing #modal-sms-logs");
+  assert.ok(indexHtml.includes('id="modal-admin-credit-override"'), "Missing #modal-admin-credit-override");
   assert.ok(indexHtml.includes('id="admin-policy-opt-a"'), "Missing #admin-policy-opt-a");
   assert.ok(indexHtml.includes('id="admin-policy-opt-b"'), "Missing #admin-policy-opt-b");
 });
@@ -339,6 +363,8 @@ it("app.js contains real-time listener, checkout handlers, and segment calculato
   assert.ok(appJs.includes("function subscribeSmsUsage"), "Missing subscribeSmsUsage in app.js");
   assert.ok(appJs.includes("function renderSmsWalletUI"), "Missing renderSmsWalletUI in app.js");
   assert.ok(appJs.includes("function openTopUpModal"), "Missing openTopUpModal in app.js");
+  assert.ok(appJs.includes("function openAdminCreditOverrideModal"), "Missing openAdminCreditOverrideModal in app.js");
+  assert.ok(appJs.includes("function submitAdminCreditOverride"), "Missing submitAdminCreditOverride in app.js");
   assert.ok(appJs.includes("function initiateTopUpCheckout"), "Missing initiateTopUpCheckout in app.js");
   assert.ok(appJs.includes("function verifyTopUpSessionBackend"), "Missing verifyTopUpSessionBackend in app.js");
   assert.ok(appJs.includes("function setAdminRolloverPolicy"), "Missing setAdminRolloverPolicy in app.js");

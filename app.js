@@ -6995,6 +6995,13 @@ function renderSuperAdminShopsTable() {
           <div class="actions-cell">
             <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
             <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">Settings ⚙️</button>
+            <button class="btn-text-sm" 
+              data-slug="${encodeURIComponent(shopSlug)}" 
+              data-name="${encodeURIComponent(shopName)}"
+              data-tier="${encodeURIComponent(shop.planTitle || (price >= 49 ? 'Enterprise' : (price >= 15 ? 'Pro Business' : 'Starter')))}"
+              onclick="openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier))"
+              style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1);" 
+              title="SuperAdmin: Grant courtesy credits or set custom monthly SMS allowance">⚡ SMS Override</button>
             ${!isSandbox ? `
               <button class="btn-text-sm" 
                 data-slug="${encodeURIComponent(shopSlug)}" 
@@ -7079,6 +7086,203 @@ function changeTenantShopPlan(shopSlug, newTierKey) {
   }
 
   showToast(`✓ Plan for "${shopName}" changed to ${newTitle} ($${newPrice}/mo)!`);
+}
+
+/* ==========================================================================
+   SUPERADMIN SMS & QUOTA OVERRIDE CONTROLLER
+   ========================================================================== */
+
+let activeOverrideShop = null;
+
+function setOverrideAmountPreset(val) {
+  const input = document.getElementById("override-amount-input");
+  if (input) input.value = val;
+}
+
+function openAdminCreditOverrideModal(shopSlug, shopName, tierTitle) {
+  if (!shopSlug) return;
+  activeOverrideShop = { slug: shopSlug, name: shopName, tier: tierTitle };
+
+  const shopDisp = document.getElementById("override-shop-display");
+  const tierBadge = document.getElementById("override-tier-badge");
+  const allowEl = document.getElementById("override-curr-allowance");
+  const usedEl = document.getElementById("override-curr-used");
+  const topUpEl = document.getElementById("override-curr-topup");
+  const amtInput = document.getElementById("override-amount-input");
+  const quotaInput = document.getElementById("override-quota-input");
+  const reasonInput = document.getElementById("override-reason-input");
+
+  if (shopDisp) shopDisp.textContent = `Shop: ${shopName || shopSlug} (${shopSlug})`;
+  if (tierBadge) tierBadge.textContent = tierTitle || "Active Plan";
+  if (amtInput) amtInput.value = "";
+  if (quotaInput) quotaInput.value = "";
+  if (reasonInput) reasonInput.value = "";
+
+  if (allowEl) allowEl.textContent = "...";
+  if (usedEl) usedEl.textContent = "...";
+  if (topUpEl) topUpEl.textContent = "...";
+
+  const modal = document.getElementById("modal-admin-credit-override");
+  if (modal) modal.classList.remove("hidden");
+
+  // Fetch live smsUsage from Firestore
+  if (db) {
+    db.collection("shops").doc(shopSlug).collection("billing").doc("smsUsage").get().then(snap => {
+      if (snap.exists) {
+        const u = snap.data();
+        if (allowEl) allowEl.textContent = (u.monthlyAllowance !== undefined ? u.monthlyAllowance : 500);
+        if (usedEl) usedEl.textContent = (u.monthlyUsed !== undefined ? u.monthlyUsed : 0);
+        if (topUpEl) topUpEl.textContent = (u.topUpBalance !== undefined ? u.topUpBalance : 0);
+        if (quotaInput && u.customMonthlyQuota) quotaInput.value = u.customMonthlyQuota;
+      } else {
+        if (allowEl) allowEl.textContent = "500";
+        if (usedEl) usedEl.textContent = "0";
+        if (topUpEl) topUpEl.textContent = "0";
+      }
+    }).catch(err => {
+      console.warn("Error fetching smsUsage for override modal:", err);
+      if (allowEl) allowEl.textContent = "500";
+      if (usedEl) usedEl.textContent = "0";
+      if (topUpEl) topUpEl.textContent = "0";
+    });
+  }
+}
+
+function closeAdminCreditOverrideModal() {
+  const modal = document.getElementById("modal-admin-credit-override");
+  if (modal) modal.classList.add("hidden");
+  activeOverrideShop = null;
+}
+
+async function submitAdminCreditOverride() {
+  if (!activeOverrideShop || !activeOverrideShop.slug) {
+    showToast("⚠️ No shop selected for override.");
+    return;
+  }
+
+  const amtInput = document.getElementById("override-amount-input");
+  const quotaInput = document.getElementById("override-quota-input");
+  const reasonInput = document.getElementById("override-reason-input");
+  const btn = document.getElementById("btn-submit-override");
+
+  const rawAmt = amtInput ? amtInput.value.trim() : "";
+  const rawQuota = quotaInput ? quotaInput.value.trim() : "";
+  const reason = reasonInput ? reasonInput.value.trim() : "";
+
+  const delta = rawAmt ? parseInt(rawAmt, 10) : 0;
+  const customQuota = rawQuota ? parseInt(rawQuota, 10) : null;
+
+  if (delta === 0 && customQuota === null) {
+    showToast("⚠️ Specify either courtesy credits (+ / -) or a custom monthly quota.");
+    return;
+  }
+
+  if (!reason) {
+    showToast("⚠️ A mandatory audit reason is required.");
+    if (reasonInput) reasonInput.focus();
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Applying...";
+  }
+
+  try {
+    let idToken = "";
+    if (firebase.auth().currentUser) {
+      try {
+        idToken = await firebase.auth().currentUser.getIdToken();
+      } catch (e) {}
+    }
+
+    const payload = {
+      slug: activeOverrideShop.slug,
+      amount: delta,
+      customMonthlyQuota: customQuota,
+      reason: reason
+    };
+
+    let updated = false;
+
+    // Attempt Cloud Function first if authenticated
+    if (idToken) {
+      try {
+        const resp = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/adjustShopSmsCredits", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${idToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const resData = await resp.json();
+        if (resp.ok && resData.success) {
+          updated = true;
+        }
+      } catch (cfErr) {
+        console.warn("Cloud function adjustShopSmsCredits fallback:", cfErr);
+      }
+    }
+
+    // Direct Firestore update fallback if SuperAdmin in browser session
+    if (!updated && db) {
+      const usageRef = db.collection("shops").doc(activeOverrideShop.slug).collection("billing").doc("smsUsage");
+      const usageSnap = await usageRef.get();
+      let usageData = usageSnap.exists ? usageSnap.data() : {
+        monthlyAllowance: 500,
+        baseMonthlyQuota: 500,
+        monthlyUsed: 0,
+        topUpBalance: 0,
+        totalAvailable: 500,
+        billingCycleStart: Date.now(),
+        billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000
+      };
+
+      if (customQuota !== null) {
+        usageData.baseMonthlyQuota = customQuota;
+        usageData.monthlyAllowance = customQuota;
+        await db.collection("shops").doc(activeOverrideShop.slug).set({ customMonthlyQuota: customQuota }, { merge: true });
+      }
+      if (delta !== 0) {
+        usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) + delta);
+      }
+      usageData.totalAvailable = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0)) + (usageData.topUpBalance || 0);
+      usageData.updatedAt = Date.now();
+
+      await usageRef.set(usageData, { merge: true });
+
+      // Record audit entry in shop credit_audits
+      await db.collection("shops").doc(activeOverrideShop.slug).collection("credit_audits").add({
+        amount: delta,
+        customMonthlyQuota: customQuota,
+        reason: reason,
+        adjustedBy: (state.user && state.user.email) || "SuperAdmin",
+        timestamp: Date.now(),
+        newTotal: usageData.totalAvailable
+      });
+
+      await db.collection("pricing_audits").add({
+        id: "audit_" + Date.now(),
+        timestamp: Date.now(),
+        adminEmail: (state.user && state.user.email) || "senthil930@gmail.com",
+        changes: [`SuperAdmin override on "${activeOverrideShop.name}": ${delta ? `Credits: ${delta > 0 ? '+' : ''}${delta} Top-Up SMS. ` : ''}${customQuota !== null ? `Custom Allowance: ${customQuota} SMS/mo. ` : ''}Reason: ${reason}`]
+      }).catch(console.warn);
+
+      updated = true;
+    }
+
+    showToast(`✓ Applied SMS override for "${activeOverrideShop.name}"!`);
+    closeAdminCreditOverrideModal();
+  } catch (err) {
+    console.error("Error submitting credit override:", err);
+    showToast("⚠️ Failed to apply override: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "⚡ Apply Override";
+    }
+  }
 }
 
 let pendingDeleteShop = null;
@@ -7648,6 +7852,7 @@ function savePricingConfig() {
     badge: document.getElementById("pricing-t1-badge").value.trim() || "Starter",
     title: document.getElementById("pricing-t1-title").value.trim() || "Free Forever",
     price: document.getElementById("pricing-t1-price").value.trim() || "$0",
+    baseSmsQuota: parseInt(document.getElementById("pricing-t1-sms-quota")?.value || "0", 10),
     desc: document.getElementById("pricing-t1-desc").value.trim(),
     features: state.adminFeatures.t1 || parseFeatureList(document.getElementById("pricing-t1-features").value)
   };
@@ -7657,6 +7862,7 @@ function savePricingConfig() {
     badge: document.getElementById("pricing-t2-badge").value.trim() || "Pro Business",
     title: document.getElementById("pricing-t2-title").value.trim() || "Standard Shop",
     price: document.getElementById("pricing-t2-price").value.trim() || "$15",
+    baseSmsQuota: parseInt(document.getElementById("pricing-t2-sms-quota")?.value || "500", 10),
     desc: document.getElementById("pricing-t2-desc").value.trim(),
     isPopular: document.getElementById("pricing-t2-popular").checked,
     features: state.adminFeatures.t2 || parseFeatureList(document.getElementById("pricing-t2-features").value)
@@ -7667,6 +7873,7 @@ function savePricingConfig() {
     badge: document.getElementById("pricing-t3-badge").value.trim() || "Enterprise",
     title: document.getElementById("pricing-t3-title").value.trim() || "Multi-Location",
     price: document.getElementById("pricing-t3-price").value.trim() || "$49",
+    baseSmsQuota: parseInt(document.getElementById("pricing-t3-sms-quota")?.value || "2500", 10),
     desc: document.getElementById("pricing-t3-desc").value.trim(),
     features: state.adminFeatures.t3 || parseFeatureList(document.getElementById("pricing-t3-features").value)
   };
@@ -7686,6 +7893,9 @@ function savePricingConfig() {
       }
       if (pTier.title !== nTier.title) {
         diffs.push(`${tName}: Plan title changed from "${pTier.title}" ➔ "${nTier.title}"`);
+      }
+      if (pTier.baseSmsQuota !== nTier.baseSmsQuota) {
+        diffs.push(`${tName}: Monthly SMS quota changed from "${pTier.baseSmsQuota ?? 'default'}" ➔ "${nTier.baseSmsQuota} SMS"`);
       }
 
       // Compare feature status changes
@@ -7782,6 +7992,7 @@ function loadPricingConfigUI() {
       setElValue("pricing-t1-badge", tiers[0].badge || "Starter");
       setElValue("pricing-t1-title", tiers[0].title || "Free Forever");
       setElValue("pricing-t1-price", tiers[0].price || "$0");
+      setElValue("pricing-t1-sms-quota", tiers[0].baseSmsQuota !== undefined ? tiers[0].baseSmsQuota : 0);
       setElValue("pricing-t1-desc", tiers[0].desc || "");
       loadFeaturesIntoState('t1', tiers[0].features);
     }
@@ -7789,6 +8000,7 @@ function loadPricingConfigUI() {
       setElValue("pricing-t2-badge", tiers[1].badge || "Pro Business");
       setElValue("pricing-t2-title", tiers[1].title || "Standard Shop");
       setElValue("pricing-t2-price", tiers[1].price || "$15");
+      setElValue("pricing-t2-sms-quota", tiers[1].baseSmsQuota !== undefined ? tiers[1].baseSmsQuota : 500);
       setElValue("pricing-t2-desc", tiers[1].desc || "");
       loadFeaturesIntoState('t2', tiers[1].features);
       const popCb = document.getElementById("pricing-t2-popular");
@@ -7798,6 +8010,7 @@ function loadPricingConfigUI() {
       setElValue("pricing-t3-badge", tiers[2].badge || "Enterprise");
       setElValue("pricing-t3-title", tiers[2].title || "Multi-Location");
       setElValue("pricing-t3-price", tiers[2].price || "$49");
+      setElValue("pricing-t3-sms-quota", tiers[2].baseSmsQuota !== undefined ? tiers[2].baseSmsQuota : 2500);
       setElValue("pricing-t3-desc", tiers[2].desc || "");
       loadFeaturesIntoState('t3', tiers[2].features);
     }

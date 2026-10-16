@@ -1687,6 +1687,10 @@
               <input type="text" id="pricing-t1-price" value="$0">
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Included Monthly SMS Quota</label>
+              <input type="number" id="pricing-t1-sms-quota" value="0">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
               <textarea id="pricing-t1-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</textarea>
             </div>
@@ -1732,6 +1736,10 @@ Audible Turn Chimes & Sound Alerts
               <input type="text" id="pricing-t2-price" value="$15">
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Included Monthly SMS Quota</label>
+              <input type="number" id="pricing-t2-sms-quota" value="500">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
               <textarea id="pricing-t2-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Everything you need to eliminate walk-away losses and track owner analytics.</textarea>
             </div>
@@ -1775,6 +1783,10 @@ Priority Cloud Firestore Latency
             <div class="form-group" style="margin-top: 0.6rem;">
               <label>Monthly Price Display</label>
               <input type="text" id="pricing-t3-price" value="$49">
+            </div>
+            <div class="form-group" style="margin-top: 0.6rem;">
+              <label>Included Monthly SMS Quota</label>
+              <input type="number" id="pricing-t3-sms-quota" value="2500">
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
@@ -2980,6 +2992,83 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- SuperAdmin SMS Credit & Quota Override Modal -->
+  <div id="modal-admin-credit-override" class="modal-backdrop hidden" onclick="if(event.target === this) closeAdminCreditOverrideModal()">
+    <div class="modal-card" style="max-width: 580px; width: 94%; padding: 2rem; border-radius: 18px; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.4); box-shadow: 0 35px 75px rgba(0,0,0,0.9); position: relative; animation: slideUp 0.25s ease;">
+      <button class="close-btn" onclick="closeAdminCreditOverrideModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.35rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" title="Close Modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem;">
+        <span style="font-size: 1.8rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 12px; padding: 0.4rem 0.65rem;">👑</span>
+        <div>
+          <h2 style="font-size: 1.3rem; color: #fff; margin: 0; font-weight: 800;">SuperAdmin SMS & Quota Override</h2>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;" id="override-modal-subtitle">Master balance adjustment & custom quota management</p>
+        </div>
+      </div>
+
+      <!-- Current Status Card -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span style="font-size: 0.82rem; font-weight: 700; color: #fff;" id="override-shop-display">Shop: Main St Barbers</span>
+          <span style="font-size: 0.75rem; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 700;" id="override-tier-badge">Pro Business ($15/mo)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; text-align: center;">
+          <div style="background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Plan Included</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #34d399;" id="override-curr-allowance">500</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Used This Mo</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #f59e0b;" id="override-curr-used">0</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Top-Up Reserve</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;" id="override-curr-topup">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action 1: Courtesy Credits Delta -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="font-size: 0.82rem; font-weight: 700; color: #e2e8f0; display: flex; justify-content: space-between;">
+          <span>⚡ Grant Courtesy Top-Up Credits (+ / -)</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Non-expiring reserve wallet</span>
+        </label>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem;">
+          <input type="number" id="override-amount-input" placeholder="e.g. 250 or 500" style="flex: 1; padding: 0.6rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm); font-size: 0.9rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setOverrideAmountPreset(100)">+100</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setOverrideAmountPreset(250)">+250</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setOverrideAmountPreset(500)">+500</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setOverrideAmountPreset(1000)">+1k</button>
+        </div>
+      </div>
+
+      <!-- Action 2: Custom Monthly Base Quota Override -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="font-size: 0.82rem; font-weight: 700; color: #e2e8f0; display: flex; justify-content: space-between;">
+          <span>🎯 Custom Monthly Base Allowance (Optional)</span>
+          <span style="font-size: 0.75rem; color: #a5b4fc;">VIP / Custom Enterprise</span>
+        </label>
+        <input type="number" id="override-quota-input" placeholder="e.g. 5000 (leave blank to maintain standard tier limit)" style="width: 100%; margin-top: 0.35rem; padding: 0.6rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm); font-size: 0.9rem;">
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">Sets a persistent custom monthly allowance for this shop, renewed every 30 days.</div>
+      </div>
+
+      <!-- Mandatory Audit Reason -->
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label style="font-size: 0.82rem; font-weight: 700; color: #e2e8f0;">
+          📜 Mandatory Audit Reason
+        </label>
+        <input type="text" id="override-reason-input" placeholder="e.g. Courtesy compensation for telecom outage / VIP contract" style="width: 100%; margin-top: 0.35rem; padding: 0.6rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm); font-size: 0.85rem;">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.65rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeAdminCreditOverrideModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-submit-override" onclick="submitAdminCreditOverride()" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); border: none;">
+          ⚡ Apply Override
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Universal Modern Cosmetic Dialog Modal (Industry-Standard Confirm/Alert/Prompt) -->
   <div id="waitlink-dialog-backdrop" class="modal-backdrop hidden" onclick="if(event.target === this) waitlinkDialogDismiss()">
     <div class="waitlink-dialog-card dialog-theme-primary" id="waitlink-dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
@@ -3035,6 +3124,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=4.9"></script>
+  <script src="app.js?v=5.0"></script>
 </body>
 </html>
