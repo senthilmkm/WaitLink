@@ -349,13 +349,15 @@ async function getOrInitSmsUsage(slug, shopData) {
   const planPrice = shopData && shopData.planPrice !== undefined ? shopData.planPrice : 15;
   const planTitle = String((shopData && shopData.planTitle) || "").toLowerCase();
   const isEnterprise = planPrice >= 49 || planTitle.includes("enterprise");
-  const baseMonthlyQuota = isEnterprise ? 2500 : 500;
+  const isPro = planPrice >= 15 || planTitle.includes("pro");
+  const baseMonthlyQuota = isEnterprise ? 2500 : (isPro ? 500 : 0);
 
   let usage = snap.exists ? snap.data() : null;
 
   if (!usage) {
     usage = {
       monthlyAllowance: baseMonthlyQuota,
+      baseMonthlyQuota: baseMonthlyQuota,
       rolledOverFromPriorMonth: 0,
       monthlyUsed: 0,
       topUpBalance: 0,
@@ -369,6 +371,26 @@ async function getOrInitSmsUsage(slug, shopData) {
     };
     await usageRef.set(usage);
     return { usage, ref: usageRef };
+  }
+
+  // Detect and handle mid-cycle subscription tier switches (e.g. Pro <-> Enterprise)
+  const currentBase = usage.baseMonthlyQuota || (usage.monthlyAllowance > 1000 ? 2500 : (usage.monthlyAllowance > 0 ? 500 : 0));
+  if (currentBase !== baseMonthlyQuota) {
+    logger.info(`Detected tier plan change for ${slug}: base quota changing from ${currentBase} to ${baseMonthlyQuota}`);
+    const delta = baseMonthlyQuota - currentBase;
+    if (delta > 0) {
+      // Upgrade (e.g. Pro 500 -> Enterprise 2500): grant the delta (+2,000) immediately
+      usage.monthlyAllowance = (usage.monthlyAllowance || currentBase) + delta;
+    } else {
+      // Downgrade (e.g. Enterprise 2500 -> Pro 500): cap allowance at new tier limit
+      usage.monthlyAllowance = Math.min(baseMonthlyQuota, usage.monthlyAllowance || baseMonthlyQuota);
+    }
+    usage.baseMonthlyQuota = baseMonthlyQuota;
+    usage.tierPrice = planPrice;
+    usage.tierTitle = shopData.planTitle || (isEnterprise ? "Enterprise Tier" : "Pro Business Tier");
+    usage.totalAvailable = Math.max(0, (usage.monthlyAllowance || baseMonthlyQuota) - (usage.monthlyUsed || 0)) + (usage.topUpBalance || 0);
+    usage.updatedAt = now;
+    await usageRef.set(usage, { merge: true });
   }
 
   // Check if billing cycle has expired -> perform rollover
@@ -394,6 +416,7 @@ async function getOrInitSmsUsage(slug, shopData) {
       usage.rolledOverFromPriorMonth = 0;
     }
 
+    usage.baseMonthlyQuota = baseMonthlyQuota;
     usage.monthlyUsed = 0;
     usage.billingCycleStart = now;
     usage.billingCycleEnd = now + monthMs;
@@ -608,10 +631,17 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
         logger.info(`Twilio SMS sent successfully to ${targetTo}! SID: ${data.sid}, Segments: ${neededSegments}`);
 
         // Debit credits accurately: plan allowance first, then top-up balance
+        let bucketUsed = "Monthly Included";
         if (availablePlan >= neededSegments) {
           usageData.monthlyUsed = (usageData.monthlyUsed || 0) + neededSegments;
+          bucketUsed = "Monthly Included";
         } else {
           const remainder = neededSegments - availablePlan;
+          if (availablePlan > 0) {
+            bucketUsed = `Split (${availablePlan} Included + ${remainder} Top-Up)`;
+          } else {
+            bucketUsed = "Top-Up Reserve";
+          }
           usageData.monthlyUsed = usageData.monthlyAllowance || 500;
           usageData.topUpBalance = Math.max(0, (usageData.topUpBalance || 0) - remainder);
         }
@@ -627,6 +657,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
         usageData.recentDispatches.unshift({
           to: maskedTo,
           segments: neededSegments,
+          bucket: bucketUsed,
           sid: data.sid,
           dispatchedAt: Date.now(),
           status: data.status || "delivered",
@@ -649,6 +680,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
             shopSlug: cleanSlug,
             sid: data.sid,
             segments: neededSegments,
+            bucket: bucketUsed,
             status: data.status || "delivered",
             caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner"),
             createdAt: Date.now()
@@ -661,6 +693,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
           success: true,
           sid: data.sid,
           segments: neededSegments,
+          bucket: bucketUsed,
           totalAvailable: usageData.totalAvailable,
           monthlyUsed: usageData.monthlyUsed,
           monthlyAllowance: usageData.monthlyAllowance || 500,
@@ -1281,6 +1314,7 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
       if (!usageSnap.exists) {
         await usageDocRef.set({
           monthlyAllowance: allowance,
+          baseMonthlyQuota: allowance,
           rolledOverFromPriorMonth: 0,
           monthlyUsed: 0,
           topUpBalance: 0,
@@ -1289,8 +1323,27 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
           billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
           lifetimeSent: 0,
           lastAlertThreshold: 0,
+          tierTitle: tierTitle,
+          tierPrice: tierPrice,
           recentDispatches: []
         });
+      } else {
+        const existingData = usageSnap.data() || {};
+        const oldBase = existingData.baseMonthlyQuota || (existingData.monthlyAllowance > 1000 ? 2500 : 500);
+        const delta = allowance - oldBase;
+        const newAllowance = delta > 0
+          ? (existingData.monthlyAllowance || oldBase) + delta
+          : Math.min(allowance, existingData.monthlyAllowance || allowance);
+        const newTotal = Math.max(0, newAllowance - (existingData.monthlyUsed || 0)) + (existingData.topUpBalance || 0);
+
+        await usageDocRef.set({
+          monthlyAllowance: newAllowance,
+          baseMonthlyQuota: allowance,
+          totalAvailable: newTotal,
+          tierTitle: tierTitle,
+          tierPrice: tierPrice,
+          updatedAt: Date.now()
+        }, { merge: true });
       }
 
       // 7. Dispatch luxury confirmation email to shop owner
@@ -1617,6 +1670,90 @@ exports.sendSupportReply = onRequest({ cors: true, maxInstances: 10 }, async (re
     });
   });
 });
+
+/**
+ * Cloud Function: createStripePortalSession
+ * Generates a direct redirect URL to Stripe's Customer Billing Portal
+ * allowing shop owners to view receipts, manage cards, and change subscriptions.
+ */
+exports.createStripePortalSession = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+
+    const authHeader = req.headers.authorization || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, error: "Authentication required." });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(authHeader.split("Bearer ")[1].trim());
+    } catch (e) {
+      return res.status(401).json({ success: false, error: "Invalid token: " + e.message });
+    }
+
+    const { slug, returnUrl } = req.body || {};
+    const cleanSlug = String(slug || "").trim().toLowerCase();
+    if (!cleanSlug) {
+      return res.status(400).json({ success: false, error: "Parameter 'slug' is required." });
+    }
+
+    try {
+      const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
+      if (!shopDoc.exists) {
+        return res.status(404).json({ success: false, error: "Shop not found." });
+      }
+      const shopData = shopDoc.data() || {};
+      const callerEmail = (decodedToken.email || "").toLowerCase();
+      const isSuper = callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com";
+      const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
+                      (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
+
+      if (!isSuper && !isOwner) {
+        return res.status(403).json({ success: false, error: "Forbidden: Not the shop owner." });
+      }
+
+      const customerId = shopData.stripeCustomerId;
+      if (!customerId) {
+        return res.status(400).json({
+          success: false,
+          noCustomer: true,
+          error: "No active Stripe customer found for this shop. Please subscribe via the pricing modal."
+        });
+      }
+
+      const postParams = new URLSearchParams({
+        "customer": customerId,
+        "return_url": returnUrl || `https://waitlink.app?s=${encodeURIComponent(cleanSlug)}&view=owner`
+      });
+
+      const portalRes = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${STRIPE_SECRET_KEY.trim()}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: postParams.toString()
+      });
+
+      const portalData = await portalRes.json();
+      if (portalRes.ok && portalData.url) {
+        return res.status(200).json({ success: true, url: portalData.url });
+      } else {
+        return res.status(portalRes.status || 400).json({
+          success: false,
+          error: (portalData.error && portalData.error.message) || "Failed to create portal session",
+          details: portalData
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({ success: false, error: "Server error: " + err.message });
+    }
+  });
+});
+
 
 
 

@@ -622,7 +622,7 @@
         <div class="metric-card highlight" style="position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div class="metric-label">Subscription Plan</div>
-            <button class="btn-text-sm" onclick="openUpgradeModal()" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
+            <button id="owner-metric-plan-btn" class="btn-text-sm" onclick="openUpgradeModal()" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
           </div>
           <div class="metric-value" id="owner-plan-value" style="color: #10b981; font-size: 1.4rem;">$0 / month</div>
           <div class="metric-caption" id="owner-plan-caption">Starter Tier (Free) &bull; Free Forever</div>
@@ -2959,6 +2959,7 @@ Dedicated Support Manager
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);">
               <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700;">Recipient Phone</th>
               <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700; text-align: center;">Segments</th>
+              <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700;">Credit Source</th>
               <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700;">Dispatched By</th>
               <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700;">Status</th>
               <th style="padding: 0.65rem 0.85rem; color: var(--text-muted); font-weight: 700; text-align: right;">Time</th>
@@ -2966,7 +2967,7 @@ Dedicated Support Manager
           </thead>
           <tbody id="sms-logs-tbody">
             <tr>
-              <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No outbound SMS logs recorded yet for this billing cycle.</td>
+              <td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No outbound SMS logs recorded yet for this billing cycle.</td>
             </tr>
           </tbody>
         </table>
@@ -3034,6 +3035,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=4.8"></script>
+  <script src="app.js?v=4.9"></script>
 </body>
 </html>

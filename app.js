@@ -840,7 +840,7 @@ async function openSmsLogsModal() {
     if (!logs || logs.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
+          <td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
             No outbound SMS dispatches recorded yet for this billing cycle.
           </td>
         </tr>
@@ -852,10 +852,20 @@ async function openSmsLogsModal() {
         const caller = item.caller || "Staff Station";
         const status = item.status || "delivered";
         const statusColor = status === "delivered" || status === "sent" ? "#10b981" : "#f59e0b";
+
+        const bucket = item.bucket || "Monthly Included";
+        let bucketBadge = `<span style="background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); color: #38bdf8; padding: 0.18rem 0.5rem; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; white-space: nowrap;">🎁 Included</span>`;
+        if (bucket === "Top-Up Reserve") {
+          bucketBadge = `<span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; padding: 0.18rem 0.5rem; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; white-space: nowrap;">⚡ Top-Up</span>`;
+        } else if (String(bucket).startsWith("Split")) {
+          bucketBadge = `<span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; padding: 0.18rem 0.5rem; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; white-space: nowrap;">🔄 ${escapeHtml(bucket)}</span>`;
+        }
+
         return `
           <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
             <td style="padding: 0.65rem 0.85rem; color: #fff; font-family: monospace;">${item.to || 'Masked Phone'}</td>
             <td style="padding: 0.65rem 0.85rem; text-align: center; color: #38bdf8; font-weight: 700;">${item.segments || 1}</td>
+            <td style="padding: 0.65rem 0.85rem;">${bucketBadge}</td>
             <td style="padding: 0.65rem 0.85rem; color: var(--text-muted);">${caller}</td>
             <td style="padding: 0.65rem 0.85rem;">
               <span style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">● ${status}</span>
@@ -1930,10 +1940,15 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
         ? e164Phone.slice(0, e164Phone.length - 7) + "****" + e164Phone.slice(-4)
         : e164Phone;
 
+      const allowance = state.smsUsage.monthlyAllowance || 500;
+      const planRemaining = Math.max(0, allowance - (state.smsUsage.monthlyUsed || 0));
+      const clientBucket = data.bucket || (planRemaining >= segs ? "Monthly Included" : (planRemaining > 0 ? `Split (${planRemaining} Included + ${segs - planRemaining} Top-Up)` : "Top-Up Reserve"));
+
       state.smsUsage.recentDispatches = state.smsUsage.recentDispatches || [];
       state.smsUsage.recentDispatches.unshift({
         to: maskedTo,
         segments: segs,
+        bucket: clientBucket,
         sid: data.sid,
         dispatchedAt: Date.now(),
         status: data.status || "delivered",
@@ -2572,6 +2587,24 @@ function renderSubscriptionBadges() {
 
   if (dropdownSubItemLabel) {
     dropdownSubItemLabel.textContent = isSubscribed ? "⚙️ Manage Subscription" : "🚀 Upgrade Subscription";
+  }
+
+  // 3.5 Owner Dashboard Metric Card Plan Action Button (Dynamic Upgrade vs Manage)
+  const ownerPlanBtn = document.getElementById("owner-metric-plan-btn");
+  if (ownerPlanBtn) {
+    if (planPrice >= 49 || planTitle.includes("Enterprise")) {
+      ownerPlanBtn.textContent = "Manage Plan ⚙️";
+      ownerPlanBtn.style.color = "#6366f1";
+      ownerPlanBtn.style.borderColor = "rgba(99, 102, 241, 0.4)";
+    } else if (planPrice >= 15 || planTitle.includes("Pro")) {
+      ownerPlanBtn.textContent = "Manage Plan ⚙️";
+      ownerPlanBtn.style.color = "#06b6d4";
+      ownerPlanBtn.style.borderColor = "rgba(6, 182, 212, 0.4)";
+    } else {
+      ownerPlanBtn.textContent = "⚡ Upgrade";
+      ownerPlanBtn.style.color = "#10b981";
+      ownerPlanBtn.style.borderColor = "rgba(16, 185, 129, 0.4)";
+    }
   }
 
   // 4. Starter Upgrade Callout Banner on Owner Dashboard

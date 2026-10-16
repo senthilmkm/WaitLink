@@ -208,6 +208,75 @@ it("Returns quotaExhausted: true (HTTP 402 equivalent) when balance is insuffici
 });
 
 // -------------------------------------------------------------------------
+// 3.5 Plan Switch Allowance Calculation & Credit Bucket Tests
+// -------------------------------------------------------------------------
+console.log("\n--- 3.5 Plan Switch Allowance Calculations & Bucket Tracking ---");
+
+function simulatePlanSwitch(currentUsage, newPlanPrice, newPlanTitle) {
+  const isEnterprise = newPlanPrice >= 49 || String(newPlanTitle || "").toLowerCase().includes("enterprise");
+  const isPro = newPlanPrice >= 15 || String(newPlanTitle || "").toLowerCase().includes("pro");
+  const baseMonthlyQuota = isEnterprise ? 2500 : (isPro ? 500 : 0);
+
+  const currentBase = currentUsage.baseMonthlyQuota || (currentUsage.monthlyAllowance > 1000 ? 2500 : (currentUsage.monthlyAllowance > 0 ? 500 : 0));
+  const updated = { ...currentUsage };
+  const delta = baseMonthlyQuota - currentBase;
+
+  if (delta > 0) {
+    updated.monthlyAllowance = (updated.monthlyAllowance || currentBase) + delta;
+  } else {
+    updated.monthlyAllowance = Math.min(baseMonthlyQuota, updated.monthlyAllowance || baseMonthlyQuota);
+  }
+
+  updated.baseMonthlyQuota = baseMonthlyQuota;
+  updated.totalAvailable = Math.max(0, (updated.monthlyAllowance || baseMonthlyQuota) - (updated.monthlyUsed || 0)) + (updated.topUpBalance || 0);
+  return updated;
+}
+
+it("Upgrade Pro -> Enterprise: Allowance increases to 2,500, retains used SMS, top-up untouched", () => {
+  const proUsage = {
+    monthlyAllowance: 500,
+    baseMonthlyQuota: 500,
+    monthlyUsed: 150,
+    topUpBalance: 300,
+    totalAvailable: 650
+  };
+  const enterprise = simulatePlanSwitch(proUsage, 49, "Enterprise Tier");
+  assert.strictEqual(enterprise.monthlyAllowance, 2500, "Allowance must be 2,500");
+  assert.strictEqual(enterprise.monthlyUsed, 150, "Used SMS must be preserved");
+  assert.strictEqual(enterprise.topUpBalance, 300, "Top-up balance must remain intact");
+  assert.strictEqual(enterprise.totalAvailable, (2500 - 150) + 300, "Total available = 2,350 plan + 300 top-up");
+});
+
+it("Downgrade Enterprise -> Pro: Allowance caps at 500, floors remaining at 0 if used > 500", () => {
+  const entUsage = {
+    monthlyAllowance: 2500,
+    baseMonthlyQuota: 2500,
+    monthlyUsed: 800,
+    topUpBalance: 100,
+    totalAvailable: 1800
+  };
+  const pro = simulatePlanSwitch(entUsage, 15, "Pro Business Tier");
+  assert.strictEqual(pro.monthlyAllowance, 500, "Allowance must cap at 500");
+  assert.strictEqual(pro.monthlyUsed, 800, "Used SMS count retained");
+  assert.strictEqual(pro.topUpBalance, 100, "Top-up reserve preserved");
+  // 500 - 800 is negative -> floors at 0 + 100 = 100
+  assert.strictEqual(pro.totalAvailable, 100, "Remaining included allowance floored at 0, only top-up remains");
+});
+
+it("Credit Bucket Classification: Accurately labels Monthly Included, Top-Up Reserve, and Split dispatches", () => {
+  function classifyBucket(allowance, used, needed) {
+    const availablePlan = Math.max(0, allowance - used);
+    if (availablePlan >= needed) return "Monthly Included";
+    if (availablePlan > 0) return `Split (${availablePlan} Included + ${needed - availablePlan} Top-Up)`;
+    return "Top-Up Reserve";
+  }
+
+  assert.strictEqual(classifyBucket(500, 10, 1), "Monthly Included");
+  assert.strictEqual(classifyBucket(500, 500, 2), "Top-Up Reserve");
+  assert.strictEqual(classifyBucket(500, 498, 5), "Split (2 Included + 3 Top-Up)");
+});
+
+// -------------------------------------------------------------------------
 // 4. One-Time Top-Up Packs & Unit Economics
 // -------------------------------------------------------------------------
 console.log("\n--- 4. One-Time Top-Up Pack Unit Economics & Pricing Integrity ---");
