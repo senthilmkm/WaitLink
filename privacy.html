@@ -32,7 +32,7 @@
     <div style="margin-bottom: 2rem;">
       <span class="hero-badge">🔒 LEGAL DOCUMENT</span>
       <h1 style="color: #fff; font-size: 2.25rem; margin-top: 0.5rem;">Privacy Policy</h1>
-      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Updated: October 3, 2026 &bull; Version 2.4</p>
+      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Updated: October 16, 2026 &bull; Version 2.5</p>
     </div>
 
     <!-- Section 1 -->
@@ -63,27 +63,67 @@
       </ul>
     </div>
 
-    <!-- Section 3 -->
+    <!-- Section 4: Clinical & Healthcare Privacy Mode -->
+    <div class="card" style="padding: 2rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #06b6d4; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🏥</span> 4. Clinical & Healthcare Privacy Mode (Urgent Care, Walk-in Clinics & Wellness)
+      </h2>
+      <p>WaitLink includes an advanced <strong>Clinical & Healthcare Privacy Mode</strong> purpose-built for urgent care centers, medical walk-ins, outpatient clinics, and wellness practices where patient confidentiality is paramount:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li><strong>Public Screen Patient Name Masking:</strong> Full patient names are automatically masked on public lobby monitors and customer mobile cards (e.g., <em>"Jonathan Edwards"</em> is displayed as <em>"Jonathan E."</em>).</li>
+        <li><strong>Front Desk Phone Protection with Tap-to-Reveal:</strong> Patient phone numbers are masked by default on front desk terminals (e.g., <code>+1 (•••) •••-1359</code>). Front desk receptionists can tap a secure toggle to temporarily reveal the number when direct verification is required, preventing lobby shoulder-surfing.</li>
+        <li><strong>Anonymous Patient Ticket IDs:</strong> When enabled, ticket tracking automatically uses anonymous patient codes (e.g., <em>"Patient #104"</em>) rather than public identifiers across queue announcements and live status views.</li>
+        <li><strong>Service Name Concealment:</strong> Sensitive healthcare and medical appointment service descriptions are strictly hidden from public-facing customer screens, ensuring waiting patients cannot view other individuals' medical care categories.</li>
+      </ul>
+    </div>
+
+    <!-- Section 5: Queue History Retention & PII Auto-Masking -->
+    <div class="card" style="padding: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #a5b4fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🛡️</span> 5. Queue History Data Retention, Privacy Auto-Masking & CSV Reporting
+      </h2>
+      <p>In accordance with data minimization standards under CCPA, TCPA, and GDPR, WaitLink enforces automated queue history lifecycle policies governed centrally by Platform Administrators:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li><strong>Tier-Governed Retention Windows:</strong> Queue history logs are retained based on your subscription tier:
+          <ul style="margin-top: 0.35rem; color: #cbd5e1;">
+            <li><strong>Starter (Free):</strong> 7 days of rolling queue history.</li>
+            <li><strong>Pro Business ($15/mo):</strong> 90 days (3 months) of rolling queue history with full CSV audit export.</li>
+            <li><strong>Enterprise ($49/mo):</strong> 365 days (1 year) of rolling history across all regional clinic and shop branches.</li>
+          </ul>
+        </li>
+        <li><strong>Automated 30-Day PII Auto-Masking:</strong> For all visits completed more than 30 days prior, customer Personally Identifiable Information (PII) is permanently anonymized:
+          <ul style="margin-top: 0.35rem; color: #cbd5e1;">
+            <li>Phone numbers are automatically masked as <code>+1 (555) •••-••89</code>.</li>
+            <li>Customer last names are redacted as <code>Jane D••••</code>.</li>
+            <li>Masked records display an immutable <code style="color: #38bdf8;">🛡️ MASKED</code> compliance tag in all audit tables.</li>
+          </ul>
+        </li>
+        <li><strong>Preservation of Operational Metrics:</strong> 100% of aggregate turnaround metrics—including wait duration, service time, arrival hour, and visit disposition (completed vs. cancelled)—are preserved permanently for historical business intelligence without storing unneeded personal data.</li>
+        <li><strong>Tier-Gated RFC 4180 CSV Reporting:</strong> Exported history reports use RFC 4180 CSV encoding with UTF-8 BOM (<code>\uFEFF</code>) for full Excel and Google Sheets fidelity, automatically applying PII masking rules to safeguard exported data files.</li>
+      </ul>
+    </div>
+
+    <!-- Section 6: Stripe Payment Security -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">3. Stripe Payment Security</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Stripe Payment Security</h2>
       <p>All subscription transactions for Pro Business ($15/mo) and Enterprise ($49/mo) plans are handled securely by <strong>Stripe</strong> (PCI-DSS Level 1 Compliant). WaitLink servers never store or process raw credit card numbers or billing CVC codes.</p>
     </div>
 
-    <!-- Section 4 -->
+    <!-- Section 7: Data Encryption & Storage -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">4. Data Encryption & Storage</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">7. Data Encryption & Storage</h2>
       <p>All data transmitted between web browsers, front desk tablets, and Google Cloud Infrastructure is encrypted in transit using <strong>TLS 1.3</strong> and encrypted at rest with <strong>AES-256</strong> industry encryption standards.</p>
     </div>
 
-    <!-- Section 5 -->
+    <!-- Section 8: LocalStorage & Session Storage -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">5. LocalStorage & Cookies</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. LocalStorage & Cookies</h2>
       <p>WaitLink uses HTML5 LocalStorage to maintain active shop preferences, temporary customer ticket timers, and sound notification settings locally on your device. We do not sell user data to third-party ad networks.</p>
     </div>
 
-    <!-- Section 6 -->
+    <!-- Section 9: DPO Contact -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Data Protection Officer Contact</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Data Protection Officer Contact</h2>
       <p>If you have questions about your business data, privacy rights, or data deletion requests, contact our Data Protection Officer directly at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
     </div>
 

@@ -32,7 +32,7 @@
     <div style="margin-bottom: 2rem;">
       <span class="hero-badge">📜 LEGAL TERMS</span>
       <h1 style="color: #fff; font-size: 2.25rem; margin-top: 0.5rem;">Terms of Service</h1>
-      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Modified: October 3, 2026 &bull; Version 2.4</p>
+      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Modified: October 16, 2026 &bull; Version 2.5</p>
     </div>
 
     <!-- Section 1 -->
@@ -46,9 +46,9 @@
       <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. Subscription Tiers & Stripe Payments</h2>
       <p>WaitLink offers free and paid subscription plans:</p>
       <ul style="margin: 0.5rem 0 1rem 1.25rem;">
-        <li><strong>Starter Tier (Free):</strong> Includes core single-shop waitlist tracking at no charge ($0/mo).</li>
-        <li><strong>Pro Business Tier ($15/mo):</strong> Billed monthly via Stripe. Unlocks branding uploads, promo banners, and CSV exports.</li>
-        <li><strong>Enterprise Tier ($49/mo):</strong> Billed monthly via Stripe. Unlocks multi-location directory and SLA guarantees.</li>
+        <li><strong>Starter Tier (Free):</strong> Includes core single-shop waitlist tracking with a 7-day rolling history window at no charge ($0/mo).</li>
+        <li><strong>Pro Business Tier ($15/mo):</strong> Billed monthly via Stripe. Unlocks branding uploads, promo banners, 90-day history retention, and RFC 4180 CSV audit exports.</li>
+        <li><strong>Enterprise Tier ($49/mo):</strong> Billed monthly via Stripe. Unlocks multi-location directory, 365-day history retention across all shop branches, and SLA guarantees.</li>
       </ul>
       <p>All credit card transactions, recurring billing cycles, and tier upgrades/downgrades are processed securely via <strong>Stripe Checkout API</strong>. Subscription fees are non-refundable once billed, except where required by law.</p>
     </div>
@@ -68,27 +68,54 @@
       </ul>
     </div>
 
-    <!-- Section 4 -->
+    <!-- Section 4: Queue History Retention & PII Anonymization Policy -->
+    <div class="card" style="padding: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #a5b4fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🛡️</span> 4. Queue History Retention, PII Anonymization & CSV Export Terms
+      </h2>
+      <p>WaitLink enforces automated data lifecycle governance across customer visit history:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li><strong>Tier History Windows:</strong> Historical queue entries are retained based on active plan limits: 7 days on Starter, 90 days on Pro Business, and 365 days on Enterprise. Records older than the tier limit are subject to automatic pruning.</li>
+        <li><strong>Automated 30-Day PII Anonymization:</strong> After 30 days, personal identifiers (telephone numbers and last names) are irrevocably masked to protect consumer privacy while preserving turnaround time metrics for business reporting.</li>
+        <li><strong>CSV Export Rights & Data Portability:</strong> Pro and Enterprise subscribers may export historical records in RFC 4180 CSV standard format. Exported files automatically respect privacy masking and are provided solely for lawful internal accounting, operational review, and patient traffic auditing.</li>
+      </ul>
+    </div>
+
+    <!-- Section 5: Clinical & Healthcare Privacy Mode Terms -->
+    <div class="card" style="padding: 2rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #06b6d4; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🏥</span> 5. Clinical & Healthcare Privacy Mode Terms
+      </h2>
+      <p>Healthcare providers, urgent care clinics, and wellness practices may activate <strong>Clinical & Healthcare Privacy Mode</strong>. By enabling this mode, the business agrees that:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li>Public displays will strictly truncate patient names to first name and last initial (e.g. <em>"Jonathan E."</em>).</li>
+        <li>Front desk staff are responsible for maintaining confidentiality when using the phone tap-to-reveal toggle on front desk screens.</li>
+        <li>Anonymous patient identifiers (e.g. <em>"Patient #104"</em>) are generated to prevent unauthorized disclosure of patient presence.</li>
+        <li>Specific medical care service names will be suppressed on public status screens. WaitLink provides technical queue management safeguards; covered entities remain responsible for their overall HIPAA physical and administrative safeguards.</li>
+      </ul>
+    </div>
+
+    <!-- Section 6: Business Owner Responsibilities -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">4. Business Owner Responsibilities</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Business Owner Responsibilities</h2>
       <p>Shop owners are responsible for maintaining the accuracy of their public business details, storefront poster display, staff access, and security of their account credentials.</p>
     </div>
 
-    <!-- Section 4 -->
+    <!-- Section 7: Service Availability & SLA -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">4. Service Availability & SLA</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">7. Service Availability & SLA</h2>
       <p>WaitLink targets a <strong>99.9% uptime</strong> for real-time Cloud Firestore queue synchronization. While offline queue caching is supported, temporary network outages beyond our control do not constitute a breach of agreement.</p>
     </div>
 
-    <!-- Section 5 -->
+    <!-- Section 8: Acceptable Use & Conduct -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">5. Acceptable Use & Conduct</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. Acceptable Use & Conduct</h2>
       <p>Users agree not to exploit, spam, flood, or manipulate waitlist queues, harvest customer data without authorization, or create deceptive business profiles. Violations will result in immediate shop termination.</p>
     </div>
 
-    <!-- Section 6 -->
+    <!-- Section 9: Contacting Legal Support -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Contacting Legal Support</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Contacting Legal Support</h2>
       <p>For inquiries regarding these Terms of Service or legal compliance, contact our Support & Legal Team at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
     </div>
 

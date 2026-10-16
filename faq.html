@@ -79,11 +79,48 @@
         <div class="faq-answer">
           <p>WaitLink offers 3 flexible pricing tiers:
             <ul>
-              <li><strong>Starter Tier (Free):</strong> $0/month forever. Full basic queue functionality for single shops.</li>
-              <li><strong>Pro Business Tier ($15/month):</strong> Includes custom shop branding/logo upload, promotional date-window banners, CSV data exports, and audio chime alerts.</li>
-              <li><strong>Enterprise Tier ($49/month):</strong> Includes multi-location directory management, priority SuperAdmin support, custom SLA guarantees, and advanced business intelligence analytics.</li>
+              <li><strong>Starter Tier (Free):</strong> $0/month forever. Full basic queue functionality for single shops with 7-day rolling history.</li>
+              <li><strong>Pro Business Tier ($15/month):</strong> Includes custom shop branding/logo upload, promotional date-window banners, 90-day history retention with RFC 4180 CSV exports, automated 30-day PII masking, and audio chime alerts.</li>
+              <li><strong>Enterprise Tier ($49/month):</strong> Includes multi-location directory management, 365-day history retention across all locations, cross-branch CSV exports, priority SuperAdmin support, custom SLA guarantees, and advanced business intelligence analytics.</li>
             </ul>
           </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>How long is customer visit history retained, and how does automated PII masking work?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Historical customer visit logs are retained based on your subscription tier: <strong>7 days</strong> on Starter (Free), <strong>90 days</strong> (3 months) on Pro Business, and <strong>365 days</strong> (1 year) on Enterprise. To comply with CCPA, TCPA, and GDPR data minimization requirements, all records older than <strong>30 days</strong> automatically have customer phone numbers (e.g., <code>+1 (555) •••-••89</code>) and surnames (e.g., <code>Jane D••••</code>) permanently anonymized across all screens and exports while preserving 100% of operational throughput metrics (wait times, turnaround speed, and completion status).</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>What is Clinical & Healthcare Privacy Mode and how does it protect patients?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Clinical & Healthcare Privacy Mode</strong> is designed specifically for urgent care centers, walk-in clinics, outpatient facilities, and wellness practices. When enabled in Shop Settings:
+            <ul>
+              <li>Patient full names are automatically truncated on public lobby screens and customer mobile tickets (e.g., <em>"Jonathan Edwards"</em> becomes <em>"Jonathan E."</em>).</li>
+              <li>Patient phone numbers are masked by default on front desk screens with a secure staff tap-to-reveal toggle to prevent lobby shoulder-surfing.</li>
+              <li>Generates anonymous patient ticket IDs (e.g., <em>"Patient #104"</em>) across queue announcements and live trackers.</li>
+              <li>Hides sensitive medical service descriptions from public-facing customer screens.</li>
+            </ul>
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>Can I export visit history data into Microsoft Excel or Google Sheets?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes! Pro Business and Enterprise subscribers can click <strong>"📥 Export CSV"</strong> directly from the Front Desk or Business Owner visit history toolbar. WaitLink streams historical visit logs formatted according to RFC 4180 standards with a UTF-8 Byte Order Mark (BOM) to ensure clean opening in Microsoft Excel, Apple Numbers, and Google Sheets without encoding errors. Exported files automatically respect 30-day PII masking rules to safeguard customer privacy.</p>
         </div>
       </div>
 
