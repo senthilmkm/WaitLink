@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaitLink — Smart Walk-In Queue & Digital Lobby for Local Businesses</title>
+  <meta name="description" content="Turn crowded lobbies into calm, loyal customers. Zero hardware to buy. Zero customer app downloads. The 1-minute smart waitlist for barbers, salons, clinics, and restaurants.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --cyan: #06b6d4;
+      --indigo: #6366f1;
+      --purple: #a855f7;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text: #090d16;
+      --text-muted: #475569;
+      --accent: #059669;
+      --accent-glow: rgba(5, 150, 105, 0.15);
+      --cyan: #0891b2;
+      --indigo: #4f46e5;
+      --purple: #9333ea;
+      --amber: #d97706;
+      --rose: #e11d48;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 3rem;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Sticky Action Header */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    html[data-theme="light"] .top-bar {
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom-color: #e2e8f0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .brand-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.55rem 1.15rem;
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border-color: var(--card-border);
+    }
+    html[data-theme="light"] .btn-secondary {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .theme-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 1rem 3rem 1rem;
+      background: radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+      border-radius: 24px;
+      margin-bottom: 2rem;
+      border: 1px solid var(--card-border);
+    }
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.3rem 0.85rem;
+      border-radius: 9999px;
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: 2.6rem;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.8px;
+      margin-bottom: 1rem;
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, #10b981 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 1.75rem auto;
+      line-height: 1.6;
+    }
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      margin-bottom: 2rem;
+    }
+    .trust-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+    }
+    html[data-theme="light"] .trust-chip {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+    }
+
+    /* Cards & Grids */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+    .card-header-icon {
+      font-size: 1.5rem;
+    }
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .card-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* The Problem Box (The Bleed) */
+    .problem-box {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%);
+      border: 1.5px solid rgba(244, 63, 94, 0.3);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    .problem-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+    .stat-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+    html[data-theme="light"] .stat-card {
+      background: #ffffff;
+      border-color: #fecdd3;
+    }
+    .stat-val {
+      font-family: var(--font-heading);
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--rose);
+      margin-bottom: 0.2rem;
+    }
+    .stat-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* 3 Steps Customer Flow */
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .step-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      position: relative;
+    }
+    html[data-theme="light"] .step-card {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+    .step-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+    .step-text {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Roles & Operations Table */
+    .role-table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      margin-top: 1rem;
+    }
+    .role-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+    .role-table th {
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      border-bottom: 2px solid var(--card-border);
+      white-space: nowrap;
+    }
+    html[data-theme="light"] .role-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .role-table td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      vertical-align: top;
+      color: var(--text);
+    }
+    .role-table tr:last-child td {
+      border-bottom: none;
+    }
+    .role-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 0.3rem;
+    }
+    .badge-customer { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .badge-desk { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-owner { background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.4); }
+
+    /* Industry Cards */
+    .industry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+    .industry-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+    html[data-theme="light"] .industry-card {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    .industry-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .industry-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .industry-detail {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* 3-Minute Demo Script Box */
+    .demo-script-box {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+      border: 1.5px solid rgba(6, 182, 212, 0.35);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    .script-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .script-step {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.15rem;
+    }
+    html[data-theme="light"] .script-step {
+      background: #ffffff;
+      border-color: #bae6fd;
+    }
+    .script-minute {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.35rem;
+    }
+    .script-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+    }
+    .script-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .script-tip {
+      margin-top: 0.65rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 2px solid var(--accent);
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--accent);
+    }
+
+    /* Pricing & ROI Grid */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    .pricing-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    html[data-theme="light"] .pricing-card {
+      background: #ffffff;
+      border-color: #e2e8f0;
+    }
+    .pricing-featured {
+      border: 2px solid var(--accent);
+      background: rgba(16, 185, 129, 0.05);
+      position: relative;
+    }
+    .pricing-badge {
+      position: absolute;
+      top: -12px;
+      right: 20px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 0.2rem 0.65rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+    .price-num {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--text);
+      margin: 0.5rem 0;
+    }
+    .price-num span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .price-features {
+      list-style: none;
+      margin: 1.25rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .price-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+    .price-features li strong {
+      color: var(--text);
+    }
+    .check-icon {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    /* ROI Callout */
+    .roi-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.12) 100%);
+      border: 1.5px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-top: 1.75rem;
+      text-align: center;
+    }
+    .roi-title {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+    .roi-desc {
+      font-size: 0.92rem;
+      color: var(--text);
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Objection Handling Grid */
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .faq-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+    html[data-theme="light"] .faq-card {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    .faq-q {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .faq-a {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Print Controls */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #090d16 !important;
+        padding-bottom: 0;
+      }
+      .top-bar, .theme-toggle-btn, .btn, .no-print {
+        display: none !important;
+      }
+      .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .card, .problem-box, .demo-script-box, .roi-banner, .step-card, .script-step, .stat-card, .industry-card, .pricing-card {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #090d16 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+      }
+      .hero {
+        background: none !important;
+        border: none !important;
+        padding: 1rem 0 !important;
+      }
+      .hero-title span {
+        color: #059669 !important;
+        -webkit-text-fill-color: initial !important;
+      }
+      .stat-val {
+        color: #e11d48 !important;
+      }
+      .role-table th {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+      }
+      .role-table td {
+        color: #0f172a !important;
+      }
+      .text-muted, .step-text, .script-desc, .faq-a, .stat-desc {
+        color: #334155 !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-title {
+        font-size: 2rem;
+      }
+      .hero-subtitle {
+        font-size: 1rem;
+      }
+      .card {
+        padding: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Demo Launcher -->
+  <header class="top-bar">
+    <a href="index.html" class="brand">
+      <span>⏳</span>
+      <span>WaitLink</span>
+      <span class="brand-badge">Merchant Sales Sheet</span>
+    </a>
+    <div class="header-actions">
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌓</button>
+      <button class="btn btn-secondary no-print" onclick="window.print()" title="Print or save as PDF for merchant pitch">🖨️ Print One-Pager</button>
+      <a href="index.html?shop=main-st-barbers" class="btn btn-primary" target="_blank" title="Open live interactive demo sandbox">
+        🚀 Launch Live Demo
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Hero Value Statement -->
+    <section class="hero">
+      <div class="hero-pill">⚡ The Zero-Hardware Smart Waitlist</div>
+      <h1 class="hero-title">
+        Turn Crowded Lobbies Into<br>
+        <span>Calm, Paying Customers.</span>
+      </h1>
+      <p class="hero-subtitle">
+        Eliminate walk-aways, stop repetitive <em>"How much longer?"</em> receptionist questions, and let walk-in customers wait anywhere without downloading any app.
+      </p>
+
+      <div class="hero-badges">
+        <span class="trust-chip">📱 Zero Customer App Downloads</span>
+        <span class="trust-chip">⏱️ 10-Second Front Desk Check-in</span>
+        <span class="trust-chip">🆓 $0 Free Starter Forever</span>
+        <span class="trust-chip">🖥️ Runs on Any iPad, Phone, or Laptop</span>
+      </div>
+
+      <div class="no-print" style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="index.html?shop=main-st-barbers" target="_blank" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+          👉 Open Live Sandbox Demo
+        </a>
+        <a href="#demo-script" class="btn btn-secondary" style="padding: 0.85rem 1.5rem; font-size: 1rem;">
+          📋 3-Minute Demo Script
+        </a>
+      </div>
+    </section>
+
+    <!-- The Problem Box: The Bleed -->
+    <section class="problem-box">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <span style="font-size: 1.5rem;">🚨</span>
+        <h2 style="font-family: var(--font-heading); font-size: 1.3rem; font-weight: 800; color: var(--rose);">
+          The Invisible Walk-Away Bleed: What Paper Clipboards Cost You Every Day
+        </h2>
+      </div>
+      <p style="font-size: 0.92rem; color: var(--text-muted); line-height: 1.5;">
+        When walk-in customers walk into a busy lobby and see 4–5 people waiting with <strong>zero idea how long the wait will be</strong>, up to 30% turn around and go to a competitor. That isn't just lost revenue for the hour—it's a loyal customer you may never see again.
+      </p>
+
+      <div class="problem-stat-grid">
+        <div class="stat-card">
+          <div class="stat-val">2 to 5</div>
+          <div class="stat-desc">Walk-in customers lost per day to long, blind waiting room lines.</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">$2,100+</div>
+          <div class="stat-desc">Monthly revenue leak for an average barbershop, salon, or walk-in clinic.</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">90 mins</div>
+          <div class="stat-desc">Wasted daily by receptionists answering <em>"How many more minutes until my turn?"</em></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How WaitLink Works: 3-Step Customer Journey -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-header-icon">✨</span>
+        <div>
+          <h2 class="card-title">How It Works: 100% Frictionless for Everyone</h2>
+          <p class="card-subtitle">Zero apps to install. Zero passwords for customers. Works instantly in any browser.</p>
+        </div>
+      </div>
+
+      <div class="flow-steps">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h3 class="step-title">Customer Scans Window QR</h3>
+          <p class="step-text">
+            Customer arrives and scans the printable QR poster on your storefront window or reception desk using their standard phone camera. No app download required.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h3 class="step-title">Live Wait Tracker on Phone</h3>
+          <p class="step-text">
+            Their smartphone displays their live position: <em>"You're #2 in line • Est. 12 mins"</em>. They are free to grab a coffee, run an errand, or wait in their car.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h3 class="step-title">1-Tap "Your Turn!" SMS Call</h3>
+          <p class="step-text">
+            When you're ready, front desk taps <strong>"SERVE NOW"</strong>. WaitLink automatically sends an SMS chime directly to their phone: <em>"Your turn is ready!"</em>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Roles & Operations Comparison Table -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-header-icon">👥</span>
+        <div>
+          <h2 class="card-title">Clear Roles &amp; Operational Separation</h2>
+          <p class="card-subtitle">Airtight boundaries: Staff can never tamper with owner billing or view other shops.</p>
+        </div>
+      </div>
+
+      <div class="role-table-wrap">
+        <table class="role-table">
+          <thead>
+            <tr>
+              <th style="width: 22%;">Role Profile</th>
+              <th style="width: 20%;">How They Access</th>
+              <th style="width: 33%;">Core Daily Operations</th>
+              <th style="width: 25%;">Primary Business Benefit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="role-badge badge-customer">Walk-In Customer</span>
+                <div style="font-weight: 700; font-size: 0.95rem;">Public Patron / Patient</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Guest on Mobile Web</div>
+              </td>
+              <td>
+                <strong>Scans Window QR Poster</strong> or clicks shared SMS link. Zero login, zero password, zero app store download.
+              </td>
+              <td>
+                • Views live position in line (#1, #2, Next)<br>
+                • Watches dynamic wait time countdown<br>
+                • Receives turn-ready SMS and turn sound<br>
+                • Can safely cancel if plans change
+              </td>
+              <td>
+                <strong style="color: var(--accent);">Eliminates line fatigue.</strong> Patrons wait happily nearby instead of crowding your doorway.
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <span class="role-badge badge-desk">Front Desk Staff</span>
+                <div style="font-weight: 700; font-size: 0.95rem;">Receptionist / Greeter</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Operator Console</div>
+              </td>
+              <td>
+                <strong>4-Digit Station PIN</strong> or 1-Click Tablet Station Link. Instant shift changes in under 2 seconds.
+              </td>
+              <td>
+                • 10-second walk-in intake (Name & Phone)<br>
+                • 1-Tap <strong>"SERVE NOW"</strong> / Call Next<br>
+                • Audible arrival sound chime alerts<br>
+                • Mark served, no-show, or delayed
+              </td>
+              <td>
+                <strong style="color: var(--accent);">Zero training required.</strong> Calmer desk, zero repetitive wait time questions from patrons.
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <span class="role-badge badge-owner">Business Owner</span>
+                <div style="font-weight: 700; font-size: 0.95rem;">Store Owner / Manager</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Full Administration</div>
+              </td>
+              <td>
+                <strong>Master Email & Password</strong> (Google or Email login). Complete privacy and financial isolation.
+              </td>
+              <td>
+                • Real-time multi-shop oversight from phone<br>
+                • 1-Click Printable Window QR Generator<br>
+                • Staff PIN management and shift auditing<br>
+                • Turnaround analytics and CSV export<br>
+                • Clinical Privacy Mode (HIPAA-friendly)
+              </td>
+              <td>
+                <strong style="color: var(--accent);">Total control & visibility.</strong> Protects master credentials while tracking peak revenue hours.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Industry-Specific Adaptability -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-header-icon">💈</span>
+        <div>
+          <h2 class="card-title">Tailored for High-Traffic Walk-In Businesses</h2>
+          <p class="card-subtitle">One app adapts instantly to the specific operational needs of your business.</p>
+        </div>
+      </div>
+
+      <div class="industry-grid">
+        <div class="industry-card">
+          <div class="industry-icon">✂️</div>
+          <div class="industry-name">Barbershops & Hair Salons</div>
+          <div class="industry-detail">
+            Barbers keep hands on scissors. Call next client with 1 tap. Recaptures weekend Saturday walk-ins who would otherwise leave when they see 6 heads waiting.
+          </div>
+        </div>
+
+        <div class="industry-card">
+          <div class="industry-icon">💅</div>
+          <div class="industry-name">Nail Bars & Beauty Spas</div>
+          <div class="industry-detail">
+            Manages walk-in groups and parties effortlessly. Clients browse nearby boutiques or retail stores while their names progress in line.
+          </div>
+        </div>
+
+        <div class="industry-card">
+          <div class="industry-icon">🏥</div>
+          <div class="industry-name">Clinics & Urgent Care</div>
+          <div class="industry-detail">
+            <strong>Clinical Privacy Mode:</strong> Automatic last-name masking (<em>"Jonathan E."</em>), private patient ticket IDs (<em>"Patient #104"</em>), and safe in-car waiting for contagious patients.
+          </div>
+        </div>
+
+        <div class="industry-card">
+          <div class="industry-icon">🍽️</div>
+          <div class="industry-name">Restaurants & Cafés</div>
+          <div class="industry-detail">
+            Replaces broken, lost, and expensive $1,500 buzzer pagers. Sends text message table buzzes directly to customer cell phones.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3-Minute Live Demo Script: The Secret Weapon for Selling -->
+    <section id="demo-script" class="demo-script-box">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <span style="font-size: 1.5rem;">🎯</span>
+        <h2 style="font-family: var(--font-heading); font-size: 1.3rem; font-weight: 800; color: var(--cyan);">
+          The 3-Minute In-Person Demo Script (Your Sales Blueprint)
+        </h2>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+        Follow this exact 3-minute sequence when pitching a shop owner on an iPad, phone, or laptop to close them on the spot:
+      </p>
+
+      <div class="script-steps">
+        <div class="script-step">
+          <div class="script-minute">Minute 1 • The Customer View</div>
+          <div class="script-title">1. Scan &amp; Experience Zero-App Check-In</div>
+          <p class="script-desc">
+            Open the demo QR on your phone or hand them your phone. Let them see how clean and fast the queue ticket loads in Safari/Chrome.
+          </p>
+          <div class="script-tip">
+            💡 Say: <em>"Notice how your customer never has to download an app or remember a password. It's instant."</em>
+          </div>
+        </div>
+
+        <div class="script-step">
+          <div class="script-minute">Minute 2 • The Front Desk View</div>
+          <div class="script-title">2. 1-Tap "SERVE NOW" Demonstration</div>
+          <p class="script-desc">
+            On your tablet, switch to Front Desk view. Tap <strong>"SERVE NOW"</strong> on their name. Their phone chimes immediately with a turn-ready alert!
+          </p>
+          <div class="script-tip">
+            💡 Say: <em>"Your receptionist just saved 2 minutes of shouting across the room or answering 'How much longer?'"</em>
+          </div>
+        </div>
+
+        <div class="script-step">
+          <div class="script-minute">Minute 3 • The Owner Value &amp; Close</div>
+          <div class="script-title">3. Show the Window Poster &amp; Free Tier</div>
+          <p class="script-desc">
+            Show the 1-Click Printable Poster generator and show the $0 Free Starter tier. Offer to let them test it this Saturday with zero commitment.
+          </p>
+          <div class="script-tip">
+            💡 Say: <em>"You can start today for $0 on any iPad you already have. If it saves even 1 walk-away customer, you're ahead."</em>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transparent Pricing & ROI -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-header-icon">🏷️</span>
+        <div>
+          <h2 class="card-title">Simple, Honest Pricing (No Contracts • No Hardware)</h2>
+          <p class="card-subtitle">Competitors charge $150+/month plus $800 proprietary kiosks. WaitLink starts free.</p>
+        </div>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Starter Tier -->
+        <div class="pricing-card">
+          <div>
+            <span style="font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Starter Tier</span>
+            <div class="price-num">$0 <span>/ month</span></div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Free forever. Perfect for solo barbers, independent stylists, and testing digital queues.
+            </p>
+            <ul class="price-features">
+              <li><span class="check-icon">✓</span> <span><strong>1 Shop Location</strong> (100 check-ins/mo)</span></li>
+              <li><span class="check-icon">✓</span> <span>Printable High-Res Window QR Poster</span></li>
+              <li><span class="check-icon">✓</span> <span>1-Tap Front Desk Queue Console</span></li>
+              <li><span class="check-icon">✓</span> <span>Real-Time Wait Time Estimator</span></li>
+              <li><span class="check-icon">✓</span> <span>Live Customer Phone Tracker (Web)</span></li>
+              <li><span class="check-icon">✓</span> <span>Audible Turn Chimes & Sound Alerts</span></li>
+            </ul>
+          </div>
+          <a href="index.html" class="btn btn-secondary" style="width: 100%;">Start Free Today</a>
+        </div>
+
+        <!-- Pro Business Tier (Featured) -->
+        <div class="pricing-card pricing-featured">
+          <div class="pricing-badge">Most Popular</div>
+          <div>
+            <span style="font-size: 0.75rem; font-weight: 800; color: #06b6d4; background: rgba(6, 182, 212, 0.2); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Pro Business</span>
+            <div class="price-num" style="color: var(--accent);">$15 <span>/ month</span></div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              For established shops wanting zero walk-away revenue loss and automated SMS texts.
+            </p>
+            <ul class="price-features">
+              <li><span class="check-icon">✓</span> <span><strong>Everything in Starter</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Unlimited Monthly Check-Ins</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>500 Included SMS Texts / mo</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>1-Month SMS Rollover Bank</strong></span></li>
+              <li><span class="check-icon">✓</span> <span>Custom Shop Logo & Accent Colors</span></li>
+              <li><span class="check-icon">✓</span> <span>Owner Analytics & Peak Rush Tracking</span></li>
+              <li><span class="check-icon">✓</span> <span>Clinical & Healthcare Privacy Mode</span></li>
+              <li><span class="check-icon">✓</span> <span>90-Day History & CSV Audit Export</span></li>
+            </ul>
+          </div>
+          <a href="index.html" class="btn btn-primary" style="width: 100%;">Upgrade to Pro</a>
+        </div>
+
+        <!-- Enterprise Tier -->
+        <div class="pricing-card">
+          <div>
+            <span style="font-size: 0.75rem; font-weight: 800; color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Enterprise</span>
+            <div class="price-num">$49 <span>/ month</span></div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              For multi-chair studios, franchise networks, and multi-location clinic chains.
+            </p>
+            <ul class="price-features">
+              <li><span class="check-icon">✓</span> <span><strong>Everything in Pro Business</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Multi-Location Network (Unlimited)</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>2,500+ Included SMS Texts / mo</strong></span></li>
+              <li><span class="check-icon">✓</span> <span>Multiple Staff Logins & Custom PINs</span></li>
+              <li><span class="check-icon">✓</span> <span>Custom Domain CNAME White-Labeling</span></li>
+              <li><span class="check-icon">✓</span> <span>365-Day Extended History Retention</span></li>
+              <li><span class="check-icon">✓</span> <span>Dedicated Support Manager & 99.9% SLA</span></li>
+            </ul>
+          </div>
+          <a href="index.html" class="btn btn-secondary" style="width: 100%;">Contact Enterprise</a>
+        </div>
+      </div>
+
+      <!-- ROI Callout -->
+      <div class="roi-banner">
+        <div class="roi-title">💡 The Math Speaks for Itself</div>
+        <p class="roi-desc">
+          At an average service value of <strong>$35</strong>, saving just <strong>ONE walk-away customer per month</strong> ($35) more than covers the entire $15/month cost of WaitLink Pro. Everything after customer #1 is 100% pure profit back in your pocket.
+        </p>
+      </div>
+    </section>
+
+    <!-- Handling Common Objections (Merchant FAQ Cheat Sheet) -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-header-icon">💬</span>
+        <div>
+          <h2 class="card-title">Answers to Common Business Owner Questions</h2>
+          <p class="card-subtitle">Quick responses to handle the most common merchant questions with confidence.</p>
+        </div>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <div class="faq-q"><span>📋</span> "We already use a paper clipboard sign-in sheet."</div>
+          <p class="faq-a">
+            Paper sheets take names, but they can't tell a customer how long the wait is or text them when it's their turn. When people see 6 names on a clipboard with no estimate, they walk away. With WaitLink, they scan the QR, grab a coffee next door, and you keep the sale.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q"><span>👴</span> "Our customers are older and might not be tech-savvy."</div>
+          <p class="faq-a">
+            WaitLink requires zero app downloads. If someone doesn't want to use their phone, your front desk can type their name into the tablet in 5 seconds just like a notepad. But for everyone else, scanning the QR code keeps your lobby calm and organized.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q"><span>🖥️</span> "Do I need to buy expensive iPad stands or hardware?"</div>
+          <p class="faq-a">
+            Zero hardware required. WaitLink runs directly in the browser of any iPad, Android tablet, smartphone, or desktop computer you already have on your counter. You can print the window QR poster on any standard home or office printer.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q"><span>🔒</span> "Can my staff accidentally see my revenue or change billing?"</div>
+          <p class="faq-a">
+            Never. Staff log in with a dedicated 4-digit Front Desk PIN. They only see queue controls (Check-In, Call, Complete). Financial reports, subscription settings, and billing portals are strictly locked behind your owner master password.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action Footer -->
+    <section style="text-align: center; padding: 2.5rem 1.5rem; background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.6) 80%); border: 1px solid var(--accent); border-radius: 20px;">
+      <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">
+        Ready to Test Drive WaitLink in Your Business?
+      </h2>
+      <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 1.5rem auto; font-size: 0.95rem;">
+        No credit card required. No hardware to buy. Set up your shop in 60 seconds and eliminate waiting room chaos today.
+      </p>
+      <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="index.html?shop=main-st-barbers" target="_blank" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+          🚀 Test the Live Sandbox Demo
+        </a>
+        <a href="index.html" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+          🏪 Create Your Free Shop
+        </a>
+      </div>
+      <div style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted);">
+        Questions? Email support at <strong>support@waitlink.app</strong> &bull; Visit <strong>https://waitlink-app-8821.web.app</strong>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Simple theme toggle between dark and light
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      localStorage.setItem("waitlink_pitch_theme", next);
+    }
+
+    // Restore saved theme preference if any
+    (function() {
+      const saved = localStorage.getItem("waitlink_pitch_theme");
+      if (saved) {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    })();
+  </script>
+</body>
+</html>

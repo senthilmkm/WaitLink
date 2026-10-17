@@ -379,6 +379,20 @@ it("Progressive Web App (PWA) manifest, service worker, and standalone tablet in
   assert.ok(css.includes('html[data-theme="light"] #pwa-install-modal .modal-card'), "style.css missing light theme modal-card override");
 });
 
+it("pitch.html contains comprehensive merchant one-pager, roles comparison table, demo script & ROI", () => {
+  const pitchPath = path.join(__dirname, "..", "pitch.html");
+  assert.ok(fs.existsSync(pitchPath), "pitch.html does not exist");
+  const pitchHtml = fs.readFileSync(pitchPath, "utf8");
+  assert.ok(pitchHtml.includes("Turn Crowded Lobbies"), "Missing punchy headline in pitch.html");
+  assert.ok(pitchHtml.includes("role-table"), "Missing roles comparison table in pitch.html");
+  assert.ok(pitchHtml.includes("Front Desk Staff") && pitchHtml.includes("Walk-In Customer") && pitchHtml.includes("Business Owner"), "Missing roles in pitch.html");
+  assert.ok(pitchHtml.includes("demo-script"), "Missing 3-minute demo script in pitch.html");
+  assert.ok(pitchHtml.includes("Starter Tier") && pitchHtml.includes("Pro Business"), "Missing pricing in pitch.html");
+  assert.ok(pitchHtml.includes("The Math Speaks for Itself"), "Missing ROI math in pitch.html");
+  assert.ok(pitchHtml.includes("@media print"), "Missing print styling in pitch.html");
+  assert.ok(html.includes('href="pitch.html"'), "index.html footer missing link to pitch.html");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
