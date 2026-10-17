@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=3.9">
+  <link rel="stylesheet" href="style.css?v=4.1">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -20,7 +20,7 @@
   <!-- Stripe.js SDK -->
   <script src="https://js.stripe.com/v3/"></script>
 </head>
-<body>
+<body class="guest-mode demo-mode" data-shop="main-st-barbers" data-demo="true">
 
   <!-- App Header -->
   <header class="app-header no-print">
@@ -437,7 +437,7 @@
       <div class="shop-banner">
         <div>
           <h1 class="shop-title" id="desk-shop-name">Main St Barbers</h1>
-          <p class="shop-subtitle" id="desk-shop-subtitle">Desk Control Panel &bull; 1-Tap Check In & Call</p>
+          <p class="shop-subtitle" id="desk-shop-subtitle">Live Front Desk Queue</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
@@ -466,7 +466,7 @@
         <form id="checkin-form" onsubmit="handleCheckIn(event)">
           <div class="input-group">
             <span class="input-icon" id="desk-checkin-icon">👤</span>
-            <input type="text" id="customer-name-input" placeholder="Enter customer name or initials (e.g. Marcus S.)" autocomplete="off" required autofocus>
+            <input type="text" id="customer-name-input" placeholder="Customer Name or Initials (e.g. Marcus S.)" autocomplete="off" required autofocus>
             <button type="submit" class="btn btn-primary btn-lg" id="btn-desk-checkin">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span id="desk-checkin-btn-text">Check In</span>
@@ -476,7 +476,7 @@
           <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem;">
               <span style="font-size: 0.85rem;">📱</span>
-              <input type="tel" id="desk-customer-phone" placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)" style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.85rem; outline: none;">
+              <input type="tel" id="desk-customer-phone" placeholder="Cell Phone for SMS (Optional)" style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.85rem; outline: none;">
             </div>
             <!-- Desk Service Selector (Populated dynamically when enabled) -->
             <div id="desk-service-selector-container" class="hidden" style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem;">
@@ -517,16 +517,6 @@
       <div class="section-header">
         <h2>Active Waiting Queue</h2>
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-          <!-- 1-Tap View Mode Switcher Toggle -->
-          <div class="view-mode-toggle-group">
-            <button class="view-toggle-btn active" id="btn-view-grid" onclick="setQueueViewMode('grid')" title="Standard Multi-Column Grid View">
-              ⣿ Grid View
-            </button>
-            <button class="view-toggle-btn" id="btn-view-stage" onclick="setQueueViewMode('stage')" title="Interactive 3D Stage Rotator View">
-              🎴 3D Stage Mode
-            </button>
-          </div>
-
           <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
             🔔 Sound Alerts: ON
           </button>
@@ -550,7 +540,7 @@
       </div>
 
       <!-- Front Desk Retention & Privacy Notice Banner -->
-      <div id="desk-retention-banner" class="retention-tier-banner starter" style="display: none;"></div>
+      <div id="desk-retention-banner" class="retention-tier-banner starter hidden" style="display: none !important;"></div>
 
       <div class="history-toolbar">
         <div class="history-filter-group">
@@ -610,7 +600,7 @@
               <span class="pulse-dot"></span> <span id="firestore-status-label">Cloud Live Sync Connected</span>
             </span>
           </div>
-          <p class="shop-subtitle" style="margin-top: 0.25rem;">Business Owner Dashboard &bull; Analytics, Link & Subscription Management</p>
+          <p class="shop-subtitle" style="margin-top: 0.25rem;">Shop Overview & Analytics</p>
         </div>
         <div class="mode-badge-toggle owner-active" onclick="switchView('desk')" title="Click to switch back to Front Desk">
           <span>Active Mode:</span> <strong>Business Owner ⇆</strong>
@@ -622,7 +612,7 @@
         <div class="metric-card highlight" style="position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div class="metric-label">Subscription Plan</div>
-            <button id="owner-metric-plan-btn" class="btn-text-sm" onclick="openUpgradeModal()" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
+            <button id="owner-metric-plan-btn" class="btn-text-sm hidden" onclick="openUpgradeModal()" style="display: none !important; color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
           </div>
           <div class="metric-value" id="owner-plan-value" style="color: #10b981; font-size: 1.4rem;">$0 / month</div>
           <div class="metric-caption" id="owner-plan-caption">Starter Tier (Free) &bull; Free Forever</div>
@@ -664,8 +654,8 @@
         </div>
       </div>
 
-      <!-- Owner Starter Upgrade Callout Banner -->
-      <div id="owner-starter-upgrade-callout" class="hidden" style="margin-top: 1.25rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.12) 100%); border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <!-- Owner Starter Upgrade Callout Banner (Strictly hidden for guests, demo mode & unauthenticated users) -->
+      <div id="owner-starter-upgrade-callout" class="hidden upgrade-callout-banner" style="display: none !important; margin-top: 1.25rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.12) 100%); border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-md); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span style="font-size: 1.6rem;">🚀</span>
           <div>
@@ -771,7 +761,7 @@
                 </label>
               </div>
               <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0; line-height: 1.45;">
-                Recommended for urgent care centers, medical walk-ins, and wellness practices. Auto-masks patient full names (e.g. <em>Jonathan E.</em>), masks phone numbers by default on front desk screen with staff tap-to-reveal toggle, generates anonymous patient ticket IDs (<em>Patient #104</em>), and hides sensitive medical service names on public customer screens.
+                Recommended for clinics and urgent care. Auto-masks patient names (Jonathan E.) and phone numbers, generates anonymous ticket IDs, and hides service names on public screens.
               </p>
             </div>
           </div>
@@ -789,7 +779,7 @@
               </div>
 
               <!-- Pro Locked Banner -->
-              <div id="logo-locked-banner" class="pro-locked-banner">
+              <div id="logo-locked-banner" class="pro-locked-banner hidden" style="display: none !important;">
                 <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Custom logo branding requires Pro Business ($15/mo).</span></span>
                 <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
               </div>
@@ -857,7 +847,7 @@
               </div>
 
               <!-- Pro Locked Banner -->
-              <div id="promo-locked-banner" class="pro-locked-banner">
+              <div id="promo-locked-banner" class="pro-locked-banner hidden" style="display: none !important;">
                 <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Promo banners require Pro Business ($15/mo).</span></span>
                 <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
               </div>
@@ -901,7 +891,7 @@
               </div>
 
               <!-- Pro Locked Banner -->
-              <div id="twilio-locked-banner" class="pro-locked-banner">
+              <div id="twilio-locked-banner" class="pro-locked-banner hidden" style="display: none !important;">
                 <span class="banner-text">🔒 <span><strong>Pro Feature:</strong> Automated SMS notifications require Pro Business ($15/mo).</span></span>
                 <button type="button" class="btn-upgrade-action" onclick="openUpgradeModal(); event.stopPropagation();">⚡ Upgrade to Pro</button>
               </div>
@@ -921,51 +911,25 @@
                       </div>
                     </div>
                     <span style="font-size: 0.72rem; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.2rem 0.6rem; border-radius: 9999px;">
-                      ● Central Gateway Online
+                      ● Central SMS Gateway Active
                     </span>
                   </div>
 
-                  <!-- Collapsible Platform Gateway Connection Details -->
-                  <details id="twilio-gateway-accordion" ontoggle="const l = document.getElementById('twilio-accordion-toggle-lbl'); if (l) l.textContent = this.open ? 'Hide Credentials ▴' : 'View Credentials ▾';" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; margin-top: 0.75rem; overflow: hidden; transition: all 0.2s ease;">
-                    <summary style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; cursor: pointer; font-size: 0.74rem; color: #cbd5e1; user-select: none; font-weight: 600; list-style: none;">
-                      <span style="display: flex; align-items: center; gap: 0.45rem;">
-                        <span style="color: #10b981;">🔒</span>
-                        <span>Platform Twilio Gateway Connection & Test Dispatch</span>
-                        <span style="font-size: 0.66rem; color: #10b981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.08rem 0.4rem; border-radius: 4px;">Encrypted</span>
-                      </span>
-                      <span id="twilio-accordion-toggle-lbl" style="font-size: 0.72rem; color: #38bdf8;">View Credentials ▾</span>
-                    </summary>
-                    <div style="padding: 0.75rem 0.85rem 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.25);">
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; opacity: 0.75;">
-                        <div class="form-group">
-                          <label style="font-size: 0.72rem; color: var(--text-muted);">Twilio Account SID</label>
-                          <input type="password" id="twilio-account-sid" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.35rem 0.55rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(4px); user-select: none;" title="Encrypted Platform Twilio Account SID">
-                        </div>
-                        <div class="form-group">
-                          <label style="font-size: 0.72rem; color: var(--text-muted);">Twilio Auth Token</label>
-                          <input type="password" id="twilio-auth-token" value="" readonly disabled style="font-family: monospace; font-size: 0.8rem; padding: 0.35rem 0.55rem; background: rgba(0,0,0,0.3); color: #94a3b8; cursor: not-allowed; border-color: rgba(255,255,255,0.1); filter: blur(0.4px);">
-                        </div>
-                      </div>
-
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.55rem; align-items: flex-end;">
-                        <div class="form-group">
-                          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
-                            <span>Twilio Sender Phone Number (SMS-Enabled)</span>
-                            <span style="font-size: 0.68rem; color: #10b981; font-weight: 600;">🔒 Platform Locked</span>
-                          </label>
-                          <div style="position: relative; display: flex; align-items: center;">
-                            <input type="text" id="twilio-from-phone" value="+1 (•••) •••-7464" readonly disabled style="font-family: monospace; font-size: 0.82rem; padding: 0.35rem 1.8rem 0.35rem 0.55rem; background: rgba(0,0,0,0.35); color: #10b981; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); cursor: not-allowed; user-select: none; width: 100%; letter-spacing: 0.05em; filter: blur(0.7px);" title="Platform-Managed Twilio Registered Sender Phone (Only last 4 digits displayed for security)">
-                            <span style="position: absolute; right: 8px; font-size: 0.75rem; color: #10b981; pointer-events: none;" title="Protected & Encrypted">🔒</span>
-                          </div>
-                        </div>
-                        <div class="form-group">
-                          <button type="button" id="btn-send-test-sms" class="btn btn-secondary btn-sm" onclick="sendTestSmsUI()" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.45rem; font-weight: 700; font-size: 0.78rem; background: rgba(16, 185, 129, 0.1);">
-                            ⚡ Send Test SMS to Business Phone
-                          </button>
-                        </div>
-                      </div>
+                  <!-- Central Gateway Status & Test SMS Dispatch -->
+                  <div style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.45rem;">
+                      <span style="color: #10b981;">🔒</span>
+                      <span>Encrypted Platform SMS Dispatch Active</span>
                     </div>
-                  </details>
+                    <div>
+                      <input type="hidden" id="twilio-account-sid" value="">
+                      <input type="hidden" id="twilio-auth-token" value="">
+                      <input type="hidden" id="twilio-from-phone" value="+1 (555) 000-7464">
+                      <button type="button" id="btn-send-test-sms" class="btn btn-secondary btn-sm" onclick="sendTestSmsUI()" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.4rem 0.85rem; font-weight: 700; font-size: 0.78rem; background: rgba(16, 185, 129, 0.1);">
+                        ⚡ Send Test SMS to Business Phone
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- SECTION 2: Message Template Editor -->
@@ -1065,7 +1029,7 @@
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="openSmsLogsModal()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">📋 Dispatch Log</button>
-                  <button type="button" class="btn btn-accent btn-sm" onclick="openTopUpModal()" style="font-size: 0.75rem; padding: 0.35rem 0.85rem; font-weight: 700;">⚡ + Buy Top-Up Pack</button>
+                  <button type="button" id="btn-owner-buy-topup" class="btn btn-accent btn-sm hidden" onclick="openTopUpModal()" style="display: none !important; font-size: 0.75rem; padding: 0.35rem 0.85rem; font-weight: 700;">⚡ + Buy Top-Up Pack</button>
                 </div>
               </div>
 
@@ -1145,8 +1109,7 @@
 
         <!-- Persistent Save & Sync Action Footer -->
         <div class="card-footer" style="padding: 1.1rem 1.5rem; background: rgba(15, 23, 42, 0.4); border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-          <div style="font-size: 0.85rem; color: var(--text-subtle); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <span>🌐</span> <span>Queue data is synchronized live across all devices & Firestore.</span>
+          <div>
             <span id="owner-save-status" style="display: none; align-items: center; gap: 0.4rem; padding: 4px 10px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #10b981;"></span>
           </div>
           <button id="btn-save-owner-settings" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 0.95rem; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; gap: 0.5rem;" onclick="saveOwnerSettings()">
@@ -1162,7 +1125,7 @@
       </div>
 
       <!-- Business Owner Retention & Privacy Notice Banner -->
-      <div id="owner-retention-banner" class="retention-tier-banner starter" style="display: none;"></div>
+      <div id="owner-retention-banner" class="retention-tier-banner starter hidden" style="display: none !important;"></div>
 
       <div class="history-toolbar">
         <div class="history-filter-group">
@@ -2224,8 +2187,8 @@ Dedicated Support Manager
       </div>
       <div class="modal-body">
         
-        <!-- Auth Role Switcher Tabs (Business Owner vs Front Desk Staff - Hidden during Registration) -->
-        <div id="auth-role-tabs-container" style="display: flex; padding: 4px; border-radius: 10px; margin-bottom: 1.25rem;">
+        <!-- Auth Role Switcher Tabs (Business Owner vs Front Desk Staff - Strictly Hidden during Registration) -->
+        <div id="auth-role-tabs-container" class="auth-role-tabs-container">
           <button type="button" id="auth-tab-owner" class="btn-text active" onclick="switchAuthTab('owner')" style="flex: 1; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; text-align: center;">
             💈 Business Owner / Admin
           </button>
@@ -3282,6 +3245,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=5.7"></script>
+  <script src="app.js?v=5.9"></script>
 </body>
 </html>

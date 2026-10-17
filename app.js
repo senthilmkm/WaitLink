@@ -281,6 +281,33 @@ function isEnterpriseTier() {
   return isEnterprise || isSuper;
 }
 
+// Helper to detect if viewing demo sandbox or guest user
+function isDemoScreenOrGuestDemo() {
+  const isGuest = !state.user || !state.user.email;
+  const slug = (state.config && state.config.slug) ? String(state.config.slug).toLowerCase().trim() : "";
+  const name = (state.config && state.config.shopName) ? String(state.config.shopName).toLowerCase().trim() : "";
+  const isDemoShop = !slug || slug === "main-st-barbers" || slug.includes("demo") || name.includes("main st") || !!state.isDemoMode;
+
+  let isUrlDemo = false;
+  if (typeof window !== "undefined" && window.location && window.location.search) {
+    const params = new URLSearchParams(window.location.search);
+    const shopP = (params.get("shop") || params.get("s") || "").toLowerCase().trim();
+    if (shopP === "main-st-barbers" || !shopP) {
+      isUrlDemo = true;
+    }
+  }
+
+  let isDemoBannerActive = false;
+  if (typeof document !== "undefined") {
+    const demoBanner = document.getElementById("demo-mode-banner");
+    if (demoBanner && !demoBanner.classList.contains("hidden")) {
+      isDemoBannerActive = true;
+    }
+  }
+
+  return isGuest || isDemoShop || isUrlDemo || isDemoBannerActive;
+}
+
 // Step 3: Retention & Privacy Helpers
 function getRetentionWindowDays(planInfo = null) {
   const info = planInfo || getActivePlanInfo();
@@ -760,19 +787,41 @@ function renderSmsWalletUI(usage = state.smsUsage || {}) {
     statTotal.style.color = totalAvailable <= 0 ? "#ef4444" : (totalAvailable < 50 ? "#f59e0b" : "#10b981");
   }
 
-  // Front Desk Zero-Disruption Warning Banner
+  // Front Desk Zero-Disruption Warning Banner (Never shown in demo mode or on demo shop or for guests)
   const deskBanner = document.getElementById("desk-sms-exhausted-banner");
   if (deskBanner) {
     const isPaid = isPaidTier();
-    if (isPaid && totalAvailable <= 0) {
+    const isDemo = isDemoScreenOrGuestDemo();
+    const isAuth = !!(state.user && state.user.email);
+    if (isAuth && !isDemo && isPaid && totalAvailable <= 0) {
       deskBanner.classList.remove("hidden");
+      deskBanner.style.display = "";
     } else {
       deskBanner.classList.add("hidden");
+      deskBanner.style.setProperty("display", "none", "important");
+    }
+  }
+
+  // Owner SMS Top-Up Action Button in Settings (Never shown in demo mode or on demo shop or for guests)
+  const ownerBuyTopUpBtn = document.getElementById("btn-owner-buy-topup");
+  if (ownerBuyTopUpBtn) {
+    const isAuth = !!(state.user && state.user.email);
+    if (!isAuth || isDemoScreenOrGuestDemo()) {
+      ownerBuyTopUpBtn.classList.add("hidden");
+      ownerBuyTopUpBtn.style.display = "none";
+      ownerBuyTopUpBtn.style.setProperty("display", "none", "important");
+    } else {
+      ownerBuyTopUpBtn.classList.remove("hidden");
+      ownerBuyTopUpBtn.style.display = "";
     }
   }
 }
 
 function openTopUpModal() {
+  if (isDemoScreenOrGuestDemo()) {
+    showToast("ℹ️ Top-Up Packs are only available for live registered shops. Main St Barbers is a demo sandbox.");
+    return;
+  }
   const modal = document.getElementById("modal-sms-topup");
   if (modal) modal.classList.remove("hidden");
 }
@@ -2386,7 +2435,7 @@ function renderAll() {
   if (deskSubtitle) {
     deskSubtitle.textContent = isClinical 
       ? "Clinical Reception Desk • Confidential Patient Intake & Call"
-      : "Desk Control Panel • 1-Tap Check In & Call";
+      : "Live Front Desk Queue";
   }
   const deskIcon = document.getElementById("desk-checkin-icon");
   if (deskIcon) {
@@ -2410,6 +2459,7 @@ function renderAll() {
   renderOwnerMetrics();
   renderShopDropdown();
   renderSubscriptionBadges();
+  renderSmsWalletUI();
   populateOwnerServicesUI();
 }
 
@@ -2556,14 +2606,16 @@ function renderSubscriptionBadges() {
   const planTitle = isAuthenticated ? rawTitle : "Starter Tier (Free)";
   const isSubscribed = isAuthenticated && (planPrice > 0 || planTitle.includes("Pro") || planTitle.includes("Enterprise"));
 
-  // 1. Home View Subscription Banner (ONLY shown for active paid subscribers)
+  // 1. Home View Subscription Banner (ONLY shown for active paid subscribers on non-demo shops)
   const homeBanner = document.getElementById("home-active-subscription-banner");
   const homeTitle = document.getElementById("home-tier-title");
   const homeIcon = document.getElementById("home-tier-icon");
+  const isDemo = isDemoScreenOrGuestDemo();
 
   if (homeBanner) {
-    if (isSubscribed) {
+    if (isSubscribed && !isDemo) {
       homeBanner.classList.remove("hidden");
+      homeBanner.style.display = "";
       if (homeTitle) {
         homeTitle.textContent = `${planTitle} ($${planPrice}/mo)`;
       }
@@ -2572,13 +2624,14 @@ function renderSubscriptionBadges() {
       }
     } else {
       homeBanner.classList.add("hidden");
+      homeBanner.style.display = "none";
     }
   }
 
-  // 2. Main Header & Mobile Drawer Upgrade Buttons (Strictly visible only for authenticated owners on the Starter tier; hidden for staff, guests and paid subscribers)
+  // 2. Main Header & Mobile Drawer Upgrade Buttons (Strictly visible only for authenticated owners on the Starter tier; hidden for demo mode, demo shop, staff, guests and paid subscribers)
   const headerBtn = document.getElementById("header-upgrade-btn");
   const mobileUpgradeBtn = document.getElementById("mobile-upgrade-btn");
-  const showUpgradeBtn = isAuthenticated && !isSubscribed && !state.isStaffSession;
+  const showUpgradeBtn = isAuthenticated && !isSubscribed && !state.isStaffSession && !isDemo;
 
   if (headerBtn) {
     if (showUpgradeBtn) {
@@ -2647,41 +2700,52 @@ function renderSubscriptionBadges() {
   // 3.5 Owner Dashboard Metric Card Plan Action Button (Dynamic Upgrade vs Manage)
   const ownerPlanBtn = document.getElementById("owner-metric-plan-btn");
   if (ownerPlanBtn) {
-    if (planPrice >= 49 || planTitle.includes("Enterprise")) {
+    if (!isAuthenticated || isDemo) {
+      ownerPlanBtn.classList.add("hidden");
+      ownerPlanBtn.style.setProperty("display", "none", "important");
+    } else if (planPrice >= 49 || planTitle.includes("Enterprise")) {
+      ownerPlanBtn.classList.remove("hidden");
+      ownerPlanBtn.style.display = "";
       ownerPlanBtn.textContent = "Manage Plan ⚙️";
       ownerPlanBtn.style.color = "#6366f1";
       ownerPlanBtn.style.borderColor = "rgba(99, 102, 241, 0.4)";
     } else if (planPrice >= 15 || planTitle.includes("Pro")) {
+      ownerPlanBtn.classList.remove("hidden");
+      ownerPlanBtn.style.display = "";
       ownerPlanBtn.textContent = "Manage Plan ⚙️";
       ownerPlanBtn.style.color = "#06b6d4";
       ownerPlanBtn.style.borderColor = "rgba(6, 182, 212, 0.4)";
     } else {
+      ownerPlanBtn.classList.remove("hidden");
+      ownerPlanBtn.style.display = "";
       ownerPlanBtn.textContent = "⚡ Upgrade";
       ownerPlanBtn.style.color = "#10b981";
       ownerPlanBtn.style.borderColor = "rgba(16, 185, 129, 0.4)";
     }
   }
 
-  // 4. Starter Upgrade Callout Banner on Owner Dashboard
+  // 4. Starter Upgrade Callout Banner on Owner Dashboard (Strictly shown only for authenticated owners on live non-demo shops)
   const isPaid = isPaidTier();
   const ownerUpgradeCallout = document.getElementById("owner-starter-upgrade-callout");
   if (ownerUpgradeCallout) {
-    if (!isPaid && !state.isStaffSession) {
+    if (isAuthenticated && !isPaid && !state.isStaffSession && !isDemo) {
       ownerUpgradeCallout.classList.remove("hidden");
+      ownerUpgradeCallout.style.setProperty("display", "flex", "important");
     } else {
       ownerUpgradeCallout.classList.add("hidden");
+      ownerUpgradeCallout.style.setProperty("display", "none", "important");
     }
   }
 
-  // 5. CSV Pro Badges
+  // 5. CSV Pro Badges (Only shown for authenticated starter owners on live shops)
   const deskCsvBadge = document.getElementById("desk-csv-pro-badge");
   const ownerCsvBadge = document.getElementById("owner-csv-pro-badge");
   if (deskCsvBadge) {
-    if (!isPaid) deskCsvBadge.classList.remove("hidden");
+    if (isAuthenticated && !isPaid && !isDemo) deskCsvBadge.classList.remove("hidden");
     else deskCsvBadge.classList.add("hidden");
   }
   if (ownerCsvBadge) {
-    if (!isPaid) ownerCsvBadge.classList.remove("hidden");
+    if (isAuthenticated && !isPaid && !isDemo) ownerCsvBadge.classList.remove("hidden");
     else ownerCsvBadge.classList.add("hidden");
   }
 
@@ -2692,6 +2756,8 @@ function renderSubscriptionBadges() {
 // Complete Paywall Feature Lockdown (Fields, Controls, File Pickers & Banners)
 function updateTierFeatureLockdown() {
   const isPaid = isPaidTier();
+  const isDemo = isDemoScreenOrGuestDemo();
+  const isAuthenticated = !!(state.user && state.user.email);
 
   // 1. Promotional Offer Card & Controls
   const promoCard = document.getElementById("owner-promo-card");
@@ -2704,7 +2770,15 @@ function updateTierFeatureLockdown() {
   if (promoCard) {
     if (!isPaid) {
       promoCard.classList.add("locked");
-      if (promoBanner) promoBanner.classList.remove("hidden");
+      if (promoBanner) {
+        if (isDemo || !isAuthenticated) {
+          promoBanner.classList.add("hidden");
+          promoBanner.style.setProperty("display", "none", "important");
+        } else {
+          promoBanner.classList.remove("hidden");
+          promoBanner.style.display = "";
+        }
+      }
       if (promoBadge) {
         promoBadge.className = "badge-pro-pill locked";
         promoBadge.textContent = "🔒 PRO";
@@ -2730,7 +2804,10 @@ function updateTierFeatureLockdown() {
       promoCard.style.cursor = "pointer";
     } else {
       promoCard.classList.remove("locked");
-      if (promoBanner) promoBanner.classList.add("hidden");
+      if (promoBanner) {
+        promoBanner.classList.add("hidden");
+        promoBanner.style.display = "none";
+      }
       if (promoBadge) {
         promoBadge.className = "badge-pro-pill unlocked";
         promoBadge.textContent = "✓ UNLOCKED";
@@ -2765,7 +2842,15 @@ function updateTierFeatureLockdown() {
   if (logoCard) {
     if (!isPaid) {
       logoCard.classList.add("locked");
-      if (logoBanner) logoBanner.classList.remove("hidden");
+      if (logoBanner) {
+        if (isDemo || !isAuthenticated) {
+          logoBanner.classList.add("hidden");
+          logoBanner.style.setProperty("display", "none", "important");
+        } else {
+          logoBanner.classList.remove("hidden");
+          logoBanner.style.display = "";
+        }
+      }
       if (logoBadge) {
         logoBadge.className = "badge-pro-pill locked";
         logoBadge.textContent = "🔒 PRO";
@@ -2790,7 +2875,10 @@ function updateTierFeatureLockdown() {
       logoCard.style.cursor = "pointer";
     } else {
       logoCard.classList.remove("locked");
-      if (logoBanner) logoBanner.classList.add("hidden");
+      if (logoBanner) {
+        logoBanner.classList.add("hidden");
+        logoBanner.style.display = "none";
+      }
       if (logoBadge) {
         logoBadge.className = "badge-pro-pill unlocked";
         logoBadge.textContent = "✓ UNLOCKED";
@@ -2825,7 +2913,15 @@ function updateTierFeatureLockdown() {
   if (twilioCard) {
     if (!isPaid) {
       twilioCard.classList.add("locked");
-      if (twilioBanner) twilioBanner.classList.remove("hidden");
+      if (twilioBanner) {
+        if (isDemo || !isAuthenticated) {
+          twilioBanner.classList.add("hidden");
+          twilioBanner.style.setProperty("display", "none", "important");
+        } else {
+          twilioBanner.classList.remove("hidden");
+          twilioBanner.style.display = "";
+        }
+      }
       if (twilioBadge) {
         twilioBadge.className = "badge-pro-pill locked";
         twilioBadge.textContent = "🔒 PRO";
@@ -2853,7 +2949,10 @@ function updateTierFeatureLockdown() {
       twilioCard.style.cursor = "pointer";
     } else {
       twilioCard.classList.remove("locked");
-      if (twilioBanner) twilioBanner.classList.add("hidden");
+      if (twilioBanner) {
+        twilioBanner.classList.add("hidden");
+        twilioBanner.style.display = "none";
+      }
       if (twilioBadge) {
         twilioBadge.className = "badge-pro-pill unlocked";
         twilioBadge.textContent = "✓ UNLOCKED";
@@ -4156,14 +4255,35 @@ function updateRetentionNotices() {
   const ownerCsvBadge = document.getElementById("owner-csv-pro-badge");
   const cfg = state.retentionConfig || DEFAULT_RETENTION_CONFIG;
 
+  const isAuth = !!(state.user && state.user.email);
+  const isDemo = isDemoScreenOrGuestDemo();
+  const isOwnerOrAdmin = isAuth && !state.isStaffSession && (state.userRole === "ShopOwner" || state.userRole === "SuperAdmin");
+
+  // STRICT REQUIREMENT: If not authenticated, in demo sandbox, or a staff session, NEVER show retention/upgrade banners
+  if (!isAuth || isDemo || state.isStaffSession) {
+    if (deskBanner) {
+      deskBanner.style.setProperty("display", "none", "important");
+      deskBanner.classList.add("hidden");
+      deskBanner.innerHTML = "";
+    }
+    if (ownerBanner) {
+      ownerBanner.style.setProperty("display", "none", "important");
+      ownerBanner.classList.add("hidden");
+      ownerBanner.innerHTML = "";
+    }
+    if (deskCsvBadge) deskCsvBadge.classList.add("hidden");
+    if (ownerCsvBadge) ownerCsvBadge.classList.add("hidden");
+    return;
+  }
+
   const starterDays = cfg.starter_retention_days || 7;
   const proDays = cfg.pro_retention_days || 90;
   const enterpriseDays = cfg.enterprise_retention_days || 365;
   const piiDays = cfg.pii_mask_after_days || 30;
 
-  // 1. CSV Button Badges
-  if (planInfo.isStarter) {
-    if (deskCsvBadge) deskCsvBadge.classList.remove("hidden");
+  // 1. CSV Button Badges (Only shown on live shop for authenticated owner on Starter plan)
+  if (planInfo.isStarter && isOwnerOrAdmin) {
+    if (deskCsvBadge) deskCsvBadge.classList.add("hidden");
     if (ownerCsvBadge) ownerCsvBadge.classList.remove("hidden");
   } else {
     if (deskCsvBadge) deskCsvBadge.classList.add("hidden");
@@ -4211,19 +4331,32 @@ function updateRetentionNotices() {
     `;
   }
 
+  // Front Desk operator view never displays upgrade marketing banners
   if (deskBanner) {
-    if (state.isStaffSession) {
-      deskBanner.style.display = "none";
+    if (state.isStaffSession || isDemo || planInfo.isStarter || !isAuth) {
+      deskBanner.style.setProperty("display", "none", "important");
+      deskBanner.classList.add("hidden");
+      deskBanner.innerHTML = "";
     } else {
       deskBanner.className = bannerClass;
       deskBanner.innerHTML = bannerHtml;
+      deskBanner.classList.remove("hidden");
       deskBanner.style.display = "flex";
     }
   }
+
+  // Owner History view only displays retention notice for authenticated shop owners on live shop
   if (ownerBanner) {
-    ownerBanner.className = bannerClass;
-    ownerBanner.innerHTML = bannerHtml;
-    ownerBanner.style.display = "flex";
+    if (!isAuth || isDemo || state.isStaffSession || !isOwnerOrAdmin) {
+      ownerBanner.style.setProperty("display", "none", "important");
+      ownerBanner.classList.add("hidden");
+      ownerBanner.innerHTML = "";
+    } else {
+      ownerBanner.className = bannerClass;
+      ownerBanner.innerHTML = bannerHtml;
+      ownerBanner.classList.remove("hidden");
+      ownerBanner.style.display = "flex";
+    }
   }
 }
 
@@ -5004,10 +5137,36 @@ function launchDemoMode() {
   }
 
   // Update browser URL query string to match demo
-  try {
-    const newUrl = `${window.location.pathname}?shop=main-st-barbers`;
-    window.history.pushState({ shop: "main-st-barbers" }, "", newUrl);
-  } catch (e) {}
+  // Strictly hide retention and upgrade callouts in demo sandbox
+  document.body.classList.remove("user-authenticated");
+  document.body.classList.add("guest-mode");
+  document.body.classList.add("demo-mode");
+  document.body.setAttribute("data-shop", "main-st-barbers");
+  document.body.setAttribute("data-demo", "true");
+
+  const deskRetBanner = document.getElementById("desk-retention-banner");
+  if (deskRetBanner) {
+    deskRetBanner.classList.add("hidden");
+    deskRetBanner.innerHTML = "";
+    deskRetBanner.style.setProperty("display", "none", "important");
+  }
+  const ownerRetBanner = document.getElementById("owner-retention-banner");
+  if (ownerRetBanner) {
+    ownerRetBanner.classList.add("hidden");
+    ownerRetBanner.innerHTML = "";
+    ownerRetBanner.style.setProperty("display", "none", "important");
+  }
+  const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
+  if (ownerStarterCallout) {
+    ownerStarterCallout.classList.add("hidden");
+    ownerStarterCallout.style.setProperty("display", "none", "important");
+  }
+  const ownerTopUp = document.getElementById("btn-owner-buy-topup");
+  if (ownerTopUp) {
+    ownerTopUp.classList.add("hidden");
+    ownerTopUp.style.display = "none";
+    ownerTopUp.style.setProperty("display", "none", "important");
+  }
 
   renderAll();
   generateQRCode();
@@ -5711,6 +5870,9 @@ function applyUserRole(user) {
   // 1. FRONT DESK STAFF OPERATOR MODE TAKES ABSOLUTE PRECEDENCE ON THIS TERMINAL
   if (state.isStaffSession && state.staffUser) {
     state.userRole = "FrontDeskStaff";
+    document.body.classList.add("user-authenticated");
+    document.body.classList.remove("guest-mode");
+    document.body.classList.remove("demo-mode");
     if (shopChipContainer) shopChipContainer.classList.remove("hidden");
     if (deskTab) deskTab.classList.remove("hidden");
     if (ownerTab) ownerTab.classList.add("hidden");
@@ -5768,9 +5930,20 @@ function applyUserRole(user) {
     const mobileUpgradeBtn = document.getElementById("mobile-upgrade-btn");
     if (mobileUpgradeBtn) mobileUpgradeBtn.style.display = "none";
     const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
-    if (ownerStarterCallout) ownerStarterCallout.classList.add("hidden");
+    if (ownerStarterCallout) {
+      ownerStarterCallout.classList.add("hidden");
+      ownerStarterCallout.style.setProperty("display", "none", "important");
+    }
     const deskRetBanner = document.getElementById("desk-retention-banner");
-    if (deskRetBanner) deskRetBanner.style.display = "none";
+    if (deskRetBanner) {
+      deskRetBanner.classList.add("hidden");
+      deskRetBanner.style.setProperty("display", "none", "important");
+    }
+    const ownerTopUp = document.getElementById("btn-owner-buy-topup");
+    if (ownerTopUp) {
+      ownerTopUp.classList.add("hidden");
+      ownerTopUp.style.setProperty("display", "none", "important");
+    }
 
     const sectionOwnerDir = document.getElementById("section-owner-directory");
     if (sectionOwnerDir) sectionOwnerDir.classList.add("hidden");
@@ -5790,6 +5963,9 @@ function applyUserRole(user) {
     const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
     state.userRole = isSuper ? "SuperAdmin" : "ShopOwner";
     state.isDemoMode = false;
+    document.body.classList.add("user-authenticated");
+    document.body.classList.remove("guest-mode");
+    document.body.classList.remove("demo-mode");
 
     // Explicitly hide demo banner for any authenticated user
     const demoBanner = document.getElementById("demo-mode-banner");
@@ -5952,8 +6128,25 @@ function applyUserRole(user) {
     if (mobileItemAuthAction) { mobileItemAuthAction.style.color = ""; mobileItemAuthAction.style.fontWeight = ""; }
     const deskLogoutBtn = document.getElementById("desk-staff-logout-btn");
     if (deskLogoutBtn) deskLogoutBtn.style.display = "none";
+
+    const deskRetBanner = document.getElementById("desk-retention-banner");
+    if (deskRetBanner) {
+      deskRetBanner.classList.add("hidden");
+      deskRetBanner.style.setProperty("display", "none", "important");
+    }
+    const ownerRetBanner = document.getElementById("owner-retention-banner");
+    if (ownerRetBanner) {
+      ownerRetBanner.classList.add("hidden");
+      ownerRetBanner.style.setProperty("display", "none", "important");
+    }
+    const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
+    if (ownerStarterCallout) ownerStarterCallout.classList.add("hidden");
   } else {
     state.userRole = "Guest";
+    document.body.classList.remove("user-authenticated");
+    document.body.classList.add("guest-mode");
+    document.body.classList.add("demo-mode");
+
     if (shopChipContainer) shopChipContainer.classList.add("hidden");
     if (deskTab) deskTab.classList.add("hidden");
     if (ownerTab) ownerTab.classList.add("hidden");
@@ -5992,6 +6185,37 @@ function applyUserRole(user) {
     if (mobileItemAuthAction) { mobileItemAuthAction.style.color = ""; mobileItemAuthAction.style.fontWeight = ""; }
     const deskLogoutBtn = document.getElementById("desk-staff-logout-btn");
     if (deskLogoutBtn) deskLogoutBtn.style.display = "none";
+
+    const deskRetBanner = document.getElementById("desk-retention-banner");
+    if (deskRetBanner) {
+      deskRetBanner.classList.add("hidden");
+      deskRetBanner.style.setProperty("display", "none", "important");
+    }
+    const ownerRetBanner = document.getElementById("owner-retention-banner");
+    if (ownerRetBanner) {
+      ownerRetBanner.classList.add("hidden");
+      ownerRetBanner.style.setProperty("display", "none", "important");
+    }
+    const ownerStarterCallout = document.getElementById("owner-starter-upgrade-callout");
+    if (ownerStarterCallout) {
+      ownerStarterCallout.classList.add("hidden");
+      ownerStarterCallout.style.setProperty("display", "none", "important");
+    }
+    const ownerTopUp = document.getElementById("btn-owner-buy-topup");
+    if (ownerTopUp) {
+      ownerTopUp.classList.add("hidden");
+      ownerTopUp.style.setProperty("display", "none", "important");
+    }
+    const ownerPlanBtn = document.getElementById("owner-metric-plan-btn");
+    if (ownerPlanBtn) {
+      ownerPlanBtn.classList.add("hidden");
+      ownerPlanBtn.style.setProperty("display", "none", "important");
+    }
+    const deskSmsBanner = document.getElementById("desk-sms-exhausted-banner");
+    if (deskSmsBanner) {
+      deskSmsBanner.classList.add("hidden");
+      deskSmsBanner.style.setProperty("display", "none", "important");
+    }
   }
 
   // Keep Create Shop button visibility in sync with authenticated user role and shop count
@@ -6007,7 +6231,7 @@ function handleAuthButtonClick(event) {
   }
 }
 
-function handleSignOut(e) {
+async function handleSignOut(e) {
   if (e) {
     if (e.preventDefault) e.preventDefault();
     if (e.stopPropagation) e.stopPropagation();
@@ -6019,41 +6243,101 @@ function handleSignOut(e) {
     try { unsubscribeSnapshot(); } catch (err) {}
     unsubscribeSnapshot = null;
   }
+  if (typeof smsUsageUnsubscribe === "function") {
+    try { smsUsageUnsubscribe(); } catch (err) {}
+    smsUsageUnsubscribe = null;
+  }
+  if (typeof pricingConfigUnsubscribe === "function") {
+    try { pricingConfigUnsubscribe(); } catch (err) {}
+    pricingConfigUnsubscribe = null;
+  }
+  if (typeof retentionConfigUnsubscribe === "function") {
+    try { retentionConfigUnsubscribe(); } catch (err) {}
+    retentionConfigUnsubscribe = null;
+  }
 
-  // 2. Clear state variables
+  // 2. Clear state variables & in-memory sensitive data
   state.user = null;
   state.userRole = "Guest";
+  state.isStaffSession = false;
+  state.staffUser = null;
   state.registeredShops = [];
   state.myShops = [{ slug: "main-st-barbers", shopName: "Main St Barbers" }];
-  state.config.planTitle = "Starter Tier (Free)";
-  state.config.planPrice = 0;
+  state.ownerDirectoryShops = null;
+  state.staffRolesList = null;
+  state.queue = [];
+  state.history = [];
+  _lastOwnerDirFetchTime = 0;
+  _lastStaffRolesFetchTime = 0;
 
-  // 3. Clear all cached storage data
+  // 3. Clear all cached storage data & remove all user/shop tokens
   try {
-    localStorage.removeItem("waitlink_my_shops");
-    localStorage.removeItem("waitlink_config");
-    localStorage.removeItem("waitlink_pricing_tiers");
-    localStorage.removeItem("waitlink_sound_enabled");
     sessionStorage.clear();
-  } catch (err) {}
 
-  // 4. Clean URL parameters (remove ?payment=..., ?tier=..., ?s=... on logout)
+    // Purge specific sensitive keys
+    const sensitiveKeys = [
+      "waitlink_my_shops",
+      "waitlink_config",
+      "waitlink_pricing_tiers",
+      "waitlink_pricing_audits",
+      "waitlink_contact_messages",
+      "waitlink_retention_config",
+      "waitlink_registered_shops",
+      "waitlink_last_shop_slug",
+      "waitlink_staff_session",
+      "waitlink_sound_enabled",
+      "waitlink_queue",
+      "waitlink_history"
+    ];
+    sensitiveKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+
+    // Dynamic sweep: remove any shop queues, histories, or user-specific cached slugs
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        if (
+          key.startsWith("waitlink_owned_slugs_") ||
+          (key.startsWith("waitlink_queue_") && key !== "waitlink_queue_main-st-barbers") ||
+          (key.startsWith("waitlink_history_") && key !== "waitlink_history_main-st-barbers") ||
+          key.startsWith("firebase:authUser:")
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    keysToRemove.forEach(k => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+  } catch (err) {
+    console.warn("Storage purge notice:", err);
+  }
+
+  // 4. Clean URL parameters (remove ?payment=..., ?tier=..., ?s=..., ?shop=... on logout)
   if (window.history && window.history.replaceState) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
-  // 5. Sign out Firebase Auth
+  // 5. Sign out Firebase Auth on server & client
   try {
     if (window.firebase && firebase.apps && firebase.apps.length > 0 && firebase.auth) {
       if (firebase.auth().currentUser) {
-        firebase.auth().signOut().catch(() => {});
+        await firebase.auth().signOut().catch(() => {});
       }
     }
   } catch (err) {
     console.warn("Firebase signout error handled:", err);
   }
 
-  // 6. Reset active shop to default demo sandbox mode for logged out guests
+  // 6. Clear all sensitive input fields in the DOM
+  try {
+    const sensitiveInputs = document.querySelectorAll('input[type="password"], input[type="email"], #auth-email, #auth-password, #staff-login-pin, #staff-login-username');
+    sensitiveInputs.forEach(inp => { if (inp) inp.value = ""; });
+  } catch (err) {}
+
+  // 7. Reset active shop to default demo sandbox mode for logged out guests
   launchDemoMode();
   applyUserRole(null);
   renderShopDropdown();
@@ -6194,9 +6478,19 @@ function setAuthMode(registerMode) {
   if (passwordGroup) passwordGroup.style.display = "";
   if (passwordInput) passwordInput.required = true;
 
+  const authModalEl = document.getElementById("auth-modal");
+
   if (isRegistering) {
-    // Only Business Owners / Admins can register a new shop; hide role switcher tabs in registration mode
+    // Only Business Owners / Admins can register a new shop; strictly hide role switcher tabs in registration mode
+    if (authModalEl) {
+      authModalEl.classList.add("auth-mode-register");
+      authModalEl.setAttribute("data-auth-mode", "register");
+    }
     if (roleTabs) roleTabs.style.display = "none";
+    if (roleTabs) {
+      roleTabs.classList.add("hidden");
+      roleTabs.style.setProperty("display", "none", "important");
+    }
     if (typeof switchAuthTab === "function") switchAuthTab("owner");
     if (title) title.textContent = "🚀 Register New Shop Account";
     if (submitBtn) submitBtn.textContent = "Create Account & Set Up Shop";
@@ -6217,7 +6511,15 @@ function setAuthMode(registerMode) {
     if (forgotBtn) forgotBtn.style.display = "none";
   } else {
     // Restore role switcher tabs for regular Sign In mode
+    if (authModalEl) {
+      authModalEl.classList.remove("auth-mode-register");
+      authModalEl.setAttribute("data-auth-mode", "signin");
+    }
     if (roleTabs) roleTabs.style.display = "flex";
+    if (roleTabs) {
+      roleTabs.classList.remove("hidden");
+      roleTabs.style.setProperty("display", "flex", "important");
+    }
     if (title) title.textContent = "🔑 Sign In to WaitLink";
     if (submitBtn) submitBtn.textContent = "Sign In";
     if (switchHint) {
@@ -7595,13 +7897,13 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
 
       showToast(`🗑️ Shop "${shopName || cleanSlug}" successfully deleted!`);
       if (state.activeView === "owner-directory") {
-        await loadOwnerDirectory();
+        await loadOwnerDirectory(true);
       }
     } catch (err) {
       console.error("Firestore delete shop error:", err);
       showToast(`⚠️ Error deleting shop from cloud: ${err.message || 'Permission denied'}`);
       if (state.activeView === "owner-directory") {
-        await loadOwnerDirectory();
+        await loadOwnerDirectory(true);
       }
       throw err;
     }
@@ -10872,8 +11174,19 @@ function staffSignOut() {
   state.staffUser = null;
   state.userRole = "Guest";
   try {
-    sessionStorage.removeItem("waitlink_staff_session");
+    sessionStorage.clear();
+    const staffPin = document.getElementById("staff-login-pin");
+    const staffUser = document.getElementById("staff-login-username");
+    if (staffPin) staffPin.value = "";
+    if (staffUser) staffUser.value = "";
   } catch (e) {}
+
+  // Reset in-memory queue/history to avoid leaking private tickets if switching to public/demo
+  if (state.config && state.config.slug !== "main-st-barbers") {
+    state.queue = [];
+    state.history = [];
+  }
+
   const deskStaffLogoutBtn = document.getElementById("desk-staff-logout-btn");
   if (deskStaffLogoutBtn) deskStaffLogoutBtn.style.display = "none";
   const deskBanner = document.getElementById("desk-retention-banner");
@@ -10881,7 +11194,8 @@ function staffSignOut() {
   applyUserRole(null);
   updateCreateShopButtonsVisibility();
   renderShopDropdown();
-  switchView("public", false);
+  launchDemoMode();
+  switchView("home", false);
   showToast("👋 Front Desk staff signed out.");
 }
 
@@ -10933,6 +11247,15 @@ async function promptStaffPinSwitch() {
 
 // Auth Switcher Tab between Business Owner and Front Desk Staff
 function switchAuthTab(tab) {
+  const roleTabs = document.getElementById("auth-role-tabs-container");
+  if (isRegistering) {
+    if (roleTabs) {
+      roleTabs.classList.add("hidden");
+      roleTabs.style.setProperty("display", "none", "important");
+    }
+    tab = "owner";
+  }
+
   const ownerTab = document.getElementById("auth-tab-owner");
   const staffTab = document.getElementById("auth-tab-staff");
   const ownerContainer = document.getElementById("auth-owner-container");
@@ -10985,7 +11308,7 @@ function switchAuthTab(tab) {
     if (staffTab) staffTab.classList.remove("active");
     if (ownerContainer) ownerContainer.classList.remove("hidden");
     if (staffContainer) staffContainer.classList.add("hidden");
-    if (authTitle) authTitle.textContent = "🔑 Sign In to WaitLink";
+    if (authTitle && !isRegistering) authTitle.textContent = "🔑 Sign In to WaitLink";
   }
 }
 
@@ -11127,9 +11450,19 @@ function switchOwnerDirTab(tabName) {
   }
 }
 
+// Cache TTL (45 seconds) for Owner Directory & Staff Roles to prevent redundant Firestore reads
+let _lastOwnerDirFetchTime = 0;
+let _lastStaffRolesFetchTime = 0;
+
 // Fetch all shops owned by the logged-in user and populate metrics & table
 async function loadOwnerDirectory(forceRefresh = false) {
   if (!state.user && !isSuperAdmin()) {
+    return;
+  }
+
+  const now = Date.now();
+  if (!forceRefresh && (now - _lastOwnerDirFetchTime < 45000) && state.ownerDirectoryShops && state.ownerDirectoryShops.length > 0) {
+    renderOwnerShopsTable(state.ownerDirectoryShops);
     return;
   }
 
@@ -11223,6 +11556,7 @@ async function loadOwnerDirectory(forceRefresh = false) {
   ownedShops = Array.from(dedupMap.values());
 
   state.ownerDirectoryShops = ownedShops;
+  _lastOwnerDirFetchTime = Date.now();
 
   if (totalShopsEl) totalShopsEl.textContent = ownedShops.length;
   if (tabShopCount) tabShopCount.textContent = ownedShops.length;
@@ -11401,11 +11735,17 @@ function filterOwnerShops(keyword) {
 }
 
 // Load staff roles across all owned shops
-async function loadStaffRoles() {
+async function loadStaffRoles(forceRefresh = false) {
   const container = document.getElementById("owner-staff-list");
   const tabStaffCount = document.getElementById("owner-dir-tab-staff-count");
   const totalStaffEl = document.getElementById("owner-dir-total-staff");
   if (!container) return;
+
+  const now = Date.now();
+  if (!forceRefresh && (now - _lastStaffRolesFetchTime < 45000) && state.staffRolesList && state.staffRolesList.length > 0) {
+    renderStaffCards(state.staffRolesList);
+    return;
+  }
 
   const shops = state.ownerDirectoryShops || [];
   if (shops.length === 0) {
@@ -11457,6 +11797,7 @@ async function loadStaffRoles() {
   }
 
   state.staffRolesList = allStaff;
+  _lastStaffRolesFetchTime = Date.now();
   if (tabStaffCount) tabStaffCount.textContent = allStaff.length;
   if (totalStaffEl) totalStaffEl.textContent = allStaff.length;
 
@@ -11760,7 +12101,7 @@ async function handleSaveStaffRole(event) {
     .then(() => {
       closeStaffRoleModal();
       showToast(`✅ Staff account "${displayName}" saved as ${roleTitle}!`);
-      loadStaffRoles();
+      loadStaffRoles(true);
       if (saveBtn) {
         saveBtn.disabled = false;
         saveBtn.textContent = "💾 Save Staff Account";
@@ -11794,7 +12135,7 @@ async function deleteStaffRole(shopSlug, staffId, staffName) {
   db.collection("shops").doc(shopSlug).collection("staff_roles").doc(staffId).delete()
     .then(() => {
       showToast(`🗑️ Staff role for "${staffName}" removed.`);
-      loadStaffRoles();
+      loadStaffRoles(true);
     })
     .catch(err => {
       console.error("Delete staff role error:", err);

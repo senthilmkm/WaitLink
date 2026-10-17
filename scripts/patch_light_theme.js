@@ -482,6 +482,54 @@ html[data-theme="light"] #auth-role-tabs-container {
   border: 1.5px solid #cbd5e1 !important;
 }
 
+html[data-theme="light"] #auth-modal.auth-mode-register #auth-role-tabs-container,
+html[data-theme="light"] #auth-modal[data-auth-mode="register"] #auth-role-tabs-container,
+html[data-theme="light"] #auth-role-tabs-container.hidden,
+html[data-theme="light"] #owner-starter-upgrade-callout.hidden,
+html[data-theme="light"] #owner-starter-upgrade-callout[style*="display: none"],
+html[data-theme="light"] .upgrade-callout-banner.hidden,
+html[data-theme="light"] #desk-retention-banner.hidden,
+html[data-theme="light"] #owner-retention-banner.hidden,
+html[data-theme="light"] #desk-sms-exhausted-banner.hidden,
+html[data-theme="light"] #btn-owner-buy-topup.hidden,
+html[data-theme="light"] #owner-metric-plan-btn.hidden,
+html[data-theme="light"] body:not(.user-authenticated) #owner-starter-upgrade-callout,
+html[data-theme="light"] body:not(.user-authenticated) #owner-retention-banner,
+html[data-theme="light"] body:not(.user-authenticated) #desk-retention-banner,
+html[data-theme="light"] body:not(.user-authenticated) #desk-sms-exhausted-banner,
+html[data-theme="light"] body:not(.user-authenticated) #btn-owner-buy-topup,
+html[data-theme="light"] body:not(.user-authenticated) #owner-metric-plan-btn,
+html[data-theme="light"] body:not(.user-authenticated) #header-upgrade-btn,
+html[data-theme="light"] body:not(.user-authenticated) #mobile-upgrade-btn,
+html[data-theme="light"] body:not(.user-authenticated) .upgrade-callout-banner,
+html[data-theme="light"] body.demo-mode #owner-starter-upgrade-callout,
+html[data-theme="light"] body.demo-mode #owner-retention-banner,
+html[data-theme="light"] body.demo-mode #desk-retention-banner,
+html[data-theme="light"] body.demo-mode #desk-sms-exhausted-banner,
+html[data-theme="light"] body.demo-mode #btn-owner-buy-topup,
+html[data-theme="light"] body.demo-mode #owner-metric-plan-btn,
+html[data-theme="light"] body.demo-mode #header-upgrade-btn,
+html[data-theme="light"] body.demo-mode #mobile-upgrade-btn,
+html[data-theme="light"] body.demo-mode .upgrade-callout-banner,
+html[data-theme="light"] body.guest-mode #owner-starter-upgrade-callout,
+html[data-theme="light"] body.guest-mode #owner-retention-banner,
+html[data-theme="light"] body.guest-mode #desk-retention-banner,
+html[data-theme="light"] body.guest-mode #desk-sms-exhausted-banner,
+html[data-theme="light"] body.guest-mode #btn-owner-buy-topup,
+html[data-theme="light"] body.guest-mode #owner-metric-plan-btn,
+html[data-theme="light"] body.guest-mode #header-upgrade-btn,
+html[data-theme="light"] body.guest-mode #mobile-upgrade-btn,
+html[data-theme="light"] body.guest-mode .upgrade-callout-banner,
+html[data-theme="light"] [data-shop="main-st-barbers"] #desk-retention-banner,
+html[data-theme="light"] [data-shop="main-st-barbers"] #owner-retention-banner {
+  display: none !important;
+}
+
+html[data-theme="light"] .upgrade-callout-banner {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
+  border: 1.5px solid rgba(6, 182, 212, 0.4) !important;
+}
+
 html[data-theme="light"] #auth-tab-owner,
 html[data-theme="light"] #auth-tab-staff {
   color: #334155 !important;

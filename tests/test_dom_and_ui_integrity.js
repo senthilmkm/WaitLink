@@ -108,6 +108,48 @@ it("auth-modal contains auth-role-tabs-container and app.js hides tabs during re
   assert.ok(appJs.includes('if (roleTabs) roleTabs.style.display = "flex"'), "app.js does not restore roleTabs in sign in mode");
 });
 
+it("auth-modal enforces 4-layer bulletproof registration lockdown (HTML, CSS !important, data-attribute & JS)", () => {
+  assert.ok(css.includes(".auth-mode-register #auth-role-tabs-container"), "style.css missing .auth-mode-register #auth-role-tabs-container rule");
+  assert.ok(css.includes("display: none !important;"), "style.css missing display: none !important rule for registration tabs");
+  assert.ok(appJs.includes('authModalEl.classList.add("auth-mode-register")'), "app.js missing auth-mode-register class on registration");
+  assert.ok(appJs.includes('authModalEl.setAttribute("data-auth-mode", "register")'), "app.js missing data-auth-mode='register'");
+  assert.ok(appJs.includes('tab = "owner";'), "app.js switchAuthTab does not force owner tab during registration");
+});
+
+it("Front Desk view UX is simplified and free of 3D stage/grid toggle clutter", () => {
+  assert.ok(!html.includes('id="view-mode-toggle-group"'), "Front Desk still contains confusing view-mode-toggle-group");
+  assert.ok(!html.includes("3D Stage Mode"), "Front Desk still contains confusing 3D Stage Mode text");
+  assert.ok(html.includes('id="desk-shop-subtitle"'), "Front Desk missing subtitle");
+});
+
+it("Shop Owner Settings UX is decluttered with central SMS gateway and no fake Twilio credentials", () => {
+  assert.ok(!html.includes('id="auth-twilio-sid"'), "Shop Owner settings still exposes obsolete twilio SID input");
+  assert.ok(!html.includes('id="auth-twilio-token"'), "Shop Owner settings still exposes obsolete twilio token input");
+  assert.ok(html.includes("Encrypted Platform SMS Dispatch Active"), "Shop Owner settings missing central SMS status indicator");
+});
+
+it("Firestore directory caching and memory leak listener cleanups are active in app.js", () => {
+  assert.ok(appJs.includes("_lastOwnerDirFetchTime"), "app.js missing _lastOwnerDirFetchTime cache timestamp");
+  assert.ok(appJs.includes("_lastStaffRolesFetchTime"), "app.js missing _lastStaffRolesFetchTime cache timestamp");
+  assert.ok(appJs.includes("smsUsageUnsubscribe = null"), "app.js missing smsUsageUnsubscribe cleanup on sign-out");
+  assert.ok(appJs.includes("pricingConfigUnsubscribe = null"), "app.js missing pricingConfigUnsubscribe cleanup on sign-out");
+  assert.ok(appJs.includes("retentionConfigUnsubscribe = null"), "app.js missing retentionConfigUnsubscribe cleanup on sign-out");
+});
+
+it("Plan upgrade and buy top-up banners are strictly suppressed in demo mode and on demo shop", () => {
+  assert.ok(appJs.includes("isDemoScreenOrGuestDemo()"), "app.js missing isDemoScreenOrGuestDemo helper");
+  assert.ok(appJs.includes("const isDemo = isDemoScreenOrGuestDemo()"), "app.js missing isDemo check in banner rendering");
+  assert.ok(appJs.includes("ownerBuyTopUpBtn.style.display = \"none\""), "app.js does not hide buy topup button in demo mode");
+  assert.ok(appJs.includes("!isDemo && isPaid && totalAvailable <= 0"), "app.js does not guard desk-sms-exhausted-banner from demo mode");
+});
+
+it("handleSignOut and staffSignOut execute comprehensive storage, session, memory and credential purge", () => {
+  assert.ok(appJs.includes("sessionStorage.clear()"), "handleSignOut/staffSignOut missing sessionStorage.clear()");
+  assert.ok(appJs.includes("waitlink_owned_slugs_"), "handleSignOut missing dynamic sweep of user shop keys");
+  assert.ok(appJs.includes("sensitiveInputs.forEach"), "handleSignOut does not clear DOM password/email input fields");
+  assert.ok(appJs.includes("await firebase.auth().signOut()"), "handleSignOut does not properly await server sign out");
+});
+
 // -------------------------------------------------------------------------
 // Tests: Universal Light Mode CSS Rules
 // -------------------------------------------------------------------------
@@ -145,5 +187,58 @@ it("index.html contains synchronized cache buster tags", () => {
   assert.ok(html.includes('src="app.js?v='), "app.js missing cache buster version");
 });
 
+// -------------------------------------------------------------------------
+// Tests: UX Simplification, Auth Tab Lockdown & Firestore Performance
+// -------------------------------------------------------------------------
+console.log("\n--- 5. UX Simplification, Auth Tab Lockdown & Firestore Performance ---");
+
+it("Register modal strictly hides role switcher tabs via CSS and JS guards", () => {
+  assert.ok(css.includes('#auth-modal.auth-mode-register #auth-role-tabs-container'), "Missing CSS selector for auth-mode-register tabs container");
+  assert.ok(appJs.includes('authModalEl.classList.add("auth-mode-register")'), "setAuthMode does not add auth-mode-register class");
+  assert.ok(appJs.includes('authModalEl.setAttribute("data-auth-mode", "register")'), "setAuthMode does not set data-auth-mode attribute");
+  assert.ok(appJs.includes('roleTabs.style.setProperty("display", "none", "important")'), "setAuthMode does not set display none !important");
+});
+
+it("Front desk header and Notifications settings are decluttered of confusing UI elements", () => {
+  assert.ok(!html.includes('id="view-mode-toggle-group"'), "Confusing 3D stage/grid view-mode toggle still present in index.html");
+  assert.ok(!html.includes('id="twilio-gateway-accordion"'), "Confusing Twilio credentials accordion still present in index.html");
+  assert.ok(html.includes("Central SMS Gateway Active"), "Missing Central SMS Gateway Active indicator in notifications pane");
+});
+
+it("Retention and marketing banners are strictly suppressed in demo and front desk starter mode", () => {
+  assert.ok(css.includes('#desk-retention-banner.hidden'), "Missing CSS hiding rule for desk retention banner");
+  assert.ok(appJs.includes('state.isStaffSession || isDemo || planInfo.isStarter'), "updateRetentionNotices does not suppress starter marketing on front desk");
+});
+
+it("handleSignOut cleans up real-time smsUsageUnsubscribe listener to prevent memory leaks", () => {
+  assert.ok(appJs.includes('if (typeof smsUsageUnsubscribe === "function")'), "handleSignOut does not clean up smsUsageUnsubscribe listener");
+});
+
+it("loadOwnerDirectory uses cached directory entries to prevent redundant Firestore subcollection reads", () => {
+  assert.ok(appJs.includes('_lastOwnerDirFetchTime'), "loadOwnerDirectory does not implement _lastOwnerDirFetchTime memory caching");
+  assert.ok(appJs.includes('forceRefresh'), "loadOwnerDirectory does not support forceRefresh bypass");
+});
+
+it("Owner starter upgrade callouts and banners are strictly suppressed in guest, demo, and unauthenticated states", () => {
+  assert.ok(html.includes('id="owner-starter-upgrade-callout" class="hidden upgrade-callout-banner" style="display: none !important;'), "owner-starter-upgrade-callout missing initial hidden and display: none !important inline style");
+  assert.ok(css.includes('body:not(.user-authenticated) #owner-starter-upgrade-callout'), "style.css missing body:not(.user-authenticated) suppression");
+  assert.ok(css.includes('body.demo-mode #owner-starter-upgrade-callout'), "style.css missing body.demo-mode suppression");
+  assert.ok(css.includes('body.guest-mode #owner-starter-upgrade-callout'), "style.css missing body.guest-mode suppression");
+  assert.ok(appJs.includes('document.body.classList.add("user-authenticated")'), "applyUserRole missing user-authenticated body class");
+  assert.ok(appJs.includes('document.body.classList.add("guest-mode")'), "applyUserRole missing guest-mode body class");
+});
+
+it("Feature paywall lockdown banners strictly require authentication before displaying", () => {
+  assert.ok(appJs.includes('if (isDemo || !isAuthenticated)'), "updateTierFeatureLockdown does not gate banners with isDemo || !isAuthenticated");
+});
+
+it("updateRetentionNotices strictly requires authentication and wipes banner innerHTML in unauthenticated/demo states", () => {
+  assert.ok(appJs.includes('if (!isAuth || isDemo || state.isStaffSession)'), "updateRetentionNotices missing early return guard for unauthenticated, demo, or staff sessions");
+  assert.ok(appJs.includes('deskBanner.innerHTML = "";'), "updateRetentionNotices does not clear deskBanner innerHTML on early return");
+  assert.ok(appJs.includes('ownerBanner.innerHTML = "";'), "updateRetentionNotices does not clear ownerBanner innerHTML on early return");
+  assert.ok(html.includes('<body class="guest-mode demo-mode"'), "index.html missing default guest-mode and demo-mode body classes");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
+

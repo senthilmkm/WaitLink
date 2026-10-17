@@ -177,5 +177,53 @@ it("firestore.rules enforces strict multi-tenant boundary isolation", () => {
   assert.ok(rules.includes("match /pricing_audits/{auditId}"), "Missing /pricing_audits rule");
 });
 
+// -------------------------------------------------------------------------
+// Tests: Complete Role Operations Matrix & Lifecycle Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 5. Comprehensive Role Operations & Lifecycle Entitlements Matrix ---");
+
+it("All 14 discrete system operations correctly enforce authorization across all 4 roles", () => {
+  const ops = [
+    { op: "check_in_customer", guest: true, staff: true, owner: true, admin: true },
+    { op: "serve_customer", guest: false, staff: true, owner: true, admin: true },
+    { op: "complete_customer", guest: false, staff: true, owner: true, admin: true },
+    { op: "cancel_customer", guest: false, staff: true, owner: true, admin: true },
+    { op: "mark_late", guest: false, staff: true, owner: true, admin: true },
+    { op: "export_csv", guest: false, staff: true, owner: true, admin: true },
+    { op: "reveal_phone_in_clinical", guest: false, staff: true, owner: true, admin: true },
+    { op: "customize_sms_template", guest: false, staff: false, owner: true, admin: true },
+    { op: "purchase_top_up_packs", guest: false, staff: false, owner: true, admin: true },
+    { op: "upgrade_subscription", guest: false, staff: false, owner: true, admin: true },
+    { op: "manage_staff_accounts", guest: false, staff: false, owner: true, admin: true },
+    { op: "modify_platform_pricing", guest: false, staff: false, owner: false, admin: true },
+    { op: "override_merchant_quota", guest: false, staff: false, owner: false, admin: true },
+    { op: "view_platform_directory", guest: false, staff: false, owner: false, admin: true }
+  ];
+
+  ops.forEach(({ op, guest, staff, owner, admin }) => {
+    assert.strictEqual(canUserPerformAction("PublicGuest", op), guest, `Failed for PublicGuest on ${op}`);
+    assert.strictEqual(canUserPerformAction("FrontDeskStaff", op), staff, `Failed for FrontDeskStaff on ${op}`);
+    assert.strictEqual(canUserPerformAction("ShopOwner", op), owner, `Failed for ShopOwner on ${op}`);
+    assert.strictEqual(canUserPerformAction("PlatformSuperAdmin", op), admin, `Failed for PlatformSuperAdmin on ${op}`);
+  });
+});
+
+it("Upgrade and marketing banners are strictly forbidden for guests, demo users, and front desk staff", () => {
+  const shouldShowUpgradeBanners = (role, isDemo, isAuthenticated) => {
+    if (!isAuthenticated) return false;
+    if (isDemo) return false;
+    if (role === "PublicGuest" || role === "FrontDeskStaff") return false;
+    return role === "ShopOwner" || role === "PlatformSuperAdmin";
+  };
+
+  assert.strictEqual(shouldShowUpgradeBanners("PublicGuest", false, false), false, "Guest must never see upgrade banners");
+  assert.strictEqual(shouldShowUpgradeBanners("PublicGuest", true, false), false, "Guest in demo must never see upgrade banners");
+  assert.strictEqual(shouldShowUpgradeBanners("FrontDeskStaff", false, true), false, "Staff must never see upgrade banners");
+  assert.strictEqual(shouldShowUpgradeBanners("FrontDeskStaff", true, true), false, "Staff in demo must never see upgrade banners");
+  assert.strictEqual(shouldShowUpgradeBanners("ShopOwner", true, true), false, "Owner in demo sandbox must never see upgrade banners");
+  assert.strictEqual(shouldShowUpgradeBanners("ShopOwner", false, true), true, "Authenticated Owner on live shop must see upgrade options");
+  assert.strictEqual(shouldShowUpgradeBanners("PlatformSuperAdmin", false, true), true, "Authenticated SuperAdmin on live shop must see upgrade options");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);

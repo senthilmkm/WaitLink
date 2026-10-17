@@ -1095,6 +1095,19 @@ html[data-theme="light"] .app-header {
   color: #a5b4fc;
 }
 
+#desk-retention-banner.hidden,
+#owner-retention-banner.hidden,
+.demo-mode #desk-retention-banner,
+.demo-mode #owner-retention-banner,
+.demo-mode-active #desk-retention-banner,
+.demo-mode-active #owner-retention-banner,
+[data-demo="true"] #desk-retention-banner,
+[data-demo="true"] #owner-retention-banner,
+[data-shop="main-st-barbers"] #desk-retention-banner,
+[data-shop="main-st-barbers"] #owner-retention-banner {
+  display: none !important;
+}
+
 /* History Table */
 .history-card {
   padding: 0;
@@ -3921,6 +3934,28 @@ body.drawer-open {
   line-height: 1.4;
 }
 
+/* Auth Role Switcher Tabs (Dark & Light) */
+.auth-role-tabs-container,
+#auth-role-tabs-container {
+  display: flex;
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+}
+
+#auth-tab-owner,
+#auth-tab-staff {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
 /* Active Auth Tab styling */
 #auth-tab-owner.active,
 #auth-tab-staff.active {
@@ -3928,6 +3963,14 @@ body.drawer-open {
   color: #090d16 !important;
   font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+}
+
+/* STRICT REGISTRATION MODE OVERRIDE: NEVER DISPLAY ROLE TABS DURING REGISTRATION */
+#auth-modal.auth-mode-register #auth-role-tabs-container,
+#auth-modal[data-auth-mode="register"] #auth-role-tabs-container,
+.auth-mode-register #auth-role-tabs-container,
+#auth-role-tabs-container.hidden {
+  display: none !important;
 }
 
 /* ==========================================================================
@@ -4494,6 +4537,12 @@ html[data-theme="light"] #auth-role-tabs-container {
   border: 1.5px solid #cbd5e1 !important;
 }
 
+html[data-theme="light"] #auth-modal.auth-mode-register #auth-role-tabs-container,
+html[data-theme="light"] #auth-modal[data-auth-mode="register"] #auth-role-tabs-container,
+html[data-theme="light"] #auth-role-tabs-container.hidden {
+  display: none !important;
+}
+
 html[data-theme="light"] #auth-tab-owner,
 html[data-theme="light"] #auth-tab-staff {
   color: #334155 !important;
@@ -4987,4 +5036,45 @@ html[data-theme="light"] .stage-nav-btn {
 html[data-theme="light"] .stage-nav-btn:hover {
   background: #0891b2 !important;
   color: #ffffff !important;
+}
+
+/* ==========================================================================
+   20. Universal Suppression of Upgrade & Top-Up Banners (Guest & Demo Modes)
+   ========================================================================== */
+#owner-starter-upgrade-callout.hidden,
+#owner-starter-upgrade-callout[style*="display: none"],
+.upgrade-callout-banner.hidden,
+#desk-retention-banner.hidden,
+#owner-retention-banner.hidden,
+#desk-sms-exhausted-banner.hidden,
+#btn-owner-buy-topup.hidden,
+#owner-metric-plan-btn.hidden,
+body:not(.user-authenticated) #owner-starter-upgrade-callout,
+body:not(.user-authenticated) #owner-retention-banner,
+body:not(.user-authenticated) #desk-retention-banner,
+body:not(.user-authenticated) #desk-sms-exhausted-banner,
+body:not(.user-authenticated) #btn-owner-buy-topup,
+body:not(.user-authenticated) #owner-metric-plan-btn,
+body:not(.user-authenticated) #header-upgrade-btn,
+body:not(.user-authenticated) #mobile-upgrade-btn,
+body:not(.user-authenticated) .upgrade-callout-banner,
+body.demo-mode #owner-starter-upgrade-callout,
+body.demo-mode #owner-retention-banner,
+body.demo-mode #desk-retention-banner,
+body.demo-mode #desk-sms-exhausted-banner,
+body.demo-mode #btn-owner-buy-topup,
+body.demo-mode #owner-metric-plan-btn,
+body.demo-mode #header-upgrade-btn,
+body.demo-mode #mobile-upgrade-btn,
+body.demo-mode .upgrade-callout-banner,
+body.guest-mode #owner-starter-upgrade-callout,
+body.guest-mode #owner-retention-banner,
+body.guest-mode #desk-retention-banner,
+body.guest-mode #desk-sms-exhausted-banner,
+body.guest-mode #btn-owner-buy-topup,
+body.guest-mode #owner-metric-plan-btn,
+body.guest-mode #header-upgrade-btn,
+body.guest-mode #mobile-upgrade-btn,
+body.guest-mode .upgrade-callout-banner {
+  display: none !important;
 }
