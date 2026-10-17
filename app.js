@@ -2418,7 +2418,10 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
       const historyItem = {
         ...item,
         status: "cancelled",
-        cancelledBy: operatorName,
+        cancelledBy: byDesk ? "desk" : "customer",
+        cancelledRole: byDesk ? "desk" : "customer",
+        cancelledByOperator: operatorName,
+        cancelledActor: cancelActor,
         calledAt: nowTs,
         completedAt: nowTs,
         cancelledAt: nowTs,
@@ -2441,8 +2444,12 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
       const item = serverHistory[hIdx];
       cancelledRecordName = item.customerName || cancelledRecordName;
       item.status = "cancelled";
-      item.cancelledBy = operatorName;
+      item.cancelledBy = byDesk ? "desk" : "customer";
+      item.cancelledRole = byDesk ? "desk" : "customer";
+      item.cancelledByOperator = operatorName;
+      item.cancelledActor = cancelActor;
       item.completedAt = nowTs;
+      item.cancelledAt = nowTs;
       item.waitDurationMin = 0;
       logCustomerActivity(item, "cancelled", "Cancelled Visit", byDesk ? `Marked No-Show / Cancelled by ${cancelActor}` : "Customer tapped Leave Line on phone", "✕", cancelActor);
       return { queue: serverQueue, history: serverHistory, affectedItem: item };
@@ -3878,7 +3885,7 @@ function renderQueue() {
           </div>
         </div>
 
-        <div class="queue-item-actions">
+        <div class="queue-item-actions ${showMoveToEnd ? 'has-requeue' : ''}">
           ${hasStaffPermission("canCallNext") ? `
           <button class="btn btn-call ${isNextUp ? 'btn-hero' : ''}" onclick="callCustomer('${escapeHtml(item.id)}')" title="Serve customer and dispatch turn-ready SMS with live ticket link">
             ${isClinical ? '🩺 CALL ' + (isNextUp ? 'PATIENT' : 'NEXT') : '⏱️ SERVE ' + (isNextUp ? 'NOW' : 'NEXT')}
@@ -4186,6 +4193,19 @@ function logCustomerActivity(item, action, title, detail, icon = "📌", actor =
   });
 }
 
+function isItemCancelledByDesk(item) {
+  if (!item || item.status !== "cancelled") return false;
+  if (item.cancelledBy === "customer" || item.cancelledRole === "customer") return false;
+  if (item.cancelledBy === "desk" || item.cancelledRole === "desk" || item.cancelledByOperator) return true;
+  if (typeof item.cancelledBy === "string" && item.cancelledBy.trim().toLowerCase() !== "customer") return true;
+  if (Array.isArray(item.activities)) {
+    const cancelLog = item.activities.find(l => l.action === "cancelled");
+    if (cancelLog && cancelLog.detail && cancelLog.detail.includes("Leave Line")) return false;
+    if (cancelLog) return true;
+  }
+  return true;
+}
+
 function getItemActivities(item) {
   if (!item) return [];
   if (Array.isArray(item.activities) && item.activities.length > 0) {
@@ -4232,12 +4252,14 @@ function getItemActivities(item) {
 
   if (item.cancelledAt || item.status === "cancelled") {
     const ts = item.cancelledAt || item.calledAt || Date.now();
-    const byDesk = item.cancelledBy === "desk";
-    const cancelActor = byDesk ? (item.calledBy || item.completedBy || "Front Desk Staff") : (item.cancelledBy || "Customer (Mobile Ticket)");
+    const byDesk = isItemCancelledByDesk(item);
+    const cancelActor = byDesk 
+      ? (item.cancelledByOperator || (item.cancelledBy && item.cancelledBy !== "desk" && item.cancelledBy !== "customer" ? item.cancelledBy : null) || item.calledBy || item.completedBy || "Front Desk Staff") 
+      : "Customer (Mobile Ticket)";
     list.push({
       action: "cancelled",
       title: "Cancelled Visit",
-      detail: byDesk ? "Cancelled / marked No-Show by Front Desk" : "Customer tapped Leave Line on phone",
+      detail: byDesk ? `Cancelled / marked No-Show by ${cancelActor}` : "Customer tapped Leave Line on phone",
       timestamp: ts,
       icon: "✕",
       actor: cancelActor
@@ -4258,11 +4280,12 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
 
   let statusTagHtml = `<span class="status-tag called" data-tooltip="Customer called for service">Called</span>`;
   if (!isCalled) {
-    const by = item.cancelledBy === "desk" ? "desk" : "customer";
-    if (by === "customer") {
+    const byDesk = isItemCancelledByDesk(item);
+    if (!byDesk) {
       statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);" data-tooltip="Customer tapped Leave Line on their phone">📱 Left Line</span>`;
     } else {
-      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);" data-tooltip="Cancelled or marked No-Show by Front Desk">🖥️ Desk Cancelled</span>`;
+      const staffTooltip = item.cancelledByOperator ? `Cancelled by ${escapeHtml(item.cancelledByOperator)} at Front Desk` : "Cancelled or marked No-Show by Front Desk";
+      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);" data-tooltip="${staffTooltip}">🖥️ Desk Cancelled</span>`;
     }
   } else if (item.delayedMinutes) {
     statusTagHtml = `
@@ -4686,7 +4709,7 @@ function exportHistoryCSV() {
     
     let statusStr = "Served";
     if (item.status === "cancelled") {
-      statusStr = item.cancelledBy === "customer" ? "Left Line (Customer)" : "Desk Cancelled / No-Show";
+      statusStr = isItemCancelledByDesk(item) ? "Desk Cancelled / No-Show" : "Left Line (Customer)";
     } else if (item.status === "called") {
       statusStr = "Served";
     }
@@ -11016,8 +11039,9 @@ function openCustomerAuditModal(id) {
   setElText("audit-modal-customer-name", modalName + (isPiiMasked ? " (🛡️ Masked)" : ""));
   setElText("audit-modal-subtitle", `Complete Lifecycle Activity Audit Log • ${state.config.shopName || 'Shop'}`);
   
-  const statusTag = item.status === "called" ? "Called (Completed)" : (item.status === "cancelled" ? (item.cancelledBy === "desk" ? "Desk Cancelled" : "Left Line (Customer)") : "In Active Queue");
-  const statusColor = item.status === "called" ? "#10b981" : (item.status === "cancelled" ? "#f43f5e" : "#06b6d4");
+  const isDeskCanc = isItemCancelledByDesk(item);
+  const statusTag = item.status === "called" ? "Called (Completed)" : (item.status === "cancelled" ? (isDeskCanc ? "Desk Cancelled" : "Left Line (Customer)") : "In Active Queue");
+  const statusColor = item.status === "called" ? "#10b981" : (item.status === "cancelled" ? (isDeskCanc ? "#f59e0b" : "#f43f5e") : "#06b6d4");
   
   const statusEl = document.getElementById("audit-modal-status");
   if (statusEl) {
@@ -12538,6 +12562,7 @@ function loadStaffActivityLog() {
    ========================================================================== */
 
 let _waitlinkDialogResolve = null;
+let _dialogMode = "confirm";
 
 function applyDialogTheme(type, customIcon) {
   const card = document.getElementById("waitlink-dialog-card");
@@ -12574,16 +12599,24 @@ function showConfirmDialog({
   cancelText = "Cancel",
   type = "primary",
   icon = null,
-  category = "Action Required"
+  category = "Action Required",
+  withNote = false,
+  noteLabel = "Staff Note / Reason (Optional):",
+  notePlaceholder = "e.g., Stepped out for coffee, No-show after 3 calls, Phone test...",
+  noteHint = "Visible on status mouse hover & in the customer lifecycle audit log."
 } = {}) {
   return new Promise(resolve => {
     _waitlinkDialogResolve = resolve;
+    _dialogMode = withNote ? "confirmWithNote" : "confirm";
 
     const backdrop = document.getElementById("waitlink-dialog-backdrop");
     const categoryEl = document.getElementById("dialog-category-tag");
     const titleEl = document.getElementById("dialog-title");
     const msgEl = document.getElementById("dialog-message");
     const inputContainer = document.getElementById("dialog-input-container");
+    const inputLabel = document.getElementById("dialog-input-label");
+    const inputEl = document.getElementById("dialog-input");
+    const inputHint = document.getElementById("dialog-input-hint");
     const btnCancel = document.getElementById("dialog-btn-cancel");
     const btnConfirm = document.getElementById("dialog-btn-confirm");
 
@@ -12600,13 +12633,37 @@ function showConfirmDialog({
       btnCancel.style.display = "inline-flex";
     }
     if (btnConfirm) btnConfirm.textContent = confirmText;
-    if (inputContainer) inputContainer.classList.add("hidden");
+
+    if (withNote) {
+      if (inputContainer) inputContainer.classList.remove("hidden");
+      if (inputLabel) inputLabel.textContent = noteLabel;
+      if (inputEl) {
+        inputEl.type = "text";
+        inputEl.placeholder = notePlaceholder;
+        inputEl.value = "";
+      }
+      if (inputHint) {
+        if (noteHint) {
+          inputHint.textContent = noteHint;
+          inputHint.classList.remove("hidden");
+        } else {
+          inputHint.classList.add("hidden");
+        }
+      }
+    } else {
+      if (inputContainer) inputContainer.classList.add("hidden");
+      if (inputHint) inputHint.classList.add("hidden");
+    }
 
     applyDialogTheme(type, icon);
 
     backdrop.classList.remove("hidden");
     setTimeout(() => {
-      if (btnConfirm) btnConfirm.focus();
+      if (withNote && inputEl) {
+        inputEl.focus();
+      } else if (btnConfirm) {
+        btnConfirm.focus();
+      }
     }, 50);
   });
 }
@@ -12621,12 +12678,14 @@ function showAlertDialog({
 } = {}) {
   return new Promise(resolve => {
     _waitlinkDialogResolve = () => resolve();
+    _dialogMode = "alert";
 
     const backdrop = document.getElementById("waitlink-dialog-backdrop");
     const categoryEl = document.getElementById("dialog-category-tag");
     const titleEl = document.getElementById("dialog-title");
     const msgEl = document.getElementById("dialog-message");
     const inputContainer = document.getElementById("dialog-input-container");
+    const inputHint = document.getElementById("dialog-input-hint");
     const btnCancel = document.getElementById("dialog-btn-cancel");
     const btnConfirm = document.getElementById("dialog-btn-confirm");
 
@@ -12642,6 +12701,7 @@ function showAlertDialog({
     if (btnCancel) btnCancel.style.display = "none";
     if (btnConfirm) btnConfirm.textContent = buttonText;
     if (inputContainer) inputContainer.classList.add("hidden");
+    if (inputHint) inputHint.classList.add("hidden");
 
     applyDialogTheme(type, icon);
 
@@ -12666,13 +12726,16 @@ function showPromptDialog({
 } = {}) {
   return new Promise(resolve => {
     _waitlinkDialogResolve = resolve;
+    _dialogMode = "prompt";
 
     const backdrop = document.getElementById("waitlink-dialog-backdrop");
     const categoryEl = document.getElementById("dialog-category-tag");
     const titleEl = document.getElementById("dialog-title");
     const msgEl = document.getElementById("dialog-message");
     const inputContainer = document.getElementById("dialog-input-container");
+    const inputLabel = document.getElementById("dialog-input-label");
     const inputEl = document.getElementById("dialog-input");
+    const inputHint = document.getElementById("dialog-input-hint");
     const btnCancel = document.getElementById("dialog-btn-cancel");
     const btnConfirm = document.getElementById("dialog-btn-confirm");
 
@@ -12691,6 +12754,8 @@ function showPromptDialog({
     if (btnConfirm) btnConfirm.textContent = confirmText;
 
     if (inputContainer) inputContainer.classList.remove("hidden");
+    if (inputLabel) inputLabel.textContent = "Enter details:";
+    if (inputHint) inputHint.classList.add("hidden");
     inputEl.type = inputType;
     inputEl.placeholder = placeholder;
     inputEl.value = defaultValue;
@@ -12707,18 +12772,21 @@ function showPromptDialog({
 
 function waitlinkDialogConfirm() {
   const backdrop = document.getElementById("waitlink-dialog-backdrop");
-  const inputContainer = document.getElementById("dialog-input-container");
   const inputEl = document.getElementById("dialog-input");
 
   if (backdrop) backdrop.classList.add("hidden");
 
   if (_waitlinkDialogResolve) {
-    if (inputContainer && !inputContainer.classList.contains("hidden")) {
+    if (_dialogMode === "confirmWithNote") {
+      const noteVal = inputEl ? inputEl.value.trim() : "";
+      _waitlinkDialogResolve({ confirmed: true, note: noteVal });
+    } else if (_dialogMode === "prompt") {
       _waitlinkDialogResolve(inputEl ? inputEl.value : "");
     } else {
       _waitlinkDialogResolve(true);
     }
     _waitlinkDialogResolve = null;
+    _dialogMode = "confirm";
   }
 }
 
@@ -12727,8 +12795,13 @@ function waitlinkDialogCancel() {
   if (backdrop) backdrop.classList.add("hidden");
 
   if (_waitlinkDialogResolve) {
-    _waitlinkDialogResolve(false);
+    if (_dialogMode === "prompt") {
+      _waitlinkDialogResolve(null);
+    } else {
+      _waitlinkDialogResolve(false);
+    }
     _waitlinkDialogResolve = null;
+    _dialogMode = "confirm";
   }
 }
 

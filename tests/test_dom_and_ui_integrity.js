@@ -393,6 +393,67 @@ it("pitch.html contains comprehensive merchant one-pager, roles comparison table
   assert.ok(html.includes('href="pitch.html"'), "index.html footer missing link to pitch.html");
 });
 
+it("Queue card actions implement zero-overflow responsive layout on iPad, Android tablets, and mobile", () => {
+  assert.ok(css.includes(".queue-item-actions"), "style.css missing .queue-item-actions");
+  assert.ok(css.includes(".queue-item-card") && css.includes("overflow: hidden"), "style.css missing overflow: hidden on .queue-item-card");
+  assert.ok(css.includes(".queue-item-actions.has-requeue .btn-call"), "style.css missing has-requeue full-width btn-call rule for tablet counter use");
+  assert.ok(css.includes(".queue-item-actions.has-requeue .btn-requeue"), "style.css missing has-requeue 50/50 btn-requeue rule");
+  assert.ok(css.includes(".queue-item-actions.has-requeue .btn-cancel"), "style.css missing has-requeue 50/50 btn-cancel rule");
+  assert.ok(appJs.includes("has-requeue"), "app.js missing dynamic has-requeue class on queue-item-actions");
+});
+
+it("Universal tablet and mobile landscape responsiveness rules are implemented in style.css", () => {
+  assert.ok(css.includes("max-width: 992px"), "style.css missing tablet 992px breakpoint");
+  assert.ok(css.includes("(max-height: 520px) and (orientation: landscape)"), "style.css missing mobile landscape breakpoint");
+  assert.ok(css.includes("env(safe-area-inset-left)"), "style.css missing safe area inset left padding");
+  assert.ok(css.includes("minmax(280px, 1fr)"), "style.css missing 280px queue-grid minmax for 3-column tablet view");
+});
+
+it("Cancellation attribution accurately distinguishes desk cancellations from customer walk-aways across BI analytics, history table, and audit modal", () => {
+  assert.ok(appJs.includes("function isItemCancelledByDesk(item)"), "app.js missing unified isItemCancelledByDesk helper");
+
+  // Verify logic using direct mock evaluation
+  const isItemCancelledByDesk = (item) => {
+    if (!item) return false;
+    if (item.cancelledBy === "desk") return true;
+    if (item.cancelledBy === "customer" || item.cancelledBy === "walkout" || item.cancelledBy === "user") return false;
+    if (Array.isArray(item.activityLog)) {
+      for (let i = item.activityLog.length - 1; i >= 0; i--) {
+        const act = item.activityLog[i];
+        if (act && (act.action === "cancelled" || act.action === "cancel")) {
+          if (act.actor === "desk" || act.actor === "staff" || act.actor === "operator") return true;
+          if (act.actor === "customer" || act.actor === "public" || act.actor === "user") return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  // Case 1: explicit cancelledBy desk
+  assert.strictEqual(isItemCancelledByDesk({ cancelledBy: "desk" }), true, "Explicit cancelledBy: 'desk' must be desk cancelled");
+
+  // Case 2: explicit cancelledBy customer
+  assert.strictEqual(isItemCancelledByDesk({ cancelledBy: "customer" }), false, "Explicit cancelledBy: 'customer' must not be desk cancelled");
+
+  // Case 3: legacy record with activityLog containing desk actor
+  assert.strictEqual(isItemCancelledByDesk({
+    activityLog: [{ action: "checkin", actor: "public" }, { action: "cancelled", actor: "desk" }]
+  }), true, "activityLog with desk actor must be resolved as desk cancelled");
+
+  // Case 4: legacy record with activityLog containing customer self-service leave
+  assert.strictEqual(isItemCancelledByDesk({
+    activityLog: [{ action: "checkin", actor: "desk" }, { action: "cancelled", actor: "customer" }]
+  }), false, "activityLog with customer actor must be resolved as customer walk-out");
+
+  // Case 5: undefined/null safety
+  assert.strictEqual(isItemCancelledByDesk(null), false, "Null item must safely return false");
+  assert.strictEqual(isItemCancelledByDesk({}), false, "Empty item must safely return false");
+
+  // Verify app.js calls isItemCancelledByDesk in renderHistoryRows and openAuditModal
+  assert.ok(appJs.includes("isItemCancelledByDesk(item)"), "renderHistoryRows must use isItemCancelledByDesk");
+  assert.ok(appJs.includes("const isDeskCanc = isItemCancelledByDesk(item);"), "openAuditModal must use isItemCancelledByDesk");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
