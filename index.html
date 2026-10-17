@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=3.7">
+  <link rel="stylesheet" href="style.css?v=3.9">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -327,7 +327,7 @@
             <span style="font-size: 1.25rem;" id="home-tier-icon">💎</span>
             <div style="text-align: left;">
               <div style="font-size: 0.725rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">YOUR ACTIVE PLAN</div>
-              <div style="font-size: 1.05rem; font-weight: 800; color: #fff;" id="home-tier-title">Starter Tier (Free)</div>
+              <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main);" id="home-tier-title">Starter Tier (Free)</div>
             </div>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="openUpgradeModal()" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">Manage Plan ⚙️</button>
@@ -476,12 +476,12 @@
           <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem;">
               <span style="font-size: 0.85rem;">📱</span>
-              <input type="tel" id="desk-customer-phone" placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)" style="width: 100%; border: none; background: transparent; color: #fff; font-size: 0.85rem; outline: none;">
+              <input type="tel" id="desk-customer-phone" placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)" style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.85rem; outline: none;">
             </div>
             <!-- Desk Service Selector (Populated dynamically when enabled) -->
             <div id="desk-service-selector-container" class="hidden" style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem;">
               <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Service:</span>
-              <select id="desk-service-select" style="width: 100%; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 0.85rem;">
+              <select id="desk-service-select" style="width: 100%; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 0.85rem;">
                 <option value="">-- Select Service (Optional) --</option>
               </select>
             </div>
@@ -669,7 +669,7 @@
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span style="font-size: 1.6rem;">🚀</span>
           <div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: #fff;">Unlock Pro Business Tier ($15/mo)</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">Unlock Pro Business Tier ($15/mo)</div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Automate Twilio SMS alerts, upload your custom logo branding, activate promo banners & download unlimited CSV history.</div>
           </div>
         </div>
@@ -781,7 +781,7 @@
             <!-- Custom Shop Logo Card (Pro Feature Gated) -->
             <div class="card pro-gated-section" id="owner-logo-card" style="padding: 1.25rem; border-radius: var(--radius-md);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                <span style="font-weight: 700; color: #fff; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span style="font-weight: 700; color: var(--text-main); font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.45rem;">
                   <span>Custom Shop Logo (Upload File or Image URL)</span>
                   <span id="logo-badge-pill" class="badge-pro-pill locked">🔒 PRO</span>
                 </span>
@@ -819,7 +819,7 @@
             <div class="form-group" style="padding: 1.25rem; background: rgba(6, 182, 212, 0.06); border: 1px dashed rgba(6, 182, 212, 0.3); border-radius: var(--radius-sm);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                 <div>
-                  <label style="font-weight: 700; color: #fff; font-size: 1rem; margin: 0;">✂️ Customer Service Menu</label>
+                  <label style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin: 0;">✂️ Customer Service Menu</label>
                   <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">Allow customers or desk staff to select specific services during check-in.</div>
                 </div>
                 <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
@@ -831,9 +831,9 @@
               <div id="owner-services-manager-body" class="hidden" style="margin-top: 0.75rem;">
                 <div style="font-size: 0.82rem; font-weight: 600; color: #06b6d4; margin-bottom: 0.5rem;">Add New Service Option:</div>
                 <div style="display: flex; gap: 0.4rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
-                  <input type="text" id="new-service-emoji" placeholder="Emoji (💈)" style="width: 70px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;">
-                  <input type="text" id="new-service-name" placeholder="Service Name (e.g. Haircut & Beard)" style="flex: 1; min-width: 140px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;">
-                  <input type="number" id="new-service-duration" placeholder="Mins (30)" style="width: 85px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;" min="5" max="240">
+                  <input type="text" id="new-service-emoji" placeholder="Emoji (💈)" style="width: 70px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
+                  <input type="text" id="new-service-name" placeholder="Service Name (e.g. Haircut & Beard)" style="flex: 1; min-width: 140px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
+                  <input type="number" id="new-service-duration" placeholder="Mins (30)" style="width: 85px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);" min="5" max="240">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="addNewOwnerService()" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; font-weight: 700;">+ Add</button>
                 </div>
 
@@ -865,17 +865,17 @@
               <!-- Lockable Controls -->
               <div class="pro-lockable-content" id="promo-lockable-content">
                 <div class="form-group" style="width: 100%;">
-                  <input type="text" id="owner-input-promo" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; box-sizing: border-box; display: block; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  <input type="text" id="owner-input-promo" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; box-sizing: border-box; display: block; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-top: 0.65rem;">
                   <div class="form-group">
                     <label for="owner-input-promo-start" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window Start</label>
-                    <input type="date" id="owner-input-promo-start" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                    <input type="date" id="owner-input-promo-start" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
                   </div>
                   <div class="form-group">
                     <label for="owner-input-promo-end" style="font-size: 0.78rem; color: var(--text-muted);">Promo Window End</label>
-                    <input type="date" id="owner-input-promo-end" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                    <input type="date" id="owner-input-promo-end" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
                   </div>
                 </div>
               </div>
@@ -1072,7 +1072,7 @@
               <!-- Monthly Quota Meter Bar -->
               <div style="margin: 0.85rem 0; padding: 0.85rem; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.45rem;">
-                  <span id="sms-usage-label" style="color: #fff;">Monthly Included Usage: 0 / 500 Used (0%)</span>
+                  <span id="sms-usage-label" style="color: var(--text-main);">Monthly Included Usage: 0 / 500 Used (0%)</span>
                   <span id="sms-remaining-label" style="color: #10b981;">500 Remaining</span>
                 </div>
                 <div style="height: 10px; width: 100%; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; position: relative;">
@@ -1088,7 +1088,7 @@
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
                 <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-sm);">
                   <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Monthly Allowance</div>
-                  <div id="sms-stat-allowance" style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-top: 2px;">500 SMS</div>
+                  <div id="sms-stat-allowance" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">500 SMS</div>
                   <div id="sms-stat-rollover-note" style="font-size: 0.68rem; color: #10b981;">0 rolled over from prior month</div>
                 </div>
                 <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-sm);">
@@ -1110,7 +1110,7 @@
             <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-md);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                 <div>
-                  <h4 style="color: #fff; margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 0.45rem;">
+                  <h4 style="color: var(--text-main); margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 0.45rem;">
                     <span>📣</span> Shop Marketing & Distribution Kit
                   </h4>
                   <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0.2rem 0 0 0;">Drive walk-in customer traffic by publishing your live waitlist link on Google Maps, Instagram & your storefront.</p>
@@ -1221,7 +1221,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span style="font-size: 1.1rem;">⏳</span>
-            <span style="font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 1rem; color: #fff;">WaitLink</span>
+            <span style="font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 1rem; color: var(--text-main);">WaitLink</span>
           </div>
           <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.3rem;">
             <span>🛡️</span> Verified Shop
@@ -1251,7 +1251,7 @@
           <!-- Active Customer Ticket Card (Spotlight at Top for Ticket Holders) -->
           <div id="public-active-ticket-card" class="hidden" style="margin: 1.25rem 0 1rem 0; padding: 1.5rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 2px solid #10b981; border-radius: var(--radius-md); text-align: center;">
             <div id="ticket-badge-display" style="font-size: 0.75rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">✅ YOU ARE IN LINE</div>
-            <h2 id="ticket-customer-name" style="color: #fff; font-size: 1.5rem; margin: 0.3rem 0 0.1rem 0;">Sammy K.</h2>
+            <h2 id="ticket-customer-name" style="color: var(--text-main); font-size: 1.5rem; margin: 0.3rem 0 0.1rem 0;">Sammy K.</h2>
             <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0;" id="ticket-position-display">Position #1</div>
             <p id="ticket-subtitle-display" style="font-size: 0.85rem; color: var(--text-muted); margin: 0.2rem 0 0.6rem 0;">Please stay near the lobby</p>
 
@@ -1311,7 +1311,7 @@
           <!-- Inline Expanding Check-In Form -->
           <div id="public-inline-checkin-card" class="hidden" style="margin: 1.25rem 0 0.5rem 0; padding: 1.25rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-md); text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-              <h3 id="public-checkin-title" style="color: #fff; font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              <h3 id="public-checkin-title" style="color: var(--text-main); font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                 <span>🎟️</span> Join Walk-In Line
               </h3>
               <button type="button" class="btn-text-sm" style="color: var(--text-muted); font-size: 0.8rem;" onclick="toggleInlineCheckInForm(false)">✕ Close</button>
@@ -1322,21 +1322,21 @@
                 <label id="public-name-label" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                   Your Name or Initials *
                 </label>
-                <input type="text" id="inline-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+                <input type="text" id="inline-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 1rem;">
               </div>
 
               <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                   Mobile Phone Number (Optional)
                 </label>
-                <input type="tel" id="inline-customer-phone" placeholder="e.g. (555) 234-5678" oninput="onPublicPhoneInput(this)" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-size: 1rem;">
+                <input type="tel" id="inline-customer-phone" placeholder="e.g. (555) 234-5678" oninput="onPublicPhoneInput(this)" style="width: 100%; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 1rem;">
                 
                 <!-- TCPA Affirmative Consent Checkbox Container (Shows dynamically when phone is entered) -->
                 <div id="inline-tcpa-consent-container" class="hidden" style="margin-top: 0.5rem; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-sm); padding: 0.65rem 0.8rem;">
                   <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer; user-select: none;">
                     <input type="checkbox" id="inline-tcpa-consent" style="margin-top: 0.2rem; accent-color: var(--primary); width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;">
                     <span style="font-size: 0.74rem; color: #cbd5e1; line-height: 1.45;">
-                      <strong style="color: #fff;">I agree to receive automated SMS alerts</strong> from <span id="tcpa-shop-name" style="color: var(--primary); font-weight: 600;">this business</span> regarding my waitlist spot and when my turn is ready. Msg & data rates may apply. Reply STOP to opt out anytime. View <a href="privacy.html" target="_blank" style="color: var(--primary); text-decoration: underline;" onclick="event.stopPropagation()">Privacy Policy</a>.
+                      <strong style="color: var(--text-main);">I agree to receive automated SMS alerts</strong> from <span id="tcpa-shop-name" style="color: var(--primary); font-weight: 600;">this business</span> regarding my waitlist spot and when my turn is ready. Msg & data rates may apply. Reply STOP to opt out anytime. View <a href="privacy.html" target="_blank" style="color: var(--primary); text-decoration: underline;" onclick="event.stopPropagation()">Privacy Policy</a>.
                     </span>
                   </label>
                 </div>
@@ -1505,7 +1505,7 @@
         <div class="section-header" style="margin-bottom: 1rem;">
           <h2>Owned Shop Locations</h2>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="owner-shop-search" placeholder="🔍 Search shops..." oninput="filterOwnerShops(this.value)" style="padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 0.85rem; width: 220px;">
+            <input type="text" id="owner-shop-search" placeholder="🔍 Search shops..." oninput="filterOwnerShops(this.value)" style="padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; width: 220px;">
             <button class="btn btn-secondary btn-sm" onclick="loadOwnerDirectory(true)">🔄 Refresh</button>
           </div>
         </div>
@@ -1539,7 +1539,7 @@
             </p>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <select id="owner-staff-filter-shop" onchange="filterStaffByShop(this.value)" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 0.85rem;">
+            <select id="owner-staff-filter-shop" onchange="filterStaffByShop(this.value)" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem;">
               <option value="">-- All Owned Shops --</option>
             </select>
             <button class="btn btn-primary btn-sm" onclick="openStaffRoleModal()">+ Add New Staff Role</button>
@@ -1570,7 +1570,7 @@
         <!-- Recent Staff Audit Activity -->
         <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="color: #fff; font-size: 1.15rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+            <h3 style="color: var(--text-main); font-size: 1.15rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
               <span>📋</span> Recent Front Desk Activity Timeline
             </h3>
             <button class="btn btn-secondary btn-sm" onclick="loadStaffActivityLog()">🔄 Refresh Log</button>
@@ -1697,7 +1697,7 @@
         <div class="card" style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%); border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-md);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
-              <h3 style="color: #fff; font-size: 1.15rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              <h3 style="color: var(--text-main); font-size: 1.15rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                 <span>⚙️</span> SMS Subscription Quota & Rollover Governance Policy
               </h3>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
@@ -1757,7 +1757,7 @@
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
-              <textarea id="pricing-t1-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</textarea>
+              <textarea id="pricing-t1-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">Perfect for solo barbers or new pop-up clinics testing digital queue tracking.</textarea>
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
@@ -1786,7 +1786,7 @@ Audible Turn Chimes & Sound Alerts
           <div class="card" style="padding: 1.5rem; background: rgba(6, 182, 212, 0.08); border: 2px solid var(--primary); border-radius: var(--radius-md);">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
               <h3 style="color: var(--primary); font-size: 1.15rem; margin: 0;">Tier 2: Pro Business</h3>
-              <label style="font-size: 0.8rem; color: #fff; display: inline-flex; align-items: center; gap: 0.3rem;"><input type="checkbox" id="pricing-t2-popular" checked> Most Popular</label>
+              <label style="font-size: 0.8rem; color: var(--text-main); display: inline-flex; align-items: center; gap: 0.3rem;"><input type="checkbox" id="pricing-t2-popular" checked> Most Popular</label>
             </div>
             <div class="form-group">
               <label>Badge Title</label>
@@ -1806,7 +1806,7 @@ Audible Turn Chimes & Sound Alerts
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
-              <textarea id="pricing-t2-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">Everything you need to eliminate walk-away losses and track owner analytics.</textarea>
+              <textarea id="pricing-t2-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">Everything you need to eliminate walk-away losses and track owner analytics.</textarea>
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
@@ -1855,7 +1855,7 @@ Priority Cloud Firestore Latency
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <label>Description</label>
-              <textarea id="pricing-t3-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">For chains, franchise barber networks, and regional medical centers.</textarea>
+              <textarea id="pricing-t3-desc" rows="2" style="width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">For chains, franchise barber networks, and regional medical centers.</textarea>
             </div>
             <div class="form-group" style="margin-top: 0.6rem;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
@@ -1922,7 +1922,7 @@ Dedicated Support Manager
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
               <span style="font-size: 1.4rem;">⏳</span>
               <div>
-                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Tier Data Retention Windows</h3>
+                <h3 style="color: var(--text-main); font-size: 1.05rem; margin: 0;">Tier Data Retention Windows</h3>
                 <span style="font-size: 0.78rem; color: var(--text-muted);">Max history duration accessible per plan tier</span>
               </div>
             </div>
@@ -1966,7 +1966,7 @@ Dedicated Support Manager
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
               <span style="font-size: 1.4rem;">🔐</span>
               <div>
-                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Privacy & PII Auto-Masking</h3>
+                <h3 style="color: var(--text-main); font-size: 1.05rem; margin: 0;">Privacy & PII Auto-Masking</h3>
                 <span style="font-size: 0.78rem; color: var(--text-muted);">Redact patron phone numbers & last names</span>
               </div>
             </div>
@@ -1999,7 +1999,7 @@ Dedicated Support Manager
             <div class="form-group" style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color);">
               <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
                 <div>
-                  <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Auto-Purge Expired Records</span>
+                  <span style="color: var(--text-main); font-size: 0.9rem; font-weight: 600;">Auto-Purge Expired Records</span>
                   <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.15rem 0 0 0;">Automatically prune historical records exceeding active tier window</p>
                 </div>
                 <input type="checkbox" id="retention-auto-purge" checked style="width: 1.2rem; height: 1.2rem; accent-color: var(--primary);">
@@ -2012,7 +2012,7 @@ Dedicated Support Manager
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
               <span style="font-size: 1.4rem;">📋</span>
               <div>
-                <h3 style="color: #fff; font-size: 1.05rem; margin: 0;">Policy Sync & Governance Status</h3>
+                <h3 style="color: var(--text-main); font-size: 1.05rem; margin: 0;">Policy Sync & Governance Status</h3>
                 <span style="font-size: 0.78rem; color: var(--text-muted);">Real-time snapshot synchronization</span>
               </div>
             </div>
@@ -2024,7 +2024,7 @@ Dedicated Support Manager
               </div>
               <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
                 <span style="color: var(--text-muted);">Last Policy Update:</span>
-                <span id="retention-last-updated" style="font-weight: 600; color: #fff;">--</span>
+                <span id="retention-last-updated" style="font-weight: 600; color: var(--text-main);">--</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding-bottom: 0.4rem; border-bottom: 1px dashed var(--border-color);">
                 <span style="color: var(--text-muted);">Updated By:</span>
@@ -2145,7 +2145,7 @@ Dedicated Support Manager
           </div>
           <div>
             <span id="delete-modal-action-badge" style="font-size: 0.725rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.05em;">DELETE ACTION</span>
-            <h2 id="delete-modal-title" style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-top: 2px;">Delete Shop Location</h2>
+            <h2 id="delete-modal-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">Delete Shop Location</h2>
           </div>
         </div>
         <button class="modal-close-btn" onclick="closeDeleteShopModal()" title="Close">&times;</button>
@@ -2153,7 +2153,7 @@ Dedicated Support Manager
 
       <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
         <p style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; margin: 0;">
-          Are you sure you want to permanently delete <strong id="delete-modal-shop-name" style="color: #fff;">Shop Name</strong>?
+          Are you sure you want to permanently delete <strong id="delete-modal-shop-name" style="color: var(--text-main);">Shop Name</strong>?
         </p>
 
         <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.825rem; color: #94a3b8;">
@@ -2225,11 +2225,11 @@ Dedicated Support Manager
       <div class="modal-body">
         
         <!-- Auth Role Switcher Tabs (Business Owner vs Front Desk Staff - Hidden during Registration) -->
-        <div id="auth-role-tabs-container" style="display: flex; background: rgba(0, 0, 0, 0.25); padding: 4px; border-radius: 10px; margin-bottom: 1.25rem; border: 1px solid var(--border-color);">
-          <button type="button" id="auth-tab-owner" class="btn-text active" onclick="switchAuthTab('owner')" style="flex: 1; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; color: #fff; background: var(--bg-card); text-align: center;">
+        <div id="auth-role-tabs-container" style="display: flex; padding: 4px; border-radius: 10px; margin-bottom: 1.25rem;">
+          <button type="button" id="auth-tab-owner" class="btn-text active" onclick="switchAuthTab('owner')" style="flex: 1; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; text-align: center;">
             💈 Business Owner / Admin
           </button>
-          <button type="button" id="auth-tab-staff" class="btn-text" onclick="switchAuthTab('staff')" style="flex: 1; padding: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+          <button type="button" id="auth-tab-staff" class="btn-text" onclick="switchAuthTab('staff')" style="flex: 1; padding: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; text-align: center;">
             🖥️ Front Desk Staff
           </button>
         </div>
@@ -2354,7 +2354,7 @@ Dedicated Support Manager
             </div>
             <div class="form-group">
               <label for="staff-assigned-shop">Assigned Shop *</label>
-              <select id="staff-assigned-shop" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: #fff;">
+              <select id="staff-assigned-shop" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
                 <!-- Populated dynamically with owner's shops -->
               </select>
             </div>
@@ -2398,7 +2398,7 @@ Dedicated Support Manager
 
           <!-- Granular Feature Checkboxes -->
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-top: 0.75rem;">
-            <div style="font-weight: 700; color: #fff; font-size: 0.85rem; margin-bottom: 0.6rem;">Feature Permissions & Capabilities:</div>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.85rem; margin-bottom: 0.6rem;">Feature Permissions & Capabilities:</div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; font-size: 0.85rem; color: #cbd5e1;">
               <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -2485,7 +2485,7 @@ Dedicated Support Manager
 
           <div class="form-group" style="margin-top: 0.75rem;">
             <label for="onboard-plan">Subscription Plan Tier</label>
-            <select id="onboard-plan" onchange="updateOnboardPlanSelection()" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+            <select id="onboard-plan" onchange="updateOnboardPlanSelection()" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
               <option value="starter" data-price="0" data-title="Starter Tier (Free)" selected>Starter Tier — Free Forever ($0/mo)</option>
               <option value="pro" data-price="15" data-title="Pro Business Tier">Pro Business Tier — Standard Shop ($15/mo — Requires Checkout)</option>
               <option value="enterprise" data-price="49" data-title="Enterprise Tier">Enterprise Tier — Multi-Location ($49/mo — Requires Checkout)</option>
@@ -2526,17 +2526,17 @@ Dedicated Support Manager
 
             <div class="pro-lockable-content" id="onboard-promo-lockable-content">
               <div class="form-group">
-                <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
                 <div class="form-group">
                   <label for="onboard-promo-start" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window Start</label>
-                  <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
                 </div>
                 <div class="form-group">
                   <label for="onboard-promo-end" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window End</label>
-                  <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: var(--radius-sm);">
+                  <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
                 </div>
               </div>
             </div>
@@ -2561,7 +2561,7 @@ Dedicated Support Manager
       <div class="modal-header upgrade-modal-header">
         <div>
           <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.6rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">💎 WAITLINK SUBSCRIPTION</span>
-          <h2 style="font-size: 1.4rem; font-weight: 800; margin-top: 0.35rem; color: #fff;">Shop Subscription Plans</h2>
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-top: 0.35rem; color: var(--text-main);">Shop Subscription Plans</h2>
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">Power your shop growth with automated SMS, custom branding, promo offers, and multi-location management.</p>
         </div>
         <button class="modal-close-btn" onclick="closeUpgradeModal()" title="Close Modal (Esc)" aria-label="Close Modal">✕</button>
@@ -2579,7 +2579,7 @@ Dedicated Support Manager
 
           <div>
             <span style="font-size: 0.725rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.65rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">SECURE 256-BIT SSL GATEWAY</span>
-            <h3 id="upgrade-proc-title" style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-top: 0.5rem; margin-bottom: 0.3rem;">
+            <h3 id="upgrade-proc-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 0.5rem; margin-bottom: 0.3rem;">
               Connecting to Stripe...
             </h3>
             <p id="upgrade-proc-desc" style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
@@ -2610,7 +2610,7 @@ Dedicated Support Manager
             <span style="font-size: 1.35rem;">💈</span>
             <div>
               <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
-                Current Shop: <strong id="modal-active-shop-name" style="color: #fff;">Main St Barbers</strong>
+                Current Shop: <strong id="modal-active-shop-name" style="color: var(--text-main);">Main St Barbers</strong>
               </div>
               <div style="font-size: 1rem; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 0.4rem; margin-top: 2px;">
                 <span class="pulse-dot" style="background: #10b981;"></span>
@@ -2630,8 +2630,8 @@ Dedicated Support Manager
             <div id="tier-badge-starter" class="hidden" style="position: absolute; top: -11px; right: 12px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">✓ CURRENT PLAN</div>
             <div>
               <span style="font-size: 0.75rem; color: var(--text-subtle); font-weight: 600;" id="modal-t1-badge">FREE FOREVER</span>
-              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t1-title">Starter</h3>
-              <div style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.8rem;"><span id="modal-t1-price">$0</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+              <h3 style="font-size: 1.15rem; color: var(--text-main); margin: 0.3rem 0;" id="modal-t1-title">Starter</h3>
+              <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.8rem;"><span id="modal-t1-price">$0</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
               <ul id="modal-tier-features-starter" style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                 <li>✓ <strong>1 Shop Location</strong></li>
                 <li>✓ Up to 100 Monthly Check-ins</li>
@@ -2653,7 +2653,7 @@ Dedicated Support Manager
             <div id="tier-badge-pro" style="position: absolute; top: -11px; right: 12px; background: var(--primary); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">POPULAR</div>
             <div>
               <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;" id="modal-t2-badge">STANDARD SHOP</span>
-              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t2-title">Pro Business</h3>
+              <h3 style="font-size: 1.15rem; color: var(--text-main); margin: 0.3rem 0;" id="modal-t2-title">Pro Business</h3>
               <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 0.8rem;"><span id="modal-t2-price">$15</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
               <ul id="modal-tier-features-pro" style="font-size: 0.8rem; color: var(--text-main); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                 <li>✓ <strong>Everything in Starter</strong></li>
@@ -2681,7 +2681,7 @@ Dedicated Support Manager
             <div id="tier-badge-enterprise" class="hidden" style="position: absolute; top: -11px; right: 12px; background: #6366f1; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">ENTERPRISE</div>
             <div>
               <span style="font-size: 0.75rem; color: #6366f1; font-weight: 600;" id="modal-t3-badge">MULTI-LOCATION</span>
-              <h3 style="font-size: 1.15rem; color: #fff; margin: 0.3rem 0;" id="modal-t3-title">Enterprise</h3>
+              <h3 style="font-size: 1.15rem; color: var(--text-main); margin: 0.3rem 0;" id="modal-t3-title">Enterprise</h3>
               <div style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-bottom: 0.8rem;"><span id="modal-t3-price">$49</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
               <ul id="modal-tier-features-enterprise" style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                 <li>✓ <strong>Everything in Pro Business</strong></li>
@@ -2724,7 +2724,7 @@ Dedicated Support Manager
     <div class="modal-card" style="max-width: 440px; padding: 1.5rem;">
       <div class="modal-header">
         <div>
-          <h2 style="font-size: 1.3rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+          <h2 style="font-size: 1.3rem; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
             <span>🎟️</span>
             <span>Join Walk-In Queue</span>
           </h2>
@@ -2740,14 +2740,14 @@ Dedicated Support Manager
           <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
             Your Name or Initials *
           </label>
-          <input type="text" id="public-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
+          <input type="text" id="public-customer-name" placeholder="e.g. Sammy K." required style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 1rem;">
         </div>
 
         <div>
           <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
             Mobile Phone Number (Optional)
           </label>
-          <input type="tel" id="public-customer-phone" placeholder="e.g. (555) 234-5678" style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 1rem;">
+          <input type="tel" id="public-customer-phone" placeholder="e.g. (555) 234-5678" style="width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 1rem;">
           <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">Used only to send an SMS text message with your live ticket link when the front desk calls your turn.</p>
         </div>
 
@@ -2767,7 +2767,7 @@ Dedicated Support Manager
     <div class="modal-card" style="max-width: 520px; padding: 1.5rem;">
       <div class="modal-header">
         <div>
-          <h2 style="font-size: 1.3rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+          <h2 style="font-size: 1.3rem; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
             <span>💬</span>
             <span id="reply-modal-title">Reply to Support Inquiry</span>
           </h2>
@@ -2790,7 +2790,7 @@ Dedicated Support Manager
           <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">
             Your Official Support Response
           </label>
-          <textarea id="reply-message-text" rows="5" placeholder="Type your response to the shop owner / customer here..." required style="width: 100%; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: #fff; font-size: 0.95rem; resize: vertical; font-family: inherit;"></textarea>
+          <textarea id="reply-message-text" rows="5" placeholder="Type your response to the shop owner / customer here..." required style="width: 100%; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.95rem; resize: vertical; font-family: inherit;"></textarea>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
@@ -2811,13 +2811,13 @@ Dedicated Support Manager
       <!-- Celebration Header -->
       <div style="text-align: center; margin-bottom: 1.5rem;">
         <div style="font-size: 3rem; margin-bottom: 0.2rem; filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.5));">🎉🚀</div>
-        <h3 style="font-size: 1.6rem; color: #fff; margin: 0; font-family: var(--font-family-heading);" id="reg-success-shop-name">Shop Onboarding Complete!</h3>
+        <h3 style="font-size: 1.6rem; color: var(--text-main); margin: 0; font-family: var(--font-family-heading);" id="reg-success-shop-name">Shop Onboarding Complete!</h3>
         <p style="font-size: 0.88rem; color: #10b981; margin: 0.35rem 0 0 0; font-weight: 600;" id="reg-success-email-notice">Your live queue & public check-in page are active</p>
       </div>
 
       <!-- Live Customer QR Code Preview Box -->
       <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem; text-align: center;">
-        <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
           <span>📱</span> Lobby QR Code (Scan to Test End-User Check-In)
         </div>
         <div id="reg-success-qr-box" style="background: #fff; padding: 0.75rem; border-radius: 12px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
@@ -2832,7 +2832,7 @@ Dedicated Support Manager
       <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--text-light);">
         <div style="border-bottom: 1px dashed rgba(255,255,255,0.12); padding-bottom: 0.65rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
           <span style="font-size: 0.8rem; color: var(--text-muted);">📧 Registered Email:</span>
-          <strong id="reg-success-email-val" style="color: #fff; font-family: monospace; font-size: 0.88rem;">owner@waitlink.app</strong>
+          <strong id="reg-success-email-val" style="color: var(--text-main); font-family: monospace; font-size: 0.88rem;">owner@waitlink.app</strong>
         </div>
 
         <!-- Links List -->
@@ -2865,7 +2865,7 @@ Dedicated Support Manager
 
       <!-- What Would You Like To Do Next? Customization Shortcuts -->
       <div style="margin-bottom: 1.25rem;">
-        <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.65rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.65rem;">
           🛠️ What would you like to configure next?
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 0.65rem;">
@@ -2905,7 +2905,7 @@ Dedicated Support Manager
         <div style="font-size: 2.2rem; background: rgba(6, 182, 212, 0.12); border: 1.5px solid rgba(6, 182, 212, 0.35); padding: 0.45rem 0.85rem; border-radius: 14px; box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);">🕵️</div>
         <div style="flex: 1;">
           <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-            <h3 style="font-size: 1.5rem; color: #fff; margin: 0; font-family: var(--font-family-heading); font-weight: 800; letter-spacing: -0.01em;" id="audit-modal-customer-name">Customer Name</h3>
+            <h3 style="font-size: 1.5rem; color: var(--text-main); margin: 0; font-family: var(--font-family-heading); font-weight: 800; letter-spacing: -0.01em;" id="audit-modal-customer-name">Customer Name</h3>
             <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(6, 182, 212, 0.15); color: #38bdf8; padding: 0.25rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(6, 182, 212, 0.3); font-weight: 700;">Immutable Audit Trail</span>
           </div>
           <p style="font-size: 0.88rem; color: #94a3b8; margin: 0.25rem 0 0 0;" id="audit-modal-subtitle">Complete Lifecycle Activity Audit Log</p>
@@ -2920,7 +2920,7 @@ Dedicated Support Manager
         </div>
         <div>
           <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Total Wait Time:</span>
-          <div id="audit-modal-waited" style="font-weight: 800; font-size: 1.05rem; color: #fff; margin-top: 0.3rem;">--</div>
+          <div id="audit-modal-waited" style="font-weight: 800; font-size: 1.05rem; color: var(--text-main); margin-top: 0.3rem;">--</div>
         </div>
         <div>
           <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Contact Phone:</span>
@@ -3212,7 +3212,7 @@ Dedicated Support Manager
 
       <!-- Actionable Cost Saving Tip -->
       <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: #cbd5e1;">
-        <strong style="color: #fff; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem;">
+        <strong style="color: var(--text-main); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem;">
           <span>🎯</span> Recommended Template for 1-Credit Delivery:
         </strong>
         <code style="display: block; background: rgba(0,0,0,0.5); padding: 0.45rem 0.65rem; border-radius: 4px; color: #38bdf8; font-size: 0.78rem; margin: 0.35rem 0;">Hi {name}! Your turn at {shop} is ready now. Your ticket: {link}</code>
@@ -3282,6 +3282,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=5.6"></script>
+  <script src="app.js?v=5.7"></script>
 </body>
 </html>
