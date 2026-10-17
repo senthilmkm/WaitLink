@@ -1,0 +1,49 @@
+{
+  "name": "WaitLink — Smart Walk-in Queue Terminal",
+  "short_name": "WaitLink",
+  "description": "Real-time walk-in queue management and live wait tracker for barbershops, salons, clinics, and service desks.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090d16",
+  "theme_color": "#06b6d4",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "assets/waitlink_stripe_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/waitlink_stripe_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Front Desk Terminal",
+      "short_name": "Front Desk",
+      "description": "Open live desk check-in queue",
+      "url": "/?view=desk&source=pwa_shortcut",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Public Wait Board",
+      "short_name": "Wait Board",
+      "description": "Open public queue status screen",
+      "url": "/?view=public&source=pwa_shortcut",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Shop Settings",
+      "short_name": "Settings",
+      "description": "Open shop owner configuration",
+      "url": "/?view=owner&source=pwa_shortcut",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    }
+  ]
+}

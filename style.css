@@ -6086,3 +6086,54 @@ html[data-theme="light"] .comparison-table tr.category-header td {
   color: #0e7490 !important;
   border-bottom-color: #e2e8f0 !important;
 }
+
+/* ==========================================================================
+   23. Progressive Web App (PWA) & Tablet Standalone Styles
+   ========================================================================== */
+body.pwa-standalone {
+  /* Standalone register mode optimization */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.pwa-standalone input,
+body.pwa-standalone textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Hide PWA install triggers when already running as an installed standalone app */
+body.pwa-standalone #pwa-install-header-btn,
+body.pwa-standalone #desk-pwa-install-btn,
+body.pwa-standalone #menu-pwa-install,
+body.pwa-standalone #mobile-item-pwa-install {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  .pwa-header-label {
+    display: none !important;
+  }
+}
+
+/* Light Theme Overrides for PWA Installation Modal */
+html[data-theme="light"] #pwa-install-modal .modal-card {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="light"] #pwa-ios-instructions {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] #pwa-ios-instructions ol {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] #pwa-ios-instructions strong {
+  color: #090d16 !important;
+}

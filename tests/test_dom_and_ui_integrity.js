@@ -69,8 +69,8 @@ it("index.html contains SuperAdmin tabs (Master Shops Directory, Pricing Config 
 // -------------------------------------------------------------------------
 console.log("\n--- 2. Universal Modals & Dialog System ---");
 
-it("index.html contains all 16 modal backdrops and dialogs", () => {
-  const all16Modals = [
+it("index.html contains all 17 modal backdrops and dialogs", () => {
+  const all17Modals = [
     "pricing-audit-modal",
     "delete-shop-modal",
     "settings-modal",
@@ -86,10 +86,11 @@ it("index.html contains all 16 modal backdrops and dialogs", () => {
     "modal-sms-logs",
     "modal-admin-credit-override",
     "modal-carrier-segments-guide",
+    "pwa-install-modal",
     "waitlink-dialog-backdrop"
   ];
 
-  all16Modals.forEach(id => {
+  all17Modals.forEach(id => {
     assert.ok(html.includes(`id="${id}"`), `Missing required modal or dialog: #${id}`);
   });
 });
@@ -346,6 +347,39 @@ it("faq.html contains intelligent search, topic filter pills, and search engine 
   assert.ok(css.includes('html[data-theme="light"] .faq-search-bar-wrap'), "style.css missing light mode search bar styles");
 });
 
+it("Progressive Web App (PWA) manifest, service worker, and standalone tablet installation are verified", () => {
+  const manifestPath = path.join(__dirname, "..", "manifest.webmanifest");
+  assert.ok(fs.existsSync(manifestPath), "manifest.webmanifest does not exist");
+  const manifestJson = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.strictEqual(manifestJson.short_name, "WaitLink", "Manifest short_name mismatch");
+  assert.strictEqual(manifestJson.display, "standalone", "Manifest display mode must be standalone");
+  assert.ok(manifestJson.icons.length >= 2, "Manifest must provide responsive home-screen icons");
+
+  const swPath = path.join(__dirname, "..", "sw.js");
+  assert.ok(fs.existsSync(swPath), "sw.js does not exist");
+  const swCode = fs.readFileSync(swPath, "utf8");
+  assert.ok(/addEventListener\(\s*['"]install['"]/.test(swCode), "sw.js missing install listener");
+  assert.ok(/addEventListener\(\s*['"]fetch['"]/.test(swCode), "sw.js missing fetch listener");
+
+  // index.html checks
+  assert.ok(html.includes('rel="manifest"') && html.includes('manifest.webmanifest'), "index.html missing manifest link");
+  assert.ok(html.includes('id="pwa-install-header-btn"'), "index.html missing #pwa-install-header-btn");
+  assert.ok(html.includes('id="desk-pwa-install-btn"'), "index.html missing #desk-pwa-install-btn");
+  assert.ok(html.includes('id="pwa-install-modal"'), "index.html missing #pwa-install-modal");
+  assert.ok(html.includes('id="pwa-ios-instructions"'), "index.html missing iOS PWA instructions box");
+
+  // app.js checks
+  assert.ok(appJs.includes("initPwaSupport()"), "app.js missing initPwaSupport call");
+  assert.ok(appJs.includes("function isPwaStandalone()"), "app.js missing isPwaStandalone helper");
+  assert.ok(appJs.includes("function triggerPwaInstall()"), "app.js missing triggerPwaInstall function");
+  assert.ok(appJs.includes("function executePwaInstall()"), "app.js missing executePwaInstall function");
+
+  // style.css checks
+  assert.ok(css.includes("body.pwa-standalone"), "style.css missing body.pwa-standalone rule");
+  assert.ok(css.includes('html[data-theme="light"] #pwa-install-modal .modal-card'), "style.css missing light theme modal-card override");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
+
 

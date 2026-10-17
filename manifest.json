@@ -1,0 +1,55 @@
+{
+  "name": "WaitLink — Live Walk-in Wait Time Tracker",
+  "short_name": "WaitLink",
+  "description": "1-tap walk-in queue management, live wait time tracker, and automated turn-ready SMS dispatch for local shops and clinics.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090d16",
+  "theme_color": "#06b6d4",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "assets/waitlink_stripe_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/waitlink_stripe_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/waitlink_stripe_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Front Desk Terminal",
+      "short_name": "Front Desk",
+      "description": "Open live desk calling terminal",
+      "url": "/?view=desk&source=pwa",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Lobby TV Display",
+      "short_name": "Lobby Display",
+      "description": "Open full-screen digital lobby waitlist",
+      "url": "/?view=display&source=pwa",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Owner Analytics",
+      "short_name": "Analytics",
+      "description": "Open business overview and metrics",
+      "url": "/?view=owner&source=pwa",
+      "icons": [{ "src": "assets/waitlink_stripe_icon.png", "sizes": "192x192" }]
+    }
+  ]
+}

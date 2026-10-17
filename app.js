@@ -466,6 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAll();
   startTimerTicker();
   generateQRCode();
+  initPwaSupport();
 
   // Auto-clear auth error banner when typing in email or password
   const authEmailInput = document.getElementById("auth-email");
@@ -12789,12 +12790,139 @@ window.persistHistoryItemToSubcollection = persistHistoryItemToSubcollection;
 window.hashStaffPasscode = hashStaffPasscode;
 window.SafeStorage = SafeStorage;
 
+/* ==========================================================================
+   Progressive Web App (PWA) & Tablet Standalone Logic
+   ========================================================================== */
+let deferredPwaPrompt = null;
+
+function isPwaStandalone() {
+  const isIosStandalone = window.navigator && window.navigator.standalone === true;
+  const isDisplayStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+  return Boolean(isIosStandalone || isDisplayStandalone);
+}
+
+function isIosOrIpad() {
+  const userAgent = (window.navigator && window.navigator.userAgent) ? window.navigator.userAgent.toLowerCase() : "";
+  const isIos = /iphone|ipad|ipod/.test(userAgent);
+  const isMacTouch = /macintosh/.test(userAgent) && (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  return Boolean(isIos || isMacTouch);
+}
+
+function showPwaInstallPrompts(show) {
+  if (isPwaStandalone()) {
+    document.body.classList.add("pwa-standalone");
+    show = false;
+  }
+
+  const headerBtn = document.getElementById("pwa-install-header-btn");
+  const deskBtn = document.getElementById("desk-pwa-install-btn");
+  const menuBtn = document.getElementById("menu-pwa-install");
+  const mobileBtn = document.getElementById("mobile-item-pwa-install");
+
+  const displayStyle = show ? "inline-flex" : "none";
+  if (headerBtn) headerBtn.style.display = displayStyle;
+  if (deskBtn) deskBtn.style.display = displayStyle;
+  if (menuBtn) menuBtn.style.display = show ? "flex" : "none";
+  if (mobileBtn) mobileBtn.style.display = show ? "flex" : "none";
+}
+
+function initPwaSupport() {
+  // 1. Detect if already running standalone
+  if (isPwaStandalone()) {
+    document.body.classList.add("pwa-standalone");
+    showPwaInstallPrompts(false);
+    return;
+  }
+
+  // 2. On iOS/iPad, native beforeinstallprompt does not fire, so we show the install guide option
+  if (isIosOrIpad()) {
+    showPwaInstallPrompts(true);
+  }
+
+  // 3. Catch browser install prompt on Android, Chrome, Edge & Desktop
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    showPwaInstallPrompts(true);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPwaPrompt = null;
+    document.body.classList.add("pwa-standalone");
+    showPwaInstallPrompts(false);
+    if (typeof showToast === "function") {
+      showToast("🎉 WaitLink Terminal installed to your home screen!");
+    }
+  });
+
+  // 4. Register Service Worker for offline shell and fast launches
+  if ("serviceWorker" in navigator && (window.location.protocol === "https:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] WaitLink Service Worker active (Scope:", reg.scope, ")");
+        })
+        .catch((err) => {
+          console.warn("[PWA] Service Worker registration note:", err);
+        });
+    });
+  }
+}
+
+function triggerPwaInstall() {
+  const modal = document.getElementById("pwa-install-modal");
+  const iosBox = document.getElementById("pwa-ios-instructions");
+  const directBox = document.getElementById("pwa-direct-install-box");
+
+  if (!modal) return;
+
+  if (deferredPwaPrompt) {
+    if (directBox) directBox.style.display = "block";
+    if (iosBox) iosBox.style.display = "none";
+  } else if (isIosOrIpad()) {
+    if (iosBox) iosBox.style.display = "block";
+    if (directBox) directBox.style.display = "none";
+  } else {
+    if (iosBox) iosBox.style.display = "block";
+    if (directBox) directBox.style.display = "none";
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function executePwaInstall() {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    deferredPwaPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === "accepted") {
+        console.log("[PWA] User accepted the installation");
+        closePwaInstallModal();
+      }
+      deferredPwaPrompt = null;
+    });
+  } else {
+    closePwaInstallModal();
+  }
+}
+
+function closePwaInstallModal() {
+  const modal = document.getElementById("pwa-install-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.isPwaStandalone = isPwaStandalone;
+window.isIosOrIpad = isIosOrIpad;
+window.initPwaSupport = initPwaSupport;
+window.triggerPwaInstall = triggerPwaInstall;
+window.executePwaInstall = executePwaInstall;
+window.closePwaInstallModal = closePwaInstallModal;
+
 // =========================================================================
 // WAITLINK CORE UNIFIED SYSTEM NAMESPACE
 // Provides structured subsystem access while preserving legacy top-level bindings
 // =========================================================================
 window.WaitLink = {
-  version: "4.7.0",
+  version: "4.8.0",
   state: state,
   QueueEngine: {
     mutateQueueAtomic,
@@ -12828,5 +12956,13 @@ window.WaitLink = {
   Audio: {
     playFrontDeskChime,
     toggleSoundAlerts
+  },
+  PWA: {
+    isPwaStandalone,
+    isIosOrIpad,
+    initPwaSupport,
+    triggerPwaInstall,
+    executePwaInstall,
+    closePwaInstallModal
   }
 };

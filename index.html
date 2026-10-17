@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WaitLink — Live Walk-in Wait Time Tracker</title>
   <meta name="description" content="1-tap check-in and live public wait time publishing for walk-in shops.">
+  <!-- PWA & Apple Tablet Standalone Configuration -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#06b6d4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WaitLink">
+  <link rel="apple-touch-icon" href="assets/waitlink_stripe_icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/waitlink_stripe_icon.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/waitlink_stripe_icon.png">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -68,6 +77,11 @@
           🌙
         </button>
 
+        <!-- PWA Install Action (Visible on tablet/mobile/desktop when install is available) -->
+        <button id="pwa-install-header-btn" class="btn btn-secondary btn-sm-header" onclick="triggerPwaInstall()" title="Install WaitLink as Standalone Tablet App" style="display: none; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; gap: 0.35rem;">
+          📲 <span class="pwa-header-label">Install App</span>
+        </button>
+
         <!-- Upgrade Primary Action (Desktop, visible only for authenticated Starter owners) -->
         <button id="header-upgrade-btn" class="btn btn-secondary btn-sm-header desktop-only-action" onclick="openUpgradeModal()" title="View & Upgrade Subscription Tiers" style="display: none; border-color: rgba(16, 185, 129, 0.4); color: #10b981; gap: 0.35rem;">
           💎 Upgrade
@@ -119,6 +133,9 @@
             </button>
             <button class="dropdown-item" onclick="copyPublicLink(); closeAllDropdowns();">
               <span>📋 Copy Shareable Link</span>
+            </button>
+            <button class="dropdown-item" id="menu-pwa-install" onclick="triggerPwaInstall(); closeAllDropdowns();">
+              <span>📲 Install Tablet Terminal App</span>
             </button>
 
             <div class="dropdown-divider"></div>
@@ -266,6 +283,10 @@
             <button class="mobile-drawer-nav-item" onclick="copyPublicLink(); closeMobileNavDrawer();">
               <span class="drawer-item-icon">📋</span>
               <span class="drawer-item-label">Copy Shareable Link</span>
+            </button>
+            <button class="mobile-drawer-nav-item" id="mobile-item-pwa-install" onclick="triggerPwaInstall(); closeMobileNavDrawer();">
+              <span class="drawer-item-icon">📲</span>
+              <span class="drawer-item-label">Install App on this Device</span>
             </button>
             <button class="mobile-drawer-nav-item hidden" id="mobile-item-main-st-demo" onclick="launchDemoMode(); closeMobileNavDrawer();">
               <span class="drawer-item-icon">🎮</span>
@@ -537,6 +558,9 @@
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
             🔔 Sound Alerts: ON
+          </button>
+          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none; font-size: 0.8rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(6, 182, 212, 0.1); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
+            📲 Install Tablet Mode
           </button>
           <span class="count-pill" id="queue-badge">0 Waiting</span>
         </div>
@@ -3257,6 +3281,74 @@ Dedicated Support Manager
         </button>
         <button type="button" class="btn btn-primary" id="dialog-btn-confirm" onclick="waitlinkDialogConfirm()">
           Confirm
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: PWA Standalone Tablet Installation -->
+  <div id="pwa-install-modal" class="modal-backdrop hidden" onclick="if(event.target === this) closePwaInstallModal()">
+    <div class="modal-card" style="max-width: 520px; width: 100%; padding: 2rem 1.75rem; border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85); position: relative;">
+      <button class="close-btn" onclick="closePwaInstallModal()" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.25rem; opacity: 0.7;" title="Close Modal">✕</button>
+
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="width: 68px; height: 68px; margin: 0 auto 0.75rem auto; background: rgba(6, 182, 212, 0.15); border: 2px solid rgba(6, 182, 212, 0.4); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 24px rgba(6, 182, 212, 0.25);">
+          📲
+        </div>
+        <h3 style="font-size: 1.5rem; color: var(--text-main); margin: 0 0 0.35rem 0; font-family: var(--font-family-heading);">Install WaitLink on this Device</h3>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">Run WaitLink as a full-screen countertop terminal with zero browser address bars or tabs.</p>
+      </div>
+
+      <!-- iOS / iPad Instructions (Auto-shown on iPad/iPhone) -->
+      <div id="pwa-ios-instructions" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+          <span>🍎</span> iPad & Safari 1-Tap Setup
+        </div>
+        <ol style="margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem; color: var(--text-light);">
+          <li>
+            Tap the <strong>Share</strong> icon in the top Safari toolbar:
+            <span style="display: inline-block; padding: 2px 7px; background: rgba(255,255,255,0.1); border-radius: 6px; font-weight: bold; margin-left: 4px;">⎙ Share [⬆]</span>
+          </li>
+          <li>
+            Scroll down the menu and tap:
+            <span style="display: inline-block; padding: 2px 7px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; font-weight: bold; margin-left: 4px;">➕ Add to Home Screen</span>
+          </li>
+          <li>
+            Tap <strong>"Add"</strong> in the top-right corner.
+          </li>
+          <li>
+            Launch <strong>WaitLink</strong> from your iPad home screen dock for full-screen edge-to-edge register mode!
+          </li>
+        </ol>
+      </div>
+
+      <!-- Direct 1-Click Install Button (Shown on Android, Chrome, Edge, and Desktop) -->
+      <div id="pwa-direct-install-box" style="margin-bottom: 1.25rem; display: none;">
+        <button id="pwa-btn-prompt-install" class="btn btn-primary" onclick="executePwaInstall()" style="width: 100%; padding: 0.85rem; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span>📲</span> Add to Home Screen / Dock
+        </button>
+      </div>
+
+      <!-- Features Checklist -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.78rem; color: var(--text-muted); padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <span style="color: #10b981;">✓</span> Full-screen kiosk mode
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <span style="color: #10b981;">✓</span> No URL address bar
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <span style="color: #10b981;">✓</span> Offline LocalStorage sync
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <span style="color: #10b981;">✓</span> Instant 1-tap dock launch
+        </div>
+      </div>
+
+      <div style="margin-top: 1.25rem; text-align: center;">
+        <button class="btn btn-secondary btn-sm" onclick="closePwaInstallModal()" style="width: 100%;">
+          Got it
         </button>
       </div>
 
