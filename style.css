@@ -4001,5 +4001,14 @@ body.drawer-open {
   }
 }
 
-
-
+/* Custom Accordion & Details Styling */
+details summary::-webkit-details-marker {
+  display: none;
+}
+details summary {
+  list-style: none;
+}
+details summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
