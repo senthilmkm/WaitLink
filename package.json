@@ -4,7 +4,7 @@
   "private": true,
   "description": "Live Walk-in Wait Time Tracker SaaS",
   "scripts": {
-    "test": "node scripts/run_all_tests.js",
+    "test": "node tests/run_all_tests.js",
     "deploy": "npx firebase-tools deploy --only hosting --project waitlink-app-8821 && node scripts/prune-firebase-versions.js",
     "prune-hosting": "node scripts/prune-firebase-versions.js"
   }
