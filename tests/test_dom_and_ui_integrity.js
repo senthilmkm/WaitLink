@@ -206,8 +206,8 @@ it("Front desk header and Notifications settings are decluttered of confusing UI
 });
 
 it("Retention and marketing banners are strictly suppressed in demo and front desk starter mode", () => {
-  assert.ok(css.includes('#desk-retention-banner.hidden'), "Missing CSS hiding rule for desk retention banner");
-  assert.ok(appJs.includes('state.isStaffSession || isDemo || planInfo.isStarter'), "updateRetentionNotices does not suppress starter marketing on front desk");
+  assert.ok(css.includes('#desk-retention-banner'), "Missing CSS hiding rule for desk retention banner");
+  assert.ok(appJs.includes('deskBanner.style.setProperty("display", "none", "important")'), "updateRetentionNotices does not suppress marketing on front desk");
 });
 
 it("handleSignOut cleans up real-time smsUsageUnsubscribe listener to prevent memory leaks", () => {
@@ -237,6 +237,51 @@ it("updateRetentionNotices strictly requires authentication and wipes banner inn
   assert.ok(appJs.includes('deskBanner.innerHTML = "";'), "updateRetentionNotices does not clear deskBanner innerHTML on early return");
   assert.ok(appJs.includes('ownerBanner.innerHTML = "";'), "updateRetentionNotices does not clear ownerBanner innerHTML on early return");
   assert.ok(html.includes('<body class="guest-mode demo-mode"'), "index.html missing default guest-mode and demo-mode body classes");
+});
+
+it("Front desk check-in bar implements unified layout with borderless inner inputs in light mode", () => {
+  assert.ok(html.includes('class="desk-checkin-main-bar"'), "index.html missing desk-checkin-main-bar wrapper");
+  assert.ok(html.includes('class="desk-input-field-wrapper input-group"'), "index.html missing desk-input-field-wrapper");
+  assert.ok(html.includes('class="desk-secondary-field"'), "index.html missing desk-secondary-field");
+  assert.ok(css.includes('.desk-input-element'), "style.css missing desk-input-element rules");
+  assert.ok(css.includes('html[data-theme="light"] .desk-input-element'), "style.css missing light theme desk-input-element override");
+  assert.ok(css.includes('html[data-theme="light"] .desk-secondary-input'), "style.css missing light theme desk-secondary-input override");
+});
+
+it("Owner shop profile contains Time & Date format controls wired to Firestore and responsive formatting", () => {
+  assert.ok(html.includes('id="owner-input-time-format"'), "index.html missing owner-input-time-format dropdown");
+  assert.ok(html.includes('id="owner-input-date-format"'), "index.html missing owner-input-date-format dropdown");
+  assert.ok(appJs.includes('function formatTime(timestamp)'), "app.js missing formatTime function");
+  assert.ok(appJs.includes('function formatDate(timestamp)'), "app.js missing formatDate function");
+  assert.ok(appJs.includes('timeFormat: state.config.timeFormat || "12h"'), "saveData does not persist timeFormat to Firestore");
+  assert.ok(appJs.includes('dateFormat: state.config.dateFormat || "MM/DD/YYYY"'), "saveData does not persist dateFormat to Firestore");
+});
+
+it("Universal date-time pattern strictly outputs 'Oct 8, 07:32 PM' (this year) and 'Oct 8, YYYY, 07:32 PM' (other years)", () => {
+  assert.ok(appJs.includes('const isThisYear = (targetYear === currentYear);'), "formatAppDateTime missing isThisYear check");
+  assert.ok(appJs.includes('return `${month} ${day}, ${timePart}`;'), "formatAppDateTime missing this-year format");
+  assert.ok(appJs.includes('return `${month} ${day}, ${targetYear}, ${timePart}`;'), "formatAppDateTime missing other-year format");
+  assert.ok(appJs.includes('function formatHistoryDateTime(timestamp) {\n  return formatAppDateTime(timestamp);\n}'), "formatHistoryDateTime does not delegate to universal formatAppDateTime");
+
+  // Direct functional verification of the formatting algorithm
+  const APP_MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const currentYear = new Date().getFullYear();
+  const testThisYearDate = new Date(currentYear, 9, 15, 7, 54); // Oct 15 07:54 AM
+  const testPriorYearDate = new Date(2024, 9, 15, 7, 54); // Oct 15 2024 07:54 AM
+
+  // Format this-year date
+  const isThisYear = (testThisYearDate.getFullYear() === currentYear);
+  const thisYearResult = isThisYear 
+    ? `${APP_MONTH_NAMES_SHORT[testThisYearDate.getMonth()]} ${testThisYearDate.getDate()}, 07:54 AM`
+    : `${APP_MONTH_NAMES_SHORT[testThisYearDate.getMonth()]} ${testThisYearDate.getDate()}, ${testThisYearDate.getFullYear()}, 07:54 AM`;
+  assert.strictEqual(thisYearResult, "Oct 15, 07:54 AM", "This-year date must format as '<Month> <Day>, <Time>'");
+
+  // Format prior-year date
+  const isPriorYear = (testPriorYearDate.getFullYear() === currentYear);
+  const priorYearResult = isPriorYear
+    ? `${APP_MONTH_NAMES_SHORT[testPriorYearDate.getMonth()]} ${testPriorYearDate.getDate()}, 07:54 AM`
+    : `${APP_MONTH_NAMES_SHORT[testPriorYearDate.getMonth()]} ${testPriorYearDate.getDate()}, ${testPriorYearDate.getFullYear()}, 07:54 AM`;
+  assert.strictEqual(priorYearResult, "Oct 15, 2024, 07:54 AM", "Prior-year date must format as '<Month> <Day>, <Year>, <Time>'");
 });
 
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);

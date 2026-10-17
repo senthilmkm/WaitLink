@@ -181,6 +181,13 @@ async function hashStaffPasscode(passcode) {
   return sha256(clean);
 }
 
+// Default Demo Services (Strictly scoped to Main St Barbers Sandbox only)
+const DEFAULT_DEMO_SERVICES = [
+  { id: "srv_demo_1", name: "Men's Haircut", estDurationMin: 20, icon: "✂️", enabled: true },
+  { id: "srv_demo_2", name: "Haircut & Beard Trim", estDurationMin: 35, icon: "💈", enabled: true },
+  { id: "srv_demo_3", name: "Beard Trim & Lineup", estDurationMin: 15, icon: "🧔", enabled: true }
+];
+
 // Application State
 const state = {
   activeView: "home", // "home" | "desk" | "owner" | "public" | "poster" | "superadmin"
@@ -192,11 +199,7 @@ const state = {
     slug: "main-st-barbers",
     estBaseWaitMin: 20,
     enableServices: true,
-    services: [
-      { id: "srv_demo_1", name: "Men's Haircut", estDurationMin: 20, icon: "✂️", enabled: true },
-      { id: "srv_demo_2", name: "Haircut & Beard Trim", estDurationMin: 35, icon: "💈", enabled: true },
-      { id: "srv_demo_3", name: "Beard Trim & Lineup", estDurationMin: 15, icon: "🧔", enabled: true }
-    ],
+    services: [...DEFAULT_DEMO_SERVICES],
     clinicalPrivacyEnabled: false,
     firebaseConfig: DEFAULT_FIREBASE_CONFIG
   },
@@ -755,8 +758,7 @@ function renderSmsWalletUI(usage = state.smsUsage || {}) {
   }
 
   if (renewalNote && usage.billingCycleEnd) {
-    const renDate = new Date(usage.billingCycleEnd);
-    renewalNote.textContent = `🔄 Resets on ${renDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    renewalNote.textContent = `🔄 Resets on ${formatAppDateOnly(usage.billingCycleEnd)}`;
   }
 
   if (rolloverBadge) {
@@ -927,7 +929,7 @@ async function openSmsLogsModal() {
     } else {
       tbody.innerHTML = logs.map(item => {
         const d = item.dispatchedAt ? new Date(item.dispatchedAt) : new Date();
-        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        const timeStr = formatAppDateTime(d);
         const caller = item.caller || "Staff Station";
         const status = item.status || "delivered";
         const statusColor = status === "delivered" || status === "sent" ? "#10b981" : "#f59e0b";
@@ -1031,12 +1033,25 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.promoEnd !== undefined) state.config.promoEnd = data.promoEnd;
       if (data.hours !== undefined) state.config.hours = data.hours;
       if (data.estBaseWaitMin !== undefined) state.config.estBaseWaitMin = data.estBaseWaitMin;
-      if (data.enableServices !== undefined) state.config.enableServices = data.enableServices;
-      if (Array.isArray(data.services)) state.config.services = data.services;
       if (data.logoUrl !== undefined) state.config.logoUrl = data.logoUrl;
+      const isDemo = (state.config.slug === "main-st-barbers");
+      if (data.enableServices !== undefined) {
+        state.config.enableServices = !!data.enableServices;
+      } else {
+        state.config.enableServices = isDemo;
+      }
+      if (Array.isArray(data.services)) {
+        state.config.services = data.services;
+      } else if (isDemo) {
+        state.config.services = [...DEFAULT_DEMO_SERVICES];
+      } else {
+        state.config.services = [];
+      }
       if (data.planTitle !== undefined) state.config.planTitle = data.planTitle;
       if (data.planPrice !== undefined) state.config.planPrice = data.planPrice;
       if (data.clinicalPrivacyEnabled !== undefined) state.config.clinicalPrivacyEnabled = !!data.clinicalPrivacyEnabled;
+      if (data.timeFormat !== undefined) state.config.timeFormat = data.timeFormat;
+      if (data.dateFormat !== undefined) state.config.dateFormat = data.dateFormat;
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
@@ -1065,6 +1080,19 @@ function subscribeFirestore(forceResubscribe = false) {
               if (data.phone !== undefined) state.config.phone = data.phone;
               if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
               if (data.clinicalPrivacyEnabled !== undefined) state.config.clinicalPrivacyEnabled = !!data.clinicalPrivacyEnabled;
+              const isDemoFallback = (state.config.slug === "main-st-barbers");
+              if (data.enableServices !== undefined) {
+                state.config.enableServices = !!data.enableServices;
+              } else {
+                state.config.enableServices = isDemoFallback;
+              }
+              if (Array.isArray(data.services)) {
+                state.config.services = data.services;
+              } else if (isDemoFallback) {
+                state.config.services = [...DEFAULT_DEMO_SERVICES];
+              } else {
+                state.config.services = [];
+              }
               if (Array.isArray(data.queue)) state.queue = data.queue;
               if (Array.isArray(data.history)) state.history = data.history;
               updateConfigUI();
@@ -1259,6 +1287,88 @@ function formatDatetimeLocalVal(val) {
   }
 }
 
+// Universal WaitLink Unified Date-Time Formatter:
+// If date is this year:      "Oct 8, 07:32 PM"
+// If date is not this year:  "Oct 8, 2026, 07:32 PM"
+const APP_MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatAppDateOnly(timestamp) {
+  if (!timestamp) return "--";
+  const d = (timestamp instanceof Date) ? timestamp : new Date(timestamp);
+  if (isNaN(d.getTime())) return "--";
+
+  const currentYear = new Date().getFullYear();
+  const targetYear = d.getFullYear();
+  const month = APP_MONTH_NAMES_SHORT[d.getMonth()];
+  const day = d.getDate();
+
+  if (targetYear === currentYear) {
+    return `${month} ${day}`;
+  }
+  return `${month} ${day}, ${targetYear}`;
+}
+
+function formatAppDateTime(timestamp) {
+  if (!timestamp) return "--";
+  const d = (timestamp instanceof Date) ? timestamp : new Date(timestamp);
+  if (isNaN(d.getTime())) return "--";
+
+  const currentYear = new Date().getFullYear();
+  const targetYear = d.getFullYear();
+  const isThisYear = (targetYear === currentYear);
+
+  const month = APP_MONTH_NAMES_SHORT[d.getMonth()];
+  const day = d.getDate();
+
+  const timeFormat = (typeof state !== "undefined" && state.config && state.config.timeFormat) || "12h";
+  const rawHours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+
+  let timePart = "";
+  if (timeFormat === "24h") {
+    timePart = `${String(rawHours).padStart(2, "0")}:${minutes}`;
+  } else {
+    const ampm = rawHours >= 12 ? "PM" : "AM";
+    let hours12 = rawHours % 12;
+    hours12 = hours12 ? hours12 : 12;
+    const hoursStr = String(hours12).padStart(2, "0");
+    timePart = `${hoursStr}:${minutes} ${ampm}`;
+  }
+
+  if (isThisYear) {
+    return `${month} ${day}, ${timePart}`;
+  } else {
+    return `${month} ${day}, ${targetYear}, ${timePart}`;
+  }
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return "";
+  const d = (timestamp instanceof Date) ? timestamp : new Date(timestamp);
+  if (isNaN(d.getTime())) return "";
+  const timeFormat = (typeof state !== "undefined" && state.config && state.config.timeFormat) || "12h";
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  if (timeFormat === "24h") {
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+  const period = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${String(h12).padStart(2, "0")}:${minutes} ${period}`;
+}
+
+function formatDate(timestamp) {
+  return formatAppDateOnly(timestamp);
+}
+
+if (typeof window !== "undefined") {
+  window.APP_MONTH_NAMES_SHORT = APP_MONTH_NAMES_SHORT;
+  window.formatAppDateTime = formatAppDateTime;
+  window.formatAppDateOnly = formatAppDateOnly;
+  window.formatTime = formatTime;
+  window.formatDate = formatDate;
+}
+
 function maskPhone(phone) {
   if (!phone || typeof phone !== "string") return "";
   const cleaned = phone.trim();
@@ -1437,6 +1547,8 @@ function updateConfigUI() {
   setElValue("owner-input-slug", state.config.slug);
   setElValue("owner-input-baseline", state.config.estBaseWaitMin);
   setElText("owner-target-baseline", state.config.estBaseWaitMin + "m");
+  setElValue("owner-input-time-format", state.config.timeFormat || "12h");
+  setElValue("owner-input-date-format", state.config.dateFormat || "MM/DD/YYYY");
   
   const ownerJsonInput = document.getElementById("owner-firestore-json");
   if (ownerJsonInput) {
@@ -1657,6 +1769,8 @@ function saveData() {
         estBaseWaitMin: state.config.estBaseWaitMin || 20,
         enableServices: !!state.config.enableServices,
         clinicalPrivacyEnabled: !!state.config.clinicalPrivacyEnabled,
+        timeFormat: state.config.timeFormat || "12h",
+        dateFormat: state.config.dateFormat || "MM/DD/YYYY",
         services: state.config.services || [],
         logoUrl: state.config.logoUrl || "",
         queue: state.queue,
@@ -3395,6 +3509,13 @@ async function saveOwnerSettings() {
     ? document.getElementById("owner-clinical-privacy-checkbox").checked 
     : !!state.config.clinicalPrivacyEnabled;
 
+  const timeFormat = (document.getElementById("owner-input-time-format") && document.getElementById("owner-input-time-format").value) 
+    || state.config.timeFormat 
+    || "12h";
+  const dateFormat = (document.getElementById("owner-input-date-format") && document.getElementById("owner-input-date-format").value) 
+    || state.config.dateFormat 
+    || "MM/DD/YYYY";
+
   state.config = {
     ...state.config,
     shopName,
@@ -3409,6 +3530,8 @@ async function saveOwnerSettings() {
     logoUrl,
     estBaseWaitMin,
     clinicalPrivacyEnabled,
+    timeFormat,
+    dateFormat,
     twilio: {
       enabled: twilioEnable,
       accountSid: twilioAccountSid,
@@ -3440,7 +3563,7 @@ async function saveOwnerSettings() {
     saveBtn.style.opacity = "1";
   }
   if (saveStatus) {
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = formatAppDateTime(new Date());
     saveStatus.style.display = "inline-flex";
     saveStatus.style.color = "#10b981";
     saveStatus.style.background = "rgba(16, 185, 129, 0.12)";
@@ -3684,7 +3807,7 @@ function renderQueue() {
     const elapsedSec = Math.floor((now - item.checkedInAt) / 1000);
     const elapsedMin = Math.floor(elapsedSec / 60);
     const timeStr = `${elapsedMin}m ${elapsedSec % 60}s`;
-    const checkInClock = new Date(item.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const checkInClock = formatAppDateTime(item.checkedInAt);
 
     const isNextUp = index === 0;
     const badgeText = isClinical 
@@ -3799,28 +3922,12 @@ function renderQueue() {
   }
 }
 
-// Helper to format date + time cleanly
+// Helper to format date + time cleanly:
+// Strictly follows universal pattern:
+// If this year:     "Oct 8, 07:32 PM"
+// If not this year: "Oct 8, 2026, 07:32 PM"
 function formatHistoryDateTime(timestamp) {
-  if (!timestamp) return "--";
-  const d = new Date(timestamp);
-  const now = new Date();
-  
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.round((today - targetDate) / (1000 * 60 * 60 * 24));
-
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  if (diffDays === 0) {
-    return `Today, ${timeStr}`;
-  } else if (diffDays === 1) {
-    return `Yesterday, ${timeStr}`;
-  } else if (diffDays > 1 && diffDays < 7) {
-    const dayName = d.toLocaleDateString([], { weekday: 'short' });
-    return `${dayName} (${d.getMonth() + 1}/${d.getDate()}), ${timeStr}`;
-  } else {
-    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}, ${timeStr}`;
-  }
+  return formatAppDateTime(timestamp);
 }
 
 // Get Filtered History List for a specific view
@@ -4333,16 +4440,9 @@ function updateRetentionNotices() {
 
   // Front Desk operator view never displays upgrade marketing banners
   if (deskBanner) {
-    if (state.isStaffSession || isDemo || planInfo.isStarter || !isAuth) {
-      deskBanner.style.setProperty("display", "none", "important");
-      deskBanner.classList.add("hidden");
-      deskBanner.innerHTML = "";
-    } else {
-      deskBanner.className = bannerClass;
-      deskBanner.innerHTML = bannerHtml;
-      deskBanner.classList.remove("hidden");
-      deskBanner.style.display = "flex";
-    }
+    deskBanner.style.setProperty("display", "none", "important");
+    deskBanner.classList.add("hidden");
+    deskBanner.innerHTML = "";
   }
 
   // Owner History view only displays retention notice for authenticated shop owners on live shop

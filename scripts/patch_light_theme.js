@@ -546,12 +546,10 @@ html[data-theme="light"] #auth-tab-staff.active {
 }
 
 /* 8. Forms, Inputs, Selects, Radios & Checkboxes */
-html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not(.desk-input-element):not(.desk-secondary-input),
 html[data-theme="light"] textarea,
-html[data-theme="light"] select,
+html[data-theme="light"] select:not(.desk-secondary-select),
 html[data-theme="light"] .dialog-input,
-html[data-theme="light"] #desk-customer-phone,
-html[data-theme="light"] #desk-service-select,
 html[data-theme="light"] #inline-customer-name,
 html[data-theme="light"] #inline-customer-phone,
 html[data-theme="light"] #public-customer-name,
@@ -575,8 +573,129 @@ html[data-theme="light"] #pricing-t2-desc,
 html[data-theme="light"] #pricing-t3-desc {
   background: #ffffff !important;
   color: #090d16 !important;
-  border: 1.5px solid #94a3b8 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
   font-weight: 600 !important;
+}
+
+/* Front Desk Check-in Bar Light Mode Refinements */
+html[data-theme="light"] .checkin-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper,
+html[data-theme="light"] .checkin-card .input-group {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) inset, 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper:hover,
+html[data-theme="light"] .checkin-card .input-group:hover {
+  border-color: #94a3b8 !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper:focus-within,
+html[data-theme="light"] .checkin-card .input-group:focus-within {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16), 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-icon-pill,
+html[data-theme="light"] .checkin-card .input-icon {
+  background: #f0f9ff !important;
+  color: #0284c7 !important;
+  border: 1px solid #bae6fd !important;
+}
+
+html[data-theme="light"] .desk-input-element,
+html[data-theme="light"] .checkin-card .input-group input,
+html[data-theme="light"] #customer-name-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-input-element::placeholder,
+html[data-theme="light"] .checkin-card .input-group input::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+html[data-theme="light"] .desk-checkin-submit-btn,
+html[data-theme="light"] #btn-desk-checkin {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #0284c7 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35) !important;
+}
+
+html[data-theme="light"] .desk-checkin-submit-btn:hover,
+html[data-theme="light"] #btn-desk-checkin:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+}
+
+html[data-theme="light"] .desk-secondary-field {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html[data-theme="light"] .desk-secondary-field:hover {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
+}
+
+html[data-theme="light"] .desk-secondary-field:focus-within {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+html[data-theme="light"] .desk-secondary-icon {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] .desk-secondary-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] .desk-secondary-input,
+html[data-theme="light"] #desk-customer-phone {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-secondary-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+html[data-theme="light"] .desk-secondary-select,
+html[data-theme="light"] #desk-service-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-secondary-select option,
+html[data-theme="light"] #desk-service-select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 
 html[data-theme="light"] input:focus,

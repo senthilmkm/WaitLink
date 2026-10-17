@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=4.1">
+  <link rel="stylesheet" href="style.css?v=4.3">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -463,25 +463,43 @@
 
       <!-- Quick Add Check-In Card -->
       <div class="card checkin-card">
-        <form id="checkin-form" onsubmit="handleCheckIn(event)">
-          <div class="input-group">
-            <span class="input-icon" id="desk-checkin-icon">👤</span>
-            <input type="text" id="customer-name-input" placeholder="Customer Name or Initials (e.g. Marcus S.)" autocomplete="off" required autofocus>
-            <button type="submit" class="btn btn-primary btn-lg" id="btn-desk-checkin">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <form id="checkin-form" onsubmit="handleCheckIn(event)" class="desk-checkin-form">
+          <!-- Primary Check-In Bar: Name Input + Prominent Action Button -->
+          <div class="desk-checkin-main-bar">
+            <div class="desk-input-field-wrapper input-group">
+              <span class="desk-input-icon-pill" id="desk-checkin-icon">👤</span>
+              <input 
+                type="text" 
+                id="customer-name-input" 
+                class="desk-input-element" 
+                placeholder="Customer Name or Initials (e.g. Marcus S.)" 
+                autocomplete="off" 
+                required 
+                autofocus
+              >
+            </div>
+            <button type="submit" class="btn btn-primary desk-checkin-submit-btn" id="btn-desk-checkin">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span id="desk-checkin-btn-text">Check In</span>
             </button>
           </div>
 
-          <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem;">
-              <span style="font-size: 0.85rem;">📱</span>
-              <input type="tel" id="desk-customer-phone" placeholder="Cell Phone for SMS (Optional)" style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 0.85rem; outline: none;">
+          <!-- Secondary Operational Fields: Mobile Phone & Service Selection -->
+          <div class="desk-checkin-details-bar">
+            <div class="desk-secondary-field" id="desk-phone-field">
+              <span class="desk-secondary-icon">📱</span>
+              <input 
+                type="tel" 
+                id="desk-customer-phone" 
+                class="desk-secondary-input" 
+                placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)"
+              >
             </div>
             <!-- Desk Service Selector (Populated dynamically when enabled) -->
-            <div id="desk-service-selector-container" class="hidden" style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.4rem;">
-              <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Service:</span>
-              <select id="desk-service-select" style="width: 100%; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 0.85rem;">
+            <div id="desk-service-selector-container" class="desk-secondary-field hidden">
+              <span class="desk-secondary-icon">✂️</span>
+              <span class="desk-secondary-label">Service:</span>
+              <select id="desk-service-select" class="desk-secondary-select">
                 <option value="">-- Select Service (Optional) --</option>
               </select>
             </div>
@@ -745,6 +763,18 @@
                 <div class="form-group">
                   <label for="owner-input-baseline">Default Service Time (Minutes)</label>
                   <input type="number" id="owner-input-baseline" value="20" min="5" max="120">
+                </div>
+
+                <div class="form-group">
+                  <label for="owner-input-time-format">Time Display Format</label>
+                  <select id="owner-input-time-format" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.9rem;">
+                    <option value="12h">12-Hour (07:32 PM)</option>
+                    <option value="24h">24-Hour (19:32)</option>
+                  </select>
+                  <input type="hidden" id="owner-input-date-format" value="adaptive">
+                  <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0.35rem 0 0 0;">
+                    Dates follow universal clean format: <strong>Oct 8, 07:32 PM</strong> (current year) &bull; <strong>Oct 8, 2026, 07:32 PM</strong> (prior years).
+                  </p>
                 </div>
               </div>
             </div>
@@ -3245,6 +3275,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=5.9"></script>
+  <script src="app.js?v=6.1"></script>
 </body>
 </html>

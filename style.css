@@ -342,44 +342,198 @@ html[data-theme="light"] .app-header {
   box-shadow: var(--shadow-card);
 }
 
-/* Checkin Form */
+/* Checkin Form & Front Desk Quick Add Bar */
 .checkin-card {
   border: 1px solid var(--border-color-glow);
   box-shadow: var(--shadow-glow);
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-lg);
+  transition: all 0.25s ease;
 }
 
-.input-group {
+.desk-checkin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Primary Bar (Row 1) */
+.desk-checkin-main-bar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-md);
-  transition: border-color 0.2s ease;
+  width: 100%;
 }
 
+.desk-input-field-wrapper,
+.input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 50px;
+  padding: 0 1rem 0 0.5rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.desk-input-field-wrapper:focus-within,
 .input-group:focus-within {
   border-color: var(--primary);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
+.desk-input-icon-pill,
 .input-icon {
-  font-size: 1.2rem;
-  padding-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  user-select: none;
+  padding: 0;
 }
 
+.desk-input-element,
 .input-group input {
   flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-main);
-  font-size: 1.1rem;
+  height: 100%;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text-main) !important;
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 0 !important;
   font-family: var(--font-family-body);
 }
 
+.desk-input-element::placeholder,
 .input-group input::placeholder {
   color: var(--text-subtle);
+  font-weight: 400;
+}
+
+.desk-checkin-submit-btn {
+  height: 50px;
+  padding: 0 1.65rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+}
+
+.desk-checkin-submit-btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.45);
+  transform: translateY(-1px);
+}
+
+.desk-checkin-submit-btn:active {
+  transform: translateY(0);
+}
+
+/* Secondary Details Bar (Row 2) */
+.desk-checkin-details-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.desk-secondary-field {
+  flex: 1;
+  min-width: 220px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.85rem;
+  border-radius: 9px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.desk-secondary-field:focus-within {
+  border-color: var(--primary);
+  background: rgba(15, 23, 42, 0.75);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.desk-secondary-icon {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.desk-secondary-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.desk-secondary-input,
+.desk-secondary-select {
+  flex: 1;
+  height: 100%;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text-main) !important;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0 !important;
+}
+
+.desk-secondary-input::placeholder {
+  color: var(--text-subtle);
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.desk-secondary-select {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .desk-checkin-main-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .desk-checkin-submit-btn {
+    width: 100%;
+    height: 48px;
+  }
+  .desk-secondary-field {
+    min-width: 100%;
+  }
 }
 
 /* Buttons */
@@ -1095,6 +1249,7 @@ html[data-theme="light"] .app-header {
   color: #a5b4fc;
 }
 
+#desk-retention-banner,
 #desk-retention-banner.hidden,
 #owner-retention-banner.hidden,
 .demo-mode #desk-retention-banner,
@@ -4559,12 +4714,10 @@ html[data-theme="light"] #auth-tab-staff.active {
 }
 
 /* 8. Forms, Inputs, Selects, Radios & Checkboxes */
-html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not(.desk-input-element):not(.desk-secondary-input),
 html[data-theme="light"] textarea,
-html[data-theme="light"] select,
+html[data-theme="light"] select:not(.desk-secondary-select),
 html[data-theme="light"] .dialog-input,
-html[data-theme="light"] #desk-customer-phone,
-html[data-theme="light"] #desk-service-select,
 html[data-theme="light"] #inline-customer-name,
 html[data-theme="light"] #inline-customer-phone,
 html[data-theme="light"] #public-customer-name,
@@ -4588,8 +4741,129 @@ html[data-theme="light"] #pricing-t2-desc,
 html[data-theme="light"] #pricing-t3-desc {
   background: #ffffff !important;
   color: #090d16 !important;
-  border: 1.5px solid #94a3b8 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
   font-weight: 600 !important;
+}
+
+/* Front Desk Check-in Bar Light Mode Refinements */
+html[data-theme="light"] .checkin-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper,
+html[data-theme="light"] .checkin-card .input-group {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) inset, 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper:hover,
+html[data-theme="light"] .checkin-card .input-group:hover {
+  border-color: #94a3b8 !important;
+}
+
+html[data-theme="light"] .desk-input-field-wrapper:focus-within,
+html[data-theme="light"] .checkin-card .input-group:focus-within {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16), 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+html[data-theme="light"] .desk-input-icon-pill,
+html[data-theme="light"] .checkin-card .input-icon {
+  background: #f0f9ff !important;
+  color: #0284c7 !important;
+  border: 1px solid #bae6fd !important;
+}
+
+html[data-theme="light"] .desk-input-element,
+html[data-theme="light"] .checkin-card .input-group input,
+html[data-theme="light"] #customer-name-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-input-element::placeholder,
+html[data-theme="light"] .checkin-card .input-group input::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+html[data-theme="light"] .desk-checkin-submit-btn,
+html[data-theme="light"] #btn-desk-checkin {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #0284c7 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35) !important;
+}
+
+html[data-theme="light"] .desk-checkin-submit-btn:hover,
+html[data-theme="light"] #btn-desk-checkin:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+}
+
+html[data-theme="light"] .desk-secondary-field {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html[data-theme="light"] .desk-secondary-field:hover {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
+}
+
+html[data-theme="light"] .desk-secondary-field:focus-within {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+html[data-theme="light"] .desk-secondary-icon {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] .desk-secondary-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] .desk-secondary-input,
+html[data-theme="light"] #desk-customer-phone {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-secondary-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+html[data-theme="light"] .desk-secondary-select,
+html[data-theme="light"] #desk-service-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .desk-secondary-select option,
+html[data-theme="light"] #desk-service-select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 
 html[data-theme="light"] input:focus,
