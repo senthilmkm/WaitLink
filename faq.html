@@ -8,7 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4.4">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem("waitlink_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    })();
+  </script>
 </head>
 <body>
 
@@ -22,28 +28,118 @@
         </a>
       </div>
       <div class="header-actions">
+        <button id="theme-toggle-btn" class="btn btn-secondary btn-sm-header" onclick="toggleTheme()" title="Switch dark/light theme" aria-label="Toggle Theme" style="padding: 0.35rem 0.65rem; font-size: 1rem;">🌙</button>
         <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Return to App</a>
         <a href="contact.html" class="btn btn-accent btn-sm-header">💬 Ask Support</a>
       </div>
     </div>
   </header>
 
-  <main class="main-content" style="max-width: 920px; padding: 3rem 1.5rem;">
+  <main class="main-content" style="max-width: 920px; padding: 2.5rem 1.5rem 4rem 1.5rem;">
     
-    <div class="landing-hero" style="padding: 1rem 0 2.5rem 0; text-align: center;">
+    <div class="landing-hero" style="padding: 0.5rem 0 2rem 0; text-align: center;">
       <div class="hero-badge">❓ FREQUENTLY ASKED QUESTIONS</div>
       <h1 class="hero-title">Got Questions? We've Got Answers.</h1>
       <p class="hero-subtitle" style="margin: 0 auto; max-width: 650px;">
-        Everything you need to know about setting up WaitLink for your business, Stripe subscription plans, and customer queue management.
+        Everything you need to know about setting up WaitLink for your business, SMS quota limits, and customer queue operations.
       </p>
     </div>
 
-    <!-- FAQ Accordion -->
-    <div class="faq-accordion" style="margin-bottom: 3rem;">
+    <!-- Intelligent Search & Category Filter Section -->
+    <section class="faq-search-container" aria-label="FAQ Search & Filter">
+      <!-- Search Input Bar -->
+      <div class="faq-search-bar-wrap">
+        <span class="faq-search-icon" aria-hidden="true">🔍</span>
+        <input 
+          type="text" 
+          id="faq-search-input" 
+          class="faq-search-input" 
+          placeholder="Type a question or keyword (e.g. SMS, pricing, staff, QR, privacy)..." 
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search frequently asked questions"
+        >
+        <div class="faq-search-actions">
+          <button id="faq-search-clear" class="faq-search-clear" style="display: none;" title="Clear search (Esc)" aria-label="Clear search">✕</button>
+          <span class="faq-search-shortcut" title="Press / to focus search" aria-hidden="true">/</span>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="faq-filter-pills" role="tablist" aria-label="Filter questions by topic">
+        <button class="faq-pill active" data-filter="all" onclick="setCategoryFilter('all')">
+          <span>✨ All</span>
+          <span class="pill-count" id="count-all">16</span>
+        </button>
+        <button class="faq-pill" data-filter="sms" onclick="setCategoryFilter('sms')">
+          <span>📱 SMS & Alerts</span>
+          <span class="pill-count" id="count-sms">3</span>
+        </button>
+        <button class="faq-pill" data-filter="pricing" onclick="setCategoryFilter('pricing')">
+          <span>💳 Pricing & Billing</span>
+          <span class="pill-count" id="count-pricing">3</span>
+        </button>
+        <button class="faq-pill" data-filter="staff" onclick="setCategoryFilter('staff')">
+          <span>👥 Staff & Stations</span>
+          <span class="pill-count" id="count-staff">3</span>
+        </button>
+        <button class="faq-pill" data-filter="privacy" onclick="setCategoryFilter('privacy')">
+          <span>🛡️ Privacy & Compliance</span>
+          <span class="pill-count" id="count-privacy">2</span>
+        </button>
+        <button class="faq-pill" data-filter="analytics" onclick="setCategoryFilter('analytics')">
+          <span>📊 Analytics & Reports</span>
+          <span class="pill-count" id="count-analytics">2</span>
+        </button>
+        <button class="faq-pill" data-filter="hardware" onclick="setCategoryFilter('hardware')">
+          <span>🖨️ QR & Setup</span>
+          <span class="pill-count" id="count-hardware">3</span>
+        </button>
+      </div>
+
+      <!-- Results Toolbar & Meta -->
+      <div class="faq-toolbar-meta">
+        <div id="faq-results-counter" class="faq-result-count">
+          Showing all <strong>16</strong> questions
+        </div>
+        <button id="faq-toggle-all-btn" class="faq-action-link-btn" onclick="toggleExpandAll()">
+          <span id="faq-toggle-all-icon">📖</span>
+          <span id="faq-toggle-all-label">Expand All</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Zero Results Empty State -->
+    <div id="faq-empty-state" class="faq-empty-state" style="display: none;">
+      <span class="faq-empty-icon" aria-hidden="true">🔍</span>
+      <h3 class="faq-empty-title">No matching questions found</h3>
+      <p id="faq-empty-desc" class="faq-empty-desc">
+        We couldn't find any questions matching your search. Try checking your spelling or search a broader topic.
+      </p>
+      <div class="faq-empty-suggestions">
+        <button class="faq-suggestion-btn" onclick="applySuggestion('SMS Rollover')">📱 SMS Rollover</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Free Plan')">💳 Free Plan</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('1-Click Station')">👥 1-Click Station</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Clinical Mode')">🩺 Clinical Mode</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Export CSV')">📥 Export CSV</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Print Poster')">🖨️ Print Poster</button>
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="clearFaqSearch()">↺ Reset Search</button>
+        <a href="contact.html" class="btn btn-primary btn-sm">💬 Contact Support</a>
+      </div>
+    </div>
+
+    <!-- FAQ Accordion List -->
+    <div id="faq-accordion" class="faq-accordion" style="margin-bottom: 3.5rem;">
       
-      <div class="faq-item active">
+      <!-- 1. App Download -->
+      <div class="faq-item active" data-category="hardware" data-keywords="qr code app download camera mobile install account register customer walkin lobby poster web browser zero download smartphone ticket phone scan">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Do walk-in customers need to download an app or create an account?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-hardware">QR & Setup</span>
+            <span class="faq-question-text">Do walk-in customers need to download an app or create an account?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -51,9 +147,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 2. Staff Calling -->
+      <div class="faq-item" data-category="staff" data-keywords="serve now serve next call next front desk reception ipad tablet pc smartphone firestore real time real-time turn ready alert bell notification sound desk button station counter">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How do front desk staff call next waiting customers?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-staff">Staff & Stations</span>
+            <span class="faq-question-text">How do front desk staff call next waiting customers?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -61,9 +161,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 3. SMS Gateway & Ticket Links -->
+      <div class="faq-item" data-category="sms" data-keywords="sms text message twilio carrier dispatch ticket link live tracking template tags custom phone notification alert automated broadcast turn ready">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Does WaitLink send automated SMS notifications with customer ticket links?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-sms">SMS & Alerts</span>
+            <span class="faq-question-text">Does WaitLink send automated SMS notifications with customer ticket links?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -71,9 +175,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 4. Pro SMS & Rollover Bank -->
+      <div class="faq-item" data-category="sms" data-keywords="sms rollover bank pro business 500 carrier segments unused allowance quota bank reserve 1000 limit month billing cycle protect credit carrier math rollover bank never lose">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How many SMS messages are included with Pro Business, and what is the Rollover Bank?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-sms">SMS & Alerts</span>
+            <span class="faq-question-text">How many SMS messages are included with Pro Business, and what is the Rollover Bank?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -81,9 +189,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 5. Zero SMS & Top-Up Packs -->
+      <div class="faq-item" data-category="sms" data-keywords="topup top-up sms credits zero exhausted pack micro growth power 250 1000 2500 5 15 39 lifetime non-expiration wallet balance pause disruption out of credits buy top up">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>What happens if our shop runs out of SMS credits, and how do Top-Up packs work?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-sms">SMS & Alerts</span>
+            <span class="faq-question-text">What happens if our shop runs out of SMS credits, and how do Top-Up packs work?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -91,9 +203,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 6. Pricing Plans -->
+      <div class="faq-item" data-category="pricing" data-keywords="pricing plans starter pro business enterprise free 0 15 49 tier subscription cost monthly features 7 day 90 day 365 day retention audio chime custom branding logo dollar fees contract">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>What subscription plans are available for WaitLink?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-pricing">Pricing & Billing</span>
+            <span class="faq-question-text">What subscription plans are available for WaitLink?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -107,9 +223,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 7. Retention & PII Masking -->
+      <div class="faq-item" data-category="privacy" data-keywords="retention history visit logs pii masking anonymize anonymized gdpr ccpa tcpa 30 days phone surname privacy compliance 7 90 365 data protection compliance security">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How long is customer visit history retained, and how does automated PII masking work?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-privacy">Privacy & Compliance</span>
+            <span class="faq-question-text">How long is customer visit history retained, and how does automated PII masking work?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -117,9 +237,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 8. Clinical Privacy Mode -->
+      <div class="faq-item" data-category="privacy" data-keywords="clinical healthcare privacy hipaa medical urgent care clinic outpatient doctor patient shoulder surfing shoulder-surfing mask truncate anonymous ticket id sensitive health clinic center wellness">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>What is Clinical & Healthcare Privacy Mode and how does it protect patients?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-privacy">Privacy & Compliance</span>
+            <span class="faq-question-text">What is Clinical & Healthcare Privacy Mode and how does it protect patients?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -134,9 +258,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 9. CSV Export -->
+      <div class="faq-item" data-category="analytics" data-keywords="export csv excel google sheets download rfc 4180 bom utf-8 spreadsheet records metrics logs reports historical numbers table data file">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Can I export visit history data into Microsoft Excel or Google Sheets?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-analytics">Analytics & Reports</span>
+            <span class="faq-question-text">Can I export visit history data into Microsoft Excel or Google Sheets?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -144,9 +272,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 10. Payments & Stripe -->
+      <div class="faq-item" data-category="pricing" data-keywords="stripe checkout payments upgrades downgrades billing cycle prorated credit card subscription direct checkout api receipt invoice cancel auto renew refund">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How are payments and plan upgrades handled?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-pricing">Pricing & Billing</span>
+            <span class="faq-question-text">How are payments and plan upgrades handled?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -154,9 +286,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 11. Multi-Location -->
+      <div class="faq-item" data-category="pricing" data-keywords="multi location multi-location multiple shops chain branches enterprise directory switch my shops franchise centralized independent queue locations stores">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Can I manage multiple business locations under one account?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-pricing">Pricing & Billing</span>
+            <span class="faq-question-text">Can I manage multiple business locations under one account?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -164,9 +300,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 12. Staff Roles & iPad Links -->
+      <div class="faq-item" data-category="staff" data-keywords="staff roles 1-click station links ipad tablet qr code permissions receptionist intake greeter service caller counter camera bookmark no password pin member accounts">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How do staff roles and 1-Click iPad Station Links work?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-staff">Staff & Stations</span>
+            <span class="faq-question-text">How do staff roles and 1-Click iPad Station Links work?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -174,9 +314,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 13. Slug Auto-Detection -->
+      <div class="faq-item" data-category="staff" data-keywords="slug store shop name login signin tablet auto detect pre-filled smart name matching frictionless collision multi tenant sign in account">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Do front desk staff have to enter the shop slug when signing in?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-staff">Staff & Stations</span>
+            <span class="faq-question-text">Do front desk staff have to enter the shop slug when signing in?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -191,9 +335,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 14. Window QR Poster -->
+      <div class="faq-item" data-category="hardware" data-keywords="poster print window storefront flyer qr code 8.5x11 printable high resolution logo business name 10 seconds share tools lobby sign paper frame display">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>How fast can I print a storefront QR window poster?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-hardware">QR & Setup</span>
+            <span class="faq-question-text">How fast can I print a storefront QR window poster?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -201,9 +349,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 15. Analytics & Walk-Away -->
+      <div class="faq-item" data-category="analytics" data-keywords="analytics walk away loss walk-away cancellation peak rush hours staff velocity turnaround speed visits per hour peak wait times business owner dashboard charts bi intelligence">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>Can business owners track walk-away loss and staff performance?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-analytics">Analytics & Reports</span>
+            <span class="faq-question-text">Can business owners track walk-away loss and staff performance?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -211,9 +363,13 @@
         </div>
       </div>
 
-      <div class="faq-item">
+      <!-- 16. Offline & Network Drop -->
+      <div class="faq-item" data-category="hardware" data-keywords="offline internet connectivity drop wifi network drop localstorage cache sync firestore seamless reconnect client side disconnect resilience recover">
         <button class="faq-question" onclick="toggleFaq(this)">
-          <span>What happens if internet connectivity drops temporarily?</span>
+          <span>
+            <span class="faq-category-badge faq-badge-hardware">QR & Setup</span>
+            <span class="faq-question-text">What happens if internet connectivity drops temporarily?</span>
+          </span>
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
@@ -275,16 +431,389 @@
     </div>
   </footer>
 
+  <!-- Intelligent FAQ Search & Interaction Engine -->
   <script>
+    // Theme Management
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("waitlink_theme", next);
+      syncThemeToggleUI(next);
+    }
+
+    function syncThemeToggleUI(theme) {
+      const btn = document.getElementById("theme-toggle-btn");
+      if (btn) {
+        btn.innerHTML = theme === "dark" ? "🌙" : "☀️";
+        btn.title = theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode";
+      }
+    }
+
+    // Accordion Toggle
     function toggleFaq(btn) {
       const item = btn.closest(".faq-item");
       if (!item) return;
       const isExpanded = item.classList.contains("active");
-      document.querySelectorAll(".faq-item").forEach(el => el.classList.remove("active"));
+      
+      // If searching, allow multi-expand without collapsing others
+      const searchInput = document.getElementById("faq-search-input");
+      const hasSearch = searchInput && searchInput.value.trim().length > 0;
+      
+      if (!hasSearch) {
+        document.querySelectorAll(".faq-item").forEach(el => el.classList.remove("active"));
+      }
+      
       if (!isExpanded) {
         item.classList.add("active");
+      } else {
+        item.classList.remove("active");
+      }
+      updateExpandAllLabel();
+    }
+
+    // Expand / Collapse All
+    function toggleExpandAll() {
+      const visibleItems = Array.from(document.querySelectorAll(".faq-item")).filter(el => el.style.display !== "none");
+      const anyCollapsed = visibleItems.some(el => !el.classList.contains("active"));
+
+      visibleItems.forEach(item => {
+        if (anyCollapsed) {
+          item.classList.add("active");
+        } else {
+          item.classList.remove("active");
+        }
+      });
+      updateExpandAllLabel();
+    }
+
+    function updateExpandAllLabel() {
+      const visibleItems = Array.from(document.querySelectorAll(".faq-item")).filter(el => el.style.display !== "none");
+      const allExpanded = visibleItems.length > 0 && visibleItems.every(el => el.classList.contains("active"));
+      const label = document.getElementById("faq-toggle-all-label");
+      const icon = document.getElementById("faq-toggle-all-icon");
+      if (label && icon) {
+        if (allExpanded) {
+          label.textContent = "Collapse All";
+          icon.textContent = "📕";
+        } else {
+          label.textContent = "Expand All";
+          icon.textContent = "📖";
+        }
       }
     }
+
+    // Intelligent Search Engine
+    let currentCategoryFilter = "all";
+    let faqIndex = [];
+
+    // Semantic Synonym Dictionaries
+    const SYNONYMS = {
+      "sms": ["text", "texts", "message", "messages", "txt", "twilio", "dispatch", "telecom"],
+      "text": ["sms", "twilio", "message"],
+      "price": ["pricing", "cost", "costs", "fee", "fees", "tier", "tiers", "subscription", "plan", "plans", "dollar", "bill", "billing"],
+      "pricing": ["price", "cost", "fee", "tier", "subscription", "plan", "starter", "pro", "enterprise"],
+      "cost": ["price", "pricing", "fee", "subscription", "plan"],
+      "free": ["starter", "zero", "$0"],
+      "staff": ["employee", "receptionist", "greeter", "desk", "worker", "user", "role", "roles", "pin", "station", "ipad", "tablet"],
+      "ipad": ["tablet", "station", "device", "screen", "kiosk"],
+      "tablet": ["ipad", "station", "device", "screen"],
+      "privacy": ["hipaa", "gdpr", "ccpa", "tcpa", "pii", "clinical", "security", "anonymize", "mask"],
+      "hipaa": ["clinical", "healthcare", "privacy", "doctor", "patient", "medical"],
+      "clinical": ["hipaa", "medical", "doctor", "patient", "clinic", "urgent", "healthcare"],
+      "patient": ["clinical", "doctor", "medical", "healthcare"],
+      "excel": ["csv", "sheets", "spreadsheet", "export", "download"],
+      "csv": ["excel", "sheets", "spreadsheet", "export", "records"],
+      "poster": ["flyer", "print", "window", "lobby", "qr", "storefront", "display"],
+      "qr": ["code", "scan", "camera", "poster", "link"],
+      "loss": ["walk-away", "walkaway", "cancellation", "abandon", "abandonment"],
+      "offline": ["wifi", "internet", "disconnect", "drop", "network", "cache", "localstorage"]
+    };
+
+    function buildFaqIndex() {
+      const items = document.querySelectorAll(".faq-item");
+      faqIndex = Array.from(items).map(item => {
+        const questionTextEl = item.querySelector(".faq-question-text") || item.querySelector(".faq-question span");
+        const answerEl = item.querySelector(".faq-answer");
+        const rawQuestion = questionTextEl ? questionTextEl.textContent.trim() : "";
+        const rawAnswerHtml = answerEl ? answerEl.innerHTML : "";
+        const rawAnswerText = answerEl ? answerEl.textContent.trim() : "";
+        const category = item.getAttribute("data-category") || "all";
+        const keywords = item.getAttribute("data-keywords") || "";
+
+        return {
+          element: item,
+          questionEl: questionTextEl,
+          answerEl: answerEl,
+          rawQuestion: rawQuestion,
+          rawAnswerHtml: rawAnswerHtml,
+          rawAnswerText: rawAnswerText,
+          category: category,
+          keywords: keywords.toLowerCase(),
+          fullText: (rawQuestion + " " + rawAnswerText + " " + keywords + " " + category).toLowerCase()
+        };
+      });
+      updateCategoryCounts();
+    }
+
+    function updateCategoryCounts() {
+      const counts = { all: faqIndex.length, sms: 0, pricing: 0, staff: 0, privacy: 0, analytics: 0, hardware: 0 };
+      faqIndex.forEach(item => {
+        if (counts[item.category] !== undefined) counts[item.category]++;
+      });
+      Object.keys(counts).forEach(k => {
+        const el = document.getElementById("count-" + k);
+        if (el) el.textContent = counts[k];
+      });
+    }
+
+    function setCategoryFilter(category) {
+      currentCategoryFilter = category;
+      document.querySelectorAll(".faq-pill").forEach(pill => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === category);
+      });
+      runFaqSearch();
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightText(rawText, tokens) {
+      if (!tokens || tokens.length === 0) return rawText;
+      let text = rawText;
+      tokens.forEach(token => {
+        if (token.length < 2) return;
+        const re = new RegExp(`(${escapeRegExp(token)})`, "gi");
+        text = text.replace(re, '<mark class="faq-highlight">$1</mark>');
+      });
+      return text;
+    }
+
+    function runFaqSearch() {
+      const searchInput = document.getElementById("faq-search-input");
+      const clearBtn = document.getElementById("faq-search-clear");
+      const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+      
+      if (clearBtn) {
+        clearBtn.style.display = query.length > 0 ? "flex" : "none";
+      }
+
+      // Tokenize search query & expand with synonyms
+      const rawTokens = query.split(/\s+/).filter(t => t.length > 0);
+      const expandedTokens = [];
+      rawTokens.forEach(token => {
+        expandedTokens.push(token);
+        if (SYNONYMS[token]) {
+          SYNONYMS[token].forEach(syn => {
+            if (!expandedTokens.includes(syn)) expandedTokens.push(syn);
+          });
+        }
+      });
+
+      let matchedItems = [];
+
+      faqIndex.forEach(item => {
+        // 1. Category Filter Check
+        if (currentCategoryFilter !== "all" && item.category !== currentCategoryFilter) {
+          item.element.style.display = "none";
+          item.element.classList.remove("active");
+          item.questionEl.innerHTML = item.rawQuestion;
+          return;
+        }
+
+        // 2. Query Match Check
+        if (rawTokens.length === 0) {
+          // No query: show all within category
+          item.element.style.display = "";
+          item.questionEl.innerHTML = item.rawQuestion;
+          matchedItems.push({ item: item, score: 1 });
+          return;
+        }
+
+        // Weighted Scoring Algorithm
+        let score = 0;
+        let matchedAllTokens = true;
+
+        for (const token of rawTokens) {
+          const variants = [token, ...(SYNONYMS[token] || [])];
+          let tokenFound = false;
+
+          for (const variant of variants) {
+            // Check in Question Title (Weight: 10)
+            if (item.rawQuestion.toLowerCase().includes(variant)) {
+              score += 10;
+              tokenFound = true;
+            }
+            // Check in Keywords & Category (Weight: 7)
+            else if (item.keywords.includes(variant) || item.category.includes(variant)) {
+              score += 7;
+              tokenFound = true;
+            }
+            // Check in Answer Body (Weight: 3)
+            else if (item.rawAnswerText.toLowerCase().includes(variant)) {
+              score += 3;
+              tokenFound = true;
+            }
+          }
+
+          if (!tokenFound) {
+            matchedAllTokens = false;
+            break;
+          }
+        }
+
+        if (matchedAllTokens && score > 0) {
+          matchedItems.push({ item: item, score: score });
+          item.element.style.display = "";
+          // Apply highlight in question title
+          item.questionEl.innerHTML = highlightText(item.rawQuestion, rawTokens);
+        } else {
+          item.element.style.display = "none";
+          item.element.classList.remove("active");
+          item.questionEl.innerHTML = item.rawQuestion;
+        }
+      });
+
+      // 3. Reorder Matching Items by Relevance Score
+      if (rawTokens.length > 0 && matchedItems.length > 0) {
+        matchedItems.sort((a, b) => b.score - a.score);
+        const accordion = document.getElementById("faq-accordion");
+        if (accordion) {
+          matchedItems.forEach(({ item }) => {
+            accordion.appendChild(item.element);
+          });
+        }
+      }
+
+      // 4. Auto-Expansion for High-Confidence / Focused Results
+      if (rawTokens.length > 0) {
+        if (matchedItems.length >= 1 && matchedItems.length <= 3) {
+          matchedItems.forEach(({ item }) => item.element.classList.add("active"));
+        } else {
+          matchedItems.forEach(({ item }, index) => {
+            if (index === 0) item.element.classList.add("active");
+            else item.element.classList.remove("active");
+          });
+        }
+      } else {
+        // Reset to first item active when search cleared
+        matchedItems.forEach(({ item }, index) => {
+          if (index === 0) item.element.classList.add("active");
+          else item.element.classList.remove("active");
+        });
+      }
+
+      // 5. Update Results Counter & Empty State
+      const counterEl = document.getElementById("faq-results-counter");
+      const emptyStateEl = document.getElementById("faq-empty-state");
+      const accordionEl = document.getElementById("faq-accordion");
+      const count = matchedItems.length;
+
+      if (counterEl) {
+        if (rawTokens.length > 0) {
+          counterEl.innerHTML = `Found <strong>${count}</strong> matching question${count === 1 ? '' : 's'} for <em>"${escapeHtml(query)}"</em>`;
+        } else if (currentCategoryFilter !== "all") {
+          const activePill = document.querySelector(`.faq-pill[data-filter="${currentCategoryFilter}"] span`);
+          const label = activePill ? activePill.textContent : currentCategoryFilter;
+          counterEl.innerHTML = `Showing <strong>${count}</strong> questions in <strong>${label}</strong>`;
+        } else {
+          counterEl.innerHTML = `Showing all <strong>${count}</strong> questions`;
+        }
+      }
+
+      if (count === 0) {
+        if (accordionEl) accordionEl.style.display = "none";
+        if (emptyStateEl) {
+          emptyStateEl.style.display = "block";
+          const descEl = document.getElementById("faq-empty-desc");
+          if (descEl) {
+            descEl.innerHTML = `We couldn't find any questions matching <strong>"${escapeHtml(query)}"</strong>. Try one of our suggested topics below.`;
+          }
+        }
+      } else {
+        if (accordionEl) accordionEl.style.display = "";
+        if (emptyStateEl) emptyStateEl.style.display = "none";
+      }
+
+      updateExpandAllLabel();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    function clearFaqSearch() {
+      const searchInput = document.getElementById("faq-search-input");
+      if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+      }
+      currentCategoryFilter = "all";
+      document.querySelectorAll(".faq-pill").forEach(pill => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "all");
+      });
+      runFaqSearch();
+    }
+
+    function applySuggestion(keyword) {
+      const searchInput = document.getElementById("faq-search-input");
+      if (searchInput) {
+        searchInput.value = keyword;
+        searchInput.focus();
+      }
+      currentCategoryFilter = "all";
+      document.querySelectorAll(".faq-pill").forEach(pill => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "all");
+      });
+      runFaqSearch();
+    }
+
+    // Initialization & Event Listeners
+    document.addEventListener("DOMContentLoaded", () => {
+      // Sync theme button
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      syncThemeToggleUI(currentTheme);
+
+      // Build Search Catalog
+      buildFaqIndex();
+
+      // Search Input Events
+      const searchInput = document.getElementById("faq-search-input");
+      const clearBtn = document.getElementById("faq-search-clear");
+
+      if (searchInput) {
+        let debounceTimer = null;
+        searchInput.addEventListener("input", () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(runFaqSearch, 80);
+        });
+
+        searchInput.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            clearFaqSearch();
+            searchInput.blur();
+          }
+        });
+      }
+
+      if (clearBtn) {
+        clearBtn.addEventListener("click", clearFaqSearch);
+      }
+
+      // Global Keyboard Shortcut: '/' focuses search input
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "/" && document.activeElement !== searchInput && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+          e.preventDefault();
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      });
+    });
   </script>
 </body>
 </html>

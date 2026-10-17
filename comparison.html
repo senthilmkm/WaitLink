@@ -4,11 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feature & Value Comparison Matrix — WaitLink vs Competitors</title>
-  <meta name="description" content="Detailed Feature & Value Comparison Matrix comparing WaitLink with Waitwhile, Waitlist Me, QLess, and Qminder. Discover zero-friction queue management with real-time updates and lobby display.">
+  <meta name="description" content="Detailed Feature & Value Comparison Matrix comparing WaitLink with Waitwhile, Waitlist Me, QLess, and Qminder. Discover zero-friction queue management with SMS rollover, privacy compliance, and instant lobby displays.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4.4">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem("waitlink_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    })();
+  </script>
 </head>
 <body>
 
@@ -22,169 +28,283 @@
         </a>
       </div>
       <div class="header-actions">
+        <button id="theme-toggle-btn" class="btn btn-secondary btn-sm-header" onclick="toggleTheme()" title="Switch dark/light theme" aria-label="Toggle Theme" style="padding: 0.35rem 0.65rem; font-size: 1rem;">🌙</button>
         <a href="index.html" class="btn btn-secondary btn-sm-header">🏠 Return to App</a>
+        <a href="faq.html" class="btn btn-secondary btn-sm-header">❓ FAQ</a>
         <a href="contact.html" class="btn btn-accent btn-sm-header">💬 Contact Sales</a>
       </div>
     </div>
   </header>
 
-  <main class="main-content" style="max-width: 1100px; padding: 3rem 1.5rem; margin: 0 auto;">
+  <main class="main-content" style="max-width: 1160px; padding: 2.5rem 1.5rem 4rem 1.5rem; margin: 0 auto;">
     
     <!-- Hero Header -->
-    <div style="text-align: center; margin-bottom: 3rem;">
+    <div style="text-align: center; margin-bottom: 2.5rem;">
       <div style="display: inline-block; padding: 6px 16px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 20px; color: #10b981; font-weight: 600; font-size: 0.85rem; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
         🚀 Industry Comparison Benchmark
       </div>
-      <h1 style="font-size: clamp(1.8rem, 4.5vw + 0.5rem, 2.5rem); font-weight: 800; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px;">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; margin-bottom: 12px;">
         Feature & Value Comparison Matrix
       </h1>
-      <p style="color: #94a3b8; max-width: 700px; margin: 0 auto; font-size: 1.1rem; line-height: 1.6;">
-        Compare WaitLink side-by-side with leading queue management solutions (<span style="color: #e2e8f0;">Waitwhile, Waitlist Me, QLess, Qminder</span>). See why local businesses switch to WaitLink for speed, affordability, and zero friction.
+      <p style="color: var(--text-muted); max-width: 720px; margin: 0 auto; font-size: 1.05rem; line-height: 1.6;">
+        Compare WaitLink side-by-side with leading queue management solutions (<em>Waitwhile, Waitlist Me, QLess, Qminder</em>). See why local shops, clinics, and service centers switch to WaitLink for speed, affordability, and zero friction.
       </p>
     </div>
 
     <!-- Comparison Table Card -->
-    <div class="comparison-matrix-card" style="padding: 2rem; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);">
+    <div class="comparison-matrix-card">
       
-      <div class="mobile-swipe-hint" style="display: none; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: #10b981; text-align: center;">
+      <div class="mobile-swipe-hint" style="display: block; padding: 0.5rem 0.75rem; margin-bottom: 0.85rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: #10b981; text-align: center;">
         👉 Swipe table horizontally to compare all solutions &rarr;
       </div>
 
-      <div class="matrix-table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);">
-        <table class="comparison-table" style="width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; color: #e2e8f0; font-size: 0.95rem;">
+      <div class="matrix-table-container">
+        <table class="comparison-table">
           <thead>
-            <tr style="background: rgba(30, 41, 59, 0.9);">
-              <th style="padding: 1.25rem 1rem; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 28%; font-weight: 700; color: #f8fafc;">Feature / Capability</th>
-              <th style="padding: 1.25rem 1rem; text-align: center; border-bottom: 2px solid #10b981; background: rgba(16, 185, 129, 0.15); width: 20%; font-weight: 800; color: #10b981; font-size: 1.15rem; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+            <tr>
+              <th class="feature-col">Feature / Capability</th>
+              <th class="waitlink-col">
                 🚀 WaitLink
-                <div style="font-size: 0.75rem; font-weight: 500; color: #a7f3d0; margin-top: 2px;">Built for Speed & Value</div>
+                <div style="font-size: 0.75rem; font-weight: 500; opacity: 0.9; margin-top: 2px;">Zero Friction & High Value</div>
               </th>
-              <th style="padding: 1.25rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitwhile</th>
-              <th style="padding: 1.25rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Waitlist Me</th>
-              <th style="padding: 1.25rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">QLess</th>
-              <th style="padding: 1.25rem 1rem; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); width: 13%; color: #94a3b8; font-weight: 600;">Qminder</th>
+              <th class="competitor-col">Waitwhile</th>
+              <th class="competitor-col">Waitlist Me</th>
+              <th class="competitor-col">QLess</th>
+              <th class="competitor-col">Qminder</th>
             </tr>
           </thead>
           <tbody>
-            <!-- Category 1 -->
-            <tr style="background: rgba(15, 23, 42, 0.6);">
-              <td colspan="6" style="padding: 0.75rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.825rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
-                1. Setup & Customer Friction
-              </td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">App Download Required</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">❌ None (Web Instant)</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">❌ None</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">❌ None</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">⚠️ App Often Preferred</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">❌ None</td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Account Setup Time</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">⚡ Under 2 Minutes</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">30+ Mins</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">15+ Mins</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Days / Onboarding Call</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">30+ Mins</td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Hardware Requirements</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">📱 Any Phone/Browser</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Tablet Kiosk</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Tablet Kiosk</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Custom Hardware</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">iPad Kiosk</td>
-            </tr>
-
-            <!-- Category 2 -->
-            <tr style="background: rgba(15, 23, 42, 0.6);">
-              <td colspan="6" style="padding: 0.75rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.825rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
-                2. Core Queue & Customer Experience
-              </td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Live Queue Tracker (Customer Phone)</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Real-Time Sync</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">⚠️ SMS Link Only</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-              <td style="padding: 1rem; text-align: center; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">⚠️ Basic SMS</td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Lobby Digital TV Display Mode</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Included Free</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">💲 Paid Addon</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">💲 Paid Addon</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">💲 Enterprise Addon</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">💲 Paid Addon</td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Twilio SMS Integration</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Built-in Toggle & Compliance</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-              <td style="padding: 1rem; text-align: center; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Yes</td>
-            </tr>
-
-            <!-- Category 3 -->
-            <tr style="background: rgba(15, 23, 42, 0.6);">
-              <td colspan="6" style="padding: 0.75rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.825rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
-                3. Analytics & Operational Intelligence
-              </td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Walk-Away Loss % Analytics</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ Instant KPI Dashboard</td>
-              <td style="padding: 1rem; text-align: center; color: #e2e8f0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Higher Tier Only</td>
-              <td style="padding: 1rem; text-align: center; color: #f43f5e; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">❌ No</td>
-              <td style="padding: 1rem; text-align: center; color: #e2e8f0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Enterprise Tier</td>
-              <td style="padding: 1rem; text-align: center; color: #e2e8f0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Custom Reports</td>
-            </tr>
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 1rem; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Customer Lifecycle CSV Audit Export</td>
-              <td style="padding: 1rem; text-align: center; background: rgba(16, 185, 129, 0.08); font-weight: 700; color: #10b981; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">✅ 11-Column Detailed Audit</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Basic CSV</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Basic CSV</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Enterprise SQL</td>
-              <td style="padding: 1rem; text-align: center; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Limited Export</td>
-            </tr>
-
-            <!-- Category 4 -->
-            <tr style="background: rgba(15, 23, 42, 0.6);">
-              <td colspan="6" style="padding: 0.75rem 1rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; font-size: 0.825rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(56, 189, 248, 0.08);">
-                4. Pricing & Value
-              </td>
+            
+            <!-- Category 1: Setup & Customer Friction -->
+            <tr class="category-header">
+              <td colspan="6">1. Setup & Customer Friction</td>
             </tr>
             <tr>
-              <td style="padding: 1.25rem 1rem; font-weight: 700;">Starting Price</td>
-              <td style="padding: 1.25rem 1rem; text-align: center; background: rgba(16, 185, 129, 0.12); font-weight: 800; color: #10b981; font-size: 1.1rem; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">💎 High Value / Free Start</td>
-              <td style="padding: 1.25rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $199 / mo</td>
-              <td style="padding: 1.25rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$29 - $49 / mo</td>
-              <td style="padding: 1.25rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$100+ / mo</td>
-              <td style="padding: 1.25rem 1rem; text-align: center; color: #cbd5e1; font-weight: 600;">$299+ / mo</td>
+              <td class="feature-title">Customer App Download Required</td>
+              <td class="waitlink-cell">❌ None (Instant Mobile Web)</td>
+              <td>❌ None</td>
+              <td>❌ None</td>
+              <td>⚠️ App Often Encouraged</td>
+              <td>❌ None</td>
             </tr>
+            <tr>
+              <td class="feature-title">Store Onboarding Setup Time</td>
+              <td class="waitlink-cell">⚡ Under 2 Minutes</td>
+              <td>30+ Mins</td>
+              <td>15+ Mins</td>
+              <td>Days / Sales Call</td>
+              <td>30+ Mins</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Hardware Requirements</td>
+              <td class="waitlink-cell">📱 Any Phone / Tablet / PC Browser</td>
+              <td>iPad / Tablet Kiosk</td>
+              <td>Tablet Kiosk</td>
+              <td>Custom Hardware</td>
+              <td>iPad Kiosks Only</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Printable Storefront QR Poster</td>
+              <td class="waitlink-cell">⚡ Built-in 10-Sec 8.5"x11" PDF</td>
+              <td>❌ DIY / Manual</td>
+              <td>❌ DIY / Manual</td>
+              <td>❌ Manual Order</td>
+              <td>❌ DIY / Extra</td>
+            </tr>
+
+            <!-- Category 2: Queue Calling, Alerts & Telecom Limits -->
+            <tr class="category-header">
+              <td colspan="6">2. Queue Calling, Alerts & Telecom Limits</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Live Queue Tracker (Customer Mobile)</td>
+              <td class="waitlink-cell">✅ Real-Time Cloud Sync</td>
+              <td>✅ Yes</td>
+              <td>⚠️ SMS Link Only</td>
+              <td>✅ Yes</td>
+              <td>⚠️ Basic SMS</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Lobby Digital TV Display Mode</td>
+              <td class="waitlink-cell">✅ Included Free in All Tiers</td>
+              <td>💲 Paid Addon</td>
+              <td>💲 Paid Addon</td>
+              <td>💲 Enterprise Addon</td>
+              <td>💲 Paid Addon</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Automated Turn-Ready SMS Notifications</td>
+              <td class="waitlink-cell">✅ Built-in Enterprise SMS Gateway</td>
+              <td>✅ Yes</td>
+              <td>✅ Yes</td>
+              <td>✅ Yes</td>
+              <td>✅ Yes</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Monthly SMS Rollover Bank</td>
+              <td class="waitlink-cell">🛡️ 1-Month Rollover Bank (Up to 1,000 SMS)</td>
+              <td>❌ No Rollover (Credits Expire)</td>
+              <td>❌ No Rollover</td>
+              <td>❌ No Rollover</td>
+              <td>❌ No Rollover</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Top-Up Packs with Lifetime Non-Expiration</td>
+              <td class="waitlink-cell">💎 Lifetime Guarantee ($5 for 250, $15 for 1,000)</td>
+              <td>❌ Expensive Per-Text Overages</td>
+              <td>❌ Hard Quota Cutoffs</td>
+              <td>❌ Custom Overages</td>
+              <td>❌ Expensive Overage Tiers</td>
+            </tr>
+
+            <!-- Category 3: Security, Privacy & Staff Operations -->
+            <tr class="category-header">
+              <td colspan="6">3. Security, Privacy & Staff Operations</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Clinical & Healthcare Privacy Mode</td>
+              <td class="waitlink-cell">🩺 1-Tap HIPAA/Clinic Mode (Name truncation & Phone masking)</td>
+              <td>💲 $500+/mo Enterprise Only</td>
+              <td>❌ Not Supported</td>
+              <td>💲 Enterprise Only</td>
+              <td>💲 Enterprise Addon</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Automated 30-Day PII Masking</td>
+              <td class="waitlink-cell">🛡️ Auto-scrubs phone & surname after 30d (CCPA/GDPR)</td>
+              <td>⚠️ Manual Requests Only</td>
+              <td>❌ No Auto-Masking</td>
+              <td>⚠️ Manual / Custom</td>
+              <td>⚠️ Manual / Custom</td>
+            </tr>
+            <tr>
+              <td class="feature-title">1-Click iPad Station Links (No Shared Passwords)</td>
+              <td class="waitlink-cell">🔒 Instant tablet link/QR without master passwords</td>
+              <td>💲 Paid Per-Seat ($20-$50/user)</td>
+              <td>⚠️ Shared Master Login</td>
+              <td>⚠️ Complex SSO</td>
+              <td>💲 Per-User Seat Pricing</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Offline Network Resilience</td>
+              <td class="waitlink-cell">⚡ LocalStorage auto-caching & instant Firestore sync</td>
+              <td>⚠️ Requires Constant Internet</td>
+              <td>⚠️ App-Dependent</td>
+              <td>❌ Fails Offline</td>
+              <td>⚠️ Connection Required</td>
+            </tr>
+
+            <!-- Category 4: Analytics, Exports & BI -->
+            <tr class="category-header">
+              <td colspan="6">4. Analytics, Exports & Business Intelligence</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Walk-Away Loss % Analytics</td>
+              <td class="waitlink-cell">✅ Instant KPI Dashboard (Loss & Turnaround)</td>
+              <td>💲 Higher Tier Only</td>
+              <td>❌ No</td>
+              <td>💲 Enterprise Tier</td>
+              <td>💲 Custom Reports</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Customer Visit CSV Audit Export</td>
+              <td class="waitlink-cell">✅ RFC 4180 BOM 11-Column Detailed Audit</td>
+              <td>Basic CSV</td>
+              <td>Basic CSV</td>
+              <td>Enterprise SQL</td>
+              <td>Limited Export</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Staff Turnaround Velocity & Peak Rush</td>
+              <td class="waitlink-cell">✅ Built-in Visits/Hour & Rush Hour Heatmap</td>
+              <td>💲 Enterprise Only</td>
+              <td>❌ Basic Count Only</td>
+              <td>💲 Custom Analytics</td>
+              <td>💲 Enterprise Only</td>
+            </tr>
+
+            <!-- Category 5: Pricing & Commercial Terms -->
+            <tr class="category-header">
+              <td colspan="6">5. Pricing & Commercial Terms</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Free Plan Available</td>
+              <td class="waitlink-cell">🎁 Starter Free Forever ($0/mo, 7-day history)</td>
+              <td>⚠️ 14-Day Trial Only</td>
+              <td>⚠️ 14-Day Trial Only</td>
+              <td>❌ No Trial / Sales Call</td>
+              <td>⚠️ 14-Day Trial Only</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Pro Tier Pricing</td>
+              <td class="waitlink-cell">💎 $15 / month (500 SMS + Rollover + TV Mode)</td>
+              <td>$79 / month</td>
+              <td>$29.99 - $49.99 / mo</td>
+              <td>$100+ / mo</td>
+              <td>$299+ / mo</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Multi-Location Enterprise Tier</td>
+              <td class="waitlink-cell">🏢 $49 / month (All locations + 365-day history)</td>
+              <td>$199+ / location / mo</td>
+              <td>Custom Quote</td>
+              <td>$1,200 - $10,000+ / yr</td>
+              <td>$499+ / location / mo</td>
+            </tr>
+            <tr>
+              <td class="feature-title">Contract Lock-in / Hardware Fees</td>
+              <td class="waitlink-cell">❌ Zero Contracts / Zero Hardware Fees (1-Click Cancel)</td>
+              <td>Annual Traps</td>
+              <td>Annual Contracts</td>
+              <td>Multi-Year Lock-in</td>
+              <td>Annual Contracts</td>
+            </tr>
+
           </tbody>
         </table>
       </div>
     </div>
 
     <!-- Call to Action Banner -->
-    <div style="margin-top: 3rem; padding: 2.5rem; text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px;">
-      <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Ready to Upgrade Your Lobby Experience?</h2>
-      <p style="color: #cbd5e1; margin-bottom: 20px;">Set up your live WaitLink queue in less than 2 minutes. No credit card required.</p>
+    <div style="margin-top: 3.5rem; padding: 2.5rem 1.5rem; text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.12) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Ready to Upgrade Your Lobby Experience?</h2>
+      <p style="color: var(--text-muted); margin-bottom: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">Set up your live WaitLink queue in less than 2 minutes. No credit card required, cancel anytime with 1 click.</p>
       <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
         <a href="index.html" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">🚀 Launch WaitLink Now</a>
+        <a href="pricing.html" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">💎 View Pricing Plans</a>
         <a href="contact.html" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">💬 Talk to Our Team</a>
       </div>
     </div>
 
   </main>
 
-  <footer style="text-align: center; padding: 2rem; color: var(--text-subtle); font-size: 0.85rem; border-top: 1px solid var(--border-color); margin-top: 3rem;">
-    <p>&copy; 2026 WaitLink Inc. All rights reserved. &bull; <a href="privacy.html" style="color: var(--text-subtle);">Privacy Policy</a> &bull; <a href="terms.html" style="color: var(--text-subtle);">Terms of Service</a> &bull; <a href="comparison.html" style="color: #10b981;">Feature Comparison</a></p>
+  <footer class="landing-footer" style="border-top: 1px solid var(--border-color); margin-top: 3rem;">
+    <div class="footer-container" style="text-align: center; padding: 2rem 1.5rem; color: var(--text-muted); font-size: 0.85rem;">
+      <p>&copy; 2026 WaitLink Cloud Sync. All rights reserved. &bull; <a href="privacy.html" style="color: var(--text-muted);">Privacy Policy</a> &bull; <a href="terms.html" style="color: var(--text-muted);">Terms of Service</a> &bull; <a href="faq.html" style="color: var(--text-muted);">FAQ</a> &bull; <a href="comparison.html" style="color: #10b981;">Feature Comparison</a></p>
+    </div>
   </footer>
 
+  <script>
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("waitlink_theme", next);
+      syncThemeToggleUI(next);
+    }
+
+    function syncThemeToggleUI(theme) {
+      const btn = document.getElementById("theme-toggle-btn");
+      if (btn) {
+        btn.innerHTML = theme === "dark" ? "🌙" : "☀️";
+        btn.title = theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      syncThemeToggleUI(currentTheme);
+    });
+  </script>
 </body>
 </html>

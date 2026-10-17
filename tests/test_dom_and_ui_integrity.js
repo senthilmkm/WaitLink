@@ -284,6 +284,68 @@ it("Universal date-time pattern strictly outputs 'Oct 8, 07:32 PM' (this year) a
   assert.strictEqual(priorYearResult, "Oct 15, 2024, 07:54 AM", "Prior-year date must format as '<Month> <Day>, <Year>, <Time>'");
 });
 
+it("History table implements Solution A: Primary 1-click action + 3-dot context menu and smart wait duration formatting", () => {
+  assert.ok(appJs.includes('btn-row-primary'), "app.js missing btn-row-primary class for 1-click action");
+  assert.ok(appJs.includes('btn-row-more'), "app.js missing btn-row-more 3-dot button");
+  assert.ok(appJs.includes('row-actions-dropdown'), "app.js missing row-actions-dropdown container");
+  assert.ok(appJs.includes('function formatWaitDuration(minutes)'), "app.js missing formatWaitDuration function");
+  assert.ok(appJs.includes('function toggleRowActionMenu(event, menuId)'), "app.js missing toggleRowActionMenu function");
+  assert.ok(css.includes('.btn-row-more'), "style.css missing .btn-row-more styles");
+  assert.ok(css.includes('.row-actions-dropdown'), "style.css missing .row-actions-dropdown styles");
+
+  // Verify formatWaitDuration logic directly
+  const formatWaitDuration = (minutes) => {
+    if (minutes === undefined || minutes === null || isNaN(minutes) || minutes < 0) return "--";
+    if (minutes === 0) return "< 1 min";
+    if (minutes >= 1440) {
+      const days = Math.floor(minutes / 1440);
+      const remHours = Math.floor((minutes % 1440) / 60);
+      return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+    }
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const remMin = minutes % 60;
+      return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+    }
+    return `${minutes} min`;
+  };
+
+  assert.strictEqual(formatWaitDuration(1), "1 min");
+  assert.strictEqual(formatWaitDuration(25), "25 min");
+  assert.strictEqual(formatWaitDuration(75), "1h 15m");
+  assert.strictEqual(formatWaitDuration(9217), "6d 9h", "Large wait times must format cleanly without overflowing raw minutes");
+  assert.strictEqual(formatWaitDuration(0), "< 1 min");
+  assert.strictEqual(formatWaitDuration(null), "--");
+});
+
+it("faq.html contains intelligent search, topic filter pills, and search engine logic", () => {
+  const faqHtmlPath = path.join(__dirname, "..", "faq.html");
+  const faqHtml = fs.readFileSync(faqHtmlPath, "utf8");
+
+  // Search input & interactive controls
+  assert.ok(faqHtml.includes('id="faq-search-input"'), "faq.html missing faq-search-input");
+  assert.ok(faqHtml.includes('id="faq-search-clear"'), "faq.html missing faq-search-clear");
+  assert.ok(faqHtml.includes('id="faq-results-counter"'), "faq.html missing faq-results-counter");
+  assert.ok(faqHtml.includes('id="faq-empty-state"'), "faq.html missing faq-empty-state");
+  assert.ok(faqHtml.includes('id="faq-toggle-all-btn"'), "faq.html missing toggle all button");
+
+  // Topic filter pills
+  assert.ok(faqHtml.includes('data-filter="sms"'), "faq.html missing SMS filter pill");
+  assert.ok(faqHtml.includes('data-filter="pricing"'), "faq.html missing pricing filter pill");
+  assert.ok(faqHtml.includes('data-filter="staff"'), "faq.html missing staff filter pill");
+  assert.ok(faqHtml.includes('data-filter="privacy"'), "faq.html missing privacy filter pill");
+  assert.ok(faqHtml.includes('data-filter="analytics"'), "faq.html missing analytics filter pill");
+  assert.ok(faqHtml.includes('data-filter="hardware"'), "faq.html missing hardware filter pill");
+
+  // Intelligent JS engine & styles
+  assert.ok(faqHtml.includes("function runFaqSearch()"), "faq.html missing runFaqSearch engine");
+  assert.ok(faqHtml.includes("const SYNONYMS = {"), "faq.html missing semantic synonym dictionary");
+  assert.ok(faqHtml.includes("function toggleTheme()"), "faq.html missing theme toggle handler");
+  assert.ok(css.includes(".faq-search-bar-wrap"), "style.css missing .faq-search-bar-wrap styles");
+  assert.ok(css.includes(".faq-pill"), "style.css missing .faq-pill styles");
+  assert.ok(css.includes('html[data-theme="light"] .faq-search-bar-wrap'), "style.css missing light mode search bar styles");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

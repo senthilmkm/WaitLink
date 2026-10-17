@@ -3930,6 +3930,23 @@ function formatHistoryDateTime(timestamp) {
   return formatAppDateTime(timestamp);
 }
 
+// Helper to format wait duration cleanly (e.g. 20 min, 1h 15m, 6d 9h)
+function formatWaitDuration(minutes) {
+  if (minutes === undefined || minutes === null || isNaN(minutes) || minutes < 0) return "--";
+  if (minutes === 0) return "< 1 min";
+  if (minutes >= 1440) {
+    const days = Math.floor(minutes / 1440);
+    const remHours = Math.floor((minutes % 1440) / 60);
+    return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+  }
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remMin = minutes % 60;
+    return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+  }
+  return `${minutes} min`;
+}
+
 // Get Filtered History List for a specific view
 function getFilteredHistoryList(isOwner = false) {
   const prefix = isOwner ? "owner-history-" : "history-";
@@ -4258,20 +4275,43 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
   }
 
   const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
+  const rowMenuId = `row-menu-${String(item.id || item.customerName || Math.random()).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 
-  const auditBtnHtml = isOwnerView ? `
-    <button class="btn-text-sm" data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" style="color: #c084fc; font-size: 0.78rem; font-weight: 700; border: 1px solid rgba(192, 132, 252, 0.4); padding: 0.2rem 0.55rem; border-radius: 6px; background: rgba(192, 132, 252, 0.15);" title="View complete lifecycle activity log for this customer">
-      🕵️ Audit Log
-    </button>
-  ` : '';
+  let menuItemsHtml = '';
+  if (isOwnerView) {
+    menuItemsHtml += `
+      <button type="button" class="row-action-item audit-item" onclick="toggleRowActionMenu(event, '${rowMenuId}'); openCustomerAuditModal('${safeId}');" title="View complete lifecycle activity log">
+        <span class="action-icon">🕵️</span>
+        <span>Audit Log</span>
+      </button>
+    `;
+  }
+  if (isCalled) {
+    menuItemsHtml += `
+      <button type="button" class="row-action-item noshow-item" onclick="toggleRowActionMenu(event, '${rowMenuId}'); markCalledAsNoShow('${safeId}');" title="Mark customer as No-Show">
+        <span class="action-icon">✕</span>
+        <span>Mark No-Show</span>
+      </button>
+    `;
+  }
+
+  const hasMenu = !!menuItemsHtml;
 
   const actionCell = `
-    <div style="display: flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
-      ${auditBtnHtml}
-      ${isCalled ? `<button class="btn-text-sm" onclick="markCalledAsNoShow('${safeId}')" style="color: #f43f5e; font-size: 0.78rem; font-weight: 600; border: 1px solid rgba(244, 63, 94, 0.3); padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(244, 63, 94, 0.1);" title="Mark customer as No-Show">✕ No-Show</button>` : ''}
-      <button class="btn-text-sm" onclick="promptRequeueCustomer('${safeId}')" style="color: #06b6d4; font-size: 0.78rem; font-weight: 600; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(6, 182, 212, 0.1);" title="Put customer back in active queue">
+    <div class="row-actions-group">
+      <button type="button" class="btn-row-primary" onclick="promptRequeueCustomer('${safeId}')" title="${isCalled ? 'Put customer back in active queue' : 'Reinstate customer to queue'}">
         ↩️ ${isCalled ? 'Re-Queue' : 'Reinstate'}
       </button>
+      ${hasMenu ? `
+        <div class="action-dropdown-wrapper">
+          <button type="button" class="btn-row-more" aria-label="More options" onclick="toggleRowActionMenu(event, '${rowMenuId}')" title="More options">
+            <span>⋮</span>
+          </button>
+          <div id="${rowMenuId}" class="row-actions-dropdown hidden" onclick="event.stopPropagation()">
+            ${menuItemsHtml}
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 
@@ -4293,10 +4333,12 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
   const maskedBadgeHtml = isPiiMasked ? ` <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3); vertical-align: middle;" title="Patron PII auto-masked in compliance with data privacy policy">🛡️ MASKED</span>` : '';
 
   const customerNameCell = isOwnerView ? `
-    <strong data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" style="cursor: pointer; color: #06b6d4; text-decoration: underline;" title="${isPiiMasked ? 'PII auto-masked (>30 days old). Click to view lifecycle audit log.' : 'Click to view lifecycle audit log.'}">
-      ${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}${maskedBadgeHtml}
-    </strong>
-  ` : `<strong>${isClinical ? '🩺 ' : ''}${escapeHtml(displayName)}${isPiiMasked ? ' <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">🛡️</span>' : ''}</strong>`;
+    <span class="history-customer-link" data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" title="${isPiiMasked ? 'PII auto-masked (>30 days old). Click to view lifecycle audit log.' : 'Click to view lifecycle audit log.'}">
+      ${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${maskedBadgeHtml}
+    </span>
+  ` : `<span>${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${isPiiMasked ? ' <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">🛡️</span>' : ''}</span>`;
+
+  const waitDurationDisplay = isCalled ? formatWaitDuration(item.waitDurationMin) : "--";
 
   return `
     <tr>
@@ -4305,10 +4347,69 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
       <td>${checkInFormatted}</td>
       <td>${calledFormatted}</td>
       <td>${cancelledFormatted}</td>
-      <td>${isCalled ? (item.waitDurationMin || 0) + " min" : "--"}</td>
-      <td style="text-align: right;">${actionCell}</td>
+      <td>${waitDurationDisplay}</td>
+      <td class="row-actions-cell">${actionCell}</td>
     </tr>
   `;
+}
+
+// Table Row Actions Dropdown Toggle & Click-Away Handler
+function toggleRowActionMenu(event, menuId) {
+  if (event) {
+    event.stopPropagation();
+  }
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+
+  const willOpen = menu.classList.contains("hidden");
+
+  // Close all other open row action menus
+  document.querySelectorAll(".row-actions-dropdown:not(.hidden)").forEach(m => {
+    m.classList.add("hidden");
+    const parentWrapper = m.closest(".action-dropdown-wrapper");
+    if (parentWrapper) {
+      const moreBtn = parentWrapper.querySelector(".btn-row-more");
+      if (moreBtn) moreBtn.classList.remove("active");
+    }
+  });
+
+  if (willOpen) {
+    const btn = (event && event.currentTarget) || (event && event.target ? event.target.closest(".btn-row-more") : null);
+    if (btn) {
+      btn.classList.add("active");
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 130) {
+        menu.style.top = "auto";
+        menu.style.bottom = "calc(100% + 4px)";
+      } else {
+        menu.style.top = "calc(100% + 4px)";
+        menu.style.bottom = "auto";
+      }
+    }
+    menu.classList.remove("hidden");
+  }
+}
+
+// Global click dismiss for row action menus
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".action-dropdown-wrapper")) {
+      document.querySelectorAll(".row-actions-dropdown:not(.hidden)").forEach(m => {
+        m.classList.add("hidden");
+        const parentWrapper = m.closest(".action-dropdown-wrapper");
+        if (parentWrapper) {
+          const moreBtn = parentWrapper.querySelector(".btn-row-more");
+          if (moreBtn) moreBtn.classList.remove("active");
+        }
+      });
+    }
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.toggleRowActionMenu = toggleRowActionMenu;
+  window.formatWaitDuration = formatWaitDuration;
 }
 
 // History Pagination Handlers
@@ -11379,11 +11480,11 @@ function switchAuthTab(tab) {
 
     if (hintEl) {
       if (state.config && state.config.slug && state.config.slug !== "main-st-barbers") {
-        hintEl.textContent = `(Active: ${state.config.shopName || state.config.slug})`;
+        hintEl.textContent = `✓ Auto-filled: ${state.config.shopName || state.config.slug}`;
       } else if (rememberedSlug) {
-        hintEl.textContent = `(Remembered: ${rememberedSlug})`;
+        hintEl.textContent = "✓ Auto-filled for this device";
       } else {
-        hintEl.textContent = "(Auto-detected from active URL)";
+        hintEl.textContent = "✓ Auto-detected";
       }
     }
 
