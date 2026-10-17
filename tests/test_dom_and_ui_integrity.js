@@ -28,9 +28,11 @@ function it(description, fn) {
 
 const htmlPath = path.join(__dirname, "..", "index.html");
 const cssPath = path.join(__dirname, "..", "style.css");
+const appJsPath = path.join(__dirname, "..", "app.js");
 
 const html = fs.readFileSync(htmlPath, "utf8");
 const css = fs.readFileSync(cssPath, "utf8");
+const appJs = fs.readFileSync(appJsPath, "utf8");
 
 // -------------------------------------------------------------------------
 // Tests: Primary Screens & View Panels
@@ -98,6 +100,12 @@ it("Shop Subscription Plans modal contains wider container and reactive feature 
   assert.ok(html.includes('id="modal-tier-feature-pro-rollover"'), "Missing #modal-tier-feature-pro-rollover for reactive rollover sync");
   assert.ok(css.includes(".upgrade-modal-card"), "Missing .upgrade-modal-card rule in style.css");
   assert.ok(css.includes("max-width: 1180px"), "upgrade-modal-card is not configured to 1180px width");
+});
+
+it("auth-modal contains auth-role-tabs-container and app.js hides tabs during registration", () => {
+  assert.ok(html.includes('id="auth-role-tabs-container"'), "Missing #auth-role-tabs-container in index.html");
+  assert.ok(appJs.includes('if (roleTabs) roleTabs.style.display = "none"'), "app.js does not hide roleTabs in registration mode");
+  assert.ok(appJs.includes('if (roleTabs) roleTabs.style.display = "flex"'), "app.js does not restore roleTabs in sign in mode");
 });
 
 // -------------------------------------------------------------------------

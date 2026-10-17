@@ -6145,12 +6145,14 @@ function toggleForgotPassword() {
   const confirmInput = document.getElementById("auth-confirm-password");
   const matchIndicator = document.getElementById("auth-match-indicator");
   const switchHint = document.querySelector(".auth-switch-hint");
+  const roleTabs = document.getElementById("auth-role-tabs-container");
 
   if (confirmGroup) confirmGroup.style.display = "none";
   if (confirmInput) confirmInput.required = false;
   if (matchIndicator) matchIndicator.style.display = "none";
 
   if (isResettingPassword) {
+    if (roleTabs) roleTabs.style.display = "none";
     if (title) title.textContent = "🔄 Reset Your Password";
     if (submitBtn) submitBtn.textContent = "Send Password Reset Link";
     if (googleBtn) googleBtn.style.display = "none";
@@ -6185,6 +6187,7 @@ function setAuthMode(registerMode) {
   const formDivider = document.getElementById("auth-form-divider");
   const switchHint = document.querySelector(".auth-switch-hint");
   const forgotBtn = document.getElementById("auth-forgot-btn");
+  const roleTabs = document.getElementById("auth-role-tabs-container");
 
   if (googleBtn) googleBtn.style.display = "";
   if (formDivider) formDivider.style.display = "";
@@ -6192,6 +6195,9 @@ function setAuthMode(registerMode) {
   if (passwordInput) passwordInput.required = true;
 
   if (isRegistering) {
+    // Only Business Owners / Admins can register a new shop; hide role switcher tabs in registration mode
+    if (roleTabs) roleTabs.style.display = "none";
+    if (typeof switchAuthTab === "function") switchAuthTab("owner");
     if (title) title.textContent = "🚀 Register New Shop Account";
     if (submitBtn) submitBtn.textContent = "Create Account & Set Up Shop";
     if (switchHint) {
@@ -6210,6 +6216,8 @@ function setAuthMode(registerMode) {
     if (matchIndicator) matchIndicator.style.display = "none";
     if (forgotBtn) forgotBtn.style.display = "none";
   } else {
+    // Restore role switcher tabs for regular Sign In mode
+    if (roleTabs) roleTabs.style.display = "flex";
     if (title) title.textContent = "🔑 Sign In to WaitLink";
     if (submitBtn) submitBtn.textContent = "Sign In";
     if (switchHint) {
