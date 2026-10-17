@@ -77,8 +77,8 @@
           🌙
         </button>
 
-        <!-- PWA Install Action (Visible on tablet/mobile/desktop when install is available) -->
-        <button id="pwa-install-header-btn" class="btn btn-secondary btn-sm-header" onclick="triggerPwaInstall()" title="Install WaitLink as Standalone Tablet App" style="display: none; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; gap: 0.35rem;">
+        <!-- PWA Install Header Button -->
+        <button id="pwa-install-header-btn" class="btn btn-secondary btn-sm-header desktop-only-action hidden" onclick="triggerPwaInstall()" title="Install WaitLink as Desktop / Tablet App" style="display: none; align-items: center; gap: 0.35rem;">
           📲 <span class="pwa-header-label">Install App</span>
         </button>
 
@@ -559,7 +559,7 @@
           <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
             🔔 Sound Alerts: ON
           </button>
-          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none; font-size: 0.8rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(6, 182, 212, 0.1); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
+          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: inline-flex; font-size: 0.8rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(6, 182, 212, 0.1); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
             📲 Install Tablet Mode
           </button>
           <span class="count-pill" id="queue-badge">0 Waiting</span>
@@ -3320,6 +3320,21 @@ Dedicated Support Manager
           <li>
             Launch <strong>WaitLink</strong> from your iPad home screen dock for full-screen edge-to-edge register mode!
           </li>
+        </ol>
+      </div>
+
+      <!-- Desktop Browser Instructions (Shown on desktop browsers when native prompt has not fired) -->
+      <div id="pwa-desktop-instructions" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem; display: none;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+          <span>🖥️</span> Desktop & Countertop Install
+        </div>
+        <p style="font-size: 0.88rem; color: var(--text-light); margin: 0 0 0.5rem 0;">
+          To install WaitLink as a dedicated app on this computer or counter display:
+        </p>
+        <ol style="margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-light);">
+          <li>Look for the <strong>Install WaitLink (⊕ or 📲)</strong> icon in your browser's address bar.</li>
+          <li>Or click your browser's <strong>Menu (⋮ or ⋯) → "Save and share" / "Install WaitLink"</strong>.</li>
+          <li>For counter tablets (iPad or Android), open this site in the tablet's browser and tap <strong>Add to Home Screen</strong>.</li>
         </ol>
       </div>
 

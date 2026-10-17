@@ -6137,3 +6137,18 @@ html[data-theme="light"] #pwa-ios-instructions ol {
 html[data-theme="light"] #pwa-ios-instructions strong {
   color: #090d16 !important;
 }
+
+html[data-theme="light"] #pwa-desktop-instructions {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] #pwa-desktop-instructions ol {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] #pwa-desktop-instructions strong {
+  color: #090d16 !important;
+}
+

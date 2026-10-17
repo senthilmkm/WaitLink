@@ -12834,10 +12834,8 @@ function initPwaSupport() {
     return;
   }
 
-  // 2. On iOS/iPad, native beforeinstallprompt does not fire, so we show the install guide option
-  if (isIosOrIpad()) {
-    showPwaInstallPrompts(true);
-  }
+  // 2. Standard recommendation: Non-standalone browsers make Front Desk pill & menu tools accessible
+  showPwaInstallPrompts(true);
 
   // 3. Catch browser install prompt on Android, Chrome, Edge & Desktop
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -12873,17 +12871,22 @@ function triggerPwaInstall() {
   const modal = document.getElementById("pwa-install-modal");
   const iosBox = document.getElementById("pwa-ios-instructions");
   const directBox = document.getElementById("pwa-direct-install-box");
+  const desktopBox = document.getElementById("pwa-desktop-instructions");
 
   if (!modal) return;
 
   if (deferredPwaPrompt) {
     if (directBox) directBox.style.display = "block";
     if (iosBox) iosBox.style.display = "none";
+    if (desktopBox) desktopBox.style.display = "none";
   } else if (isIosOrIpad()) {
     if (iosBox) iosBox.style.display = "block";
     if (directBox) directBox.style.display = "none";
+    if (desktopBox) desktopBox.style.display = "none";
   } else {
-    if (iosBox) iosBox.style.display = "block";
+    // Desktop Chrome/Edge/Firefox/Safari where prompt has not fired yet
+    if (desktopBox) desktopBox.style.display = "block";
+    if (iosBox) iosBox.style.display = "none";
     if (directBox) directBox.style.display = "none";
   }
 
