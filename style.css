@@ -4012,3 +4012,381 @@ details summary:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* ==========================================================================
+   Universal Light Theme System (All Pages, Modals, Menus, Popups, Tables)
+   ========================================================================== */
+
+/* Global Light Mode Canvas */
+html[data-theme="light"],
+html[data-theme="light"] body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* 1. Universal Modals & Overlays */
+html[data-theme="light"] .modal-card,
+html[data-theme="light"] .audit-trail-modal-card,
+html[data-theme="light"] .onboarding-modal-card,
+html[data-theme="light"] .upgrade-modal-card,
+html[data-theme="light"] #modal-carrier-segments-guide .modal-card,
+html[data-theme="light"] #modal-sms-topup .modal-card,
+html[data-theme="light"] #modal-sms-logs .modal-card,
+html[data-theme="light"] #modal-admin-credit-override .modal-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.22), 0 0 1px rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .modal-card h2,
+html[data-theme="light"] .modal-card h3,
+html[data-theme="light"] .modal-card h4,
+html[data-theme="light"] .modal-card strong:not([style*="color"]) {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .modal-card p:not([style*="color"]) {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] .onboarding-modal-header,
+html[data-theme="light"] .upgrade-modal-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] .onboarding-modal-header h2,
+html[data-theme="light"] .upgrade-modal-header h2 {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .close-btn,
+html[data-theme="light"] .modal-close-btn,
+html[data-theme="light"] .dialog-close-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #475569 !important;
+}
+
+html[data-theme="light"] .close-btn:hover,
+html[data-theme="light"] .modal-close-btn:hover,
+html[data-theme="light"] .dialog-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* 2. Universal Cosmetic Dialog System */
+html[data-theme="light"] .waitlink-dialog-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.22) !important;
+}
+
+html[data-theme="light"] .dialog-title {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .dialog-message {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .dialog-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-theme="light"] .dialog-footer {
+  background: #f8fafc !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .dialog-footer #dialog-btn-cancel {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+}
+
+/* 3. Dropdown Menus & Header Switchers */
+html[data-theme="light"] .brand-name {
+  background: linear-gradient(135deg, #0f172a 0%, var(--primary) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+html[data-theme="light"] .shop-chip-btn {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+html[data-theme="light"] .shop-chip-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: var(--primary) !important;
+}
+
+html[data-theme="light"] .dropdown-menu {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .dropdown-user-info {
+  color: #0f172a !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .dropdown-header-title {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] .dropdown-item {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .dropdown-item:hover {
+  background: #f1f5f9 !important;
+  color: #06b6d4 !important;
+}
+
+html[data-theme="light"] .mode-tabs {
+  background: #f1f5f9 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] .tab-btn {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] .tab-btn:hover {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .tab-btn.active {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+/* 4. Settings Sub-Tabs Navigation */
+html[data-theme="light"] .settings-subtabs-nav {
+  background: #f8fafc !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] .settings-subtab-btn {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] .settings-subtab-btn:hover {
+  color: #0f172a !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+html[data-theme="light"] .settings-subtab-btn.active {
+  color: var(--primary) !important;
+  border-bottom-color: var(--primary) !important;
+  background: rgba(6, 182, 212, 0.08) !important;
+}
+
+/* 5. Cards & Section Panels */
+html[data-theme="light"] .card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06) !important;
+}
+
+html[data-theme="light"] .card-subpanel {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .phone-bubble-mockup {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.09) !important;
+}
+
+html[data-theme="light"] #twilio-template-live-preview {
+  background: rgba(6, 182, 212, 0.1) !important;
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .card-header h3,
+html[data-theme="light"] .card h3,
+html[data-theme="light"] .card h2,
+html[data-theme="light"] .shop-title {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .card-footer {
+  background: #f8fafc !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 6. Forms, Inputs & Select Controls */
+html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="light"] textarea,
+html[data-theme="light"] select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.16) !important;
+}
+
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="light"] input:disabled,
+html[data-theme="light"] textarea:disabled {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] .input-group,
+html[data-theme="light"] .slug-input-wrapper {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="light"] .input-group input {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .filter-select,
+html[data-theme="light"] .filter-date-input,
+html[data-theme="light"] .filter-search-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="light"] .filter-select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 7. Buttons */
+html[data-theme="light"] .btn-secondary {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+}
+
+html[data-theme="light"] .btn-secondary:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .btn-text-sm {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="light"] .btn-icon {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 8. Tables & Logs */
+html[data-theme="light"] table {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] table thead tr,
+html[data-theme="light"] .history-table th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] table tbody tr,
+html[data-theme="light"] .history-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] table tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+/* 9. Public Customer Wait View */
+html[data-theme="light"] .public-card {
+  background: #ffffff !important;
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.1), 0 0 25px rgba(6, 182, 212, 0.15) !important;
+}
+
+html[data-theme="light"] .public-shop-name {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .public-timer-box,
+html[data-theme="light"] .public-info-box {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 10. Upgrade Modal Tier Cards */
+html[data-theme="light"] .upgrade-modal-card .card {
+  background: #f8fafc !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] .upgrade-modal-card h3,
+html[data-theme="light"] .upgrade-modal-card div[style*="font-size: 1.5rem"],
+html[data-theme="light"] #modal-t1-title,
+html[data-theme="light"] #modal-t2-title,
+html[data-theme="light"] #modal-t3-title,
+html[data-theme="light"] #modal-t1-price {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #upgrade-processing-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-theme="light"] #upgrade-processing-overlay > div {
+  background: #ffffff !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="light"] #upgrade-proc-title {
+  color: #0f172a !important;
+}
+
+/* 11. SMS Outbound Wallet Card & Details */
+html[data-theme="light"] #owner-sms-wallet-card,
+html[data-theme="light"] #owner-twilio-card {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] #twilio-gateway-accordion {
+  background: #f8fafc !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] #twilio-gateway-accordion > div {
+  background: #ffffff !important;
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] #sms-usage-label,
+html[data-theme="light"] #owner-sms-wallet-card strong {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #owner-sms-wallet-card div[style*="background: rgba(0,0,0"],
+html[data-theme="light"] #owner-sms-wallet-card div[style*="background: rgba(0, 0, 0"] {
+  background: #f8fafc !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
