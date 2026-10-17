@@ -945,15 +945,20 @@
 
                 <!-- Custom Serve Now SMS Message Template -->
                 <div class="form-group" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
                     <label for="twilio-serve-now-template" style="font-size: 0.8rem; font-weight: 600; color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
                       💬 "Serve Now" Customer SMS Text Template
                     </label>
-                    <button type="button" id="btn-reset-sms-tpl" class="btn-text" onclick="resetServeNowTemplateDefault()" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: underline; padding: 0;" title="Reset back to default template">
-                      ↺ Reset to Default
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button type="button" class="btn-text" onclick="openCarrierSegmentsModal()" style="font-size: 0.72rem; color: #38bdf8; display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;" title="Learn how carrier segments and character limits affect SMS credit charges">
+                        ℹ️ Carrier Segments Guide
+                      </button>
+                      <button type="button" id="btn-reset-sms-tpl" class="btn-text" onclick="resetServeNowTemplateDefault()" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: underline; padding: 0;" title="Reset back to default template">
+                        ↺ Reset to Default
+                      </button>
+                    </div>
                   </div>
-                  <textarea id="twilio-serve-now-template" rows="2" style="font-size: 0.82rem; padding: 0.5rem 0.65rem; width: 100%; line-height: 1.4; resize: vertical;" placeholder="Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}" oninput="updateServeNowTemplatePreview()"></textarea>
+                  <textarea id="twilio-serve-now-template" rows="2" style="font-size: 0.82rem; padding: 0.5rem 0.65rem; width: 100%; line-height: 1.4; resize: vertical;" placeholder="Hi {name}! Your turn at {shop} is ready now. Your ticket: {link}" oninput="updateServeNowTemplatePreview()"></textarea>
                   
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem;">
                     <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
@@ -965,6 +970,17 @@
                     </div>
                   </div>
 
+                  <!-- Carrier Segments In-Line Notice -->
+                  <div style="margin-top: 0.5rem; padding: 0.55rem 0.75rem; background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.22); border-radius: var(--radius-sm); font-size: 0.73rem; color: #cbd5e1; line-height: 1.45;">
+                    <div style="font-weight: 700; color: #38bdf8; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
+                      <span>📏 Telecom Carrier Segment Rules & Credit Charges</span>
+                      <button type="button" onclick="openCarrierSegmentsModal()" style="background: none; border: none; color: #38bdf8; font-size: 0.7rem; text-decoration: underline; cursor: pointer; padding: 0;">View Guide &rarr;</button>
+                    </div>
+                    • <strong>1 Segment = Up to 160 characters</strong> (standard GSM-7 plain text) &rarr; Uses <strong>1 SMS credit</strong>.<br>
+                    • <strong>2 Segments = 161 to 306 characters</strong> (153 chars/segment due to carrier headers) &rarr; Uses <strong>2 SMS credits</strong>.<br>
+                    • <strong>Emojis (💈, ✂️) switch to UCS-2 encoding</strong> where 1 segment is only <strong>70 characters</strong>.
+                  </div>
+
                   <!-- Live Customer SMS Preview Box & Character Segment Meter -->
                   <div style="margin-top: 0.5rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-sm); padding: 0.55rem 0.75rem;">
                     <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
@@ -972,13 +988,19 @@
                       <span id="sms-encoding-badge" style="font-size: 0.68rem; color: #10b981; font-weight: 700;">GSM-7 Standard</span>
                     </div>
                     <div id="twilio-template-live-preview" style="font-size: 0.78rem; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                      Hi Alex! Your turn at Main St Barbers is ready now. Please proceed to the front desk. View your ticket: https://waitlink.app?s=main-st-barbers&view=public&ticket=sample-101
+                      Hi Alex! Your turn at Main St Barbers is ready now. Your ticket: https://waitlink.app?s=main-st-barbers&view=public&ticket=sample-101
                     </div>
 
                     <div style="margin-top: 0.45rem; padding-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem;">
                       <span id="sms-char-counter" style="color: #38bdf8; font-weight: 700;">74/160 Characters • 1 Carrier Segment</span>
-                      <span style="color: var(--text-muted);">1 credit per segment</span>
+                      <span style="color: var(--text-muted); font-weight: 600;">1 credit per segment</span>
                     </div>
+                    
+                    <!-- Dynamic Warning When 2+ Segments -->
+                    <div id="sms-multisegment-warning" class="hidden" style="margin-top: 0.45rem; padding: 0.45rem 0.65rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 4px; font-size: 0.72rem; color: #fbbf24; line-height: 1.35;">
+                      ⚠️ <strong>Multi-Segment Notice:</strong> This message exceeds 160 characters and will be billed as <span id="sms-segment-count-warn" style="font-weight: 800; text-decoration: underline;">2</span> Carrier Segments (<span id="sms-credit-count-warn" style="font-weight: 800;">2</span> SMS credits per alert). Shorten your text to under 160 characters to charge only 1 credit.
+                    </div>
+
                     <div id="sms-emoji-warning" class="hidden" style="margin-top: 0.35rem; font-size: 0.7rem; color: #f59e0b; line-height: 1.3;">
                       ⚠️ <strong>Emoji Detected:</strong> Carriers enforce UCS-2 encoding (70 chars/segment). Removing emojis saves SMS credits.
                     </div>
@@ -3069,6 +3091,99 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- Carrier Segments & Character Guide Modal -->
+  <div id="modal-carrier-segments-guide" class="modal-backdrop hidden" onclick="if(event.target === this) closeCarrierSegmentsModal()">
+    <div class="modal-card" style="max-width: 640px; width: 94%; padding: 2rem; border-radius: 18px; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.4); box-shadow: 0 35px 75px rgba(0,0,0,0.9); position: relative; animation: slideUp 0.25s ease;">
+      <button class="close-btn" onclick="closeCarrierSegmentsModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.35rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" title="Close Modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem;">
+        <span style="font-size: 1.8rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 12px; padding: 0.4rem 0.65rem;">📱</span>
+        <div>
+          <h2 style="font-size: 1.3rem; color: #fff; margin: 0; font-weight: 800;">Understanding SMS Carrier Segments & Credits</h2>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0 0;">How character length and emojis impact your SMS billing</p>
+        </div>
+      </div>
+
+      <!-- Core Telecom Explanation -->
+      <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-sm); padding: 0.9rem 1rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: #e2e8f0; line-height: 1.5;">
+        <strong style="color: #38bdf8; display: block; margin-bottom: 0.25rem;">💡 Why are SMS alerts measured in "Segments"?</strong>
+        Telecommunication carriers (Verizon, AT&T, T-Mobile, Twilio) do not bill by single message. They bill per <strong>Carrier Segment</strong>. If your message exceeds 160 characters, cellular networks automatically split and concatenate it into multiple segments, debiting 1 credit per segment.
+      </div>
+
+      <!-- Comparison Cards -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        
+        <!-- Standard GSM-7 Card -->
+        <div style="background: rgba(16, 185, 129, 0.06); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <strong style="color: #34d399; font-size: 0.9rem;">📝 GSM-7 Standard Text</strong>
+            <span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">Recommended</span>
+          </div>
+          <p style="font-size: 0.78rem; color: #cbd5e1; margin: 0 0 0.65rem 0;">Standard English letters, numbers, and basic punctuation.</p>
+          <div style="font-size: 0.78rem; color: #e2e8f0; display: flex; flex-direction: column; gap: 0.35rem;">
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <span>• <strong>1 Segment</strong> (1 Credit):</span>
+              <strong style="color: #34d399;">Up to 160 chars</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <span>• <strong>2 Segments</strong> (2 Credits):</span>
+              <strong style="color: #f59e0b;">161 – 306 chars</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+              <span>• <strong>3 Segments</strong> (3 Credits):</span>
+              <strong style="color: #ef4444;">307 – 459 chars</strong>
+            </div>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">
+            *Multi-segment GSM uses 153 chars/segment due to 7-byte carrier concatenation headers.
+          </div>
+        </div>
+
+        <!-- Unicode / Emoji Card -->
+        <div style="background: rgba(245, 158, 11, 0.06); border: 1.5px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <strong style="color: #fbbf24; font-size: 0.9rem;">⚠️ UCS-2 Unicode / Emojis</strong>
+            <span style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">Consumes 2× Credits</span>
+          </div>
+          <p style="font-size: 0.78rem; color: #cbd5e1; margin: 0 0 0.65rem 0;">Any message containing emojis (💈, ✂️, 🕒) or accented non-GSM characters.</p>
+          <div style="font-size: 0.78rem; color: #e2e8f0; display: flex; flex-direction: column; gap: 0.35rem;">
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <span>• <strong>1 Segment</strong> (1 Credit):</span>
+              <strong style="color: #34d399;">Up to 70 chars only</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <span>• <strong>2 Segments</strong> (2 Credits):</span>
+              <strong style="color: #f59e0b;">71 – 134 chars</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+              <span>• <strong>3 Segments</strong> (3 Credits):</span>
+              <strong style="color: #ef4444;">135 – 201 chars</strong>
+            </div>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">
+            *Carriers drop segment capacity to 70 chars whenever a 16-bit Unicode character is detected.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Actionable Cost Saving Tip -->
+      <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: #cbd5e1;">
+        <strong style="color: #fff; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem;">
+          <span>🎯</span> Recommended Template for 1-Credit Delivery:
+        </strong>
+        <code style="display: block; background: rgba(0,0,0,0.5); padding: 0.45rem 0.65rem; border-radius: 4px; color: #38bdf8; font-size: 0.78rem; margin: 0.35rem 0;">Hi {name}! Your turn at {shop} is ready now. Your ticket: {link}</code>
+        <div style="font-size: 0.72rem; color: var(--text-muted);">This template stays under 160 characters, ensuring each customer alert uses <strong>exactly 1 credit</strong> out of your monthly quota.</div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-primary" onclick="closeCarrierSegmentsModal()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; font-weight: 700;">
+          Got it 👍
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Universal Modern Cosmetic Dialog Modal (Industry-Standard Confirm/Alert/Prompt) -->
   <div id="waitlink-dialog-backdrop" class="modal-backdrop hidden" onclick="if(event.target === this) waitlinkDialogDismiss()">
     <div class="waitlink-dialog-card dialog-theme-primary" id="waitlink-dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
@@ -3124,6 +3239,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=5.1"></script>
+  <script src="app.js?v=5.2"></script>
 </body>
 </html>

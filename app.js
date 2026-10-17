@@ -19,8 +19,7 @@ const SECRETS = (typeof window !== "undefined" && window.WAITLINK_SECRETS) ? win
 
 // Centralized Twilio SMS Gateway Sender Number
 const DEFAULT_TWILIO_FROM = SECRETS.TWILIO_FROM_PHONE || "+18039027464";
-const DEFAULT_TWILIO_FROM_DISPLAY = "+1 (803) 902-7464";
-const DEFAULT_SERVE_NOW_SMS = "Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}";
+const DEFAULT_SERVE_NOW_SMS = "Hi {name}! Your turn at {shop} is ready now. Your ticket: {link}";
 
 // =========================================================================
 // RUNTIME ERROR BOUNDARIES & RESILIENCE GUARDS
@@ -1839,6 +1838,31 @@ function updateServeNowTemplatePreview() {
       emojiWarn.classList.add("hidden");
     }
   }
+
+  // Live Multi-Segment Credit Warning
+  const multiWarn = document.getElementById("sms-multisegment-warning");
+  const warnSegSpan = document.getElementById("sms-segment-count-warn");
+  const warnCreditSpan = document.getElementById("sms-credit-count-warn");
+
+  if (multiWarn) {
+    if (segments > 1) {
+      multiWarn.classList.remove("hidden");
+      if (warnSegSpan) warnSegSpan.textContent = segments;
+      if (warnCreditSpan) warnCreditSpan.textContent = segments;
+    } else {
+      multiWarn.classList.add("hidden");
+    }
+  }
+}
+
+function openCarrierSegmentsModal() {
+  const modal = document.getElementById("modal-carrier-segments-guide");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeCarrierSegmentsModal() {
+  const modal = document.getElementById("modal-carrier-segments-guide");
+  if (modal) modal.classList.add("hidden");
 }
 
 function insertServeNowTemplateTag(tag) {
