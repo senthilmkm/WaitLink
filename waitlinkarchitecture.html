@@ -848,13 +848,13 @@
         </table>
       </div>
 
-      <!-- Subsection: All 11 Cloud Functions Architectural Specification -->
+      <!-- Subsection: All 12 Cloud Functions Architectural Specification -->
       <div style="margin-top: 2rem;">
         <h3 style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-          <span>⚡</span> All 11 Serverless Cloud Functions (Node.js 20 &bull; 2nd Gen)
+          <span>⚡</span> All 12 Serverless Cloud Functions (Node.js 20 &bull; 2nd Gen)
         </h3>
         <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
-          WaitLink deploys 11 enterprise serverless micro-functions hosted in Google Cloud (<code>us-central1</code>). Each function runs on <strong>Node.js 20</strong>, enforces CORS validation, executes within a concurrency limit of <code>maxInstances: 10</code> to prevent cost overruns, and interacts with third-party APIs (Twilio, Stripe, Brevo) using secure environment secrets:
+          WaitLink deploys 12 enterprise serverless micro-functions hosted in Google Cloud (<code>us-central1</code>). Each function runs on <strong>Node.js 20</strong>, enforces CORS validation, executes within a concurrency limit of <code>maxInstances: 10</code> to prevent cost overruns, and interacts with third-party APIs (Twilio, Stripe, Brevo) using secure environment secrets:
         </p>
 
         <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
@@ -945,6 +945,13 @@
                 <td>Brevo API v3 &bull; Firestore</td>
                 <td><code>inquiryId, recipientEmail, replyText</code></td>
                 <td>SuperAdmin resolution dispatch &bull; Emails customer directly from WaitLink Support and marks inquiry resolved</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #6366f1;">createStripePortalSession</strong></td>
+                <td>HTTP POST &bull; CORS</td>
+                <td>Stripe Billing Portal API</td>
+                <td><code>slug, returnUrl</code></td>
+                <td>Authenticates shop owner or SuperAdmin &bull; Retrieves <code>stripeCustomerId</code> &bull; Generates secure self-serve Stripe Billing Portal link for payment method updates, invoice history, and cancellation management</td>
               </tr>
             </tbody>
           </table>

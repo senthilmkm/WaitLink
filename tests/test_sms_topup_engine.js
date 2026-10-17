@@ -377,12 +377,13 @@ it("firestore.rules enforces security on /billing and /top_ups", () => {
   assert.ok(rules.includes("match /top_ups/{topUpId}"), "Missing top_ups subcollection rule");
 });
 
-it("waitlinkarchitecture.html documents all 11 Cloud Functions & SMS Volume Quota Engine", () => {
+it("waitlinkarchitecture.html documents all 12 Cloud Functions & SMS Volume Quota Engine", () => {
   const archHtml = fs.readFileSync(path.join(__dirname, "../waitlinkarchitecture.html"), "utf8");
-  assert.ok(archHtml.includes("All 11 Serverless Cloud Functions"), "Missing 11 Cloud Functions heading in architecture doc");
+  assert.ok(archHtml.includes("All 12 Serverless Cloud Functions"), "Missing 12 Cloud Functions heading in architecture doc");
   assert.ok(archHtml.includes("createStripeTopUpSession"), "Missing createStripeTopUpSession in architecture doc");
   assert.ok(archHtml.includes("verifyStripeTopUpSession"), "Missing verifyStripeTopUpSession in architecture doc");
   assert.ok(archHtml.includes("adjustShopSmsCredits"), "Missing adjustShopSmsCredits in architecture doc");
+  assert.ok(archHtml.includes("createStripePortalSession"), "Missing createStripePortalSession in architecture doc");
   assert.ok(archHtml.includes("SMS Outbound Volume Quotas, Metering") && archHtml.includes("Top-Up Engine"), "Missing SMS Quota architecture section");
 });
 
