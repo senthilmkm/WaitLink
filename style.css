@@ -1863,8 +1863,8 @@ html[data-theme="light"] .app-header {
 
 /* Subscription Upgrade Modal Dedicated Layout */
 .upgrade-modal-card {
-  max-width: 960px !important;
-  width: 94% !important;
+  max-width: 1180px !important;
+  width: 95% !important;
   max-height: min(90vh, 90dvh) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -4388,5 +4388,223 @@ html[data-theme="light"] #owner-sms-wallet-card div[style*="background: rgba(0,0
 html[data-theme="light"] #owner-sms-wallet-card div[style*="background: rgba(0, 0, 0"] {
   background: #f8fafc !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 12. High-Contrast Chips, Badges & Interactive Tags in Light Mode */
+html[data-theme="light"] .mode-badge-toggle {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+html[data-theme="light"] .mode-badge-toggle:hover {
+  background: #f8fafc !important;
+  border-color: #0891b2 !important;
+}
+html[data-theme="light"] .mode-badge-toggle strong {
+  color: #0891b2 !important;
+}
+html[data-theme="light"] .mode-badge-toggle.owner-active strong {
+  color: #4f46e5 !important;
+}
+
+html[data-theme="light"] #desk-operator-role-pill {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+}
+
+html[data-theme="light"] .position-badge {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] .position-badge.next-up {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25) !important;
+}
+
+html[data-theme="light"] .queue-item-card.next-up {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.12) !important;
+}
+
+html[data-theme="light"] .badge-service {
+  background: #ecfeff !important;
+  color: #0e7490 !important;
+  border-color: #a5f3fc !important;
+}
+
+html[data-theme="light"] .badge-late {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fcd34d !important;
+}
+
+html[data-theme="light"] .btn-sms-tag,
+html[data-theme="light"] .btn-badge {
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+}
+html[data-theme="light"] button[onclick*="'{name}'"] {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #86efac !important;
+}
+html[data-theme="light"] button[onclick*="'{shop}'"] {
+  background: #ecfeff !important;
+  color: #0e7490 !important;
+  border-color: #a5f3fc !important;
+}
+html[data-theme="light"] button[onclick*="'{service}'"] {
+  background: #f3e8ff !important;
+  color: #7e22ce !important;
+  border-color: #d8b4fe !important;
+}
+html[data-theme="light"] button[onclick*="'{link}'"] {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #bfdbfe !important;
+}
+
+html[data-theme="light"] #sms-encoding-badge {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+
+html[data-theme="light"] #sms-char-counter {
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] .badge-pro-pill.locked {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+html[data-theme="light"] .badge-pro-pill.unlocked {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+
+html[data-theme="light"] #desk-sms-exhausted-banner {
+  background: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+}
+
+html[data-theme="light"] #modal-active-plan-banner {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+
+html[data-theme="light"] #modal-active-shop-name {
+  color: #0f172a !important;
+}
+
+/* 13. Form Controls, Inputs, Checkboxes, Radios & Selects in Light Mode */
+html[data-theme="light"] input[type="checkbox"],
+html[data-theme="light"] input[type="radio"] {
+  accent-color: #0891b2 !important;
+  cursor: pointer !important;
+}
+
+html[data-theme="light"] select,
+html[data-theme="light"] select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] select:focus,
+html[data-theme="light"] input:focus,
+html[data-theme="light"] textarea:focus {
+  border-color: #0891b2 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15) !important;
+}
+
+html[data-theme="light"] label,
+html[data-theme="light"] .form-group label {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] #twilio-toggle-wrapper {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 14. SuperAdmin Pricing Page Controls & Tiers in Light Mode */
+html[data-theme="light"] #superpanel-pricing .card {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] #superpanel-pricing h3,
+html[data-theme="light"] #superpanel-pricing h2 {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #policy-card-desc-a,
+html[data-theme="light"] #policy-card-desc-b {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html[data-theme="light"] #admin-policy-opt-a.btn-secondary,
+html[data-theme="light"] #admin-policy-opt-b.btn-secondary {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] .pricing-feature-row {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html[data-theme="light"] .pricing-feature-row input {
+  color: #0f172a !important;
+}
+
+/* 15. Universal Contrast Overrides for Inline White Text in Light Mode */
+html[data-theme="light"] .card strong[style*="color: #fff"],
+html[data-theme="light"] .card strong[style*="color: #ffffff"],
+html[data-theme="light"] .card strong[style*="color: rgb(255, 255, 255)"],
+html[data-theme="light"] .card span[style*="color: #fff"],
+html[data-theme="light"] .card span[style*="color: #ffffff"],
+html[data-theme="light"] .modal-card span[style*="color: #fff"],
+html[data-theme="light"] .modal-card span[style*="color: #ffffff"],
+html[data-theme="light"] .card h3[style*="color: #fff"],
+html[data-theme="light"] .card h4[style*="color: #fff"],
+html[data-theme="light"] .card h2[style*="color: #fff"] {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .customer-name {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .metric-value {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .metric-label {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="light"] .metric-caption {
+  color: #64748b !important;
 }
 

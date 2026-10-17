@@ -8137,58 +8137,68 @@ function loadPricingConfigUI() {
 
 function ensureTierSMSLimits(tiers) {
   if (!Array.isArray(tiers)) return tiers;
+  const isOptA = state.rolloverPolicy === "option_a";
+
+  const headlineText = isOptA
+    ? "500 Automated SMS / mo Included (Standard Monthly Reset)"
+    : "500 Automated SMS / mo Included (+ 1-Month Rollover Bank up to 1,000 SMS)";
+
+  const rolloverText = isOptA
+    ? "Monthly Reset (Unused monthly quota refreshes at cycle boundary)"
+    : "1-Month Rollover Bank (Up to 1,000 SMS reserve)";
+
   tiers.forEach((tier, idx) => {
     if (!tier || !Array.isArray(tier.features)) return;
     const id = tier.id || (idx === 0 ? "starter" : (idx === 1 ? "pro" : "enterprise"));
     const feats = tier.features;
 
-    const hasText = (query) => feats.some(f => {
+    const findFeatureIdx = (query) => feats.findIndex(f => {
       const t = typeof f === 'object' && f !== null ? f.text : String(f);
       return t.toLowerCase().includes(query.toLowerCase());
     });
 
     if (id === "starter" || idx === 0) {
-      if (!hasText("0 SMS")) {
-        const smsIdx = feats.findIndex(f => {
-          const t = typeof f === 'object' && f !== null ? f.text : String(f);
-          return t.toLowerCase().includes("sms");
-        });
-        const targetIdx = smsIdx !== -1 ? smsIdx : 7;
-        feats.splice(targetIdx, 0, { text: "0 SMS Included (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true });
+      if (findFeatureIdx("0 SMS") === -1) {
+        feats.push({ text: "0 SMS Included (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true });
       }
     } else if (id === "pro" || idx === 1) {
-      if (!hasText("500")) {
-        const smsIdx = feats.findIndex(f => {
-          const t = typeof f === 'object' && f !== null ? f.text : String(f);
-          return t.toLowerCase().includes("sms");
-        });
-        const targetIdx = smsIdx !== -1 ? smsIdx : 2;
-        feats.splice(targetIdx, 0, { text: "500 Automated SMS / mo included (+ 1-Month Rollover Bank up to 1,000 SMS)", enabled: true });
+      // 1. Headline 500 SMS feature
+      const smsIdx = feats.findIndex(f => {
+        const t = typeof f === 'object' && f !== null ? f.text : String(f);
+        return t.includes("500") && (t.toLowerCase().includes("sms") || t.toLowerCase().includes("automated"));
+      });
+      if (smsIdx !== -1) {
+        if (typeof feats[smsIdx] === 'object' && feats[smsIdx] !== null) {
+          feats[smsIdx].text = headlineText;
+        } else {
+          feats[smsIdx] = headlineText;
+        }
+      } else {
+        feats.splice(2, 0, { text: headlineText, enabled: true });
       }
-      if (!hasText("Rollover Bank") && !hasText("rollover")) {
-        const fiveIdx = feats.findIndex(f => {
-          const t = typeof f === 'object' && f !== null ? f.text : String(f);
-          return t.includes("500");
-        });
-        const targetIdx = fiveIdx !== -1 ? fiveIdx + 1 : 3;
-        feats.splice(targetIdx, 0, { text: "1-Month Rollover Bank (Up to 1,000 SMS reserve)", enabled: true });
+
+      // 2. Rollover Bank / Monthly Reset feature
+      const rollIdx = feats.findIndex(f => {
+        const t = typeof f === 'object' && f !== null ? f.text : String(f);
+        return t.toLowerCase().includes("rollover") || t.toLowerCase().includes("monthly reset") || t.toLowerCase().includes("monthly refresh") || t.toLowerCase().includes("cycle boundary");
+      });
+      if (rollIdx !== -1) {
+        if (typeof feats[rollIdx] === 'object' && feats[rollIdx] !== null) {
+          feats[rollIdx].text = rolloverText;
+        } else {
+          feats[rollIdx] = rolloverText;
+        }
+      } else {
+        feats.splice(3, 0, { text: rolloverText, enabled: true });
       }
-      if (!hasText("Top-Up") && !hasText("top up") && !hasText("+250")) {
-        const rollIdx = feats.findIndex(f => {
-          const t = typeof f === 'object' && f !== null ? f.text : String(f);
-          return t.toLowerCase().includes("rollover");
-        });
-        const targetIdx = rollIdx !== -1 ? rollIdx + 1 : 4;
-        feats.splice(targetIdx, 0, { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true });
+
+      // 3. Top-Up packs feature
+      if (findFeatureIdx("top-up") === -1 && findFeatureIdx("+250") === -1) {
+        feats.splice(4, 0, { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true });
       }
     } else if (id === "enterprise" || idx === 2) {
-      if (!hasText("2,500") && !hasText("2500")) {
-        const smsIdx = feats.findIndex(f => {
-          const t = typeof f === 'object' && f !== null ? f.text : String(f);
-          return t.toLowerCase().includes("sms");
-        });
-        const targetIdx = smsIdx !== -1 ? smsIdx : 2;
-        feats.splice(targetIdx, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
+      if (findFeatureIdx("2,500") === -1 && findFeatureIdx("2500") === -1) {
+        feats.splice(2, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
       }
     }
   });
@@ -8269,6 +8279,26 @@ function initPricingConfigRealtimeSync() {
         if (d.rolloverPolicy) {
           state.rolloverPolicy = d.rolloverPolicy;
           updateAdminRolloverPolicyUI(d.rolloverPolicy);
+          if (state.pricingTiers) {
+            state.pricingTiers = ensureTierSMSLimits(state.pricingTiers);
+            renderUpgradeModalTiers(state.pricingTiers);
+          }
+          const isOptA = d.rolloverPolicy === "option_a";
+          const headline = isOptA
+            ? "500 Automated SMS / mo Included (Standard Monthly Reset)"
+            : "500 Automated SMS / mo Included (+ 1-Month Rollover Bank up to 1,000 SMS)";
+          const rolloverLine = isOptA
+            ? "Monthly Reset (Unused monthly quota refreshes at cycle boundary)"
+            : "1-Month Rollover Bank (Up to 1,000 SMS reserve)";
+
+          const smsEl = document.getElementById("modal-tier-feature-pro-sms");
+          if (smsEl) smsEl.textContent = headline;
+
+          const rollEl = document.getElementById("modal-tier-feature-pro-rollover");
+          if (rollEl) {
+            rollEl.textContent = rolloverLine;
+            rollEl.style.color = isOptA ? "#0284c7" : "#10b981";
+          }
         }
 
         const panelPricing = document.getElementById("superpanel-pricing");
@@ -8353,6 +8383,50 @@ function setAdminRolloverPolicy(policy) {
   state.rolloverPolicy = chosen;
   updateAdminRolloverPolicyUI(chosen);
 
+  // 1. Instantly update Shop Subscription Plans modal and cached tiers
+  if (state.pricingTiers) {
+    state.pricingTiers = ensureTierSMSLimits(state.pricingTiers);
+    localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+    renderUpgradeModalTiers(state.pricingTiers);
+  }
+
+  // 2. Directly update Pro plan features in DOM (works even if custom tiers haven't loaded)
+  const isOptA = chosen === "option_a";
+  const headline = isOptA
+    ? "500 Automated SMS / mo Included (Standard Monthly Reset)"
+    : "500 Automated SMS / mo Included (+ 1-Month Rollover Bank up to 1,000 SMS)";
+  const rolloverLine = isOptA
+    ? "Monthly Reset (Unused monthly quota refreshes at cycle boundary)"
+    : "1-Month Rollover Bank (Up to 1,000 SMS reserve)";
+
+  const smsEl = document.getElementById("modal-tier-feature-pro-sms");
+  if (smsEl) smsEl.textContent = headline;
+
+  const rollEl = document.getElementById("modal-tier-feature-pro-rollover");
+  if (rollEl) {
+    rollEl.textContent = rolloverLine;
+    rollEl.style.color = isOptA ? "#0284c7" : "#10b981";
+  }
+
+  // 3. Update Admin Feature Manager list under Tier 2 on pricing page
+  if (state.adminFeatures && state.adminFeatures.t2) {
+    const f500 = state.adminFeatures.t2.find(f => f.text.includes("500") && (f.text.toLowerCase().includes("sms") || f.text.toLowerCase().includes("automated")));
+    if (f500) f500.text = headline;
+    const fRoll = state.adminFeatures.t2.find(f => f.text.toLowerCase().includes("rollover") || f.text.toLowerCase().includes("monthly reset") || f.text.toLowerCase().includes("monthly refresh") || f.text.toLowerCase().includes("cycle boundary"));
+    if (fRoll) {
+      fRoll.text = rolloverLine;
+    } else {
+      state.adminFeatures.t2.splice(3, 0, { text: rolloverLine, enabled: true });
+    }
+    renderAdminFeatureManager('t2');
+  }
+
+  // 4. Update SMS usage wallet preview if loaded
+  if (state.smsUsage) {
+    renderSmsWalletUI(state.smsUsage);
+  }
+
+  // 5. Persist to Firestore
   if (typeof db !== "undefined" && db) {
     db.collection("settings").doc("pricing_config").set({
       rolloverPolicy: chosen,
@@ -8360,9 +8434,6 @@ function setAdminRolloverPolicy(policy) {
       updatedBy: (state.user && state.user.email) || "senthil930@gmail.com"
     }, { merge: true }).then(() => {
       showToast(`⚙️ Rollover Policy switched to ${chosen === 'option_a' ? 'Option A: Monthly Reset' : 'Option B: 1-Month Rollover Bank'}`);
-      if (state.smsUsage) {
-        renderSmsWalletUI(state.smsUsage);
-      }
     }).catch(err => {
       console.warn("Failed to persist rollover policy:", err);
     });
@@ -8656,7 +8727,24 @@ function openUpgradeModal(targetTier) {
 
 function updateUpgradeModalUI() {
   if (state.pricingTiers) {
+    state.pricingTiers = ensureTierSMSLimits(state.pricingTiers);
     renderUpgradeModalTiers(state.pricingTiers);
+  }
+  const isOptA = state.rolloverPolicy === "option_a";
+  const headline = isOptA
+    ? "500 Automated SMS / mo Included (Standard Monthly Reset)"
+    : "500 Automated SMS / mo Included (+ 1-Month Rollover Bank up to 1,000 SMS)";
+  const rolloverLine = isOptA
+    ? "Monthly Reset (Unused monthly quota refreshes at cycle boundary)"
+    : "1-Month Rollover Bank (Up to 1,000 SMS reserve)";
+
+  const smsEl = document.getElementById("modal-tier-feature-pro-sms");
+  if (smsEl) smsEl.textContent = headline;
+
+  const rollEl = document.getElementById("modal-tier-feature-pro-rollover");
+  if (rollEl) {
+    rollEl.textContent = rolloverLine;
+    rollEl.style.color = isOptA ? "#0284c7" : "#10b981";
   }
   const planPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const planTitle = state.config.planTitle || "Starter Tier (Free)";
