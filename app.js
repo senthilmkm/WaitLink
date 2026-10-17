@@ -8581,7 +8581,24 @@ function initStripePaymentEngine() {
       }
     })();
   } else if (paymentStatus === "cancelled") {
-    showToast("Checkout cancelled. No charges were made.");
+    const isUpgradeFlow = urlParams.get("action") === "upgrade" || paidTier;
+    if (isUpgradeFlow) {
+      showToast("← Returned to Subscription Plans. You can select another plan or keep Starter Free.");
+      setTimeout(() => {
+        openUpgradeModal();
+        const targetTier = urlParams.get("tier");
+        if (targetTier) {
+          const cardId = targetTier === "enterprise" ? "tier-card-enterprise" : "tier-card-pro";
+          const card = document.getElementById(cardId);
+          if (card) {
+            card.style.transform = "scale(1.02)";
+            setTimeout(() => { if (card) card.style.transform = ""; }, 1200);
+          }
+        }
+      }, 300);
+    } else {
+      showToast("Checkout cancelled. No charges were made.");
+    }
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -8596,7 +8613,15 @@ function initStripePaymentEngine() {
       verifyTopUpSessionBackend(topupSessionId);
     }
   } else if (topupStatus === "cancel") {
-    showToast("Top-up checkout cancelled. No charges were made.");
+    showToast("← Returned to SMS Top-Up Settings. No charges were made.");
+    if (typeof switchView === "function") switchView("owner");
+    if (typeof switchOwnerSubTab === "function") switchOwnerSubTab("notifications");
+    setTimeout(() => {
+      const el = document.getElementById("owner-topup-section") || document.getElementById("owner-notifications-content");
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 400);
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);

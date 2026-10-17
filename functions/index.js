@@ -1107,7 +1107,8 @@ exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }
         "line_items[0][quantity]": "1",
         "mode": "subscription",
         "success_url": `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&payment=success&tier=${encodeURIComponent(tierKey || 'pro')}&session_id={CHECKOUT_SESSION_ID}`,
-        "cancel_url": `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&payment=cancelled`
+        "cancel_url": `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&action=upgrade&tier=${encodeURIComponent(tierKey || 'pro')}&payment=cancelled`,
+        "custom_text[submit][message]": "Need to compare options? Click the ← back arrow in the top-left header anytime to return to the WaitLink Subscription Plans page without charging your card."
       });
 
       const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -1188,7 +1189,8 @@ exports.createStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
         "metadata[addedCredits]": String(credits),
         "metadata[amountTotal]": String(priceCents),
         "success_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&topup=success&session_id={CHECKOUT_SESSION_ID}`,
-        "cancel_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&topup=cancel`
+        "cancel_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&subtab=notifications&topup=cancel`,
+        "custom_text[submit][message]": "Click the ← back arrow in the top-left header anytime to return to WaitLink SMS Settings without charging your card."
       });
 
       const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {

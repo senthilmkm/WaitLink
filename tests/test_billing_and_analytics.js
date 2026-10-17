@@ -245,5 +245,35 @@ it("formatRfc4180CsvRow: Properly escapes commas, quotes, and newlines", () => {
   assert.strictEqual(formatRfc4180CsvRow(rowWithQuotes), 'TK-103,"Marcus ""The Barber""",980-253-1359,Cut,1');
 });
 
+// -------------------------------------------------------------------------
+// Tests: Stripe Checkout Cancellation Routing & Guidance Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 5. Stripe Checkout Navigation & Return URL Integrity ---");
+
+it("buildStripeSubscriptionCancelUrl: Includes action=upgrade to reopen pricing modal", () => {
+  const hostOrigin = "https://waitlink.app";
+  const shopSlug = "downtown-salon";
+  const tierKey = "pro";
+  const cancelUrl = `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&action=upgrade&tier=${encodeURIComponent(tierKey)}&payment=cancelled`;
+
+  const parsed = new URL(cancelUrl);
+  assert.strictEqual(parsed.searchParams.get("action"), "upgrade");
+  assert.strictEqual(parsed.searchParams.get("payment"), "cancelled");
+  assert.strictEqual(parsed.searchParams.get("tier"), "pro");
+  assert.strictEqual(parsed.searchParams.get("s"), "downtown-salon");
+});
+
+it("buildStripeTopUpCancelUrl: Includes view=owner and subtab=notifications to restore SMS settings", () => {
+  const hostOrigin = "https://waitlink.app";
+  const cleanSlug = "uptown-cuts";
+  const cancelUrl = `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&subtab=notifications&topup=cancel`;
+
+  const parsed = new URL(cancelUrl);
+  assert.strictEqual(parsed.searchParams.get("view"), "owner");
+  assert.strictEqual(parsed.searchParams.get("subtab"), "notifications");
+  assert.strictEqual(parsed.searchParams.get("topup"), "cancel");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
+
