@@ -50,45 +50,138 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Safe localStorage abstraction (defends against iOS private browsing / QuotaExceededError)
+// Cross-Browser In-Memory Storage Fallback (Guarantees 100% operation across Safari Private Browsing, Edge InPrivate & Chrome Incognito)
+const _inMemoryLocalStore = new Map();
+const _inMemorySessionStore = new Map();
+
 const SafeStorage = {
   get(key, fallback = null) {
     try {
-      const item = localStorage.getItem(key);
-      return item !== null ? item : fallback;
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        const item = window.localStorage.getItem(key);
+        if (item !== null) return item;
+      }
     } catch (e) {
-      console.warn("Storage read note:", e);
-      return fallback;
+      console.warn("SafeStorage read note (private mode fallback active):", e);
     }
+    return _inMemoryLocalStore.has(String(key)) ? _inMemoryLocalStore.get(String(key)) : fallback;
   },
   getJSON(key, fallback = null) {
     try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : fallback;
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        const item = window.localStorage.getItem(key);
+        if (item) return JSON.parse(item);
+      }
     } catch (e) {
-      console.warn("Storage parse note:", e);
-      return fallback;
+      console.warn("SafeStorage parse note (private mode fallback active):", e);
     }
+    if (_inMemoryLocalStore.has(String(key))) {
+      try {
+        return JSON.parse(_inMemoryLocalStore.get(String(key)));
+      } catch (e) {
+        return fallback;
+      }
+    }
+    return fallback;
   },
   set(key, value) {
+    const valStr = typeof value === "string" ? value : JSON.stringify(value);
+    _inMemoryLocalStore.set(String(key), valStr);
     try {
-      const valStr = typeof value === "string" ? value : JSON.stringify(value);
-      localStorage.setItem(key, valStr);
-      return true;
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        window.localStorage.setItem(key, valStr);
+        return true;
+      }
     } catch (e) {
-      console.warn("Storage write note (quota or private mode):", e);
-      return false;
+      console.warn("SafeStorage write note (quota/private browsing restriction - memory fallback used):", e);
     }
+    return true;
   },
   remove(key) {
+    _inMemoryLocalStore.delete(String(key));
     try {
-      localStorage.removeItem(key);
-      return true;
-    } catch (e) {
-      return false;
-    }
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        window.localStorage.removeItem(key);
+        return true;
+      }
+    } catch (e) {}
+    return true;
+  },
+  clear() {
+    _inMemoryLocalStore.clear();
+    try {
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        window.localStorage.clear();
+        return true;
+      }
+    } catch (e) {}
+    return true;
   }
 };
+
+const SafeSessionStorage = {
+  get(key, fallback = null) {
+    try {
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        const item = window.sessionStorage.getItem(key);
+        if (item !== null) return item;
+      }
+    } catch (e) {
+      console.warn("SafeSessionStorage read note:", e);
+    }
+    return _inMemorySessionStore.has(String(key)) ? _inMemorySessionStore.get(String(key)) : fallback;
+  },
+  getJSON(key, fallback = null) {
+    try {
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        const item = window.sessionStorage.getItem(key);
+        if (item) return JSON.parse(item);
+      }
+    } catch (e) {}
+    if (_inMemorySessionStore.has(String(key))) {
+      try {
+        return JSON.parse(_inMemorySessionStore.get(String(key)));
+      } catch (e) {
+        return fallback;
+      }
+    }
+    return fallback;
+  },
+  set(key, value) {
+    const valStr = typeof value === "string" ? value : JSON.stringify(value);
+    _inMemorySessionStore.set(String(key), valStr);
+    try {
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        window.sessionStorage.setItem(key, valStr);
+        return true;
+      }
+    } catch (e) {}
+    return true;
+  },
+  remove(key) {
+    _inMemorySessionStore.delete(String(key));
+    try {
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        window.sessionStorage.removeItem(key);
+        return true;
+      }
+    } catch (e) {}
+    return true;
+  },
+  clear() {
+    _inMemorySessionStore.clear();
+    try {
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        window.sessionStorage.clear();
+        return true;
+      }
+    } catch (e) {}
+    return true;
+  }
+};
+
+window.SafeStorage = SafeStorage;
+window.SafeSessionStorage = SafeSessionStorage;
 
 // Pure JavaScript Standard SHA-256 Hasher (Deterministic Fallback)
 function sha256(ascii) {
@@ -561,17 +654,12 @@ const state = {
 };
 window.state = state;
 
-// Check for persistent staff session in sessionStorage
-try {
-  const cachedStaff = sessionStorage.getItem("waitlink_staff_session");
-  if (cachedStaff) {
-    const parsedStaff = JSON.parse(cachedStaff);
-    if (parsedStaff && parsedStaff.username && parsedStaff.assignedShop) {
-      state.isStaffSession = true;
-      state.staffUser = parsedStaff;
-    }
-  }
-} catch (e) {}
+// Check for persistent staff session in SafeSessionStorage
+const parsedStaff = SafeSessionStorage.getJSON("waitlink_staff_session");
+if (parsedStaff && parsedStaff.username && parsedStaff.assignedShop) {
+  state.isStaffSession = true;
+  state.staffUser = parsedStaff;
+}
 
 // Cache pre-load for retention config
 const DEFAULT_RETENTION_CONFIG = {
@@ -980,9 +1068,7 @@ function toggleSoundAlerts() {
     showToast("🔕 Front Desk Sound Alerts Muted");
   }
 
-  try {
-    localStorage.setItem("waitlink_sound_enabled", JSON.stringify(state.soundEnabled));
-  } catch (e) {}
+  SafeStorage.set("waitlink_sound_enabled", state.soundEnabled);
 }
 
 function updateSoundToggleUI() {
@@ -1534,20 +1620,14 @@ function trackMyShop(slug, shopName) {
   } else {
     existing.shopName = shopName;
   }
-  try {
-    localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
-  } catch (e) {}
+  SafeStorage.set("waitlink_my_shops", state.myShops);
 }
 
-// Load Config from LocalStorage
+// Load Config from SafeStorage
 function loadConfig() {
-  const saved = localStorage.getItem("waitlink_config");
-  if (saved) {
-    try {
-      state.config = { ...state.config, ...JSON.parse(saved) };
-    } catch (e) {
-      console.error("Failed to parse saved config", e);
-    }
+  const savedConfig = SafeStorage.getJSON("waitlink_config");
+  if (savedConfig) {
+    state.config = { ...state.config, ...savedConfig };
   }
 
   // Ensure Twilio sender number is healthy & synchronized with +1 (803) 902-7464
@@ -1555,9 +1635,7 @@ function loadConfig() {
     const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
     if (!fromDigits || fromDigits.includes("9802531359") || fromDigits.includes("8774153678")) {
       state.config.twilio.fromPhone = DEFAULT_TWILIO_FROM;
-      try {
-        localStorage.setItem("waitlink_config", JSON.stringify(state.config));
-      } catch (e) {}
+      SafeStorage.set("waitlink_config", state.config);
     }
   }
 
@@ -1617,13 +1695,8 @@ function loadConfig() {
   }
 
   // Load tracked user shops
-  const savedMyShops = localStorage.getItem("waitlink_my_shops");
-  if (savedMyShops) {
-    try { state.myShops = JSON.parse(savedMyShops); } catch (e) { state.myShops = []; }
-  }
-  if (!Array.isArray(state.myShops)) {
-    state.myShops = [];
-  }
+  const savedMyShops = SafeStorage.getJSON("waitlink_my_shops", []);
+  state.myShops = Array.isArray(savedMyShops) ? savedMyShops : [];
   // Never persist demo shop in local cache unless SuperAdmin
   if (!isSuperAdmin()) {
     state.myShops = state.myShops.filter(s => s && s.slug !== "main-st-barbers");
@@ -1639,9 +1712,9 @@ function loadConfig() {
     state.isDemoMode = false;
   }
 
-  const savedSound = localStorage.getItem("waitlink_sound_enabled");
+  const savedSound = SafeStorage.getJSON("waitlink_sound_enabled", null);
   if (savedSound !== null) {
-    try { state.soundEnabled = JSON.parse(savedSound); } catch (e) {}
+    state.soundEnabled = !!savedSound;
   }
 
   updateConfigUI();
@@ -1650,7 +1723,7 @@ function loadConfig() {
 
 function saveConfig() {
   trackMyShop(state.config.slug, state.config.shopName);
-  localStorage.setItem("waitlink_config", JSON.stringify(state.config));
+  SafeStorage.set("waitlink_config", state.config);
   updateConfigUI();
   subscribeFirestore(); // Re-subscribe to new shop document
 }
@@ -2139,14 +2212,14 @@ function getStorageKeys() {
 // Load Queue & History Data
 function loadData() {
   const { queueKey, historyKey } = getStorageKeys();
-  const savedQueue = localStorage.getItem(queueKey);
-  const savedHistory = localStorage.getItem(historyKey);
+  const savedQueue = SafeStorage.getJSON(queueKey);
+  const savedHistory = SafeStorage.getJSON(historyKey);
 
   const isMainStDemo = (state.config.slug === "main-st-barbers");
   const isDemoSlug = state.config.slug && (state.config.slug.startsWith("demo-") || state.config.slug.includes("demo"));
 
-  if (savedQueue) {
-    try { state.queue = JSON.parse(savedQueue); } catch (e) { state.queue = []; }
+  if (Array.isArray(savedQueue)) {
+    state.queue = savedQueue;
   } else if (isMainStDemo) {
     // Initial Demo Seed for Main St Barbers Sandbox ONLY
     const now = Date.now();
@@ -2168,8 +2241,8 @@ function loadData() {
   const savedTicket = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
   state.myTicket = (savedTicket && savedTicket.id) ? savedTicket : null;
 
-  if (savedHistory) {
-    try { state.history = JSON.parse(savedHistory); } catch (e) { state.history = []; }
+  if (Array.isArray(savedHistory)) {
+    state.history = savedHistory;
   } else if (isMainStDemo) {
     // Initial Demo Seed History for Main St Barbers Sandbox ONLY
     const now = Date.now();
@@ -4239,7 +4312,7 @@ async function saveOwnerFirestoreConfig() {
 
 function setQueueViewMode(mode) {
   state.deskViewMode = mode;
-  localStorage.setItem("waitlink_desk_view_mode", mode);
+  SafeStorage.set("waitlink_desk_view_mode", mode);
   if (state.stageFocusedIndex === undefined) state.stageFocusedIndex = 0;
   renderQueue();
 }
@@ -5517,16 +5590,14 @@ function switchView(viewName, isSilent = false) {
     // Check cached owned slugs for instant synchronous validation even before network queries complete
     let isCachedOwner = false;
     if (userEmailClean) {
-      try {
-        const cachedSlugs = JSON.parse(localStorage.getItem("waitlink_owned_slugs_" + userEmailClean) || "[]");
-        if (Array.isArray(cachedSlugs) && (
-          cachedSlugs.includes(state.config.slug) || 
-          (cachedSlugs.includes("stomada") && state.config.slug === "stomada-clinic") || 
-          (cachedSlugs.includes("stomada-clinic") && state.config.slug === "stomada")
-        )) {
-          isCachedOwner = true;
-        }
-      } catch (e) {}
+      const cachedSlugs = SafeStorage.getJSON("waitlink_owned_slugs_" + userEmailClean, []);
+      if (Array.isArray(cachedSlugs) && (
+        cachedSlugs.includes(state.config.slug) || 
+        (cachedSlugs.includes("stomada") && state.config.slug === "stomada-clinic") || 
+        (cachedSlugs.includes("stomada-clinic") && state.config.slug === "stomada")
+      )) {
+        isCachedOwner = true;
+      }
     }
 
     // Check direct config match OR check if registeredShops / ownerDirectoryShops / myShops contains this active shop with matching owner
@@ -6499,12 +6570,10 @@ let isResettingPassword = false;
 
 function initAuth() {
   // Check for persistent session override first
-  const sessionUser = sessionStorage.getItem("waitlink_session_user");
+  const sessionUser = SafeSessionStorage.getJSON("waitlink_session_user");
   if (sessionUser) {
-    try {
-      state.user = JSON.parse(sessionUser);
-      applyUserRole(state.user);
-    } catch (e) {}
+    state.user = sessionUser;
+    applyUserRole(state.user);
   }
 
   if (!ensureFirebaseInitialized() || !firebase.auth) return;
@@ -6514,7 +6583,7 @@ function initAuth() {
     firebase.auth().getRedirectResult().then(async result => {
       if (result && result.user) {
         state.user = result.user;
-        sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+        SafeSessionStorage.set("waitlink_session_user", result.user);
         await applyUserRole(result.user);
         closeAuthModal();
         const email = result.user.email || "";
@@ -6539,10 +6608,10 @@ function initAuth() {
     // do not let the background Firebase auth listener clobber the front desk staff operator role!
     const urlParams = new URLSearchParams(window.location.search);
     const hasStationParams = urlParams.get("staff") && (urlParams.get("key") || urlParams.get("passcode"));
-    if (state.isStaffSession || sessionStorage.getItem("waitlink_staff_session") || hasStationParams) {
+    if (state.isStaffSession || SafeSessionStorage.get("waitlink_staff_session") || hasStationParams) {
       if (user) {
         state.user = user;
-        sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
+        SafeSessionStorage.set("waitlink_session_user", user);
       }
       return;
     }
@@ -6553,7 +6622,7 @@ function initAuth() {
       return;
     }
     state.user = user;
-    sessionStorage.setItem("waitlink_session_user", JSON.stringify(user));
+    SafeSessionStorage.set("waitlink_session_user", user);
     await applyUserRole(user);
     if (state.pendingInitialView) {
       const target = state.pendingInitialView;
@@ -6661,7 +6730,7 @@ function syncUserShopSelection(fetchedShops, isSuper) {
   
   if (state.user && state.user.email) {
     const ownedSlugs = fetchedShops.map(s => s.slug || s.id);
-    localStorage.setItem("waitlink_owned_slugs_" + state.user.email.toLowerCase().trim(), JSON.stringify(ownedSlugs));
+    SafeStorage.set("waitlink_owned_slugs_" + state.user.email.toLowerCase().trim(), ownedSlugs);
   }
 
   renderShopDropdown();
@@ -7150,7 +7219,7 @@ async function handleSignOut(e) {
 
   // 3. Clear all cached storage data & remove all user/shop tokens
   try {
-    sessionStorage.clear();
+    SafeSessionStorage.clear();
 
     // Purge specific sensitive keys
     const sensitiveKeys = [
@@ -7168,27 +7237,29 @@ async function handleSignOut(e) {
       "waitlink_history"
     ];
     sensitiveKeys.forEach(k => {
-      try { localStorage.removeItem(k); } catch (e) {}
+      SafeStorage.remove(k);
     });
 
     // Dynamic sweep: remove any shop queues, histories, or user-specific cached slugs
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        if (
-          key.startsWith("waitlink_owned_slugs_") ||
-          (key.startsWith("waitlink_queue_") && key !== "waitlink_queue_main-st-barbers") ||
-          (key.startsWith("waitlink_history_") && key !== "waitlink_history_main-st-barbers") ||
-          key.startsWith("firebase:authUser:")
-        ) {
-          keysToRemove.push(key);
+    try {
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        const keysToRemove = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (key) {
+            if (
+              key.startsWith("waitlink_owned_slugs_") ||
+              (key.startsWith("waitlink_queue_") && key !== "waitlink_queue_main-st-barbers") ||
+              (key.startsWith("waitlink_history_") && key !== "waitlink_history_main-st-barbers") ||
+              key.startsWith("firebase:authUser:")
+            ) {
+              keysToRemove.push(key);
+            }
+          }
         }
+        keysToRemove.forEach(k => SafeStorage.remove(k));
       }
-    }
-    keysToRemove.forEach(k => {
-      try { localStorage.removeItem(k); } catch (e) {}
-    });
+    } catch (e) {}
   } catch (err) {
     console.warn("Storage purge notice:", err);
   }
@@ -7477,7 +7548,7 @@ function signInWithGoogle() {
   firebase.auth().signInWithPopup(provider).then(async result => {
     if (result && result.user) {
       state.user = result.user;
-      sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+      SafeSessionStorage.set("waitlink_session_user", result.user);
       await applyUserRole(result.user);
       const wasPendingShop = pendingCreateShopAfterAuth || isRegistering;
       closeAuthModal();
@@ -7639,7 +7710,7 @@ function handleAuthSubmit(event) {
       .then(result => {
         if (result && result.user) {
           state.user = result.user;
-          sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+          SafeSessionStorage.set("waitlink_session_user", result.user);
           applyUserRole(result.user);
           closeAuthModal();
           showToast(`🎉 Welcome to WaitLink! Account registered for ${email}.`);
@@ -7694,7 +7765,7 @@ function handleAuthSubmit(event) {
       .then(async result => {
         if (result && result.user) {
           state.user = result.user;
-          sessionStorage.setItem("waitlink_session_user", JSON.stringify(result.user));
+          SafeSessionStorage.set("waitlink_session_user", result.user);
           await applyUserRole(result.user);
           const wasPendingShop = pendingCreateShopAfterAuth;
           closeAuthModal();
@@ -7911,8 +7982,8 @@ async function handleOnboardingSubmit(event) {
   state.isDemoMode = false;
 
   // Remove legacy global keys so no demo contamination remains
-  localStorage.removeItem("waitlink_queue");
-  localStorage.removeItem("waitlink_history");
+  SafeStorage.remove("waitlink_queue");
+  SafeStorage.remove("waitlink_history");
 
   // Update browser URL query string to match newly created shop
   try {
@@ -8387,7 +8458,7 @@ function changeTenantShopPlan(shopSlug, newTierKey) {
       oldPrice = targetShop.planPrice !== undefined ? targetShop.planPrice : 0;
       targetShop.planTitle = newTitle;
       targetShop.planPrice = newPrice;
-      localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+      SafeStorage.set("waitlink_registered_shops", state.registeredShops);
     }
   }
 
@@ -8395,7 +8466,7 @@ function changeTenantShopPlan(shopSlug, newTierKey) {
   if (state.config.slug === shopSlug) {
     state.config.planTitle = newTitle;
     state.config.planPrice = newPrice;
-    localStorage.setItem("waitlink_config", JSON.stringify(state.config));
+    SafeStorage.set("waitlink_config", state.config);
     updateConfigUI();
     renderAll();
   }
@@ -8780,7 +8851,7 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
       const sId = String(s.id || '').trim();
       return !idsToPurge.has(sSlug) && !idsToPurge.has(sId) && sSlug !== cleanSlug && sId !== cleanDocId;
     });
-    localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+    SafeStorage.set("waitlink_registered_shops", state.registeredShops);
   }
 
   if (Array.isArray(state.myShops)) {
@@ -8789,7 +8860,7 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
       const sId = String(s.id || '').trim();
       return !idsToPurge.has(sSlug) && !idsToPurge.has(sId) && sSlug !== cleanSlug && sId !== cleanDocId;
     });
-    localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
+    SafeStorage.set("waitlink_my_shops", state.myShops);
   }
 
   // If deleted shop was active session, reset to main-st-barbers
@@ -9007,8 +9078,8 @@ async function cleanDuplicateShops() {
   });
 
   Promise.all(deletePromises).then(() => {
-    localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
-    localStorage.setItem("waitlink_my_shops", JSON.stringify(state.myShops));
+    SafeStorage.set("waitlink_registered_shops", state.registeredShops);
+    SafeStorage.set("waitlink_my_shops", state.myShops);
     
     // Log audit
     const auditEntry = {
@@ -9222,7 +9293,7 @@ async function launchDemoShopFromModal() {
       } else {
         state.registeredShops.unshift({ id: finalSlug, ...demoDoc });
       }
-      localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+      SafeStorage.set("waitlink_registered_shops", state.registeredShops);
       renderSuperAdminShopsTable();
 
       // Launch and inspect desk
@@ -9454,7 +9525,7 @@ function formatFeatureListForInput(features) {
 }
 
 function savePricingConfig() {
-  const prevTiers = state.pricingTiers || (localStorage.getItem("waitlink_pricing_tiers") ? JSON.parse(localStorage.getItem("waitlink_pricing_tiers")) : null);
+  const prevTiers = state.pricingTiers || SafeStorage.getJSON("waitlink_pricing_tiers", null);
 
   const t1 = {
     id: "starter",
@@ -9528,7 +9599,7 @@ function savePricingConfig() {
   }
 
   state.pricingTiers = newTiers;
-  localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(newTiers));
+  SafeStorage.set("waitlink_pricing_tiers", newTiers);
   renderUpgradeModalTiers(newTiers);
 
   // Save Audit Log
@@ -9540,13 +9611,10 @@ function savePricingConfig() {
   };
 
   // Local Audit Log Save
-  let existingAudits = [];
-  try {
-    const savedA = localStorage.getItem("waitlink_pricing_audits");
-    if (savedA) existingAudits = JSON.parse(savedA);
-  } catch (e) {}
+  let existingAudits = SafeStorage.getJSON("waitlink_pricing_audits", []);
+  if (!Array.isArray(existingAudits)) existingAudits = [];
   existingAudits.unshift(auditEntry);
-  localStorage.setItem("waitlink_pricing_audits", JSON.stringify(existingAudits));
+  SafeStorage.set("waitlink_pricing_audits", existingAudits);
 
   // Firestore Sync
   if (db) {
@@ -9627,13 +9695,11 @@ function loadPricingConfigUI() {
   };
 
   // Local load first
-  const saved = localStorage.getItem("waitlink_pricing_tiers");
+  const saved = SafeStorage.getJSON("waitlink_pricing_tiers");
   if (saved) {
-    try { 
-      const parsed = ensureTierSMSLimits(JSON.parse(saved));
-      state.pricingTiers = parsed;
-      applyTiersToUI(parsed); 
-    } catch (e) {}
+    const parsed = ensureTierSMSLimits(saved);
+    state.pricingTiers = parsed;
+    applyTiersToUI(parsed);
   }
 
   // Live Cloud load from Firestore
@@ -9641,7 +9707,7 @@ function loadPricingConfigUI() {
     db.collection("settings").doc("pricing_config").get().then(doc => {
       if (doc.exists && doc.data().tiers) {
         state.pricingTiers = ensureTierSMSLimits(doc.data().tiers);
-        localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+        SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
         applyTiersToUI(state.pricingTiers);
       }
     }).catch(console.warn);
@@ -9785,7 +9851,7 @@ function initPricingConfigRealtimeSync() {
         const d = doc.data() || {};
         if (d.tiers) {
           state.pricingTiers = ensureTierSMSLimits(d.tiers);
-          localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+          SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
           renderUpgradeModalTiers(state.pricingTiers);
         }
 
@@ -9899,7 +9965,7 @@ function setAdminRolloverPolicy(policy) {
   // 1. Instantly update Shop Subscription Plans modal and cached tiers
   if (state.pricingTiers) {
     state.pricingTiers = ensureTierSMSLimits(state.pricingTiers);
-    localStorage.setItem("waitlink_pricing_tiers", JSON.stringify(state.pricingTiers));
+    SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
     renderUpgradeModalTiers(state.pricingTiers);
   }
 
@@ -9994,18 +10060,15 @@ function openPricingAuditModal() {
   };
 
   // Local Audits Fallback
-  let localAudits = [];
-  try {
-    const saved = localStorage.getItem("waitlink_pricing_audits");
-    if (saved) localAudits = JSON.parse(saved);
-  } catch (e) {}
+  let localAudits = SafeStorage.getJSON("waitlink_pricing_audits", []);
+  if (!Array.isArray(localAudits)) localAudits = [];
 
   if (db) {
     db.collection("pricing_audits").orderBy("timestamp", "desc").get().then(snapshot => {
       const cloudAudits = [];
       snapshot.forEach(doc => cloudAudits.push(doc.data()));
       if (cloudAudits.length > 0) {
-        localStorage.setItem("waitlink_pricing_audits", JSON.stringify(cloudAudits));
+        SafeStorage.set("waitlink_pricing_audits", cloudAudits);
         renderAudits(cloudAudits);
       } else {
         renderAudits(localAudits);
@@ -10035,7 +10098,7 @@ async function clearPricingAuditLogs() {
     category: "SuperAdmin Action"
   });
   if (!confirmed) return;
-  localStorage.removeItem("waitlink_pricing_audits");
+  SafeStorage.remove("waitlink_pricing_audits");
   openPricingAuditModal();
   showToast("Local audit history cleared.");
 }
@@ -11275,11 +11338,8 @@ function loadSupportInquiries() {
   };
 
   // Check Local Storage fallback
-  let localMessages = [];
-  try {
-    const saved = localStorage.getItem("waitlink_contact_messages");
-    if (saved) localMessages = JSON.parse(saved);
-  } catch (e) {}
+  let localMessages = SafeStorage.getJSON("waitlink_contact_messages", []);
+  if (!Array.isArray(localMessages)) localMessages = [];
 
   if (db) {
     db.collection("contact_messages").orderBy("sentAt", "desc").get().then(snapshot => {
@@ -11287,8 +11347,8 @@ function loadSupportInquiries() {
       snapshot.forEach(doc => {
         cloudMessages.push({ id: doc.id, ...doc.data() });
       });
-      // Ground truth is Firestore: update localStorage cache to match exactly
-      localStorage.setItem("waitlink_contact_messages", JSON.stringify(cloudMessages));
+      // Ground truth is Firestore: update cache to match exactly
+      SafeStorage.set("waitlink_contact_messages", cloudMessages);
       renderMessages(cloudMessages);
     }).catch(err => {
       console.warn("Error fetching contact_messages from Firestore:", err);
@@ -11312,11 +11372,11 @@ async function deleteSupportInquiry(msgId) {
   if (!confirmed) return;
 
   // 1. Immediately remove from local cache and update UI optimistically
-  try {
-    let local = JSON.parse(localStorage.getItem("waitlink_contact_messages") || "[]");
+  let local = SafeStorage.getJSON("waitlink_contact_messages", []);
+  if (Array.isArray(local)) {
     local = local.filter(m => m.id !== msgId && m.sentAt != msgId);
-    localStorage.setItem("waitlink_contact_messages", JSON.stringify(local));
-  } catch (e) {}
+    SafeStorage.set("waitlink_contact_messages", local);
+  }
 
   // 2. Delete from Cloud Firestore
   if (db && msgId) {
@@ -11451,7 +11511,7 @@ function initRetentionConfigRealtimeSync() {
     retentionConfigUnsubscribe = db.collection("settings").doc("retention_config").onSnapshot(doc => {
       if (doc.exists) {
         state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...doc.data() };
-        localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+        SafeStorage.set("waitlink_retention_config", state.retentionConfig);
       } else {
         state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG };
       }
@@ -11541,7 +11601,7 @@ function saveRetentionConfig() {
     db.collection("settings").doc("retention_config").set(payload, { merge: true })
       .then(() => {
         state.retentionConfig = { ...state.retentionConfig, ...payload };
-        localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+        SafeStorage.set("waitlink_retention_config", state.retentionConfig);
         loadRetentionConfigUI();
         renderHistory();
         showToast("✅ Retention & privacy policy saved and broadcasted to all shops!");
@@ -11552,7 +11612,7 @@ function saveRetentionConfig() {
       });
   } else {
     state.retentionConfig = { ...state.retentionConfig, ...payload };
-    localStorage.setItem("waitlink_retention_config", JSON.stringify(state.retentionConfig));
+    SafeStorage.set("waitlink_retention_config", state.retentionConfig);
     loadRetentionConfigUI();
     renderHistory();
     showToast("Saved retention policy locally.");
@@ -12111,14 +12171,11 @@ async function cancelMyTicket() {
   let customerName = state.myTicket ? state.myTicket.customerName : null;
 
   if (!ticketId) {
-    try {
-      const saved = localStorage.getItem(`waitlink_ticket_${state.config.slug}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        ticketId = parsed.id;
-        customerName = parsed.customerName;
-      }
-    } catch (e) {}
+    const parsed = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
+    if (parsed) {
+      ticketId = parsed.id;
+      customerName = parsed.customerName;
+    }
   }
 
   if (!ticketId && !customerName) {
@@ -12877,21 +12934,16 @@ function hasStaffPermission(permKey) {
 
 // Restore staff session from sessionStorage on page load/reload
 function restoreStaffSessionIfPresent() {
-  try {
-    const saved = sessionStorage.getItem("waitlink_staff_session");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.username && parsed.assignedShop) {
-        state.isStaffSession = true;
-        state.staffUser = parsed;
-        state.userRole = "FrontDeskStaff";
-        inspectShop(parsed.assignedShop, true);
-        applyUserRole(null);
-        switchView("desk", true);
-        return true;
-      }
-    }
-  } catch (e) {}
+  const parsed = SafeSessionStorage.getJSON("waitlink_staff_session");
+  if (parsed && parsed.username && parsed.assignedShop) {
+    state.isStaffSession = true;
+    state.staffUser = parsed;
+    state.userRole = "FrontDeskStaff";
+    inspectShop(parsed.assignedShop, true);
+    applyUserRole(null);
+    switchView("desk", true);
+    return true;
+  }
   return false;
 }
 
@@ -12989,9 +13041,7 @@ function loginAsStaff(staffData, shopSlug, isAutoLogin = false) {
   state.staffUser = staffData;
   state.userRole = "FrontDeskStaff";
 
-  try {
-    sessionStorage.setItem("waitlink_staff_session", JSON.stringify(staffData));
-  } catch (e) {}
+  SafeSessionStorage.set("waitlink_staff_session", staffData);
 
   inspectShop(shopSlug, true);
   applyUserRole(null);
@@ -13016,13 +13066,11 @@ function staffSignOut() {
   state.isStaffSession = false;
   state.staffUser = null;
   state.userRole = "Guest";
-  try {
-    sessionStorage.clear();
-    const staffPin = document.getElementById("staff-login-pin");
-    const staffUser = document.getElementById("staff-login-username");
-    if (staffPin) staffPin.value = "";
-    if (staffUser) staffUser.value = "";
-  } catch (e) {}
+  SafeSessionStorage.clear();
+  const staffPin = document.getElementById("staff-login-pin");
+  const staffUser = document.getElementById("staff-login-username");
+  if (staffPin) staffPin.value = "";
+  if (staffUser) staffUser.value = "";
 
   // Reset in-memory queue/history to avoid leaking private tickets if switching to public/demo
   if (state.config && state.config.slug !== "main-st-barbers") {
@@ -13115,7 +13163,7 @@ function switchAuthTab(tab) {
     if (authTitle) authTitle.textContent = "🖥️ Front Desk Staff Login";
 
     const shopInput = document.getElementById("staff-login-shop");
-    const rememberedSlug = (typeof localStorage !== "undefined" ? localStorage.getItem("waitlink_last_shop_slug") : null) || (state.config && state.config.slug);
+    const rememberedSlug = SafeStorage.get("waitlink_last_shop_slug") || (state.config && state.config.slug);
     if (shopInput && (!shopInput.value || shopInput.value === "main-st-barbers") && rememberedSlug) {
       shopInput.value = rememberedSlug;
     }
@@ -13210,9 +13258,7 @@ async function handleStaffAuthSubmit(event) {
     console.warn("Shop resolution notice:", e);
   }
 
-  try {
-    localStorage.setItem("waitlink_last_shop_slug", cleanSlug);
-  } catch (e) {}
+  SafeStorage.set("waitlink_last_shop_slug", cleanSlug);
 
   const inputHash = await hashStaffPasscode(passcode);
 
