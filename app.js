@@ -918,7 +918,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } else if (restoreStaffSessionIfPresent()) {
     // Staff session restored from active tablet session storage
   } else if (shopParam) {
-    if (modeParam === "public" || modeParam === "customer") {
+    if (modeParam === "public" || modeParam === "customer" || modeParam === "kiosk") {
       const header = document.querySelector(".app-header");
       if (header) header.style.display = "none";
       switchView("public", true);
@@ -943,7 +943,7 @@ document.addEventListener("DOMContentLoaded", () => {
         switchView("public", true);
       }
     }
-  } else if (modeParam === "public" || modeParam === "customer") {
+  } else if (modeParam === "public" || modeParam === "customer" || modeParam === "kiosk") {
     const header = document.querySelector(".app-header");
     if (header) header.style.display = "none";
     switchView("public", true);
@@ -1474,8 +1474,10 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
       // Auto-promote owner to Front Desk ONLY if pendingInitialView is set and URL does not request explicit customer view
       const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
+                                   new URLSearchParams(window.location.search).get("view") === "kiosk" || 
                                    new URLSearchParams(window.location.search).get("mode") === "public" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "customer";
+                                   new URLSearchParams(window.location.search).get("mode") === "customer" ||
+                                   new URLSearchParams(window.location.search).get("mode") === "kiosk";
       if (!urlHasExplicitPublic && state.user && state.user.email && state.pendingInitialView) {
         const uEmail = state.user.email.toLowerCase().trim();
         const oEmail = (state.config.ownerEmail || "").toLowerCase().trim();
@@ -6745,8 +6747,10 @@ function syncUserShopSelection(fetchedShops, isSuper) {
       }
       // If user had pendingInitialView or landed on home, promote to desk ONLY if not explicit public view request!
       const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
+                                   new URLSearchParams(window.location.search).get("view") === "kiosk" || 
                                    new URLSearchParams(window.location.search).get("mode") === "public" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "customer";
+                                   new URLSearchParams(window.location.search).get("mode") === "customer" ||
+                                   new URLSearchParams(window.location.search).get("mode") === "kiosk";
       if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
