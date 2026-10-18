@@ -400,6 +400,7 @@
       <a href="#comparison" class="doc-pill">⚖️ Competitor Matrix</a>
       <a href="#pricing-matrix" class="doc-pill">💎 Pricing & Tier Matrix</a>
       <a href="#rbac-audit" class="doc-pill">🛡️ RBAC & Tier Audit</a>
+      <a href="#role-crud-matrix" class="doc-pill">📋 Role CRUD & Entitlements</a>
       <a href="#revenue-metrics-engine" class="doc-pill">📊 Revenue & Account 360°</a>
     </div>
   </div>
@@ -1965,52 +1966,63 @@ node scripts/prune-firebase-versions.js
         WaitLink enforces an airtight multi-tenant security architecture that maps user profiles (Guest, Front Desk Staff, Shop Owner, SuperAdmin) to strictly isolated operational views and feature sets based on subscription tiers (Starter, Pro Business, Enterprise). This audit documents how UI presentation, client state controllers, and serverless Cloud Firestore security rules collaboratively eliminate unauthorized cross-tenant data access, paywall bypasses, and forever-free loopholes.
       </p>
 
-      <!-- The 4 User Archetypes Breakdown -->
+      <!-- The 5 User Archetypes Breakdown -->
       <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-        👥 1. The Four User Profiles & Operational Boundaries
+        👥 1. The Five User Profiles & Operational Boundaries
       </h3>
-      <div class="flow-grid" style="margin-bottom: 2.5rem;">
+      <div class="flow-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 2.5rem;">
         <div class="flow-step-card" style="border-top: 3px solid #38bdf8;">
-          <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Profile 1: Guest</span>
-          <strong style="color: #fff; font-size: 1rem;">Anonymous Public Visitor / Walk-in Customer</strong>
+          <span class="flow-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Profile 1: Customer</span>
+          <strong style="color: #fff; font-size: 1rem;">End User / Walk-in Customer</strong>
           <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
-            Unauthenticated visitor accessing the app or scanning the storefront window QR code. Restricted exclusively to the public waitlist customer view (<code style="color: #38bdf8;">?view=public</code>).
+            Patron joining the queue via storefront QR code or web intake. Bound strictly to their unique ticket (<code style="color: #38bdf8;">?ticket=uuid</code>) and public queue view.
           </p>
           <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
-            <strong>UI Visibility:</strong> Sees only <code>🏠 Home</code>, <code>⚡ + Create Shop</code>, <code>🔑 Sign In</code>, and Theme Toggle. <strong>Upgrade button and administrative tabs (Front Desk, Owner, SuperAdmin) are strictly hidden.</strong>
+            <strong>Capabilities:</strong> View live wait estimate, track queue position, receive SMS call alert, opt-out / leave line. <strong>Cannot view other customers' unmasked PII or admin consoles.</strong>
           </div>
         </div>
 
         <div class="flow-step-card" style="border-top: 3px solid #10b981;">
           <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Profile 2: Front Desk</span>
-          <strong style="color: #fff; font-size: 1rem;">Receptionist / Staff Queue Controller</strong>
+          <strong style="color: #fff; font-size: 1rem;">Counter Staff &amp; Receptionist</strong>
           <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
-            Front desk operator stationed at a lobby tablet, iPad, or mobile smartphone running the real-time queue console (<code style="color: #10b981;">?view=desk</code>).
+            Station operator running the real-time queue console on a counter iPad or mobile terminal (<code style="color: #10b981;">?view=desk</code>) authenticated via station PIN token.
           </p>
           <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
-            <strong>Capabilities:</strong> 1-tap <code>SERVE NOW</code> / <code>SERVE NEXT</code> customer calling, delay grace extensions, audio chime alerts, manual walk-in intake. <strong>No access to billing, pricing, or platform-wide settings.</strong>
+            <strong>Capabilities:</strong> Call customers (<code>SERVE NOW</code>), serve next FIFO, apply grace delays, desk check-in intake, complete service. <strong>No billing, pricing, or cross-shop access.</strong>
           </div>
         </div>
 
         <div class="flow-step-card" style="border-top: 3px solid #c084fc;">
           <span class="flow-badge" style="background: rgba(192, 132, 252, 0.2); color: #c084fc;">Profile 3: Owner</span>
-          <strong style="color: #fff; font-size: 1rem;">Registered Business Owner (Starter / Pro / Enterprise)</strong>
+          <strong style="color: #fff; font-size: 1rem;">Registered Business Owner</strong>
           <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
-            Authenticated account owner linked to their business document in Firestore (<code style="color: #c084fc;">ownerEmail</code> / <code style="color: #c084fc;">ownerUid</code>). Full access to Front Desk and Owner Analytics (<code style="color: #c084fc;">?view=owner</code>).
+            Authenticated owner account linked to business documents (<code style="color: #c084fc;">ownerEmail</code> / <code style="color: #c084fc;">ownerUid</code>). Full access to Front Desk and Owner Hub (<code style="color: #c084fc;">?view=owner</code>).
           </p>
           <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
-            <strong>Tier Enforcement:</strong> Starter owners see Upgrade buttons in header/drawer; Pro/Enterprise owners enjoy a clean uncluttered header with active tier badges. Features unlock dynamically based on paid status.
+            <strong>Capabilities:</strong> Manage services &amp; hours, provision staff PINs, buy SMS top-ups, Stripe subscriptions, multi-shop switching (Enterprise). <strong>Cannot view other owners' data.</strong>
           </div>
         </div>
 
         <div class="flow-step-card" style="border-top: 3px solid #f59e0b;">
           <span class="flow-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Profile 4: SuperAdmin</span>
-          <strong style="color: #fff; font-size: 1rem;">Platform Administrator (Master Authority)</strong>
+          <strong style="color: #fff; font-size: 1rem;">Platform Administrator</strong>
           <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
-            Cryptographically verified account (<code style="color: #f59e0b;">senthil930@gmail.com</code>) with master override authority across all multi-tenant collections, Cloud Functions, and SuperAdmin screens (<code style="color: #f59e0b;">?view=superadmin</code>).
+            Cryptographically verified master account (<code style="color: #f59e0b;">senthil930@gmail.com</code>) with master override authority across all tenant collections (<code style="color: #f59e0b;">?view=superadmin</code>).
           </p>
           <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
-            <strong>Capabilities:</strong> Tenant directory inspection, live pricing engine updates, instant shop tier reassignment, cloud duplicate purge engine, and immutable audit logs.
+            <strong>Capabilities:</strong> Multi-tenant shop directory, real-time revenue intelligence 360°, custom SMS overrides, tier reassignments, ghost cleanup, RFC 4180 financial CSV ledger.
+          </div>
+        </div>
+
+        <div class="flow-step-card" style="border-top: 3px solid #06b6d4;">
+          <span class="flow-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;">Profile 5: Guest</span>
+          <strong style="color: #fff; font-size: 1rem;">Guest Explorer &amp; Sandbox Visitor</strong>
+          <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-top: 0.5rem;">
+            Unauthenticated visitor browsing the marketing homepage or trying the interactive sandbox demo (<code style="color: #06b6d4;">?s=demo-barbershop</code>).
+          </p>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px;">
+            <strong>Capabilities:</strong> Test live queue dynamics in sandbox, launch 15-second registration wizard. <strong>Upgrade buttons and all admin tabs are strictly hidden.</strong>
           </div>
         </div>
       </div>
@@ -2226,9 +2238,524 @@ node scripts/prune-firebase-versions.js
         </table>
       </div>
 
+      <!-- Comprehensive Role CRUD & Operational Entitlements Matrix -->
+      <h3 id="role-crud-matrix" style="color: #fff; font-size: 1.35rem; margin-top: 2rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        📋 3. Comprehensive Role CRUD & Operational Entitlements Matrix
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem; line-height: 1.6;">
+        Exhaustive multi-tenant operational matrix detailing Create, Read, Update, and Delete capabilities across all 5 user profiles (End User / Customer, Front Desk Staff, Shop Owner, SuperAdmin, and Guest Explorer). Every state-mutating operation is guarded by Firestore transactions (<code style="color: #38bdf8;">mutateQueueAtomic</code> and <code style="color: #38bdf8;">addQueueItemAtomic</code>) to guarantee zero race conditions, airtight tenant boundaries, and immutable customer privacy.
+      </p>
+
+      <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; margin-bottom: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.84rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 0.85rem 1rem; color: #fff; width: 25%;">Lifecycle &amp; Operation (CRUD)</th>
+              <th style="padding: 0.85rem 0.65rem; color: #38bdf8; text-align: center; width: 15%;">End User / Customer</th>
+              <th style="padding: 0.85rem 0.65rem; color: #10b981; text-align: center; width: 15%;">Front Desk Staff</th>
+              <th style="padding: 0.85rem 0.65rem; color: #c084fc; text-align: center; width: 15%;">Shop Owner</th>
+              <th style="padding: 0.85rem 0.65rem; color: #f59e0b; text-align: center; width: 15%;">Platform SuperAdmin</th>
+              <th style="padding: 0.85rem 0.65rem; color: #94a3b8; text-align: center; width: 15%;">Guest Explorer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Category 1 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.72rem;">1. Queue &amp; Visit Intake Lifecycle (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: Walk-In Self Check-In</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Atomic queue append via <code>addQueueItemAtomic</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Self Check-In<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">QR / Web (Syncs URL &amp; Storage)</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Self Blocked<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Use Desk Intake</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Allowed<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">On owned shop link</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Test<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">On any shop</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Sandbox Test<br><span style="font-size: 0.72rem; color: #94a3b8;">Main St Barbers only</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: Front Desk Counter Intake</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Staff check-in with <code>isSelfCheckIn: false</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Desk Intake<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">No session adoption</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Desk Access<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Across owned shops</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Desk Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Queue &amp; Live Wait Status</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Real-time estimated wait time &amp; queue list</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8; font-weight: 700;">✅ Public &amp; Ticket<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Auto-masks PII in clinical</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Desk Queue<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Ticking timers, tap-to-reveal</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Desk Queue<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Across all owned shops</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Inspection<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Global directory search</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">✅ Sandbox Queue</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Call Customer (<code>SERVE NOW</code>)</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Concurrency lock via <code>mutateQueueAtomic</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Counter Station<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">SMS alert with tracking URL</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Serve Next in Line (FIFO)</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Automated top-of-line customer calling</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ 1-Tap Call Next<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Transitions top ticket</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Customer Delay / Grace Extension</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Bumps customer back 1-2 slots or extends grace</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Delay / Bump<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Preserves ticket integrity</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Complete Visit</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Persist to <code>/shops/{slug}/history/{id}</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Complete Service<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Clobber-free 50-item cap</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Delete / Cancel: Cancel Spot / No-Show</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Remove from queue &amp; archive reason</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Leave Line<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Cancels own ticket only</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Desk Cancel<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Confirm prompt, logs actor</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Leave Own Spot</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Reinstate / Re-Queue Customer</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Restore ticket to active lobby queue</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Re-Queue at End<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Protects waiting line order</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 2 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #10b981; text-transform: uppercase; font-size: 0.72rem;">2. Multi-Tenant Shop Management &amp; Partitioning (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: 15-Second Shop Registration</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Universal slug generation &amp; starter setup</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Allowed<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Starter/Pro: 1; Enterprise: Multi</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Provision<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Demo: Starter $0 default</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #06b6d4;">⚡ Onboarding Flow</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Shop Settings, Services &amp; Hours</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Firestore doc read on <code>/shops/{slug}</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8;">✅ Public Bar Only<br><span style="font-size: 0.72rem; color: #94a3b8;">Hours &amp; Contact info</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Operating Header<br><span style="font-size: 0.72rem; color: #94a3b8;">No billing/owner secrets</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Settings Modal<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">All owned locations</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Directory<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">All tenants worldwide</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">✅ Sandbox Read</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Edit Settings, Branding &amp; Services</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Polymorphic hours, 6 services, clinical mode</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Authority<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">On owned shop doc</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Pause / Resume Walk-In Queue</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Immediate SafeStorage &amp; Cloud sync</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Desk Banner Toggle<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Still serves waiting tickets</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Settings &amp; Directory</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ 1-Click Directory Action</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Multi-Shop Switching (<code>inspectShop</code>)</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Zero cross-shop ticket leakage</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Locked to Terminal</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ 1-Tap Switch<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Resets in-memory queue/ticket</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Switch Any Shop</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Delete: Delete Shop Document</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Purges root doc &amp; archives metadata</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Modal Name Confirm<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Sandbox protected</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Purge<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Ghost doc cleanup engine</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 3 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 0.72rem;">3. Staff Roles &amp; Granular Operator RBAC (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: Provision Counter Staff PINs</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Writes to <code>/shops/{slug}/staff_roles/{id}</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Add Staff<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Passcode &amp; Role Title</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Access</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Counter Staff Directory &amp; Station QRs</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Fast terminal authentication checks</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8;">✅ Station Login Only<br><span style="font-size: 0.72rem; color: #94a3b8;">Single-doc token read</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Staff Table<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Under My Shops &amp; Staff</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Directory</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Granular Role Permissions</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Check-in, call next, complete, phone reveal</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Granular Toggles<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">6 discrete permissions</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Override</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Delete: Revoke Passcode / Delete Staff</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Instant session invalidation</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Instant Revocation</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Revocation</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 4 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #06b6d4; text-transform: uppercase; font-size: 0.72rem;">4. Telecom SMS Limits, Top-Up Packs &amp; Carrier Quota (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Real-Time SMS Wallet &amp; Carrier Segments</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Monthly allowance &amp; non-expiring reserve</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Live SMS Wallet<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Progress bar &amp; balance</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master SMS Inspection</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: Purchase Top-Up Packs via Stripe</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">250 ($5), 1,000 ($15), 2,500 ($39)</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Stripe Checkout<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Serverless Cloud webhook</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Access</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Automated Carrier SMS Decrement</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">GSM-7 / UCS-2 multi-segment carrier math</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8;">✅ SMS Receiver</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Automated Trigger<br><span style="font-size: 0.72rem; color: #94a3b8;">On SERVE NOW</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Wallet Debit</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b;">✅ Global Audit</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: SuperAdmin SMS Credit Override</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Courtesy credits &amp; custom monthly quota</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Courtesy Override<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Non-expiring reserve credits</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 5 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #a855f7; text-transform: uppercase; font-size: 0.72rem;">5. Business Intelligence, Analytics &amp; Historical Logs (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Real-Time Shop Analytics</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Average wait time, hourly traffic, walk-aways</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Queue Count Only</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full BI Dashboard<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Owned locations</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Directory BI</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Historical Completed Visit Logs</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Audit trail on <code>/shops/{slug}/history</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Today's History (50)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full History Logs<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Filtered by date range</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Master Audit Trail</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Export: RFC 4180 CSV Visit Ledger</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Sanitized customer visit history export</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8; font-weight: 700;">✅ Own Visits Only<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Pro (90d) / Enterprise (365d)</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Platform CSV Export</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 6 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; font-size: 0.72rem;">6. SuperAdmin Revenue Metrics &amp; Account 360° Intelligence (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Executive Revenue Metrics &amp; Account 360°</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">MRR, ARR, ARPU, ARPPU, LTV, Churn signals</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Unlocked<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Full 360° modal &amp; KPIs</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Create: 1-Tap Demo Sandbox Shop</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Preset industry catalog with 6 services</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ 1-Tap Launch<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Starter $0 tier default</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Update: Tenant Plan Reassignment</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Starter ($0), Pro ($15), Enterprise ($49)</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked<br><span style="font-size: 0.72rem; color: #94a3b8;">Via Stripe checkout only</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Instant Reassign<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Interactive select dropdown</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Export: Platform Financial CSV Ledger</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">RFC 4180 accounts portfolio &amp; MRR export</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Platform CSV Export<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Account portfolio ledger</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Delete: Multi-Tenant Ghost Cleanup Engine</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Grouped duplicate purge by exact <code>doc.id</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444; font-weight: 700;">❌ Blocked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Cloud Purge Engine<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Purges ghost documents</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ Blocked</td>
+            </tr>
+
+            <!-- Category 7 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #ec4899; text-transform: uppercase; font-size: 0.72rem;">7. Customer Ticket Tracking &amp; PII Clinical Privacy Protection (CRUD)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: Dedicated Mobile Ticket Tracking</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Live position, wait time progress bar, audio chime</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8; font-weight: 700;">✅ Own Ticket View<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Scoped to ticket UUID</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Terminal View</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Terminal View</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b;">Master Inspection</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8;">✅ Sandbox Ticket</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Read: HIPAA Clinical Privacy Mode Masking</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Masks patron names on public screens (<code>J*** D***</code>)</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8; font-weight: 700;">✅ Masked View<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Full name on own ticket only</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Unmasked Desk<br><span style="font-size: 0.72rem; color: #94a3b8; font-weight: 400;">Tap-to-reveal phone</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Full Unmasked Access</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b; font-weight: 700;">✅ Full Unmasked Access</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #38bdf8;">✅ Masked View</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Delete: Clear Mobile Ticket Session</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Clears local storage &amp; unbinds active ticket</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">✅ Leave Line / Reset</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #ef4444;">❌ N/A (Desk Station)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Safe Reset</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #f59e0b;">✅ Safe Reset</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">✅ Reset Sandbox</td>
+            </tr>
+
+            <!-- Category 8 -->
+            <tr style="background: rgba(255, 255, 255, 0.03);">
+              <td colspan="6" style="padding: 0.5rem 1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 0.72rem;">8. Anti-Race Condition Concurrency, State Invariants &amp; Data Isolation</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Atomic Firestore Mutex Transactions</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;"><code>mutateQueueAtomic</code> &amp; <code>addQueueItemAtomic</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Zero Race Conditions</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Zero Race Conditions</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Zero Race Conditions</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Zero Race Conditions</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Zero Race Conditions</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Cross-Shop Ticket Partitioning</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Scoping via <code>waitlink_ticket_${slug}</code></div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Airtight Scoping</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Terminal Locked</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Multi-Shop Isolated</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Clean Global Context</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Sandbox Isolated</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Desk Intake Operator Session Protection</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;"><code>isSelfCheckIn: false</code> prevents staff hijacking</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A (Self Intake)</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">🛡️ Session Protected<br><span style="font-size: 0.72rem; color: #94a3b8;">Desk never inherits ticket</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Protected</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Protected</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.7rem 1rem; color: #fff;">
+                <strong>Demo Sandbox Zero-Revenue Invariant</strong>
+                <div style="font-size: 0.74rem; color: #94a3b8;">Forces Starter $0 plan, preventing MRR inflation</div>
+              </td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">N/A</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #94a3b8;">Commercial Only</td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981; font-weight: 700;">🛡️ 100% Accurate MRR<br><span style="font-size: 0.72rem; color: #94a3b8;">$0 Starter Tier Default</span></td>
+              <td style="padding: 0.7rem 0.65rem; text-align: center; color: #10b981;">🛡️ Free Sandbox Access</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Architectural Deep-Dive: Multi-Tenant Collision & Anti-Race Engine -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 1.5rem; margin-bottom: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+        <h4 style="color: #38bdf8; font-size: 1.05rem; font-weight: 800; margin: 0 0 0.75rem 0; display: flex; align-items: center; gap: 0.5rem;">
+          🛡️ Technical Guarantees: Multi-Tenant Data Collision &amp; Anti-Race Condition Engine
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 1rem;">
+            <strong style="color: #fff; font-size: 0.88rem;">1. Atomic Concurrency Mutex</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.4rem 0 0 0;">
+              All state transitions (Check-In, Call, Serve Next, Complete, Delay, Reinstate) execute through Google Cloud Firestore document transactions via <code style="color: #38bdf8;">mutateQueueAtomic()</code>. Even if 10 front desk staff click <em>SERVE NOW</em> concurrently, exactly one succeeds while other terminals cleanly re-sync without double-calling or ticket loss.
+            </p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 1rem;">
+            <strong style="color: #fff; font-size: 0.88rem;">2. Strict Multi-Tenant Scoping</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.4rem 0 0 0;">
+              Every ticket is tagged with <code style="color: #10b981;">shopSlug: state.config.slug</code>. Local storage strictly namespaces tickets to <code style="color: #10b981;">waitlink_ticket_${slug}</code>. When a business owner switches between their multiple shops via <code style="color: #10b981;">inspectShop()</code>, in-memory queues and tickets are completely flushed and re-synced, preventing ticket bleed.
+            </p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 1rem;">
+            <strong style="color: #fff; font-size: 0.88rem;">3. Desk Intake Isolation</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.4rem 0 0 0;">
+              When front desk operators manually enter a walk-in patron, <code style="color: #c084fc;">addQueueItemAtomic(item, false)</code> sets <code style="color: #c084fc;">isSelfCheckIn: false</code>. This guarantees the receptionist’s iPad or tablet remains firmly in the operational console and does not accidentally adopt the customer’s personal mobile ticket session.
+            </p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 1rem;">
+            <strong style="color: #fff; font-size: 0.88rem;">4. Memory-Leak Free DOM Ticker</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.4rem 0 0 0;">
+              The authoritative <code style="color: #f59e0b;">startTimerTicker()</code> engine avoids rebuilding DOM trees every second. Instead, it targets existing <code style="color: #f59e0b;">.timer-pill</code> and <code style="color: #f59e0b;">#ticket-timer-display</code> elements and updates their text nodes in-place, eliminating memory leaks and unnecessary Firestore reads.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Triple-Layer Anti-Abuse Architecture -->
       <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-        🔒 3. Triple-Layer Anti-Abuse Architecture: Sealing "Forever-Free" Loopholes
+        🔒 4. Triple-Layer Anti-Abuse Architecture: Sealing "Forever-Free" Loopholes
       </h3>
       <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.25rem;">
         WaitLink uses a defense-in-depth model to ensure malicious or clever users cannot bypass paywalls, forge subscription plans, or spin up multiple shops indefinitely for free:
@@ -2266,7 +2793,7 @@ node scripts/prune-firebase-versions.js
       <!-- Cloud Duplicate Purge Engine -->
       <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 1.5rem;">
         <h4 style="color: #fbbf24; font-size: 1.05rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
-          🧹 4. SuperAdmin Multi-Tenant Ghost Document Cleanup Engine
+          🧹 5. SuperAdmin Multi-Tenant Ghost Document Cleanup Engine
         </h4>
         <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.75rem;">
           In Google Cloud Firestore, documents are keyed by their <strong>Document ID (<code>doc.id</code>)</strong>, which can differ from an internal <code>slug</code> field (e.g., legacy test documents created with spaces or un-slugified IDs such as <code>"Amy Dental clinic"</code> or <code>"stomada"</code>).
