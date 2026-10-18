@@ -533,6 +533,13 @@ select,
   color-scheme: dark;
 }
 
+select:not(.desk-secondary-select):not(.filter-select) {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: var(--radius-sm);
+}
+
 select option,
 .desk-secondary-select option,
 #desk-service-select option,
@@ -541,6 +548,12 @@ select option,
   background-color: #0f172a !important;
   color: #f8fafc !important;
   padding: 8px 12px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
 }
 
 select optgroup,
@@ -5095,33 +5108,51 @@ html[data-theme="light"] .desk-secondary-input::placeholder {
   font-weight: 400 !important;
 }
 
-html[data-theme="light"] .desk-secondary-select,
-html[data-theme="light"] #desk-service-select,
-html[data-theme="light"] .filter-select,
 html[data-theme="light"] select {
   color-scheme: light !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
   color: #0f172a !important;
   font-weight: 600 !important;
 }
 
+html[data-theme="light"] select:not(.desk-secondary-select):not(.filter-select) {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .desk-secondary-select,
+html[data-theme="light"] #desk-service-select,
+html[data-theme="light"] .filter-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] select option,
 html[data-theme="light"] .desk-secondary-select option,
 html[data-theme="light"] #desk-service-select option,
-html[data-theme="light"] select option,
 html[data-theme="light"] .filter-select option,
 html[data-theme="light"] .desk-service-option {
   background-color: #ffffff !important;
   color: #0f172a !important;
   font-weight: 500 !important;
+  padding: 8px 12px !important;
+}
+
+html[data-theme="light"] select option:checked,
+html[data-theme="light"] select option:hover {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
 }
 
 html[data-theme="light"] select optgroup,
 html[data-theme="light"] .desk-secondary-select optgroup,
 html[data-theme="light"] #desk-service-select optgroup {
   background-color: #f1f5f9 !important;
-  color: #475569 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
 }
 
 html[data-theme="light"] input:focus,
@@ -6348,5 +6379,251 @@ html[data-theme="light"] .demo-preview-service-tag {
   border-color: #cbd5e1 !important;
   color: #1e293b !important;
 }
+
+/* ==========================================================================
+   Universal High-Contrast Theme Harmonization (Light & Dark Mode)
+   Guarantees 100% text, dropdown, modal, popup and card readability
+   ========================================================================== */
+
+/* 1. Live Customer Ticket Running Late & Consent Boxes */
+html[data-theme="light"] #ticket-running-late-container {
+  background: #fffbeb !important;
+  border: 1.5px dashed #f59e0b !important;
+}
+
+html[data-theme="light"] #running-late-title {
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] .late-chip-btn {
+  background: #ffffff !important;
+  color: #b45309 !important;
+  border: 1.5px solid #d97706 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] .late-chip-btn:hover {
+  background: #fef3c7 !important;
+  border-color: #b45309 !important;
+  color: #78350f !important;
+}
+
+html[data-theme="light"] #running-late-locked-msg {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fcd34d !important;
+}
+
+html[data-theme="light"] #inline-tcpa-consent-container {
+  background: #f0fdf4 !important;
+  border: 1.5px solid #86efac !important;
+}
+
+html[data-theme="light"] #inline-tcpa-consent-container span,
+html[data-theme="light"] #inline-tcpa-consent-container strong {
+  color: #14532d !important;
+}
+
+html[data-theme="light"] #tcpa-shop-name {
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+/* 2. Staff Modal Permissions & Checkboxes */
+html[data-theme="light"] #staff-modal div[style*="background: rgba(15, 23, 42"] {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+html[data-theme="light"] #staff-modal div[style*="background: rgba(15, 23, 42"] div,
+html[data-theme="light"] #staff-modal div[style*="background: rgba(15, 23, 42"] span,
+html[data-theme="light"] #staff-modal div[style*="background: rgba(15, 23, 42"] label {
+  color: #090d16 !important;
+  font-weight: 600 !important;
+}
+
+/* 3. Stripe Checkout Connecting Overlay */
+html[data-theme="light"] #upgrade-processing-overlay {
+  background: rgba(241, 245, 249, 0.95) !important;
+}
+
+html[data-theme="light"] #upgrade-processing-overlay > div {
+  background: #ffffff !important;
+  border: 1.5px solid #10b981 !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(16, 185, 129, 0.15) !important;
+}
+
+html[data-theme="light"] #upgrade-proc-title {
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #upgrade-proc-desc {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] #upgrade-processing-overlay div[style*="background: rgba(0, 0, 0, 0.35)"] {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* 4. Registration Success Dialog Boxes */
+html[data-theme="light"] #registration-success-modal div[style*="background: rgba(15, 23, 42"] {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #registration-success-modal div[style*="border-bottom: 1px dashed"] {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html[data-theme="light"] #reg-success-email-val {
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #reg-success-shop-name {
+  color: #090d16 !important;
+}
+
+/* 5. Customer Audit Trail Modal */
+html[data-theme="light"] #customer-audit-modal div[style*="background: rgba(15, 23, 42"] {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #audit-modal-customer-name {
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #audit-modal-subtitle {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] #audit-modal-waited,
+html[data-theme="light"] #audit-modal-status,
+html[data-theme="light"] #audit-modal-phone {
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #audit-modal-count {
+  color: #0284c7 !important;
+}
+
+/* 6. Delete Shop Modal */
+html[data-theme="light"] #delete-shop-modal div[style*="background: rgba(0, 0, 0, 0.35)"] {
+  background: #fff1f2 !important;
+  border: 1px solid #fecdd3 !important;
+  color: #881337 !important;
+}
+
+html[data-theme="light"] #delete-shop-modal p {
+  color: #1e293b !important;
+}
+
+/* 7. Tablet PWA Instructions Box */
+html[data-theme="light"] #pwa-ios-instructions,
+html[data-theme="light"] #pwa-desktop-instructions {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #090d16 !important;
+}
+
+html[data-theme="light"] #pwa-ios-instructions ol,
+html[data-theme="light"] #pwa-desktop-instructions ol,
+html[data-theme="light"] #pwa-ios-instructions li,
+html[data-theme="light"] #pwa-desktop-instructions li {
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] #pwa-ios-instructions span[style*="background: rgba(255,255,255,0.1)"] {
+  background: #e2e8f0 !important;
+  color: #090d16 !important;
+}
+
+/* 8. Light-to-Dark Contrast Color Inversions for High Readability in Light Mode */
+html[data-theme="light"] span[style*="color: #38bdf8"],
+html[data-theme="light"] div[style*="color: #38bdf8"],
+html[data-theme="light"] strong[style*="color: #38bdf8"],
+html[data-theme="light"] button[style*="color: #38bdf8"],
+html[data-theme="light"] a[style*="color: #38bdf8"] {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] span[style*="color: #06b6d4"],
+html[data-theme="light"] div[style*="color: #06b6d4"],
+html[data-theme="light"] strong[style*="color: #06b6d4"],
+html[data-theme="light"] button[style*="color: #06b6d4"],
+html[data-theme="light"] a[style*="color: #06b6d4"] {
+  color: #0369a1 !important;
+}
+
+html[data-theme="light"] span[style*="color: #fbbf24"],
+html[data-theme="light"] div[style*="color: #fbbf24"],
+html[data-theme="light"] strong[style*="color: #fbbf24"],
+html[data-theme="light"] button[style*="color: #fbbf24"],
+html[data-theme="light"] a[style*="color: #fbbf24"] {
+  color: #b45309 !important;
+}
+
+html[data-theme="light"] span[style*="color: #34d399"],
+html[data-theme="light"] div[style*="color: #34d399"],
+html[data-theme="light"] strong[style*="color: #34d399"],
+html[data-theme="light"] button[style*="color: #34d399"],
+html[data-theme="light"] div[style*="color: #a7f3d0"],
+html[data-theme="light"] span[style*="color: #a7f3d0"] {
+  color: #15803d !important;
+}
+
+html[data-theme="light"] span[style*="color: #a5b4fc"],
+html[data-theme="light"] div[style*="color: #a5b4fc"],
+html[data-theme="light"] strong[style*="color: #a5b4fc"],
+html[data-theme="light"] span[style*="color: #c7d2fe"],
+html[data-theme="light"] div[style*="color: #c7d2fe"] {
+  color: #4338ca !important;
+}
+
+html[data-theme="light"] span[style*="color: #cbd5e1"],
+html[data-theme="light"] div[style*="color: #cbd5e1"],
+html[data-theme="light"] strong[style*="color: #cbd5e1"],
+html[data-theme="light"] p[style*="color: #cbd5e1"] {
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] span[style*="color: #94a3b8"],
+html[data-theme="light"] div[style*="color: #94a3b8"],
+html[data-theme="light"] strong[style*="color: #94a3b8"],
+html[data-theme="light"] p[style*="color: #94a3b8"] {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] span[style*="color: #60a5fa"],
+html[data-theme="light"] button[style*="color: #60a5fa"] {
+  color: #1d4ed8 !important;
+}
+
+html[data-theme="light"] span[style*="color: #c084fc"],
+html[data-theme="light"] div[style*="color: #c084fc"] {
+  color: #7e22ce !important;
+}
+
+/* 9. Universal Form Selects & Inputs in Light Mode */
+html[data-theme="light"] select,
+html[data-theme="light"] .dialog-select {
+  background-color: #ffffff !important;
+  color: #090d16 !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+html[data-theme="light"] .desk-secondary-select,
+html[data-theme="light"] #desk-service-select,
+html[data-theme="light"] .filter-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 
 
