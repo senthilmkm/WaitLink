@@ -658,7 +658,10 @@ it("Customer QR Code Join Flow: Ticket persistence, URL sync, in-flight ticket p
   assert.ok(html.includes('id="ticket-completed-actions"'), "index.html missing #ticket-completed-actions container");
   assert.ok(html.includes('onclick="resetMyTicketView()"'), "index.html missing resetMyTicketView button");
 
-  // getPublicUrl staging and environment awareness
+  // Production Domain Hierarchy & Fallback Governance
+  assert.ok(appJs.includes('const WAITLINK_PRODUCTION_DOMAIN = "https://waitlink.app"'), "app.js must declare https://waitlink.app as primary production domain");
+  assert.ok(appJs.includes('const WAITLINK_FALLBACK_DOMAIN = "https://waitlink-app-8821.web.app"'), "app.js must declare https://waitlink-app-8821.web.app as official fallback domain");
+  assert.ok(appJs.includes("function getPublicFallbackUrl()"), "app.js must provide getPublicFallbackUrl helper");
   assert.ok(appJs.includes("isHostedStaging"), "app.js getPublicUrl must detect hosted staging domains (*.web.app / *.firebaseapp.com)");
 
   // URL search parameter synchronization

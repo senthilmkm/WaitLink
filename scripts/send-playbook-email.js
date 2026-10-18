@@ -73,8 +73,8 @@ async function sendEmail() {
 
           <h2>Quick Links</h2>
           <p>
-            • <strong>Live Interactive Demo:</strong> <a href="https://waitlink-app-8821.web.app/?shop=main-st-barbers">https://waitlink-app-8821.web.app/?shop=main-st-barbers</a><br>
-            • <strong>Production App:</strong> <a href="https://waitlink-app-8821.web.app">https://waitlink-app-8821.web.app</a>
+            • <strong>Production App:</strong> <a href="https://waitlink.app">https://waitlink.app</a> (Fallback: <a href="https://waitlink-app-8821.web.app">https://waitlink-app-8821.web.app</a>)<br>
+            • <strong>Live Interactive Demo:</strong> <a href="https://waitlink.app/?shop=main-st-barbers">https://waitlink.app/?shop=main-st-barbers</a>
           </p>
 
           <p style="margin-top: 24px; font-size: 13px; color: #64748b;">

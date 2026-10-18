@@ -1675,13 +1675,30 @@ function formatSlugToTitle(slug) {
     .join(" ");
 }
 
-function getPublicUrl() {
-  // Respect current test/staging host (e.g. *.web.app, *.firebaseapp.com, localhost) so QR code testing opens in same host
+// Universal WaitLink Domain Hierarchy:
+// Primary Production Domain: https://waitlink.app
+// Official Hosting Fallback Domain: https://waitlink-app-8821.web.app
+const WAITLINK_PRODUCTION_DOMAIN = "https://waitlink.app";
+const WAITLINK_FALLBACK_DOMAIN = "https://waitlink-app-8821.web.app";
+
+function getPublicUrl(options = {}) {
   const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   const isHostedStaging = typeof window !== "undefined" && (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com"));
-  const baseUrl = (isLocal || isHostedStaging) ? window.location.origin : "https://waitlink.app";
+  
+  // Production domain used across the entire app is strictly https://waitlink.app.
+  // The official fallback domain is https://waitlink-app-8821.web.app.
+  let baseUrl = WAITLINK_PRODUCTION_DOMAIN;
+  if (isLocal) {
+    baseUrl = window.location.origin;
+  } else if (options && options.useFallback) {
+    baseUrl = WAITLINK_FALLBACK_DOMAIN;
+  }
   const cleanSlug = slugify(state.config.slug || state.config.shopName || "main-st-barbers");
   return `${baseUrl}/?s=${encodeURIComponent(cleanSlug)}&view=public`;
+}
+
+function getPublicFallbackUrl() {
+  return getPublicUrl({ useFallback: true });
 }
 
 function setElText(id, text) {
@@ -14301,6 +14318,9 @@ window.initPwaSupport = initPwaSupport;
 window.triggerPwaInstall = triggerPwaInstall;
 window.executePwaInstall = executePwaInstall;
 window.closePwaInstallModal = closePwaInstallModal;
+window.WAITLINK_PRODUCTION_DOMAIN = WAITLINK_PRODUCTION_DOMAIN;
+window.WAITLINK_FALLBACK_DOMAIN = WAITLINK_FALLBACK_DOMAIN;
+window.getPublicFallbackUrl = getPublicFallbackUrl;
 
 // =========================================================================
 // WAITLINK CORE UNIFIED SYSTEM NAMESPACE
