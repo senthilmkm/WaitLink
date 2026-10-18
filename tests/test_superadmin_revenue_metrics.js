@@ -568,6 +568,26 @@ it("switchSuperTab strictly suppresses revenue panel rendering for non-superadmi
 });
 
 // -------------------------------------------------------------------------
+// 9. Architecture Documentation & Specification Integrity
+// -------------------------------------------------------------------------
+console.log("\n--- 9. Architecture Blueprint Documentation Integrity ---");
+
+it("waitlinkarchitecture.html contains Section 11: SuperAdmin Revenue Metrics & Account 360°", () => {
+  const archHtmlPath = path.join(__dirname, "..", "waitlinkarchitecture.html");
+  const archHtml = fs.readFileSync(archHtmlPath, "utf8");
+
+  assert.ok(archHtml.includes('id="revenue-metrics-engine"'), "Missing #revenue-metrics-engine in waitlinkarchitecture.html");
+  assert.ok(archHtml.includes('href="#revenue-metrics-engine"'), "Missing sticky sub-nav link to #revenue-metrics-engine");
+  assert.ok(archHtml.includes("SuperAdmin Revenue Metrics & Account 360° Intelligence Engine"), "Missing Section 11 heading");
+  assert.ok(archHtml.includes("MRR_account(u)"), "Missing MRR account formula in architecture doc");
+  assert.ok(archHtml.includes("ARR = MRR_platform &times; 12"), "Missing ARR formula in architecture doc");
+  assert.ok(archHtml.includes("Zero-Division Safe"), "Missing Zero-Division safe documentation in architecture doc");
+  assert.ok(archHtml.includes("badge-signal-upsell"), "Missing growth signal badges in architecture doc");
+  assert.ok(archHtml.includes("badge-signal-churn"), "Missing churn risk badge in architecture doc");
+  assert.ok(archHtml.includes("Micro (250 SMS @ $5.00)"), "Missing Micro top-up margin breakdown");
+});
+
+// -------------------------------------------------------------------------
 // Execution Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");

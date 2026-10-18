@@ -400,6 +400,7 @@
       <a href="#comparison" class="doc-pill">⚖️ Competitor Matrix</a>
       <a href="#pricing-matrix" class="doc-pill">💎 Pricing & Tier Matrix</a>
       <a href="#rbac-audit" class="doc-pill">🛡️ RBAC & Tier Audit</a>
+      <a href="#revenue-metrics-engine" class="doc-pill">📊 Revenue & Account 360°</a>
     </div>
   </div>
 
@@ -2272,6 +2273,294 @@ node scripts/prune-firebase-versions.js
         </p>
         <p style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; margin: 0;">
           The updated <code>cleanDuplicateShops()</code> engine identifies duplicates by grouping normalized <code>(shopName + ownerEmail)</code> pairs, picks the canonical kebab-case document to preserve, and purges ghost documents using their exact <strong>Firestore Document ID</strong> (<code>d.ghost.id</code>). This permanently purges obsolete cloud documents and prevents ghost shops from re-appearing after session logout or page reload.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- SECTION 11: SUPERADMIN REVENUE METRICS & ACCOUNT 360° INTELLIGENCE ENGINE -->
+    <section id="revenue-metrics-engine" class="section-card">
+      <div class="section-title-wrap">
+        <span class="section-num">11</span>
+        <h2 class="section-heading">SuperAdmin Revenue Metrics & Account 360° Intelligence Engine</h2>
+      </div>
+
+      <p style="color: #cbd5e1; font-size: 1.05rem; line-height: 1.7; margin-bottom: 2rem;">
+        The <strong>Revenue Metrics & Account 360°</strong> engine transforms the SuperAdmin console from a flat storefront database into an <strong>owner-centric SaaS financial and operations intelligence platform</strong>. It rolls up multi-location portfolios under verified account owners, calculates platform unit economics (MRR, ARR, ARPU, ARPPU, Freemium Conversion, Top-Up Gross Margins, and LTV) with 100% mathematical precision, surfaces automated growth and churn signals, and provides a slide-out 360° account inspection drawer with immediate founder actions.
+      </p>
+
+      <!-- 1. Architectural Shift: Shop-Centric vs Account-Centric -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        🏢 1. The Architectural Shift: Shop-Centric vs. Account-Centric Intelligence
+      </h3>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 14px; padding: 1.5rem;">
+          <span class="flow-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">Legacy Paradigm: Flat Shop-Centric</span>
+          <strong style="color: #fff; font-size: 1rem; display: block; margin: 0.5rem 0;">Isolated Tenant Rows</strong>
+          <ul style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; padding-left: 1.2rem; margin: 0;">
+            <li>Each shop was an isolated row in the database, obscuring business owners running 3 to 10 locations.</li>
+            <li>Zero aggregation of multi-store monthly subscription revenue (MRR) or annualized value (ARR).</li>
+            <li>Unable to detect if a high-volume Starter shop was prime for a Pro upsell or if an Enterprise customer had gone dormant.</li>
+            <li>Required manual SQL/Firestore dumps or spreadsheet wrangling to determine platform ARPU or churn rates.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 1.5rem;">
+          <span class="flow-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Modern Paradigm: Account 360° Centric</span>
+          <strong style="color: #fff; font-size: 1rem; display: block; margin: 0.5rem 0;">Unified Owner Portfolios</strong>
+          <ul style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; padding-left: 1.2rem; margin: 0;">
+            <li>Automatically groups all storefronts under the verified registered <code style="color: #38bdf8;">ownerEmail</code>.</li>
+            <li>Real-time rollup of total locations, active stores, combined MRR, foot-traffic, and reserve SMS wallets.</li>
+            <li>Automated heuristic state machines: surfaces <span style="color: #f59e0b; font-weight: 700;">🔥 Ready for Pro</span>, <span style="color: #38bdf8; font-weight: 700;">⭐ Multi-Unit Bundle</span>, and <span style="color: #f87171; font-weight: 700;">⚠️ Churn Risk</span>.</li>
+            <li>Slide-out 360° Drawer enables instant front desk terminal inspection, founder email outreach, and courtesy credits.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2. SaaS Revenue Mathematical Invariants -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        📐 2. SaaS Revenue Mathematical Formulations & Zero-Division Invariants
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem;">
+        All financial metrics in WaitLink adhere to strict SaaS accounting principles and are mathematically protected against division-by-zero, non-finite values, and NaN errors:
+      </p>
+
+      <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; margin-bottom: 2.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.84rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 0.85rem 1rem; color: #fff; width: 22%;">Metric</th>
+              <th style="padding: 0.85rem 1rem; color: #38bdf8; width: 38%;">Mathematical Formulation</th>
+              <th style="padding: 0.85rem 1rem; color: #10b981; width: 40%;">Defensive Boundary & Invariant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Monthly Recurring Revenue (MRR)</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                MRR_account(u) = &Sigma; Price(tier_s)<br>
+                MRR_platform = &Sigma; MRR_account(u)
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Inactive (<code style="color: #f87171;">isActive: false</code>) or canceled shops strictly contribute $0.00. Dynamic tier registry falls back to $0 (Starter), $30 (Pro), $99 (Enterprise).
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Annual Recurring Revenue (ARR)</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                ARR = MRR_platform &times; 12
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Standardized 12-month run rate of contracted subscription commitments.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Blended ARPU &amp; ARPPU</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                ARPU = MRR / N_total<br>
+                ARPPU = MRR / N_paid
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                <strong>Zero-Division Safe:</strong> If <code style="color: #38bdf8;">N_total === 0</code> or <code style="color: #38bdf8;">N_paid === 0</code>, returns <code style="color: #10b981;">0</code> instead of <code style="color: #f87171;">NaN</code> or <code style="color: #f87171;">Infinity</code>.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Freemium Conversion Rate (FCR)</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                FCR = (N_paid / N_total) &times; 100%
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Measures conversion efficiency from free Starter accounts into paying Pro/Enterprise subscribers.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Top-Up Unit Economics &amp; Margin</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                Gross Margin = (Price - COGS) / Price<br>
+                COGS = Credits &times; $0.013/SMS
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                <strong>Proven Positive Gross Margins:</strong><br>
+                • <strong>Micro (250 SMS @ $5.00):</strong> COGS $3.25 &rarr; Profit <strong>+$1.75 (35.0%)</strong><br>
+                • <strong>Growth (1,000 SMS @ $15.00):</strong> COGS $13.00 &rarr; Profit <strong>+$2.00 (13.3%)</strong><br>
+                • <strong>Power (2,500 SMS @ $39.00):</strong> COGS $32.50 &rarr; Profit <strong>+$6.50 (16.7%)</strong>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0.75rem 1rem; color: #fff; font-weight: 700;">Customer Lifetime Value (LTV)</td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                Realized Spend + (MRR &times; 24 mo)
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Combines historical subscription invoices and one-time top-ups with a 24-month SaaS operational benchmark.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3. Account Health & Recency State Machine -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        🩺 3. Activity Recency & Operational Health State Machine
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Evaluates the elapsed time <code style="color: #38bdf8;">&Delta;t = Now - mostRecentActivityMs</code> across all shops in an account (check-in timestamp, served timestamp, staff terminal login, or profile updates):
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2.5rem;">
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1.1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+            <span class="health-dot-today"></span>
+            <strong style="color: #10b981; font-size: 0.92rem;">Active Today</strong>
+          </div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">&Delta;t &le; 24 Hours</div>
+          <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0.4rem 0 0 0;">Live front desk throughput active right now.</p>
+        </div>
+
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1.1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+            <span class="health-dot-week"></span>
+            <strong style="color: #38bdf8; font-size: 0.92rem;">Active This Week</strong>
+          </div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">24 Hours &lt; &Delta;t &le; 7 Days</div>
+          <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0.4rem 0 0 0;">Regular operational cadence (e.g. closed Sun/Mon).</p>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 1.1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+            <span class="health-dot-risk"></span>
+            <strong style="color: #f59e0b; font-size: 0.92rem;">Inactive &gt; 7 Days</strong>
+          </div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">7 Days &lt; &Delta;t &le; 30 Days</div>
+          <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0.4rem 0 0 0;">Storefront cooling down; zero arrivals in 7+ days.</p>
+        </div>
+
+        <div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 12px; padding: 1.1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+            <span class="health-dot-dormant"></span>
+            <strong style="color: #94a3b8; font-size: 0.92rem;">Dormant (&gt;30d)</strong>
+          </div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">&Delta;t &gt; 30 Days or No Data</div>
+          <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0.4rem 0 0 0;">Abandoned onboarding or merchant churned.</p>
+        </div>
+      </div>
+
+      <!-- 4. Growth & Churn Heuristics Matrix -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        ⚡ 4. SuperAdmin Growth & Churn Heuristics Matrix
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Real-time heuristics engine evaluates account status on every load to guide founder outreach:
+      </p>
+
+      <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; margin-bottom: 2.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.84rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 0.85rem 1rem; color: #fff; width: 22%;">Growth Signal Badge</th>
+              <th style="padding: 0.85rem 1rem; color: #38bdf8; width: 38%;">Algorithmic Trigger Logic</th>
+              <th style="padding: 0.85rem 1rem; color: #10b981; width: 40%;">Recommended Founder Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem;"><span class="badge-signal-upsell">🔥 Ready for Pro</span></td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                !hasPaid &amp;&amp; totalVisits30d &ge; 150
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Free merchant handling serious foot traffic. Send founder email offering a 14-day Pro trial with printable QR poster.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem;"><span class="badge-signal-multi">⭐ Multi-Unit Bundle</span></td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                totalShopsCount &ge; 2 &amp;&amp; hasStarter
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Owner runs multiple stores but some remain on free starter. Pitch the <strong>Enterprise Multi-Location Bundle ($99/mo for up to 5 locations)</strong>.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem;"><span class="badge-signal-enterprise">💎 High-Volume Pro</span></td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                (smsAllowance &gt; 0 &amp;&amp; smsUsed &ge; quota * 0.8) || topUpBalance &gt; 0
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Heavy SMS consumer frequently topping up. Pitch high-volume Enterprise contract with 5,000 included monthly SMS.
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 0.75rem 1rem;"><span class="badge-signal-churn">⚠️ Churn Risk</span></td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                accountMrr &gt; 0 &amp;&amp; healthStatus === "at_risk" &amp;&amp; totalVisits30d === 0
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Paying tenant ($30-$99/mo) with zero queue arrivals in 14+ days. Immediate high-priority check-in to assist with iPad hardware or staff training.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0.75rem 1rem;"><span class="badge-signal-steady">✅ Steady Tenant</span></td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1; font-family: 'Fira Code', monospace; font-size: 0.8rem;">
+                Default standard state
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.82rem;">
+                Healthy recurring tenant operating normally. Maintain service quality and reliability.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 5. Component & UI Architecture -->
+      <h3 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        🖥️ 5. Master-Detail UI Architecture &amp; Account 360° Drawer
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1.25rem;">
+        The SuperAdmin console provides a reactive, responsive workflow with zero full-page reloads:
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.25rem;">
+          <strong style="color: #38bdf8; font-size: 0.95rem;">Macro KPI Scorecards</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; margin: 0.4rem 0 0 0;">
+            4 glassmorphic scorecards displaying Total Platform MRR, Annual Run-Rate (ARR), Paid Conversion Rate, Blended ARPU, ARPPU, and 30D Top-Up Sales Volume with estimated gross margin.
+          </p>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.25rem;">
+          <strong style="color: #10b981; font-size: 0.95rem;">Reactive Search &amp; Filter Toolbar</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; margin: 0.4rem 0 0 0;">
+            Real-time search across owner email, display name, and storefront titles, combined with Tier filters (Paid/Starter), Location Count (Single/Multi), Growth Signals, and multi-field sorting.
+          </p>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.25rem;">
+          <strong style="color: #c084fc; font-size: 0.95rem;">Master Accounts Grid Table</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; margin: 0.4rem 0 0 0;">
+            Clean tabular display showing Owner Email, Total Shops count with active/inactive dots, Subscription Status breakdown, Monthly MRR, 30D Foot Traffic, Growth Signal badge, and 1-click [ 🔍 360° ] trigger.
+          </p>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.25rem;">
+          <strong style="color: #f59e0b; font-size: 0.95rem;">Slide-Out Account 360° Drawer</strong>
+          <p style="font-size: 0.82rem; color: #94a3b8; margin: 0.4rem 0 0 0;">
+            540px right-hand slide-out drawer (<code style="color: #f59e0b;">#account-360-drawer</code>) with backdrop blur. Displays full shop cards (front desk, public card, and settings links), financial rollup, and founder action buttons.
+          </p>
+        </div>
+      </div>
+
+      <!-- 6. Zero Redundant Reads & Performance Engine -->
+      <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.5rem; margin-bottom: 2.5rem;">
+        <h4 style="color: #10b981; font-size: 1.05rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+          ⚡ 6. Zero Redundant Cloud Reads &amp; Performance Invariant
+        </h4>
+        <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.75rem;">
+          In-memory aggregation pipeline (<code style="color: #38bdf8;">aggregateRevenueAccounts()</code>) groups shop records directly from the already-loaded SuperAdmin directory (<code style="color: #38bdf8;">state.registeredShops</code> / <code style="color: #38bdf8;">state.superadminShops</code>).
+        </p>
+        <p style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; margin: 0;">
+          Switching to the Revenue Metrics tab executes in <strong>0ms network round-trip time</strong> with <strong>zero additional Firestore document reads</strong>, eliminating billing overhead and rate-limit risks while ensuring instant responsiveness for the platform administrator.
         </p>
       </div>
 
