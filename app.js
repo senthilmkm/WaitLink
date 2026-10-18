@@ -1169,6 +1169,10 @@ function openTopUpModal() {
     showToast("ℹ️ Top-Up Packs are only available for live registered shops. Main St Barbers is a demo sandbox.");
     return;
   }
+  if (!state.user || !state.user.email || state.isStaffSession) {
+    showToast("🔒 SMS Top-Up Packs are reserved for authenticated Shop Owners.");
+    return;
+  }
   const modal = document.getElementById("modal-sms-topup");
   if (modal) modal.classList.remove("hidden");
 }
@@ -1179,6 +1183,14 @@ function closeTopUpModal() {
 }
 
 async function initiateTopUpCheckout(packId) {
+  if (!state.user || !state.user.email || state.isStaffSession) {
+    showToast("🔒 Only authenticated Shop Owners can purchase SMS Top-Up Packs.");
+    return;
+  }
+  if (isDemoScreenOrGuestDemo()) {
+    showToast("ℹ️ Top-Up checkout is disabled in demo mode.");
+    return;
+  }
   const currentSlug = (state.config && state.config.slug) || "main-st-barbers";
   showToast(`⚡ Connecting to Stripe Checkout for ${String(packId || "pack").toUpperCase()} Pack...`);
   const originUrl = window.location.origin + window.location.pathname;
@@ -10009,14 +10021,16 @@ function initStripePaymentEngine() {
   // Handle direct navigation to upgrade modal via ?action=upgrade&tier=pro
   if (urlParams.get("action") === "upgrade") {
     setTimeout(() => {
-      openUpgradeModal();
-      const targetTier = urlParams.get("tier");
-      if (targetTier) {
-        const cardId = targetTier === "enterprise" ? "tier-card-enterprise" : "tier-card-pro";
-        const card = document.getElementById(cardId);
-        if (card) {
-          card.style.transform = "scale(1.02)";
-          setTimeout(() => { if (card) card.style.transform = ""; }, 1200);
+      if (state.user && state.user.email && !state.isStaffSession && !isDemoScreenOrGuestDemo()) {
+        openUpgradeModal();
+        const targetTier = urlParams.get("tier");
+        if (targetTier) {
+          const cardId = targetTier === "enterprise" ? "tier-card-enterprise" : "tier-card-pro";
+          const card = document.getElementById(cardId);
+          if (card) {
+            card.style.transform = "scale(1.02)";
+            setTimeout(() => { if (card) card.style.transform = ""; }, 1200);
+          }
         }
       }
     }, 350);
@@ -10107,8 +10121,16 @@ function initStripeSdk() {
 }
 
 function openUpgradeModal(targetTier) {
+  if (!state.user || !state.user.email) {
+    showToast("🔒 Please sign in as a Shop Owner to view and manage subscription plans.");
+    return;
+  }
   if (state.isStaffSession) {
     showToast("ℹ️ Subscriptions and billing are managed exclusively by the Shop Owner.");
+    return;
+  }
+  if (isDemoScreenOrGuestDemo()) {
+    showToast("ℹ️ Main St Barbers is an interactive demo. Sign up to create a real shop and select plans.");
     return;
   }
   updateUpgradeModalUI();

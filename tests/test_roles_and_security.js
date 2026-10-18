@@ -250,5 +250,31 @@ it("Upgrade and marketing banners are strictly forbidden for guests, demo users,
   assert.strictEqual(shouldShowUpgradeBanners("PlatformSuperAdmin", false, true), true, "Authenticated SuperAdmin on live shop must see upgrade options");
 });
 
+it("openUpgradeModal and action=upgrade URL parameter are strictly blocked for unauthenticated guests and staff", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  // Verify openUpgradeModal guards against unauthenticated sessions
+  assert.ok(appJs.includes("if (!state.user || !state.user.email) {"), "openUpgradeModal missing unauthenticated user guard");
+  assert.ok(appJs.includes("Please sign in as a Shop Owner to view and manage subscription plans"), "openUpgradeModal missing sign-in toast warning");
+  assert.ok(appJs.includes("if (isDemoScreenOrGuestDemo()) {"), "openUpgradeModal missing isDemoScreenOrGuestDemo check");
+
+  // Verify action=upgrade URL query handler guards against unauthenticated guests
+  assert.ok(appJs.includes("if (state.user && state.user.email && !state.isStaffSession && !isDemoScreenOrGuestDemo())"), "action=upgrade URL parameter not properly guarded against guests");
+});
+
+it("openTopUpModal and initiateTopUpCheckout are strictly blocked for unauthenticated guests, staff, and demo mode", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  // Verify openTopUpModal guards
+  assert.ok(appJs.includes("SMS Top-Up Packs are reserved for authenticated Shop Owners"), "openTopUpModal missing owner authentication guard");
+  // Verify initiateTopUpCheckout guards
+  assert.ok(appJs.includes("Only authenticated Shop Owners can purchase SMS Top-Up Packs"), "initiateTopUpCheckout missing owner authentication guard");
+  assert.ok(appJs.includes("Top-Up checkout is disabled in demo mode"), "initiateTopUpCheckout missing demo guard");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);

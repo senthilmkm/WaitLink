@@ -158,6 +158,11 @@ it("Plan upgrade and buy top-up banners are strictly suppressed in demo mode and
   assert.ok(appJs.includes("const isDemo = isDemoScreenOrGuestDemo()"), "app.js missing isDemo check in banner rendering");
   assert.ok(appJs.includes("ownerBuyTopUpBtn.style.display = \"none\""), "app.js does not hide buy topup button in demo mode");
   assert.ok(appJs.includes("!isDemo && isPaid && totalAvailable <= 0"), "app.js does not guard desk-sms-exhausted-banner from demo mode");
+  assert.ok(html.includes('id="desk-sms-exhausted-banner" class="hidden" style="display: none !important;'), "desk-sms-exhausted-banner missing initial display: none !important inline style");
+  assert.ok(css.includes("body:not(.user-authenticated) #desk-sms-exhausted-banner"), "style.css missing body:not(.user-authenticated) #desk-sms-exhausted-banner");
+  assert.ok(css.includes("body.guest-mode #desk-sms-exhausted-banner"), "style.css missing body.guest-mode #desk-sms-exhausted-banner");
+  assert.ok(css.includes("body:not(.user-authenticated) #header-upgrade-btn"), "style.css missing body:not(.user-authenticated) #header-upgrade-btn");
+  assert.ok(css.includes("body.guest-mode #header-upgrade-btn"), "style.css missing body.guest-mode #header-upgrade-btn");
 });
 
 it("handleSignOut and staffSignOut execute comprehensive storage, session, memory and credential purge", () => {
