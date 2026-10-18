@@ -109,6 +109,26 @@ it("Demo Sandbox Access: Demo shops (main-st-barbers and demo-*) grant unauthent
   assert.ok(appJsCode.includes('const isDemoSlug = state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-")'), "app.js must default demo- visits to desk view");
 });
 
+it("Public Marketing Links & Poster: Guarantees customer card routing, dynamic poster isolation and non-clobbering", () => {
+  const appJsCode = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+  const htmlCode = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+  // Public URL canonical format with trailing slash before query
+  assert.ok(appJsCode.includes('return `${baseUrl}/?s=${encodeURIComponent(cleanSlug)}&view=public`;'), "getPublicUrl must generate clean canonical URL with slash");
+  
+  // Explicit view=public prevents auto-promotion to desk
+  assert.ok(appJsCode.includes('!urlHasExplicitPublic'), "subscribeFirestore and syncUserShopSelection must never auto-promote when view=public");
+  
+  // Printable Poster UI synchronization function
+  assert.ok(appJsCode.includes('function updatePosterUI()'), "app.js must define updatePosterUI");
+  assert.ok(appJsCode.includes('updatePosterUI();'), "updatePosterUI must be wired to switchView, config and Firestore updates");
+
+  // Poster elements must exist in index.html with generic fallbacks
+  assert.ok(htmlCode.includes('id="poster-tagline"'), "index.html missing id='poster-tagline'");
+  assert.ok(htmlCode.includes('onclick="copyPublicLink(\'google\')"'), "index.html missing copyPublicLink google channel");
+  assert.ok(htmlCode.includes('onclick="copyPublicLink(\'instagram\')"'), "index.html missing copyPublicLink instagram channel");
+});
+
 // -------------------------------------------------------------------------
 // Tests: Action Permission Matrix
 // -------------------------------------------------------------------------

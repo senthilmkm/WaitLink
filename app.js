@@ -438,7 +438,9 @@ function generateDemoPitch(shopName, industryKey, demoUrl) {
   const name = shopName || preset.defaultShopName;
   const unit = preset.unitLabel || "chairs / stations";
 
-  return `Hi ${name} Team,
+  return `Subject: 30-Second Live Waitlist Demo for ${name} (Stop Walk-Away Revenue Loss)
+
+Hi ${name} Team,
 
 When customers walk into ${name}, see a crowded waiting area, and have no idea how long the wait is... up to 30% quietly turn around and walk away to a competitor.
 
@@ -764,6 +766,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shopParam !== "main-st-barbers") {
       const cleanTitleSlug = shopParam.startsWith("demo-") ? shopParam.replace(/^demo-/, "") : shopParam;
       state.config.shopName = formatSlugToTitle(cleanTitleSlug);
+      state.config.address = "";
+      state.config.phone = "";
+      if (isDemoSlug) {
+        const indKey = detectIndustryFromText(cleanTitleSlug);
+        const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+        state.config.services = [...preset.services];
+        state.config.tagline = preset.tagline;
+        state.config.unitLabel = preset.unitLabel;
+        state.config.clinicalPrivacyEnabled = !!preset.clinicalPrivacyEnabled;
+        state.config.estBaseWaitMin = preset.estBaseWaitMin;
+      } else {
+        state.config.services = [];
+      }
     }
     // Clean queue & history so previous shop state never flashes or leaks
     state.queue = [];
@@ -1331,8 +1346,11 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.address !== undefined) state.config.address = data.address;
       if (data.phone !== undefined) state.config.phone = data.phone;
       if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
-      // Auto-promote owner to Front Desk if they landed on public view or had a pending view request
-      if (state.user && state.user.email && (state.activeView === "public" || state.pendingInitialView)) {
+      // Auto-promote owner to Front Desk ONLY if pendingInitialView is set and URL does not request explicit customer view
+      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
+                                   new URLSearchParams(window.location.search).get("mode") === "public" ||
+                                   new URLSearchParams(window.location.search).get("mode") === "customer";
+      if (!urlHasExplicitPublic && state.user && state.user.email && state.pendingInitialView) {
         const uEmail = state.user.email.toLowerCase().trim();
         const oEmail = (state.config.ownerEmail || "").toLowerCase().trim();
         if (uEmail === oEmail) {
@@ -1358,7 +1376,9 @@ function subscribeFirestore(forceResubscribe = false) {
       if (Array.isArray(data.services) && data.services.length > 0) {
         state.config.services = data.services;
       } else if (isDemo) {
-        state.config.services = [...DEFAULT_DEMO_SERVICES];
+        const indKey = data.demoIndustry || detectIndustryFromText(state.config.slug);
+        const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+        state.config.services = [...preset.services];
       } else {
         state.config.services = [];
       }
@@ -1367,6 +1387,8 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.clinicalPrivacyEnabled !== undefined) state.config.clinicalPrivacyEnabled = !!data.clinicalPrivacyEnabled;
       if (data.timeFormat !== undefined) state.config.timeFormat = data.timeFormat;
       if (data.dateFormat !== undefined) state.config.dateFormat = data.dateFormat;
+      if (data.tagline !== undefined) state.config.tagline = data.tagline;
+      if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
@@ -1375,6 +1397,7 @@ function subscribeFirestore(forceResubscribe = false) {
         }
       }
       updateConfigUI();
+      updatePosterUI();
       renderAll();
 
       if (newCheckInDetected && state.currentView === "desk") {
@@ -1401,16 +1424,21 @@ function subscribeFirestore(forceResubscribe = false) {
               } else {
                 state.config.enableServices = isDemoFallback;
               }
-              if (Array.isArray(data.services)) {
+              if (Array.isArray(data.services) && data.services.length > 0) {
                 state.config.services = data.services;
               } else if (isDemoFallback) {
-                state.config.services = [...DEFAULT_DEMO_SERVICES];
+                const indKey = data.demoIndustry || detectIndustryFromText(state.config.slug);
+                const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+                state.config.services = [...preset.services];
               } else {
                 state.config.services = [];
               }
               if (Array.isArray(data.queue)) state.queue = data.queue;
               if (Array.isArray(data.history)) state.history = data.history;
+              if (data.tagline !== undefined) state.config.tagline = data.tagline;
+              if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
               updateConfigUI();
+              updatePosterUI();
               renderAll();
 
               // Auto-heal / alias: If authenticated as the owner, cleanly migrate to canonical slug ID and purge legacy ID
@@ -1516,6 +1544,17 @@ function loadConfig() {
       state.config.shopName = formatSlugToTitle(cleanTitleSlug);
       state.config.address = "";
       state.config.phone = "";
+      if (isDemoSlug) {
+        const indKey = detectIndustryFromText(cleanTitleSlug);
+        const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+        state.config.services = [...preset.services];
+        state.config.tagline = preset.tagline;
+        state.config.unitLabel = preset.unitLabel;
+        state.config.clinicalPrivacyEnabled = !!preset.clinicalPrivacyEnabled;
+        state.config.estBaseWaitMin = preset.estBaseWaitMin;
+      } else {
+        state.config.services = [];
+      }
     }
   }
 
@@ -1583,7 +1622,7 @@ function getPublicUrl() {
   const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   const baseUrl = isLocal ? window.location.origin : "https://waitlink.app";
   const cleanSlug = slugify(state.config.slug || state.config.shopName || "main-st-barbers");
-  return `${baseUrl}?s=${encodeURIComponent(cleanSlug)}&view=public`;
+  return `${baseUrl}/?s=${encodeURIComponent(cleanSlug)}&view=public`;
 }
 
 function setElText(id, text) {
@@ -1886,7 +1925,35 @@ function updateConfigUI() {
     } else {
       statusLabel.textContent = "Local Standalone Mode";
     }
+  updatePosterUI();
+}
+
+// Dedicated High-Fidelity Printable Window Poster UI & QR Synchronizer
+function updatePosterUI() {
+  const shopName = (state.config.shopName || "Live Walk-In Queue").trim();
+  const publicUrl = getPublicUrl();
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+  const tagline = (state.config.tagline || (isClinical ? "Patient Care & Walk-Ins" : "Walk-Ins Welcome")).toUpperCase();
+
+  setElText("poster-shop-name", shopName.toUpperCase());
+  const taglineEl = document.getElementById("poster-tagline");
+  if (taglineEl) taglineEl.textContent = tagline;
+  setElText("poster-url-text", publicUrl.replace(/^https?:\/\//, ""));
+
+  const logoUrl = state.config.logoUrl || "";
+  const isPaid = isPaidTier();
+  const posterLogo = document.getElementById("poster-shop-logo");
+  if (posterLogo) {
+    if (logoUrl && isPaid) {
+      posterLogo.src = logoUrl;
+      posterLogo.classList.remove("hidden");
+    } else {
+      posterLogo.src = "";
+      posterLogo.classList.add("hidden");
+    }
   }
+
+  generateQRCode();
 }
 
 // Helper to get shop-specific local storage keys
@@ -1904,7 +1971,8 @@ function loadData() {
   const savedQueue = localStorage.getItem(queueKey);
   const savedHistory = localStorage.getItem(historyKey);
 
-  const isMainStDemo = (state.config.slug === "main-st-barbers") || state.isDemoMode;
+  const isMainStDemo = (state.config.slug === "main-st-barbers");
+  const isDemoSlug = state.config.slug && (state.config.slug.startsWith("demo-") || state.config.slug.includes("demo"));
 
   if (savedQueue) {
     try { state.queue = JSON.parse(savedQueue); } catch (e) { state.queue = []; }
@@ -1916,6 +1984,10 @@ function loadData() {
       { id: "q2", customerName: "ragu", checkedInAt: now - 0.63 * 60 * 1000 },
       { id: "q3", customerName: "deeena", checkedInAt: now - 0.08 * 60 * 1000 }
     ];
+  } else if (isDemoSlug) {
+    const indKey = detectIndustryFromText(state.config.slug);
+    const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+    state.queue = preset.generateQueue ? preset.generateQueue(Date.now()) : [];
   } else {
     // Clean empty queue for real custom shop
     state.queue = [];
@@ -1936,6 +2008,10 @@ function loadData() {
       { id: "h5", customerName: "Elena R.", status: "cancelled", cancelledBy: "customer", checkedInAt: now - oneDay - 240 * 60 * 1000, cancelledAt: now - oneDay - 235 * 60 * 1000, waitDurationMin: 0 },
       { id: "h6", customerName: "Michael B.", status: "called", checkedInAt: now - 2 * oneDay - 300 * 60 * 1000, calledAt: now - 2 * oneDay - 280 * 60 * 1000, waitDurationMin: 20 }
     ];
+  } else if (isDemoSlug) {
+    const indKey = detectIndustryFromText(state.config.slug);
+    const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+    state.history = preset.generateHistory ? preset.generateHistory(Date.now()) : [];
   } else {
     // Clean empty history for real custom shop
     state.history = [];
@@ -5372,16 +5448,12 @@ function switchView(viewName, isSilent = false) {
     }
   }
 
-  // Handle Demo Mode Banner display (Available for all demo sandboxes)
+  // Handle Demo Mode Banner display (ONLY for generic Main St Barbers sandbox)
   const demoBanner = document.getElementById("demo-mode-banner");
   if (demoBanner) {
-    const isDemoSandbox = (state.isDemoMode || state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo") || !!state.config.isDemoShop);
-    if (isDemoSandbox && viewName !== "home") {
+    const isMainStSandbox = !state.user && state.config.slug === "main-st-barbers";
+    if (isMainStSandbox && viewName !== "home" && viewName !== "public") {
       demoBanner.classList.remove("hidden");
-      const bannerText = document.getElementById("demo-banner-text");
-      if (bannerText) {
-        bannerText.innerHTML = `You are exploring <strong>${escapeHtml(state.config.shopName || 'Demo Sandbox')}</strong>. Test calling customers, checking in, or 1-tap SMS alerts!`;
-      }
     } else {
       demoBanner.classList.add("hidden");
     }
@@ -5425,7 +5497,7 @@ function switchView(viewName, isSilent = false) {
   }
 
   if (viewName === "poster") {
-    generateQRCode();
+    updatePosterUI();
   }
 }
 
@@ -6103,13 +6175,18 @@ function generateQRCode() {
 }
 
 // Copy Public Link Helper
-function copyPublicLink() {
+function copyPublicLink(channel = "public") {
   const publicUrl = getPublicUrl();
-  navigator.clipboard.writeText(publicUrl).then(() => {
-    showToast("Public wait link copied to clipboard!");
-  }).catch(() => {
-    showToast("Link: " + publicUrl);
-  });
+  const label = channel === "google" ? "Google Business Profile waitlist" : (channel === "instagram" ? "Instagram bio waitlist" : "Public customer");
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(publicUrl).then(() => {
+      showToast(`🔗 ${label} link copied to clipboard!`);
+    }).catch(() => {
+      prompt(`Copy ${label} Link:`, publicUrl);
+    });
+  } else {
+    prompt(`Copy ${label} Link:`, publicUrl);
+  }
 }
 
 // Settings Modal
@@ -6355,8 +6432,11 @@ function syncUserShopSelection(fetchedShops, isSuper) {
       if (currentOwned.name || currentOwned.shopName) {
         state.config.shopName = currentOwned.name || currentOwned.shopName;
       }
-      // If user was on public view or had pendingInitialView, promote to desk!
-      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+      // If user had pendingInitialView or landed on home, promote to desk ONLY if not explicit public view request!
+      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
+                                   new URLSearchParams(window.location.search).get("mode") === "public" ||
+                                   new URLSearchParams(window.location.search).get("mode") === "customer";
+      if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
         switchView(targetView);
@@ -6367,7 +6447,7 @@ function syncUserShopSelection(fetchedShops, isSuper) {
     const nonDemoShop = fetchedShops.find(s => s.slug !== "main-st-barbers");
     if (nonDemoShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
       inspectShop(nonDemoShop.slug, true);
-      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+      if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
         switchView(targetView);
@@ -7835,6 +7915,22 @@ function inspectShop(slug, isSilent = false) {
   const isDemoSlug = (slug === "main-st-barbers") || String(slug).startsWith("demo-") || String(slug).includes("demo");
   state.isDemoMode = isDemoSlug;
 
+  if (isDemoSlug && slug !== "main-st-barbers") {
+    const cleanTitle = slug.startsWith("demo-") ? slug.replace(/^demo-/, "") : slug;
+    const indKey = detectIndustryFromText(cleanTitle);
+    const preset = DEMO_INDUSTRY_PRESETS[indKey] || DEMO_INDUSTRY_PRESETS.general;
+    state.config.services = [...preset.services];
+    state.config.tagline = preset.tagline;
+    state.config.unitLabel = preset.unitLabel;
+    state.config.clinicalPrivacyEnabled = !!preset.clinicalPrivacyEnabled;
+    state.config.estBaseWaitMin = preset.estBaseWaitMin;
+  } else if (slug !== "main-st-barbers") {
+    state.config.services = [];
+    state.config.address = "";
+    state.config.phone = "";
+    state.config.promoText = "";
+  }
+
   loadData();
   saveConfig();
 
@@ -7848,7 +7944,7 @@ function inspectShop(slug, isSilent = false) {
   } catch (e) {}
 
   renderAll();
-  generateQRCode();
+  updatePosterUI();
   if (!isSilent) {
     switchView("desk");
     showToast(`💈 Switched to "${targetName}"`);

@@ -1140,14 +1140,14 @@
                 <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                   <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">📍 GOOGLE MAPS / BUSINESS PROFILE</div>
                   <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Add to your Google Business Profile as your official "Check Wait Time" link.</div>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink()" style="width: 100%;">🔗 Copy Google Maps Link</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('google')" style="width: 100%;">🔗 Copy Google Maps Link</button>
                 </div>
 
                 <!-- Link 2: Instagram / Facebook Bio -->
                 <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                   <div style="font-size: 0.75rem; color: #ec4899; font-weight: 700; text-transform: uppercase;">📸 INSTAGRAM / SOCIAL BIO</div>
                   <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Paste in your Instagram bio link ("Tap to view today's live wait time").</div>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink()" style="width: 100%; border-color: rgba(236, 72, 153, 0.4); color: #ec4899;">📸 Copy Instagram Bio Link</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('instagram')" style="width: 100%; border-color: rgba(236, 72, 153, 0.4); color: #ec4899;">📸 Copy Instagram Bio Link</button>
                 </div>
 
                 <!-- Link 3: Storefront QR Poster -->
@@ -1250,7 +1250,7 @@
           <div class="public-header">
             <img id="public-shop-logo" class="public-logo-img hidden" alt="Shop Logo">
             <div class="shop-badge">LIVE WALK-IN QUEUE</div>
-            <h1 class="public-shop-name" id="public-shop-name">Main St Barbers</h1>
+            <h1 class="public-shop-name" id="public-shop-name">Live Walk-In Queue</h1>
 
             <!-- Store Hours Banner (Placed immediately below shop name) -->
             <div id="public-hours-box" style="margin-top: 0.35rem; font-size: 0.8rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; background: rgba(16, 185, 129, 0.08); padding: 0.22rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.25);">
@@ -1426,21 +1426,30 @@
 
     <!-- VIEW 4: PRINTABLE WINDOW POSTER -->
     <section id="view-poster" class="view-panel hidden">
-      <div class="poster-actions no-print">
+      <div class="poster-actions no-print" style="display: flex; gap: 0.6rem; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
         <button class="btn btn-primary btn-lg" onclick="window.print()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
           Print Window Poster
         </button>
-        <p class="hint-text">Designed to print cleanly on 8.5" x 11" paper for your front desk or window.</p>
+        <button type="button" class="btn btn-secondary btn-lg" onclick="switchView('desk')">
+          ← Front Desk
+        </button>
+        <button type="button" class="btn btn-secondary btn-lg" onclick="switchView('owner')">
+          ⚙️ Shop Settings
+        </button>
+        <button type="button" class="btn btn-secondary btn-lg" onclick="window.open(getPublicUrl(), '_blank')" style="border-color: #06b6d4; color: #06b6d4;">
+          👁️ Preview Live Customer Card ↗
+        </button>
       </div>
+      <p class="hint-text no-print" style="text-align: center; margin-bottom: 1.25rem;">Designed to print cleanly on 8.5" x 11" paper for your front desk or window.</p>
 
       <!-- Printable Poster Content -->
       <div class="printable-poster" id="printable-area">
         <div class="poster-header">
           <img id="poster-shop-logo" class="poster-logo-img hidden" alt="Shop Logo">
           <div class="poster-icon">⏳</div>
-          <h1 id="poster-shop-name">MAIN ST BARBERS</h1>
-          <div class="poster-tagline">WALK-INS WELCOME</div>
+          <h1 id="poster-shop-name">LIVE WALK-IN QUEUE</h1>
+          <div class="poster-tagline" id="poster-tagline">WALK-INS WELCOME</div>
         </div>
 
         <div class="poster-body">
@@ -1448,12 +1457,12 @@
           <p class="poster-instruction">Scan this QR code with your phone camera to see today's live average wait time:</p>
 
           <div class="qr-container">
-            <div id="qrcode-box"></div>
+            <div id="qrcode-box" style="cursor: pointer;" title="Click to test live customer card" onclick="window.open(getPublicUrl(), '_blank')"></div>
           </div>
 
           <div class="poster-url-display">
             <span>Or visit:</span>
-            <strong id="poster-url-text">waitlink.app/s/main-st-barbers</strong>
+            <strong id="poster-url-text" style="cursor: pointer;" title="Click to test live customer card" onclick="window.open(getPublicUrl(), '_blank')">waitlink.app</strong>
           </div>
         </div>
 
@@ -3464,6 +3473,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=6.8"></script>
+  <script src="app.js?v=7.0"></script>
 </body>
 </html>
