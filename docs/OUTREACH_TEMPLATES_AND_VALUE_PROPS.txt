@@ -12,8 +12,9 @@ TABLE OF CONTENTS
 3. Template 2: Healthcare & Clinic Outreach (Urgent Care, Dental, Physio, Wellness)
 4. Template 3: Short & Punchy Social DM (LinkedIn, Instagram, Facebook)
 5. Template 4: Polite Follow-Up Note (Sent 4-5 Days Later)
-6. Key Value Props & Benefit Cheat Sheet (Front Desk, Owners, End Customers)
-7. Handling Common Objections (Quick Reference Answers)
+6. Template 5: 12-Liner Outreach for Auto Repair & Tire Shops (Paper/Clipboard to Digital)
+7. Key Value Props & Benefit Cheat Sheet (Front Desk, Owners, End Customers)
+8. Handling Common Objections (Quick Reference Answers)
 
 
 ================================================================================
@@ -65,7 +66,7 @@ Here is how it keeps customers happy and your lobby calm:
    • Accessible Pricing: 100% Free Starter tier to start, and just $15/mo for Pro (unlimited SMS alerts & custom branding)—a fraction of legacy kiosk systems.
 
 You can test a 30-second live demo right on your phone without creating an account or inputting any credit card:
-👉 Try the Live Interactive Demo Here: https://waitlink-app-8821.web.app/?shop=main-st-barbers
+👉 Try the Live Interactive Demo Here: https://waitlink.app/?shop=main-st-barbers
 
 If you already have a smooth waitlist solution in place or are completely satisfied with your current walk-in process, please feel free to disregard this note. 
 
@@ -153,6 +154,29 @@ Best,
 
 [Your Name]
 WaitLink
+
+
+================================================================================
+5. TEMPLATE 5: 12-LINER OUTREACH FOR AUTO REPAIR & TIRE SHOPS
+(Target: Shops managing walk-ins by paper clipboard, whiteboards, or phone calls)
+================================================================================
+
+SUBJECT: Quick question about walk-in tire & service waits at [Shop Name]
+
+Hi [Owner / Service Manager Name],
+
+1. Running a busy auto or tire shop means your service bays and lifts are constantly moving, but managing walk-in drivers on a paper clipboard or phone notes creates two silent revenue leaks every single day.
+2. Problem #1 — The Parking Lot Walk-Away: A driver pulls in for an oil change, tire patch, or brake check, sees 4 people waiting in a cramped lobby with zero idea how long it will take, and drives straight to a competitor down the street (costing you $80–$400 in lost ticket revenue).
+3. Problem #2 — The Service Counter Interruption Trap: Your service advisors are interrupted every five minutes by ringing phones or pacing customers asking "Is my car up on the lift yet?", pulling them away from billing work, writing estimates, and ordering parts.
+4. Losing just one or two walk-in tickets a week quietly bleeds $400 to $1,600+ a month in high-margin shop revenue that drove right past your bays.
+5. That is why spending a modest $15/month for a modern digital queue like WaitLink (https://waitlink.app) pays for itself on day one.
+6. 🖨️ 1-Click QR Code & Google Business Link: Auto-generate custom printable QR posters for your front counter and window, or post your live queue link directly on your Google Business Profile so drivers can check live bay wait times before driving over and join the line remotely.
+7. ⚡ 10-Second Counter Check-In: For drivers who walk right in, service advisors log their name, phone, and vehicle/service in two quick taps on any existing phone, tablet, or shop computer.
+8. 📱 Live Mobile Tracker & Lobby TV Board: Drivers see their real-time spot in line on their smartphone (or on your lobby TV screen)—freeing them to grab coffee or run errands instead of pacing your waiting room.
+9. 💬 Automated 1-Tap SMS Dispatch: The moment a bay or technician frees up, one click sends an automated text: "Your vehicle is up next! Please pull up to bay reception."
+10. At just $15/month for unlimited queue tracking and automated SMS alerts, saving even a single lost tire mount or oil change covers an entire year of WaitLink.
+11. 👉 You can test the 30-second live demo right on your phone without creating an account: https://waitlink.app/?shop=main-st-barbers
+12. If you are already completely comfortable with your current paper sheet and phone call process, please feel free to disregard this note!
 
 
 ================================================================================

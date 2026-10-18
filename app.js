@@ -181,6 +181,314 @@ async function hashStaffPasscode(passcode) {
   return sha256(clean);
 }
 
+// Industry Catalog & Demo Presets for 1-Click Dynamic Prospect Demonstration (Option A)
+const DEMO_INDUSTRY_PRESETS = {
+  auto: {
+    id: "auto",
+    label: "Auto Repair & Tire Shop",
+    icon: "🛞",
+    defaultShopName: "Apex Tire & Auto",
+    tagline: "Live Service Bay Queue & Vehicle Status",
+    unitLabel: "Bays / Lifts",
+    estBaseWaitMin: 25,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_auto_1", name: "Synthetic Oil & Filter", estDurationMin: 20, icon: "🛢️", enabled: true },
+      { id: "srv_auto_2", name: "4-Tire Mount & Balance", estDurationMin: 40, icon: "🛞", enabled: true },
+      { id: "srv_auto_3", name: "Brake Pad Inspection", estDurationMin: 25, icon: "🛑", enabled: true },
+      { id: "srv_auto_4", name: "Flat Tire Patch / Repair", estDurationMin: 15, icon: "🔧", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Marcus T.", phone: "(555) 234-8901", service: "4-Tire Mount & Balance", selectedServiceName: "4-Tire Mount & Balance", selectedServiceDurationMin: 40, notes: "Ford F-150 (Silver)", checkedInAt: now - 18 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Sarah L.", phone: "(555) 789-4321", service: "Synthetic Oil & Filter", selectedServiceName: "Synthetic Oil & Filter", selectedServiceDurationMin: 20, notes: "Honda Civic (White)", checkedInAt: now - 8 * 60 * 1000 },
+      { id: "demo_q3", customerName: "David K.", phone: "(555) 456-1122", service: "Brake Pad Inspection", selectedServiceName: "Brake Pad Inspection", selectedServiceDurationMin: 25, notes: "Toyota RAV4 (Blue)", checkedInAt: now - 2 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "James P.", service: "Synthetic Oil & Filter", status: "called", checkedInAt: now - 55 * 60 * 1000, calledAt: now - 35 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h2", customerName: "Robert C.", service: "4-Tire Mount & Balance", status: "called", checkedInAt: now - 95 * 60 * 1000, calledAt: now - 60 * 60 * 1000, waitDurationMin: 35 },
+        { id: "demo_h3", customerName: "Alex W.", service: "Flat Tire Patch", status: "cancelled", cancelledBy: "customer", checkedInAt: now - 120 * 60 * 1000, cancelledAt: now - 110 * 60 * 1000, waitDurationMin: 0 },
+        { id: "demo_h4", customerName: "Elena R.", service: "Brake Pad Inspection", status: "called", checkedInAt: now - oneDay - 180 * 60 * 1000, calledAt: now - oneDay - 155 * 60 * 1000, waitDurationMin: 25 },
+        { id: "demo_h5", customerName: "Michael B.", service: "Synthetic Oil & Filter", status: "called", checkedInAt: now - oneDay - 240 * 60 * 1000, calledAt: now - oneDay - 220 * 60 * 1000, waitDurationMin: 20 }
+      ];
+    }
+  },
+  salon: {
+    id: "salon",
+    label: "Barbershop & Hair Salon",
+    icon: "💈",
+    defaultShopName: "Crown & Blade Barbers",
+    tagline: "Live Styling Chair & Barber Queue",
+    unitLabel: "Chairs / Stations",
+    estBaseWaitMin: 20,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_barber_1", name: "Men's Skin Fade / Haircut", estDurationMin: 25, icon: "✂️", enabled: true },
+      { id: "srv_barber_2", name: "Haircut & Hot Towel Beard Trim", estDurationMin: 35, icon: "💈", enabled: true },
+      { id: "srv_barber_3", name: "Beard Sculpt & Razor Lineup", estDurationMin: 15, icon: "🧔", enabled: true },
+      { id: "srv_barber_4", name: "Deluxe Haircut & Wash", estDurationMin: 30, icon: "🧴", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Andre W.", phone: "(555) 890-1234", service: "Men's Skin Fade / Haircut", selectedServiceName: "Men's Skin Fade / Haircut", selectedServiceDurationMin: 25, checkedInAt: now - 15 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Elena R.", phone: "(555) 678-9012", service: "Deluxe Haircut & Wash", selectedServiceName: "Deluxe Haircut & Wash", selectedServiceDurationMin: 30, checkedInAt: now - 7 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Marcus S.", phone: "(555) 345-6789", service: "Haircut & Hot Towel Beard Trim", selectedServiceName: "Haircut & Hot Towel Beard Trim", selectedServiceDurationMin: 35, checkedInAt: now - 1 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "James P.", service: "Men's Skin Fade", status: "called", checkedInAt: now - 45 * 60 * 1000, calledAt: now - 25 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h2", customerName: "Chris K.", service: "Beard Sculpt", status: "called", checkedInAt: now - 35 * 60 * 1000, calledAt: now - 17 * 60 * 1000, waitDurationMin: 18 },
+        { id: "demo_h3", customerName: "Alex W.", service: "Haircut & Wash", status: "cancelled", cancelledBy: "customer", checkedInAt: now - 50 * 60 * 1000, cancelledAt: now - 40 * 60 * 1000, waitDurationMin: 0 },
+        { id: "demo_h4", customerName: "David L.", service: "Men's Skin Fade", status: "called", checkedInAt: now - oneDay - 180 * 60 * 1000, calledAt: now - oneDay - 160 * 60 * 1000, waitDurationMin: 20 }
+      ];
+    }
+  },
+  clinic: {
+    id: "clinic",
+    label: "Medical, Urgent Care & Dental",
+    icon: "🏥",
+    defaultShopName: "Metro Urgent Care & Dental",
+    tagline: "Patient Triage & Exam Room Queue",
+    unitLabel: "Exam Rooms",
+    estBaseWaitMin: 20,
+    clinicalPrivacyEnabled: true, // HIPAA Privacy Auto-Enabled!
+    services: [
+      { id: "srv_med_1", name: "Walk-In Urgent Care Triage", estDurationMin: 20, icon: "🩺", enabled: true },
+      { id: "srv_med_2", name: "Routine Dental Cleaning", estDurationMin: 30, icon: "🦷", enabled: true },
+      { id: "srv_med_3", name: "Flu / Cold Symptoms Check", estDurationMin: 15, icon: "🌡️", enabled: true },
+      { id: "srv_med_4", name: "X-Ray / Diagnostic Imaging", estDurationMin: 25, icon: "🩻", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Marcus T.", phone: "(555) 901-2345", service: "Walk-In Urgent Care Triage", selectedServiceName: "Walk-In Urgent Care Triage", selectedServiceDurationMin: 20, checkedInAt: now - 14 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Sarah L.", phone: "(555) 345-6789", service: "Routine Dental Cleaning", selectedServiceName: "Routine Dental Cleaning", selectedServiceDurationMin: 30, checkedInAt: now - 6 * 60 * 1000 },
+      { id: "demo_q3", customerName: "David K.", phone: "(555) 456-7890", service: "Flu / Cold Symptoms Check", selectedServiceName: "Flu / Cold Symptoms Check", selectedServiceDurationMin: 15, checkedInAt: now - 1 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Patient J.P.", service: "Urgent Care Triage", status: "called", checkedInAt: now - 60 * 60 * 1000, calledAt: now - 40 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h2", customerName: "Patient E.R.", service: "Routine Dental Cleaning", status: "called", checkedInAt: now - 110 * 60 * 1000, calledAt: now - 85 * 60 * 1000, waitDurationMin: 25 },
+        { id: "demo_h3", customerName: "Patient M.B.", service: "X-Ray Imaging", status: "called", checkedInAt: now - oneDay - 140 * 60 * 1000, calledAt: now - oneDay - 120 * 60 * 1000, waitDurationMin: 20 }
+      ];
+    }
+  },
+  pet: {
+    id: "pet",
+    label: "Pet Grooming & Veterinary",
+    icon: "🐕",
+    defaultShopName: "Paws & Claws Grooming Spa",
+    tagline: "Live Pet Grooming & Exam Queue",
+    unitLabel: "Grooming Tubs / Tables",
+    estBaseWaitMin: 30,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_pet_1", name: "Full Groom, Bath & Fluff", estDurationMin: 45, icon: "🛁", enabled: true },
+      { id: "srv_pet_2", name: "Nail Grind & Ear Cleaning", estDurationMin: 15, icon: "🐾", enabled: true },
+      { id: "srv_pet_3", name: "De-Shedding & Brush-Out", estDurationMin: 30, icon: "🐕", enabled: true },
+      { id: "srv_pet_4", name: "Walk-in Vaccine / Health Check", estDurationMin: 20, icon: "💉", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Bella (Golden Retriever)", phone: "(555) 234-9988", service: "Full Groom, Bath & Fluff", selectedServiceName: "Full Groom, Bath & Fluff", selectedServiceDurationMin: 45, checkedInAt: now - 22 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Milo (French Bulldog)", phone: "(555) 345-1122", service: "Nail Grind & Ear Cleaning", selectedServiceName: "Nail Grind & Ear Cleaning", selectedServiceDurationMin: 15, checkedInAt: now - 11 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Luna (Ragdoll Cat)", phone: "(555) 567-8899", service: "De-Shedding & Brush-Out", selectedServiceName: "De-Shedding & Brush-Out", selectedServiceDurationMin: 30, checkedInAt: now - 3 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Charlie (Labrador)", service: "Full Groom & Bath", status: "called", checkedInAt: now - 70 * 60 * 1000, calledAt: now - 35 * 60 * 1000, waitDurationMin: 35 },
+        { id: "demo_h2", customerName: "Daisy (Poodle)", service: "Nail Grind", status: "called", checkedInAt: now - 45 * 60 * 1000, calledAt: now - 30 * 60 * 1000, waitDurationMin: 15 },
+        { id: "demo_h3", customerName: "Rocky (German Shepherd)", service: "De-Shedding", status: "called", checkedInAt: now - oneDay - 160 * 60 * 1000, calledAt: now - oneDay - 130 * 60 * 1000, waitDurationMin: 30 }
+      ];
+    }
+  },
+  restaurant: {
+    id: "restaurant",
+    label: "Restaurants, Cafes & Food Trucks",
+    icon: "🍽️",
+    defaultShopName: "The Foundry Grill & Bistro",
+    tagline: "Live Host Stand & Table Seating Waitlist",
+    unitLabel: "Tables & Patios",
+    estBaseWaitMin: 15,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_rst_1", name: "Indoor Table for 2", estDurationMin: 15, icon: "🍽️", enabled: true },
+      { id: "srv_rst_2", name: "Indoor Table for 4+", estDurationMin: 25, icon: "🥂", enabled: true },
+      { id: "srv_rst_3", name: "Patio / Outdoor Seating", estDurationMin: 20, icon: "☀️", enabled: true },
+      { id: "srv_rst_4", name: "Bar High-Top (Quick Seat)", estDurationMin: 10, icon: "🍸", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Miller Party (4 guests)", phone: "(555) 432-1098", service: "Indoor Table for 4+", selectedServiceName: "Indoor Table for 4+", selectedServiceDurationMin: 25, checkedInAt: now - 16 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Sarah K. (2 guests)", phone: "(555) 765-4321", service: "Patio / Outdoor Seating", selectedServiceName: "Patio / Outdoor Seating", selectedServiceDurationMin: 20, checkedInAt: now - 9 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Dave & Alex (2 guests)", phone: "(555) 876-5432", service: "Bar High-Top (Quick Seat)", selectedServiceName: "Bar High-Top (Quick Seat)", selectedServiceDurationMin: 10, checkedInAt: now - 2 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Watson Party (3)", service: "Indoor Table for 4+", status: "called", checkedInAt: now - 45 * 60 * 1000, calledAt: now - 25 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h2", customerName: "Taylor (2)", service: "Patio Seating", status: "called", checkedInAt: now - 35 * 60 * 1000, calledAt: now - 18 * 60 * 1000, waitDurationMin: 17 },
+        { id: "demo_h3", customerName: "Garcia Party (6)", service: "Indoor Table for 4+", status: "called", checkedInAt: now - oneDay - 120 * 60 * 1000, calledAt: now - oneDay - 95 * 60 * 1000, waitDurationMin: 25 }
+      ];
+    }
+  },
+  repair: {
+    id: "repair",
+    label: "Phone, Tablet & Computer Repair",
+    icon: "📱",
+    defaultShopName: "QuickFix Tech & Device Repair",
+    tagline: "Live Diagnostic & Tech Bench Queue",
+    unitLabel: "Tech Benches",
+    estBaseWaitMin: 20,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_rpr_1", name: "iPhone / Android Screen Swap", estDurationMin: 25, icon: "📱", enabled: true },
+      { id: "srv_rpr_2", name: "Battery Health Replacement", estDurationMin: 20, icon: "🔋", enabled: true },
+      { id: "srv_rpr_3", name: "Water Damage Diagnostic", estDurationMin: 30, icon: "💧", enabled: true },
+      { id: "srv_rpr_4", name: "Charging Port & Speaker Fix", estDurationMin: 20, icon: "🔌", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Jason B. (iPhone 14 Pro)", phone: "(555) 654-3210", service: "iPhone / Android Screen Swap", selectedServiceName: "iPhone / Android Screen Swap", selectedServiceDurationMin: 25, checkedInAt: now - 17 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Emma V. (MacBook Air)", phone: "(555) 543-2109", service: "Battery Health Replacement", selectedServiceName: "Battery Health Replacement", selectedServiceDurationMin: 20, checkedInAt: now - 7 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Carlos R. (Galaxy S23)", phone: "(555) 432-1987", service: "Water Damage Diagnostic", selectedServiceName: "Water Damage Diagnostic", selectedServiceDurationMin: 30, checkedInAt: now - 2 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Chloe M. (iPad)", service: "Screen Swap", status: "called", checkedInAt: now - 50 * 60 * 1000, calledAt: now - 25 * 60 * 1000, waitDurationMin: 25 },
+        { id: "demo_h2", customerName: "Tyler S. (iPhone 13)", service: "Battery Swap", status: "called", checkedInAt: now - 40 * 60 * 1000, calledAt: now - 20 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h3", customerName: "Liam D. (Dell XPS)", service: "Diagnostic", status: "called", checkedInAt: now - oneDay - 140 * 60 * 1000, calledAt: now - oneDay - 110 * 60 * 1000, waitDurationMin: 30 }
+      ];
+    }
+  },
+  tattoo: {
+    id: "tattoo",
+    label: "Tattoo & Piercing Studios",
+    icon: "🎨",
+    defaultShopName: "Black Lotus Tattoo Studio",
+    tagline: "Live Artist Station & Piercing Waitlist",
+    unitLabel: "Artist Stations",
+    estBaseWaitMin: 30,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_tat_1", name: "Walk-In Flash Tattoo (Small)", estDurationMin: 35, icon: "🖋️", enabled: true },
+      { id: "srv_tat_2", name: "Ear / Nose Piercing", estDurationMin: 15, icon: "💎", enabled: true },
+      { id: "srv_tat_3", name: "Custom Piece Consultation", estDurationMin: 20, icon: "🎨", enabled: true },
+      { id: "srv_tat_4", name: "Tattoo Touch-Up & Bandage", estDurationMin: 20, icon: "🩹", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Tyler S.", phone: "(555) 321-0987", service: "Walk-In Flash Tattoo (Small)", selectedServiceName: "Walk-In Flash Tattoo (Small)", selectedServiceDurationMin: 35, notes: "Forearm dagger flash", checkedInAt: now - 25 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Chloe M.", phone: "(555) 210-9876", service: "Ear / Nose Piercing", selectedServiceName: "Ear / Nose Piercing", selectedServiceDurationMin: 15, notes: "Double helix", checkedInAt: now - 12 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Alex P.", phone: "(555) 109-8765", service: "Custom Piece Consultation", selectedServiceName: "Custom Piece Consultation", selectedServiceDurationMin: 20, notes: "Sleeve concept", checkedInAt: now - 3 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Jordan K.", service: "Flash Tattoo", status: "called", checkedInAt: now - 65 * 60 * 1000, calledAt: now - 30 * 60 * 1000, waitDurationMin: 35 },
+        { id: "demo_h2", customerName: "Sam R.", service: "Nose Piercing", status: "called", checkedInAt: now - 35 * 60 * 1000, calledAt: now - 20 * 60 * 1000, waitDurationMin: 15 },
+        { id: "demo_h3", customerName: "Maya L.", service: "Consultation", status: "called", checkedInAt: now - oneDay - 150 * 60 * 1000, calledAt: now - oneDay - 130 * 60 * 1000, waitDurationMin: 20 }
+      ];
+    }
+  },
+  general: {
+    id: "general",
+    label: "General Walk-In Service Counter",
+    icon: "🏢",
+    defaultShopName: "Downtown Service Center",
+    tagline: "Live Customer Service Desk Queue",
+    unitLabel: "Service Counters",
+    estBaseWaitMin: 15,
+    clinicalPrivacyEnabled: false,
+    services: [
+      { id: "srv_gen_1", name: "Express Service Desk", estDurationMin: 15, icon: "⚡", enabled: true },
+      { id: "srv_gen_2", name: "General Intake & Advisory", estDurationMin: 20, icon: "📋", enabled: true },
+      { id: "srv_gen_3", name: "Document / Order Pickup", estDurationMin: 10, icon: "📦", enabled: true }
+    ],
+    generateQueue: (now = Date.now()) => [
+      { id: "demo_q1", customerName: "Ticket #101", phone: "(555) 111-2233", service: "Express Service Desk", selectedServiceName: "Express Service Desk", selectedServiceDurationMin: 15, checkedInAt: now - 12 * 60 * 1000 },
+      { id: "demo_q2", customerName: "Ticket #102", phone: "(555) 222-3344", service: "General Intake & Advisory", selectedServiceName: "General Intake & Advisory", selectedServiceDurationMin: 20, checkedInAt: now - 5 * 60 * 1000 },
+      { id: "demo_q3", customerName: "Ticket #103", phone: "(555) 333-4455", service: "Document / Order Pickup", selectedServiceName: "Document / Order Pickup", selectedServiceDurationMin: 10, checkedInAt: now - 1 * 60 * 1000 }
+    ],
+    generateHistory: (now = Date.now()) => {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return [
+        { id: "demo_h1", customerName: "Ticket #098", service: "Express Service", status: "called", checkedInAt: now - 40 * 60 * 1000, calledAt: now - 25 * 60 * 1000, waitDurationMin: 15 },
+        { id: "demo_h2", customerName: "Ticket #099", service: "Intake", status: "called", checkedInAt: now - 35 * 60 * 1000, calledAt: now - 15 * 60 * 1000, waitDurationMin: 20 },
+        { id: "demo_h3", customerName: "Ticket #095", service: "Order Pickup", status: "called", checkedInAt: now - oneDay - 110 * 60 * 1000, calledAt: now - oneDay - 100 * 60 * 1000, waitDurationMin: 10 }
+      ];
+    }
+  }
+};
+
+// Smart trade / industry detector from business title
+function detectIndustryFromText(text) {
+  const t = String(text || "").toLowerCase();
+  if (/tire|auto|lube|mechanic|garage|oil|brake|muffler|transmission|car|motor/.test(t)) return "auto";
+  if (/dental|clinic|doctor|urgent|care|physio|chiro|health|medical|optom|pediatric|dentist/.test(t)) return "clinic";
+  if (/pet|dog|cat|groom|vet|animal|puppy|claw|paw/.test(t)) return "pet";
+  if (/barber|salon|fade|hair|blade|stylist|lash|nail|spa|cut|parlor/.test(t)) return "salon";
+  if (/restaurant|cafe|bistro|grill|pizza|taco|burger|eats|bar|brew|diner|food|kitchen|bbq|pub/.test(t)) return "restaurant";
+  if (/repair|phone|tech|device|screen|computer|pc|laptop|mobile|fix|gadget|iphone|android/.test(t)) return "repair";
+  if (/tattoo|ink|piercing|needle|flash/.test(t)) return "tattoo";
+  return "general";
+}
+
+// Tailored cold outreach email & DM generator for Option A
+function generateDemoPitch(shopName, industryKey, demoUrl) {
+  const preset = DEMO_INDUSTRY_PRESETS[industryKey] || DEMO_INDUSTRY_PRESETS.general;
+  const name = shopName || preset.defaultShopName;
+  const unit = preset.unitLabel || "chairs / stations";
+
+  return `Hi ${name} Team,
+
+When customers walk into ${name}, see a crowded waiting area, and have no idea how long the wait is... up to 30% quietly turn around and walk away to a competitor.
+
+We set up a quick 30-second live demo sandbox specifically tailored for ${name}:
+👉 ${demoUrl}
+
+Here is how WaitLink stops this invisible walk-away revenue leak:
+1. 📋 Counter & Window QR Poster: Walk-ins scan with their camera and join the queue in 2 seconds.
+2. 🌐 Google Maps & Website Links: Customers can join your line before leaving their home or car.
+3. 📱 Zero App Downloads: Opens instantly in their mobile browser—no downloads or passwords.
+4. ⏱️ Live Phone Tracker: Shows their real-time spot in line ("2nd in line") and live wait estimate.
+5. ☕ Wait Anywhere: Customers can wait outside, in their car, or grab a coffee instead of crowding your lobby.
+6. 📲 1-Tap SMS Call: Front desk taps 1 button to text: "Your ${unit} is ready now!"
+7. 🛑 Cuts Desk Interruptions by 80%: Eliminates repetitive "How much longer?" questions.
+8. 💻 Zero Hardware to Buy: Runs on the phones, tablets, and laptops you already own.
+9. 🆓 100% Free Forever Starter Tier: No credit card, no hardware, launches in 2 minutes.
+
+Feel free to click around the live interactive demo we pre-populated for you:
+${demoUrl}
+
+Best regards,
+WaitLink Team (https://waitlink.app)`;
+}
+
+// Initialize dynamic prospect demonstration mode (Option A)
+function initDemoMode(industryKey, customName) {
+  state.isDemoMode = true;
+  let key = String(industryKey || "").toLowerCase().trim();
+  if (!DEMO_INDUSTRY_PRESETS[key]) {
+    key = detectIndustryFromText(customName || key);
+  }
+  const preset = DEMO_INDUSTRY_PRESETS[key] || DEMO_INDUSTRY_PRESETS.general;
+  state.demoIndustry = preset.id;
+  const shopTitle = customName ? customName.trim() : preset.defaultShopName;
+  state.config.shopName = shopTitle;
+  state.config.slug = slugify(shopTitle) || ("demo-" + preset.id);
+  state.config.services = [...preset.services];
+  state.config.estBaseWaitMin = preset.estBaseWaitMin;
+  state.config.clinicalPrivacyEnabled = !!preset.clinicalPrivacyEnabled;
+  state.config.enableServices = true;
+  state.config.tagline = preset.tagline;
+
+  const now = Date.now();
+  state.queue = preset.generateQueue(now);
+  state.history = preset.generateHistory(now);
+
+  saveData();
+  updateConfigUI();
+}
+
 // Default Demo Services (Strictly scoped to Main St Barbers Sandbox only)
 const DEFAULT_DEMO_SERVICES = [
   { id: "srv_demo_1", name: "Men's Haircut", estDurationMin: 20, icon: "✂️", enabled: true },
@@ -192,6 +500,7 @@ const DEFAULT_DEMO_SERVICES = [
 const state = {
   activeView: "home", // "home" | "desk" | "owner" | "public" | "poster" | "superadmin"
   isDemoMode: false,
+  demoIndustry: null,
   user: null, // Logged in user object
   userRole: "Guest", // "SuperAdmin" | "ShopOwner" | "Guest"
   config: {
@@ -1185,10 +1494,13 @@ function loadConfig() {
     state.config.firebaseConfig = DEFAULT_FIREBASE_CONFIG;
   }
 
-  // URL parameter check for custom shop slug and Stripe payment callbacks
+  // URL parameter check for custom shop slug, demo presets, and Stripe payment callbacks
   const params = new URLSearchParams(window.location.search);
+  const demoParam = params.get("demo");
   const urlSlug = params.get("s") || params.get("shop");
-  if (urlSlug) {
+  if (demoParam) {
+    initDemoMode(demoParam, params.get("name") || (urlSlug ? formatSlugToTitle(urlSlug) : null));
+  } else if (urlSlug) {
     state.config.slug = slugify(urlSlug);
     if (state.config.slug !== "main-st-barbers") {
       state.config.shopName = formatSlugToTitle(state.config.slug);
@@ -1214,8 +1526,8 @@ function loadConfig() {
     trackMyShop(state.config.slug, state.config.shopName);
   }
 
-  // Ensure isDemoMode is false for any custom user shop
-  if (state.config.slug && state.config.slug !== "main-st-barbers") {
+  // Ensure isDemoMode is false for any custom non-demo user shop
+  if (state.config.slug && state.config.slug !== "main-st-barbers" && !state.config.slug.startsWith("demo-") && !demoParam) {
     state.isDemoMode = false;
   }
 
@@ -7561,10 +7873,14 @@ function renderSuperAdminShopsTable() {
     const bgColor = currentTierKey === 'enterprise' ? 'rgba(99, 102, 241, 0.15)' : (currentTierKey === 'pro' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)');
 
     const isSandbox = shopSlug === 'main-st-barbers' || docId === 'main-st-barbers';
+    const isDemo = !!(shop.isDemoShop || shopSlug.startsWith("demo-") || isSandbox);
 
     return `
       <tr>
-        <td><strong>${escapeHtml(shopName)}</strong></td>
+        <td>
+          <strong>${escapeHtml(shopName)}</strong>
+          ${isDemo ? `<span style="margin-left: 6px; font-size: 0.68rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); padding: 1px 6px; border-radius: 4px; font-weight: 700;">Demo</span>` : ''}
+        </td>
         <td><code>waitlink.app?s=${escapeHtml(shopSlug)}</code></td>
         <td>${escapeHtml(shop.ownerEmail || 'owner@waitlink.app')}</td>
         <td>
@@ -8277,6 +8593,252 @@ async function cleanDuplicateShops() {
     console.error("Error purging duplicate shops:", err);
     showToast(`⚠️ Error during cleanup: ${err.message}`);
   });
+}
+
+// ==========================================================================
+// 1-TAP DEMO SHOP GENERATOR ENGINE (SUPERADMIN)
+// ==========================================================================
+
+let activeDemoIndustry = "auto";
+
+function openDemoShopGeneratorModal() {
+  if (!isSuperAdmin()) {
+    showToast("⚠️ Platform SuperAdmin directory is restricted to authorized platform administrators.");
+    return;
+  }
+
+  const modal = document.getElementById("modal-demo-shop-generator");
+  if (!modal) return;
+
+  renderDemoIndustryGrid();
+  selectDemoIndustry(activeDemoIndustry || "auto", true);
+  modal.classList.remove("hidden");
+}
+
+function closeDemoShopGeneratorModal() {
+  const modal = document.getElementById("modal-demo-shop-generator");
+  if (modal) modal.classList.add("hidden");
+}
+
+function renderDemoIndustryGrid() {
+  const grid = document.getElementById("demo-industry-grid");
+  if (!grid || typeof DEMO_INDUSTRY_PRESETS === "undefined") return;
+
+  const presets = Object.values(DEMO_INDUSTRY_PRESETS);
+  grid.innerHTML = presets.map(p => {
+    const isAct = p.id === activeDemoIndustry;
+    return `
+      <div class="demo-industry-chip ${isAct ? 'active' : ''}" 
+           id="demo-chip-${p.id}" 
+           onclick="selectDemoIndustry('${p.id}')"
+           title="${escapeHtml(p.label)}">
+        <span class="chip-icon">${p.icon}</span>
+        <span class="chip-title">${escapeHtml(p.label)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function selectDemoIndustry(industryKey, forceResetName = false) {
+  if (!DEMO_INDUSTRY_PRESETS[industryKey]) industryKey = "general";
+  activeDemoIndustry = industryKey;
+  const preset = DEMO_INDUSTRY_PRESETS[industryKey];
+
+  // Update active state in grid chips
+  const chips = document.querySelectorAll(".demo-industry-chip");
+  chips.forEach(c => {
+    if (c.id === `demo-chip-${industryKey}`) c.classList.add("active");
+    else c.classList.remove("active");
+  });
+
+  const nameInput = document.getElementById("demo-shop-name-input");
+  if (nameInput) {
+    const userTyped = nameInput.dataset.userTyped === "true";
+    if (forceResetName || !userTyped || !nameInput.value.trim()) {
+      nameInput.value = preset.defaultShopName;
+      delete nameInput.dataset.userTyped;
+    }
+  }
+
+  updateDemoPreviewSnapshot(preset);
+  updateDemoSlugPreview();
+}
+
+function handleDemoNameInput(val) {
+  const nameInput = document.getElementById("demo-shop-name-input");
+  if (nameInput) nameInput.dataset.userTyped = "true";
+
+  const cleanVal = String(val || "").trim();
+  const detectedKey = detectIndustryFromText(cleanVal);
+  const badgeEl = document.getElementById("demo-industry-detected-badge");
+
+  if (cleanVal && detectedKey && detectedKey !== activeDemoIndustry && DEMO_INDUSTRY_PRESETS[detectedKey]) {
+    const detPreset = DEMO_INDUSTRY_PRESETS[detectedKey];
+    if (badgeEl) {
+      badgeEl.innerHTML = `✨ Matches: <strong>${detPreset.icon} ${detPreset.label}</strong> (<a href="#" onclick="selectDemoIndustry('${detectedKey}'); return false;" style="color: #a855f7; text-decoration: underline;">Switch</a>)`;
+    }
+  } else if (badgeEl) {
+    badgeEl.innerHTML = "";
+  }
+
+  const preset = DEMO_INDUSTRY_PRESETS[activeDemoIndustry] || DEMO_INDUSTRY_PRESETS.general;
+  const titleEl = document.getElementById("demo-preview-title");
+  if (titleEl) titleEl.textContent = cleanVal || preset.defaultShopName;
+
+  updateDemoSlugPreview();
+}
+
+function updateDemoSlugPreview() {
+  const nameInput = document.getElementById("demo-shop-name-input");
+  const preset = DEMO_INDUSTRY_PRESETS[activeDemoIndustry] || DEMO_INDUSTRY_PRESETS.general;
+  const shopTitle = (nameInput && nameInput.value.trim()) || preset.defaultShopName;
+  const rawSlug = slugify(shopTitle);
+  const finalSlug = rawSlug.startsWith("demo-") ? rawSlug : `demo-${rawSlug}`;
+
+  const slugEl = document.getElementById("demo-slug-preview");
+  if (slugEl) {
+    slugEl.textContent = `waitlink.app?s=${finalSlug}`;
+  }
+}
+
+function updateDemoPreviewSnapshot(preset) {
+  if (!preset) return;
+  const iconEl = document.getElementById("demo-preview-icon");
+  const titleEl = document.getElementById("demo-preview-title");
+  const unitsEl = document.getElementById("demo-preview-units");
+  const taglineEl = document.getElementById("demo-preview-tagline");
+  const servicesEl = document.getElementById("demo-preview-services-chips");
+  const queueCountEl = document.getElementById("demo-preview-queue-count");
+  const nameInput = document.getElementById("demo-shop-name-input");
+
+  const shopTitle = (nameInput && nameInput.value.trim()) || preset.defaultShopName;
+
+  if (iconEl) iconEl.textContent = preset.icon;
+  if (titleEl) titleEl.textContent = shopTitle;
+  if (unitsEl) unitsEl.textContent = preset.unitLabel || "Stations";
+  if (taglineEl) taglineEl.textContent = preset.tagline || "";
+  if (queueCountEl) {
+    const mockQueue = preset.generateQueue ? preset.generateQueue() : [];
+    queueCountEl.textContent = `${mockQueue.length} in queue`;
+  }
+
+  if (servicesEl && Array.isArray(preset.services)) {
+    servicesEl.innerHTML = preset.services.map(s => `
+      <span class="demo-preview-service-tag">${s.icon || '⚡'} ${escapeHtml(s.name)} (${s.estDurationMin}m)</span>
+    `).join("");
+  }
+}
+
+async function launchDemoShopFromModal() {
+  if (!isSuperAdmin()) {
+    showToast("⚠️ SuperAdmin access required.");
+    return;
+  }
+
+  const btn = document.getElementById("btn-launch-demo-shop");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="pulse-dot"></span> Launching Demo...`;
+  }
+
+  try {
+    const preset = DEMO_INDUSTRY_PRESETS[activeDemoIndustry] || DEMO_INDUSTRY_PRESETS.general;
+    const nameInput = document.getElementById("demo-shop-name-input");
+    const shopTitle = (nameInput && nameInput.value.trim()) || preset.defaultShopName;
+    const rawSlug = slugify(shopTitle);
+    const finalSlug = rawSlug.startsWith("demo-") ? rawSlug : `demo-${rawSlug}`;
+
+    const saveCheck = document.getElementById("demo-save-to-firestore");
+    const saveToCloud = saveCheck ? saveCheck.checked : true;
+
+    const now = Date.now();
+    const mockQueue = preset.generateQueue(now);
+    const mockHistory = preset.generateHistory(now);
+
+    if (saveToCloud && db) {
+      const demoDoc = {
+        name: shopTitle,
+        shopName: shopTitle,
+        slug: finalSlug,
+        isDemoShop: true,
+        demoIndustry: preset.id,
+        ownerEmail: SUPERADMIN_EMAIL,
+        ownerUid: (state.user && state.user.uid) || "superadmin",
+        planTitle: "Pro Business Tier (Demo Sandbox)",
+        planPrice: 15,
+        unitLabel: preset.unitLabel,
+        tagline: preset.tagline,
+        services: [...preset.services],
+        estBaseWaitMin: preset.estBaseWaitMin,
+        clinicalPrivacyEnabled: !!preset.clinicalPrivacyEnabled,
+        enableServices: true,
+        queue: mockQueue,
+        history: mockHistory,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await db.collection("shops").doc(finalSlug).set(demoDoc, { merge: true });
+
+      // Add to registeredShops cache
+      if (!Array.isArray(state.registeredShops)) state.registeredShops = [];
+      const exIdx = state.registeredShops.findIndex(s => (s.slug || s.id) === finalSlug);
+      if (exIdx >= 0) {
+        state.registeredShops[exIdx] = { id: finalSlug, ...demoDoc };
+      } else {
+        state.registeredShops.unshift({ id: finalSlug, ...demoDoc });
+      }
+      localStorage.setItem("waitlink_registered_shops", JSON.stringify(state.registeredShops));
+      renderSuperAdminShopsTable();
+
+      // Launch and inspect desk
+      inspectShop(finalSlug);
+      showToast(`🚀 1-Tap Demo Shop "${shopTitle}" created and live!`);
+    } else {
+      // Local session demo mode
+      initDemoMode(preset.id, shopTitle);
+      state.config.slug = finalSlug;
+      saveConfig();
+      renderAll();
+      generateQRCode();
+      switchView("desk");
+      showToast(`🚀 Demo Sandbox "${shopTitle}" launched!`);
+    }
+
+    closeDemoShopGeneratorModal();
+  } catch (err) {
+    console.error("Error launching demo shop:", err);
+    showToast(`⚠️ Failed to launch demo shop: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `🚀 1-Tap Launch Demo Shop`;
+    }
+  }
+}
+
+function copyDemoPitchFromModal() {
+  const preset = DEMO_INDUSTRY_PRESETS[activeDemoIndustry] || DEMO_INDUSTRY_PRESETS.general;
+  const nameInput = document.getElementById("demo-shop-name-input");
+  const shopTitle = (nameInput && nameInput.value.trim()) || preset.defaultShopName;
+  const rawSlug = slugify(shopTitle);
+  const finalSlug = rawSlug.startsWith("demo-") ? rawSlug : `demo-${rawSlug}`;
+
+  const origin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://waitlink.app";
+  const path = window.location.pathname || "/";
+  const demoUrl = `${origin}${path}?s=${finalSlug}`;
+
+  const pitch = generateDemoPitch(shopTitle, preset.id, demoUrl);
+
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pitch).then(() => {
+      showToast(`📋 Sales pitch for "${shopTitle}" copied to clipboard!`);
+    }).catch(() => {
+      prompt("Copy Demo Sales Pitch:", pitch);
+    });
+  } else {
+    prompt("Copy Demo Sales Pitch:", pitch);
+  }
 }
 
 // SuperAdmin Sub-Tab Switcher & Support Inbox Loader

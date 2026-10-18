@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=4.6">
+  <link rel="stylesheet" href="style.css?v=4.8">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -1665,6 +1665,7 @@
           <h2>Master Multi-Tenant Shop Directory</h2>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" onclick="cleanDuplicateShops()" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08);" title="Scan and purge duplicate shop records with matching name & owner">🧹 Purge Duplicates</button>
+            <button class="btn btn-primary btn-sm" id="btn-superadmin-demo-generator" onclick="openDemoShopGeneratorModal()" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; font-weight: 700; box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35);" title="SuperAdmin: 1-Tap create a tailored demo shop for any industry prospect">⚡ 1-Tap Demo Generator</button>
             <button class="btn btn-primary btn-sm" onclick="openOnboardingModal()">+ Register New Shop</button>
           </div>
         </div>
@@ -3245,6 +3246,86 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- 1-Tap Demo Shop Generator Modal (SuperAdmin Only) -->
+  <div id="modal-demo-shop-generator" class="modal-backdrop hidden" onclick="if(event.target === this) closeDemoShopGeneratorModal()">
+    <div class="modal-card demo-generator-modal-card" style="max-width: 680px; width: 95%; padding: 2rem; border-radius: 20px; background: var(--bg-card); color: var(--text-main); border: 1.5px solid rgba(168, 85, 247, 0.45); box-shadow: 0 35px 80px rgba(0,0,0,0.9), 0 0 35px rgba(168, 85, 247, 0.2); position: relative; animation: slideUp 0.25s ease;">
+      <button class="close-btn" onclick="closeDemoShopGeneratorModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.35rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" title="Close Modal">&times;</button>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <span style="font-size: 2rem; background: rgba(168, 85, 247, 0.18); border: 1.5px solid rgba(168, 85, 247, 0.45); border-radius: 14px; padding: 0.4rem 0.75rem;">⚡</span>
+        <div>
+          <div style="font-size: 0.725rem; font-weight: 800; color: #c084fc; text-transform: uppercase; letter-spacing: 0.06em;">SuperAdmin Sales Engine</div>
+          <h2 style="font-size: 1.35rem; color: var(--text-main); margin: 0; font-weight: 800;">1-Tap Demo Shop Generator</h2>
+        </div>
+      </div>
+
+      <p style="font-size: 0.825rem; color: var(--text-muted); margin: 0 0 1.25rem 0; line-height: 1.45;">
+        Select an industry or type a prospect's business name. WaitLink will instantly assemble a tailored demo shop with realistic mock queues, industry services, live phone tracking, and a tailored cold pitch.
+      </p>
+
+      <!-- Step 1: Industry Preset Grid -->
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
+          1. Select Industry Preset:
+        </label>
+        <div class="demo-industry-grid" id="demo-industry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 0.6rem;">
+          <!-- Injected dynamically by app.js with fallback -->
+        </div>
+      </div>
+
+      <!-- Step 2: Custom Business Name & Slug Preview -->
+      <div style="margin-bottom: 1.25rem;">
+        <label for="demo-shop-name-input" style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em;">
+          2. Prospect / Business Name (Optional Custom Override):
+        </label>
+        <div style="position: relative;">
+          <input type="text" id="demo-shop-name-input" class="form-input" placeholder="e.g. Apex Tire & Auto" oninput="handleDemoNameInput(this.value)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1.5px solid var(--border-color); color: var(--text-main); font-size: 0.95rem; font-weight: 600;">
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.775rem; color: var(--text-muted);">
+          <span>Target URL: <code id="demo-slug-preview" style="color: #a855f7; font-weight: 700;">waitlink.app?s=demo-apex-tire</code></span>
+          <span id="demo-industry-detected-badge" style="font-size: 0.72rem; color: #34d399; font-weight: 700;"></span>
+        </div>
+      </div>
+
+      <!-- Step 3: Preset Live Preview Snapshot Box -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;" class="card-subpanel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
+          <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
+            <span id="demo-preview-icon">🛞</span> <span id="demo-preview-title">Apex Tire & Auto</span>
+          </span>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <span id="demo-preview-queue-count" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">3 in queue</span>
+            <span id="demo-preview-units" style="font-size: 0.7rem; background: rgba(168, 85, 247, 0.18); color: #c084fc; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">Bays / Lifts</span>
+          </div>
+        </div>
+        <p id="demo-preview-tagline" style="font-size: 0.775rem; color: var(--text-muted); margin: 0 0 0.65rem 0;">Live Service Bay Queue & Vehicle Status</p>
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem;">Pre-Configured Services:</div>
+        <div id="demo-preview-services-chips" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+          <!-- Service badges -->
+        </div>
+      </div>
+
+      <!-- Step 4: Storage Mode Checkbox -->
+      <div style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem 1rem;">
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; margin: 0; font-size: 0.825rem; color: var(--text-main); font-weight: 600;">
+          <input type="checkbox" id="demo-save-to-firestore" checked style="width: 17px; height: 17px; accent-color: #a855f7; cursor: pointer;">
+          <span>☁️ Save to Cloud Firestore (creates persistent shareable URL for prospect)</span>
+        </label>
+      </div>
+
+      <!-- Action Footer -->
+      <div style="display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeDemoShopGeneratorModal()">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-demo-pitch" onclick="copyDemoPitchFromModal()" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); font-weight: 700;">
+          📋 Copy Sales Pitch
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-launch-demo-shop" onclick="launchDemoShopFromModal()" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; font-weight: 800; padding: 0.65rem 1.4rem; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4); border-radius: 8px;">
+          🚀 1-Tap Launch Demo Shop
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Universal Modern Cosmetic Dialog Modal (Industry-Standard Confirm/Alert/Prompt) -->
   <div id="waitlink-dialog-backdrop" class="modal-backdrop hidden" onclick="if(event.target === this) waitlinkDialogDismiss()">
     <div class="waitlink-dialog-card dialog-theme-primary" id="waitlink-dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
@@ -3383,6 +3464,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=6.4"></script>
+  <script src="app.js?v=6.6"></script>
 </body>
 </html>

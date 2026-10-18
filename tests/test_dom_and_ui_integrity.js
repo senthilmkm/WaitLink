@@ -69,8 +69,8 @@ it("index.html contains SuperAdmin tabs (Master Shops Directory, Pricing Config 
 // -------------------------------------------------------------------------
 console.log("\n--- 2. Universal Modals & Dialog System ---");
 
-it("index.html contains all 17 modal backdrops and dialogs", () => {
-  const all17Modals = [
+it("index.html contains all 18 modal backdrops and dialogs", () => {
+  const all18Modals = [
     "pricing-audit-modal",
     "delete-shop-modal",
     "settings-modal",
@@ -87,12 +87,28 @@ it("index.html contains all 17 modal backdrops and dialogs", () => {
     "modal-admin-credit-override",
     "modal-carrier-segments-guide",
     "pwa-install-modal",
+    "modal-demo-shop-generator",
     "waitlink-dialog-backdrop"
   ];
 
-  all17Modals.forEach(id => {
+  all18Modals.forEach(id => {
     assert.ok(html.includes(`id="${id}"`), `Missing required modal or dialog: #${id}`);
   });
+});
+
+it("SuperAdmin Master Directory contains 1-Tap Demo Shop Generator with all 8 industry presets", () => {
+  assert.ok(html.includes('id="btn-superadmin-demo-generator"'), "Missing #btn-superadmin-demo-generator in SuperAdmin directory");
+  assert.ok(html.includes('id="modal-demo-shop-generator"'), "Missing #modal-demo-shop-generator in index.html");
+  assert.ok(html.includes('id="demo-industry-grid"'), "Missing #demo-industry-grid in generator modal");
+  assert.ok(html.includes('id="demo-shop-name-input"'), "Missing #demo-shop-name-input in generator modal");
+  assert.ok(html.includes('id="btn-launch-demo-shop"'), "Missing #btn-launch-demo-shop in generator modal");
+  assert.ok(html.includes('id="btn-copy-demo-pitch"'), "Missing #btn-copy-demo-pitch in generator modal");
+  assert.ok(appJs.includes("function openDemoShopGeneratorModal()"), "app.js missing openDemoShopGeneratorModal");
+  assert.ok(appJs.includes("async function launchDemoShopFromModal()"), "app.js missing launchDemoShopFromModal");
+  assert.ok(appJs.includes("function copyDemoPitchFromModal()"), "app.js missing copyDemoPitchFromModal");
+  assert.ok(appJs.includes("const DEMO_INDUSTRY_PRESETS ="), "app.js missing DEMO_INDUSTRY_PRESETS");
+  assert.ok(css.includes(".demo-industry-chip"), "style.css missing .demo-industry-chip styling");
+  assert.ok(css.includes(".demo-generator-modal-card"), "style.css missing .demo-generator-modal-card styling");
 });
 
 it("Shop Subscription Plans modal contains wider container and reactive feature IDs", () => {
