@@ -1925,6 +1925,7 @@ function updateConfigUI() {
     } else {
       statusLabel.textContent = "Local Standalone Mode";
     }
+  }
   updatePosterUI();
 }
 
