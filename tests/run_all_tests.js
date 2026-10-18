@@ -15,7 +15,8 @@ const testSuites = [
   { name: "2. Multi-Role Access Control & Security Invariants", file: "test_roles_and_security.js" },
   { name: "3. Billing Economics, Retention Compliance & BI Analytics", file: "test_billing_and_analytics.js" },
   { name: "4. DOM Structure, Screens, Modals & UI Theme Integrity", file: "test_dom_and_ui_integrity.js" },
-  { name: "5. Telecom SMS Limits, Carrier Math & Rollover Governance", file: "test_sms_topup_engine.js" }
+  { name: "5. Telecom SMS Limits, Carrier Math & Rollover Governance", file: "test_sms_topup_engine.js" },
+  { name: "6. 15-Second Shop Launch, 8 Industry Catalogs & Pre-Publishing Review", file: "test_onboarding_and_review_engine.js" }
 ];
 
 let totalSuitesPassed = 0;

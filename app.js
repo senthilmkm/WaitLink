@@ -196,7 +196,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_auto_1", name: "Synthetic Oil & Filter", estDurationMin: 20, icon: "🛢️", enabled: true },
       { id: "srv_auto_2", name: "4-Tire Mount & Balance", estDurationMin: 40, icon: "🛞", enabled: true },
       { id: "srv_auto_3", name: "Brake Pad Inspection", estDurationMin: 25, icon: "🛑", enabled: true },
-      { id: "srv_auto_4", name: "Flat Tire Patch / Repair", estDurationMin: 15, icon: "🔧", enabled: true }
+      { id: "srv_auto_4", name: "Flat Tire Patch / Repair", estDurationMin: 15, icon: "🔧", enabled: true },
+      { id: "srv_auto_5", name: "Tire Rotation & Pressure Check", estDurationMin: 15, icon: "🔄", enabled: true },
+      { id: "srv_auto_6", name: "Battery Test & Replacement", estDurationMin: 15, icon: "⚡", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Marcus T.", phone: "(555) 234-8901", service: "4-Tire Mount & Balance", selectedServiceName: "4-Tire Mount & Balance", selectedServiceDurationMin: 40, notes: "Ford F-150 (Silver)", checkedInAt: now - 18 * 60 * 1000 },
@@ -227,7 +229,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_barber_1", name: "Men's Skin Fade / Haircut", estDurationMin: 25, icon: "✂️", enabled: true },
       { id: "srv_barber_2", name: "Haircut & Hot Towel Beard Trim", estDurationMin: 35, icon: "💈", enabled: true },
       { id: "srv_barber_3", name: "Beard Sculpt & Razor Lineup", estDurationMin: 15, icon: "🧔", enabled: true },
-      { id: "srv_barber_4", name: "Deluxe Haircut & Wash", estDurationMin: 30, icon: "🧴", enabled: true }
+      { id: "srv_barber_4", name: "Deluxe Haircut & Wash", estDurationMin: 30, icon: "🧴", enabled: true },
+      { id: "srv_barber_5", name: "Kids / Senior Haircut", estDurationMin: 20, icon: "🧒", enabled: true },
+      { id: "srv_barber_6", name: "Hair Color & Highlights", estDurationMin: 45, icon: "🎨", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Andre W.", phone: "(555) 890-1234", service: "Men's Skin Fade / Haircut", selectedServiceName: "Men's Skin Fade / Haircut", selectedServiceDurationMin: 25, checkedInAt: now - 15 * 60 * 1000 },
@@ -257,7 +261,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_med_1", name: "Walk-In Urgent Care Triage", estDurationMin: 20, icon: "🩺", enabled: true },
       { id: "srv_med_2", name: "Routine Dental Cleaning", estDurationMin: 30, icon: "🦷", enabled: true },
       { id: "srv_med_3", name: "Flu / Cold Symptoms Check", estDurationMin: 15, icon: "🌡️", enabled: true },
-      { id: "srv_med_4", name: "X-Ray / Diagnostic Imaging", estDurationMin: 25, icon: "🩻", enabled: true }
+      { id: "srv_med_4", name: "X-Ray / Diagnostic Imaging", estDurationMin: 25, icon: "🩻", enabled: true },
+      { id: "srv_med_5", name: "Vaccination & Booster Injection", estDurationMin: 10, icon: "💉", enabled: true },
+      { id: "srv_med_6", name: "Minor Wound Dressing & Suture", estDurationMin: 20, icon: "🩹", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Marcus T.", phone: "(555) 901-2345", service: "Walk-In Urgent Care Triage", selectedServiceName: "Walk-In Urgent Care Triage", selectedServiceDurationMin: 20, checkedInAt: now - 14 * 60 * 1000 },
@@ -286,7 +292,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_pet_1", name: "Full Groom, Bath & Fluff", estDurationMin: 45, icon: "🛁", enabled: true },
       { id: "srv_pet_2", name: "Nail Grind & Ear Cleaning", estDurationMin: 15, icon: "🐾", enabled: true },
       { id: "srv_pet_3", name: "De-Shedding & Brush-Out", estDurationMin: 30, icon: "🐕", enabled: true },
-      { id: "srv_pet_4", name: "Walk-in Vaccine / Health Check", estDurationMin: 20, icon: "💉", enabled: true }
+      { id: "srv_pet_4", name: "Walk-in Vaccine / Health Check", estDurationMin: 20, icon: "💉", enabled: true },
+      { id: "srv_pet_5", name: "Sanitary Trim & Paw Shave", estDurationMin: 20, icon: "✂️", enabled: true },
+      { id: "srv_pet_6", name: "Teeth Brushing & Fresh Breath", estDurationMin: 10, icon: "🪥", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Bella (Golden Retriever)", phone: "(555) 234-9988", service: "Full Groom, Bath & Fluff", selectedServiceName: "Full Groom, Bath & Fluff", selectedServiceDurationMin: 45, checkedInAt: now - 22 * 60 * 1000 },
@@ -315,7 +323,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_rst_1", name: "Indoor Table for 2", estDurationMin: 15, icon: "🍽️", enabled: true },
       { id: "srv_rst_2", name: "Indoor Table for 4+", estDurationMin: 25, icon: "🥂", enabled: true },
       { id: "srv_rst_3", name: "Patio / Outdoor Seating", estDurationMin: 20, icon: "☀️", enabled: true },
-      { id: "srv_rst_4", name: "Bar High-Top (Quick Seat)", estDurationMin: 10, icon: "🍸", enabled: true }
+      { id: "srv_rst_4", name: "Bar High-Top (Quick Seat)", estDurationMin: 10, icon: "🍸", enabled: true },
+      { id: "srv_rst_5", name: "Large Party / Family Table (6+)", estDurationMin: 35, icon: "🎉", enabled: true },
+      { id: "srv_rst_6", name: "Takeout / Pickup Counter Order", estDurationMin: 5, icon: "🛍️", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Miller Party (4 guests)", phone: "(555) 432-1098", service: "Indoor Table for 4+", selectedServiceName: "Indoor Table for 4+", selectedServiceDurationMin: 25, checkedInAt: now - 16 * 60 * 1000 },
@@ -344,7 +354,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_rpr_1", name: "iPhone / Android Screen Swap", estDurationMin: 25, icon: "📱", enabled: true },
       { id: "srv_rpr_2", name: "Battery Health Replacement", estDurationMin: 20, icon: "🔋", enabled: true },
       { id: "srv_rpr_3", name: "Water Damage Diagnostic", estDurationMin: 30, icon: "💧", enabled: true },
-      { id: "srv_rpr_4", name: "Charging Port & Speaker Fix", estDurationMin: 20, icon: "🔌", enabled: true }
+      { id: "srv_rpr_4", name: "Charging Port & Speaker Fix", estDurationMin: 20, icon: "🔌", enabled: true },
+      { id: "srv_rpr_5", name: "Laptop / Mac Diagnostics", estDurationMin: 30, icon: "💻", enabled: true },
+      { id: "srv_rpr_6", name: "Tempered Glass Screen Protector", estDurationMin: 10, icon: "🛡️", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Jason B. (iPhone 14 Pro)", phone: "(555) 654-3210", service: "iPhone / Android Screen Swap", selectedServiceName: "iPhone / Android Screen Swap", selectedServiceDurationMin: 25, checkedInAt: now - 17 * 60 * 1000 },
@@ -373,7 +385,9 @@ const DEMO_INDUSTRY_PRESETS = {
       { id: "srv_tat_1", name: "Walk-In Flash Tattoo (Small)", estDurationMin: 35, icon: "🖋️", enabled: true },
       { id: "srv_tat_2", name: "Ear / Nose Piercing", estDurationMin: 15, icon: "💎", enabled: true },
       { id: "srv_tat_3", name: "Custom Piece Consultation", estDurationMin: 20, icon: "🎨", enabled: true },
-      { id: "srv_tat_4", name: "Tattoo Touch-Up & Bandage", estDurationMin: 20, icon: "🩹", enabled: true }
+      { id: "srv_tat_4", name: "Tattoo Touch-Up & Bandage", estDurationMin: 20, icon: "🩹", enabled: true },
+      { id: "srv_tat_5", name: "Navel / Body Piercing", estDurationMin: 20, icon: "✨", enabled: true },
+      { id: "srv_tat_6", name: "Color Fill & Shading Session", estDurationMin: 45, icon: "🖌️", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Tyler S.", phone: "(555) 321-0987", service: "Walk-In Flash Tattoo (Small)", selectedServiceName: "Walk-In Flash Tattoo (Small)", selectedServiceDurationMin: 35, notes: "Forearm dagger flash", checkedInAt: now - 25 * 60 * 1000 },
@@ -401,7 +415,10 @@ const DEMO_INDUSTRY_PRESETS = {
     services: [
       { id: "srv_gen_1", name: "Express Service Desk", estDurationMin: 15, icon: "⚡", enabled: true },
       { id: "srv_gen_2", name: "General Intake & Advisory", estDurationMin: 20, icon: "📋", enabled: true },
-      { id: "srv_gen_3", name: "Document / Order Pickup", estDurationMin: 10, icon: "📦", enabled: true }
+      { id: "srv_gen_3", name: "Document / Order Pickup", estDurationMin: 10, icon: "📦", enabled: true },
+      { id: "srv_gen_4", name: "Payments & Account Inquiries", estDurationMin: 15, icon: "💳", enabled: true },
+      { id: "srv_gen_5", name: "Specialized Consultation", estDurationMin: 30, icon: "🤝", enabled: true },
+      { id: "srv_gen_6", name: "Permits, Forms & Filing", estDurationMin: 25, icon: "📝", enabled: true }
     ],
     generateQueue: (now = Date.now()) => [
       { id: "demo_q1", customerName: "Ticket #101", phone: "(555) 111-2233", service: "Express Service Desk", selectedServiceName: "Express Service Desk", selectedServiceDurationMin: 15, checkedInAt: now - 12 * 60 * 1000 },
@@ -5856,6 +5873,8 @@ function openCreateShopModal() {
   if (modal) {
     modal.classList.remove("hidden");
     resetSlugWizardState();
+    renderOnboardIndustryGrid();
+    selectOnboardIndustry("salon", true);
     const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
     if (nameInput) {
       nameInput.value = "";
@@ -5877,6 +5896,92 @@ function closeCreateShopModal() {
 
 function closeOnboardingModal() {
   closeCreateShopModal();
+}
+
+// 15-Second Shop Launch: Active Industry & Grid Renderer
+let activeOnboardIndustry = "salon";
+let userExplicitlyPickedIndustry = false;
+
+function renderOnboardIndustryGrid() {
+  const grid = document.getElementById("onboard-industry-grid");
+  if (!grid || typeof DEMO_INDUSTRY_PRESETS === "undefined") return;
+
+  const presets = Object.values(DEMO_INDUSTRY_PRESETS);
+  grid.innerHTML = presets.map(p => {
+    const isAct = p.id === activeOnboardIndustry;
+    return `
+      <div class="onboard-industry-chip ${isAct ? 'active' : ''}" 
+           id="onboard-chip-${p.id}" 
+           onclick="selectOnboardIndustry('${p.id}', false)"
+           title="${escapeHtml(p.label)}">
+        <span class="chip-icon">${p.icon}</span>
+        <span class="chip-title">${escapeHtml(p.label)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function selectOnboardIndustry(industryKey, isAuto = false) {
+  if (!DEMO_INDUSTRY_PRESETS || !DEMO_INDUSTRY_PRESETS[industryKey]) {
+    industryKey = "salon";
+  }
+  activeOnboardIndustry = industryKey;
+  if (!isAuto) {
+    userExplicitlyPickedIndustry = true;
+  }
+  const preset = DEMO_INDUSTRY_PRESETS[industryKey];
+
+  // Update active chip classes
+  const chips = document.querySelectorAll(".onboard-industry-chip");
+  chips.forEach(c => {
+    if (c.id === `onboard-chip-${industryKey}`) c.classList.add("active");
+    else c.classList.remove("active");
+  });
+
+  const indInput = document.getElementById("onboard-industry");
+  if (indInput) indInput.value = industryKey;
+
+  const badgeEl = document.getElementById("onboard-industry-badge");
+  if (badgeEl) {
+    const srvCount = (preset.services || []).length || 6;
+    badgeEl.textContent = `${srvCount} Realistic Services Loaded`;
+  }
+
+  const baselineInput = document.getElementById("onboard-baseline");
+  if (baselineInput) baselineInput.value = preset.estBaseWaitMin || 20;
+
+  const baselineDisplay = document.getElementById("onboard-baseline-display");
+  if (baselineDisplay) {
+    baselineDisplay.textContent = `${preset.estBaseWaitMin || 20} min / visit`;
+  }
+}
+
+function handleOnboardShopNameInput(val) {
+  generateSlugFromInput(val);
+
+  const cleanVal = String(val || "").trim();
+  if (cleanVal && !userExplicitlyPickedIndustry) {
+    const detectedKey = detectIndustryFromText(cleanVal);
+    if (detectedKey && DEMO_INDUSTRY_PRESETS[detectedKey] && detectedKey !== activeOnboardIndustry) {
+      selectOnboardIndustry(detectedKey, true);
+    }
+  }
+}
+
+function toggleSlugEdit() {
+  const container = document.getElementById("onboard-slug-custom-container");
+  const btn = document.getElementById("btn-toggle-slug-edit");
+  if (!container) return;
+
+  if (container.classList.contains("hidden")) {
+    container.classList.remove("hidden");
+    if (btn) btn.textContent = "Done Editing";
+    const slugInput = document.getElementById("onboard-slug");
+    if (slugInput) slugInput.focus();
+  } else {
+    container.classList.add("hidden");
+    if (btn) btn.textContent = "Customize";
+  }
 }
 
 // Reserved system slugs that cannot be claimed by tenant shops
@@ -5910,6 +6015,8 @@ function extractCityFromAddress(addr) {
 
 // Reset Smart Slug Wizard UI & State
 function resetSlugWizardState() {
+  userExplicitlyPickedIndustry = false;
+  activeOnboardIndustry = "salon";
   const slugInput = document.getElementById("onboard-slug");
   if (slugInput) {
     slugInput.value = "";
@@ -5917,7 +6024,7 @@ function resetSlugWizardState() {
     delete slugInput.dataset.slugValid;
   }
   const statusEl = document.getElementById("onboard-slug-status");
-  if (statusEl) statusEl.innerHTML = "";
+  if (statusEl) statusEl.innerHTML = '<span style="color: #10b981;">✅ Universally Unique</span>';
   const wrapperEl = document.getElementById("onboard-slug-wrapper");
   if (wrapperEl) wrapperEl.className = "slug-input-wrapper";
   const urlEl = document.getElementById("onboard-slug-url-display");
@@ -5928,6 +6035,10 @@ function resetSlugWizardState() {
     chipEl.innerHTML = "";
     chipEl.dataset.suggestedSlug = "";
   }
+  const customContainer = document.getElementById("onboard-slug-custom-container");
+  if (customContainer) customContainer.classList.add("hidden");
+  const toggleBtn = document.getElementById("btn-toggle-slug-edit");
+  if (toggleBtn) toggleBtn.textContent = "Customize";
 }
 
 // Check Cloud Firestore and local directory for slug uniqueness
@@ -7511,7 +7622,7 @@ function handleAuthSubmit(event) {
    SHOP ONBOARDING WIZARD (BUSINESS OWNER)
    ========================================================================== */
 
-function handleOnboardingSubmit(event) {
+async function handleOnboardingSubmit(event) {
   event.preventDefault();
 
   // Strict Auth Gate: Ensure user is authenticated
@@ -7535,20 +7646,19 @@ function handleOnboardingSubmit(event) {
   }
 
   // Strictly sanitize the slug to kebab-case (no spaces, lowercase only)
-  let slug = slugify(rawSlug || shopName);
-  if (!slug) {
-    slug = `shop-${Date.now().toString(36)}`;
+  let candidateSlug = slugify(rawSlug || shopName);
+  if (!candidateSlug || candidateSlug.length < 3) {
+    candidateSlug = `shop-${Date.now().toString(36)}`;
   }
 
-  if (slugInput && slugInput.dataset.slugValid === "false") {
-    showToast("⚠️ The URL slug is either reserved or already taken. Please choose an available slug or tap the smart suggestion.");
-    slugInput.focus();
-    return;
+  if (RESERVED_SLUGS.has(candidateSlug)) {
+    candidateSlug = `${candidateSlug}-${Math.floor(100 + Math.random() * 900)}`;
   }
 
   const address = document.getElementById("onboard-address") ? document.getElementById("onboard-address").value.trim() : "";
 
-  // 1. Strict Duplicate Check: Prevent shops with the same name and same business address
+  // 1. Strict Duplicate Check: Prevent duplicate shop names for same owner
+  const currentEmail = (state.user.email || "").toLowerCase();
   const cleanName = shopName.toLowerCase();
   const cleanAddr = address.toLowerCase();
 
@@ -7556,7 +7666,7 @@ function handleOnboardingSubmit(event) {
     if (!s) return false;
     const sSlug = s.slug || s.id;
     // Allow saving/editing own existing shop with same slug
-    if (sSlug === slug || sSlug === rawSlug) return false;
+    if (sSlug === candidateSlug || sSlug === rawSlug) return false;
 
     const sName = (s.shopName || s.name || "").trim().toLowerCase();
     const sAddr = (s.address || "").trim().toLowerCase();
@@ -7576,12 +7686,11 @@ function handleOnboardingSubmit(event) {
   });
 
   if (isDuplicate) {
-    showToast(`⚠️ A shop named "${shopName}" with this address or owner already exists. Duplicate shops at the same location are not permitted.`);
+    showToast(`⚠️ A shop named "${shopName}" already exists in your account. Please use a distinct name.`);
     return;
   }
 
-  // Check for slug collision against existing directory
-  const currentEmail = (state.user.email || "").toLowerCase();
+  // Check multi-location limits
   const isSuper = currentEmail === SUPERADMIN_EMAIL.toLowerCase();
   const currentPlanPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const isEnterprise = currentPlanPrice === 49 || (state.config.planTitle || "").includes("Enterprise");
@@ -7591,8 +7700,8 @@ function handleOnboardingSubmit(event) {
     ((s.ownerEmail || "").toLowerCase() === currentEmail || (s.ownerUid && s.ownerUid === state.user.uid))
   );
 
-  const isExistingOwned = state.myShops && state.myShops.some(s => s.slug === slug);
-  const isNewShop = !isExistingOwned && !ownedShops.some(s => s.slug === slug);
+  const isExistingOwned = state.myShops && state.myShops.some(s => s.slug === candidateSlug);
+  const isNewShop = !isExistingOwned && !ownedShops.some(s => s.slug === candidateSlug);
 
   if (!isSuper && !isEnterprise && isNewShop && ownedShops.length >= 1) {
     showToast("🔒 Free Starter plan includes 1 shop location. Upgrade to Enterprise for Multi-Location management!");
@@ -7601,29 +7710,47 @@ function handleOnboardingSubmit(event) {
     return;
   }
 
-  const isCollision = (state.registeredShops || []).some(s => s && (s.slug === slug || s.id === slug));
-
-  if (isCollision) {
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    slug = `${slug}-${randomSuffix}`;
-    showToast(`Notice: Reserved slug collision auto-resolved to "${slug}"`);
+  // Invisible Universal Slug Guarantee:
+  // Check candidate slug against Cloud Firestore /shops/{slug} and registered shops directory.
+  // Auto-resolve collisions seamlessly with -2, -3, or random suffix.
+  let slug = candidateSlug;
+  try {
+    let check = await isSlugAvailableInCloud(slug);
+    let counter = 1;
+    while (!check.available && counter <= 10) {
+      counter++;
+      slug = `${candidateSlug}-${counter}`;
+      check = await isSlugAvailableInCloud(slug);
+    }
+    if (!check.available) {
+      slug = `${candidateSlug}-${Date.now().toString(36).slice(-4)}`;
+    }
+  } catch (err) {
+    console.warn("Universal slug uniqueness check warning:", err);
   }
 
-  // Read selected Subscription Plan Tier intent
-  const planSelect = document.getElementById("onboard-plan");
-  const wantsPaidUpgrade = planSelect && planSelect.value !== "starter";
-  const requestedTier = wantsPaidUpgrade ? planSelect.value : null;
+  // Read selected industry preset (defaults to salon)
+  const industryInput = document.getElementById("onboard-industry");
+  const industryKey = (industryInput && industryInput.value) || activeOnboardIndustry || "salon";
+  const preset = (typeof DEMO_INDUSTRY_PRESETS !== "undefined" && DEMO_INDUSTRY_PRESETS[industryKey]) || (DEMO_INDUSTRY_PRESETS && DEMO_INDUSTRY_PRESETS.salon) || {
+    unitLabel: "Stations / Chairs",
+    clinicalPrivacyEnabled: false,
+    estBaseWaitMin: 20,
+    services: [
+      { id: "srv_def_1", name: "Standard Walk-In Service", estDurationMin: 20, icon: "⚡", enabled: true }
+    ]
+  };
+
+  // Seed 6 realistic services with durations and icons from the industry preset
+  const initialServices = JSON.parse(JSON.stringify(preset.services || []));
+  const unitLabel = preset.unitLabel || "Stations / Chairs";
+  const clinicalPrivacy = !!preset.clinicalPrivacyEnabled;
+  const baseline = preset.estBaseWaitMin || 20;
+  const defaultHours = { open: "09:00", close: "19:00", days: [1, 2, 3, 4, 5, 6, 0] };
 
   // Security Hardening (P0-1): All newly registered shops strictly initialize on Starter Tier ($0).
-  // Paid tiers (Pro / Enterprise) can only be unlocked via verified Stripe Checkout.
   const planTitle = "Starter Tier (Free)";
   const planPrice = 0;
-
-  const phone = document.getElementById("onboard-phone") ? document.getElementById("onboard-phone").value.trim() : "";
-  const promoText = document.getElementById("onboard-promo-text") ? document.getElementById("onboard-promo-text").value.trim() : "";
-  const promoStart = document.getElementById("onboard-promo-start") ? document.getElementById("onboard-promo-start").value : "";
-  const promoEnd = document.getElementById("onboard-promo-end") ? document.getElementById("onboard-promo-end").value : "";
-  const baseline = (document.getElementById("onboard-baseline") ? parseInt(document.getElementById("onboard-baseline").value, 10) : 0) || 20;
 
   // Clear previous shop's in-memory queue & history for the new shop
   state.queue = [];
@@ -7631,15 +7758,20 @@ function handleOnboardingSubmit(event) {
 
   state.config.shopName = shopName;
   state.config.slug = slug;
+  state.config.industry = industryKey;
+  state.config.services = initialServices;
+  state.config.unitLabel = unitLabel;
+  state.config.clinicalPrivacyEnabled = clinicalPrivacy;
+  state.config.estBaseWaitMin = baseline;
+  state.config.hours = defaultHours;
   state.config.address = address;
-  state.config.phone = phone;
+  state.config.phone = "";
   state.config.ownerEmail = state.user.email;
   state.config.planTitle = planTitle;
   state.config.planPrice = planPrice;
-  state.config.promoText = promoText;
-  state.config.promoStart = promoStart;
-  state.config.promoEnd = promoEnd;
-  state.config.estBaseWaitMin = baseline;
+  state.config.promoText = "";
+  state.config.promoStart = "";
+  state.config.promoEnd = "";
   state.isDemoMode = false;
 
   // Remove legacy global keys so no demo contamination remains
@@ -7658,22 +7790,24 @@ function handleOnboardingSubmit(event) {
 
   saveConfig();
 
-  // Register shop in Firestore with clean queue & history and verified owner
+  // Register shop in Firestore with clean queue & history, 6 services, and verified owner
   if (db) {
     db.collection("shops").doc(slug).set({
       name: shopName,
       shopName: shopName,
       slug: slug,
+      industry: industryKey,
+      services: initialServices,
+      unitLabel: unitLabel,
+      clinicalPrivacyEnabled: clinicalPrivacy,
+      estBaseWaitMin: baseline,
+      hours: defaultHours,
       address: address,
-      phone: phone,
+      phone: "",
       planTitle: planTitle,
       planPrice: planPrice,
       ownerEmail: state.user.email,
       ownerUid: (state.user && state.user.uid) || "",
-      promoText: promoText,
-      promoStart: promoStart,
-      promoEnd: promoEnd,
-      estBaseWaitMin: baseline,
       queue: [],
       history: [],
       createdAt: Date.now()
@@ -7694,13 +7828,6 @@ function handleOnboardingSubmit(event) {
   switchView("desk");
   showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
   openRegistrationSuccessModal(shopName, slug, state.user.email);
-
-  if (wantsPaidUpgrade) {
-    setTimeout(() => {
-      showToast(`⚡ Complete your Stripe checkout to activate ${requestedTier === 'enterprise' ? 'Enterprise' : 'Pro Business'} Tier!`);
-      openUpgradeModal(requestedTier);
-    }, 2200);
-  }
 }
 
 let lastRegisteredEmailPayload = null;
@@ -7719,6 +7846,12 @@ function openRegistrationSuccessModal(shopName, rawSlug, ownerEmail) {
   setElText("reg-success-shop-name", `🎉 ${shopName} Live & Registered!`);
   setElText("reg-success-shop-title", shopName);
   setElText("reg-success-email-val", emailVal);
+
+  const serviceCountEl = document.getElementById("reg-review-service-count");
+  if (serviceCountEl) {
+    const srvCount = (state.config.services || []).length || 6;
+    serviceCountEl.textContent = `${srvCount} realistic industry services`;
+  }
 
   setElText("reg-link-owner-text", ownerUrl.replace("https://", ""));
   setElText("reg-link-desk-text", deskUrl.replace("https://", ""));

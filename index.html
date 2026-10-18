@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=5.2">
+  <link rel="stylesheet" href="style.css?v=5.3">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -2480,108 +2480,132 @@ Dedicated Support Manager
     </div>
   </div>
 
-  <!-- Shop Onboarding Setup Wizard Modal (For New Business Owners) -->
-  <div id="onboarding-modal" class="modal-backdrop hidden">
-    <div class="modal-card onboarding-modal-card">
-      <div class="modal-header onboarding-modal-header">
-        <h2>🚀 Register Your Business on WaitLink</h2>
-        <button class="close-btn" onclick="closeOnboardingModal()">&times;</button>
+  <!-- Shop Onboarding Setup Wizard Modal (Dead-Simple 15-Second Shop Launch) -->
+  <div id="onboarding-modal" class="modal-backdrop hidden" onclick="if(event.target === this) closeOnboardingModal()">
+    <div class="modal-card onboarding-modal-card" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 30px 75px rgba(0, 0, 0, 0.95), 0 0 35px rgba(16, 185, 129, 0.15); border-radius: 20px; background: var(--bg-card); color: var(--text-main); position: relative; animation: slideUp 0.25s ease;">
+      <div class="modal-header onboarding-modal-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="font-size: 2rem; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 0.35rem 0.65rem; line-height: 1;">⚡</div>
+          <div>
+            <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin: 0; font-family: var(--font-family-heading);">15-Second Shop Launch</h2>
+            <p style="font-size: 0.8rem; color: #10b981; margin: 0.2rem 0 0 0; font-weight: 700;">✓ Free Forever &bull; No Credit Card Required &bull; Launch Instantly</p>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeOnboardingModal()" style="font-size: 1.35rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" title="Close Modal">&times;</button>
       </div>
+
       <div class="modal-body onboarding-modal-body">
-        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Set up your walk-in shop in 30 seconds:</p>
-
         <form id="onboarding-form" onsubmit="handleOnboardingSubmit(event)">
-          <div class="form-group">
-            <label for="onboard-shopname">Business Name</label>
-            <input type="text" id="onboard-shopname" placeholder="e.g. Apex Barber Studio" required oninput="generateSlugFromInput(this.value)">
+          <!-- Hidden compatibility fields to keep all existing handlers safe -->
+          <input type="hidden" id="onboard-plan" value="starter">
+          <input type="hidden" id="onboard-address" value="">
+          <input type="hidden" id="onboard-phone" value="">
+          <input type="hidden" id="onboard-owner-email" value="">
+          <input type="hidden" id="onboard-promo-text" value="">
+          <input type="hidden" id="onboard-promo-start" value="">
+          <input type="hidden" id="onboard-promo-end" value="">
+          <input type="hidden" id="onboard-baseline" value="20">
+
+          <!-- Step 1: Business Name -->
+          <div class="form-group" style="margin-bottom: 1.15rem;">
+            <label for="onboard-shopname" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.45rem;">
+              <span>1. What is your Business Name? <span style="color: #ef4444;">*</span></span>
+              <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">(Visible to customers)</span>
+            </label>
+            <input type="text" id="onboard-shopname" placeholder="e.g. Apex Barber Studio, Metro Urgent Care..." required oninput="handleOnboardShopNameInput(this.value)" autocomplete="off" style="width: 100%; padding: 0.8rem 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 10px; background: rgba(0, 0, 0, 0.3); border: 1.5px solid var(--border-color); color: var(--text-main);">
           </div>
 
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-              <label for="onboard-slug" style="margin: 0; font-weight: 700;">Shareable Waitlist URL Slug</label>
-              <span id="onboard-slug-status" style="font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;"></span>
-            </div>
-            <div class="slug-input-wrapper" id="onboard-slug-wrapper" style="transition: all 0.2s ease;">
-              <span class="slug-prefix">waitlink.app?s=</span>
-              <input type="text" id="onboard-slug" placeholder="apex-barber" required oninput="handleManualSlugInput(this.value)" autocomplete="off" spellcheck="false">
-            </div>
-            <div id="onboard-slug-preview-box" style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(0, 0, 0, 0.25); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
-              <div style="display: flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                <span style="opacity: 0.8;">🔗 Live Link:</span>
-                <strong id="onboard-slug-url-display" style="color: #38bdf8;">https://waitlink.app?s=...</strong>
-              </div>
-              <div id="onboard-slug-suggestion-chip" class="hidden" onclick="applySlugSuggestion()" style="cursor: pointer; font-size: 0.72rem; padding: 0.2rem 0.65rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; border-radius: 9999px; font-weight: 700; transition: all 0.2s ease;" title="Click to use this smart available suggestion">
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <label for="onboard-plan">Subscription Plan Tier</label>
-            <select id="onboard-plan" onchange="updateOnboardPlanSelection()" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.9rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
-              <option value="starter" data-price="0" data-title="Starter Tier (Free)" selected>Starter Tier — Free Forever ($0/mo)</option>
-              <option value="pro" data-price="15" data-title="Pro Business Tier">Pro Business Tier — Standard Shop ($15/mo — Requires Checkout)</option>
-              <option value="enterprise" data-price="49" data-title="Enterprise Tier">Enterprise Tier — Multi-Location ($49/mo — Requires Checkout)</option>
-            </select>
-            <div id="onboard-plan-hint" style="font-size: 0.78rem; color: #10b981; margin-top: 0.35rem;">
-              ✓ Starter Tier is free forever (1 shop location, up to 100 walk-ins/mo). You can upgrade anytime to Pro in 1 tap.
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <label for="onboard-address">Business Address (Optional)</label>
-            <input type="text" id="onboard-address" placeholder="e.g. 123 Main St, Suite 4B, New York" oninput="handleOnboardAddressInput(this.value)">
-          </div>
-
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <label for="onboard-phone">Business Phone Number (Optional)</label>
-            <input type="text" id="onboard-phone" placeholder="e.g. (555) 234-5678">
-          </div>
-
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <label for="onboard-owner-email">Shop Owner Email Address (Optional)</label>
-            <input type="email" id="onboard-owner-email" placeholder="e.g. owner@mybarbershop.com">
-            <small class="form-hint" style="font-size: 0.75rem; color: var(--text-subtle);">Used to send your shop links, owner portal key, and registration confirmation email.</small>
-          </div>
-
-          <!-- Promotional Offer Box with Info Icon Tooltip (Pro Feature) -->
-          <div class="card pro-gated-section" id="onboard-promo-card" style="margin-top: 1rem; padding: 1.25rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
-              <label for="onboard-promo-text" style="font-weight: 700; color: var(--primary); font-size: 0.85rem; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
-                🎁 Promotional Offer Details (Optional) <span id="onboard-promo-badge" class="badge-pro-pill unlocked">PRO</span>
+          <!-- Step 2: Industry Preset Selection (All 8 Presets) -->
+          <div class="form-group" style="margin-bottom: 1.15rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <label style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin: 0;">
+                2. Choose Your Industry Preset:
               </label>
-              <span class="info-tooltip-badge" title="Promotional offer details will show on your public customer check-in page only during the active date/time window specified below. Requires Pro Business tier ($15/mo).">ℹ️</span>
+              <span id="onboard-industry-badge" style="font-size: 0.72rem; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12); padding: 0.2rem 0.55rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                6 Realistic Services Loaded
+              </span>
             </div>
-
-            <div id="onboard-promo-locked-banner" class="pro-locked-banner hidden" style="margin-bottom: 0.6rem;">
-              <span class="banner-text">🔒 <span><strong>Starter Tier:</strong> Promo banners require Pro Business ($15/mo) or Enterprise.</span></span>
-            </div>
-
-            <div class="pro-lockable-content" id="onboard-promo-lockable-content">
-              <div class="form-group">
-                <input type="text" id="onboard-promo-text" placeholder="e.g. 🎉 20% Off All Haircuts During Happy Hour!" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
+            <input type="hidden" id="onboard-industry" value="salon">
+            <div class="onboard-industry-grid" id="onboard-industry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 0.55rem;">
+              <!-- 8 Industry Presets Chips dynamically rendered & fallback chips -->
+              <div class="onboard-industry-chip active" id="onboard-chip-salon" onclick="selectOnboardIndustry('salon')">
+                <span class="chip-icon">💈</span>
+                <span class="chip-title">Barbershop & Salon</span>
               </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
-                <div class="form-group">
-                  <label for="onboard-promo-start" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window Start</label>
-                  <input type="date" id="onboard-promo-start" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
-                </div>
-                <div class="form-group">
-                  <label for="onboard-promo-end" style="font-size: 0.75rem; color: var(--text-muted);">Promo Window End</label>
-                  <input type="date" id="onboard-promo-end" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; font-family: var(--font-family-body); background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
-                </div>
+              <div class="onboard-industry-chip" id="onboard-chip-auto" onclick="selectOnboardIndustry('auto')">
+                <span class="chip-icon">🛞</span>
+                <span class="chip-title">Auto Repair & Tire</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-clinic" onclick="selectOnboardIndustry('clinic')">
+                <span class="chip-icon">🏥</span>
+                <span class="chip-title">Medical & Dental</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-pet" onclick="selectOnboardIndustry('pet')">
+                <span class="chip-icon">🐕</span>
+                <span class="chip-title">Pet Grooming & Vet</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-restaurant" onclick="selectOnboardIndustry('restaurant')">
+                <span class="chip-icon">🍽️</span>
+                <span class="chip-title">Restaurant & Cafe</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-repair" onclick="selectOnboardIndustry('repair')">
+                <span class="chip-icon">📱</span>
+                <span class="chip-title">Phone & Tech Repair</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-tattoo" onclick="selectOnboardIndustry('tattoo')">
+                <span class="chip-icon">🎨</span>
+                <span class="chip-title">Tattoo & Piercing</span>
+              </div>
+              <div class="onboard-industry-chip" id="onboard-chip-general" onclick="selectOnboardIndustry('general')">
+                <span class="chip-icon">🏢</span>
+                <span class="chip-title">General Walk-In</span>
               </div>
             </div>
           </div>
 
-          <div class="form-group" style="margin-top: 0.75rem;">
-            <label for="onboard-baseline">Average Turnaround Baseline (Minutes)</label>
-            <input type="number" id="onboard-baseline" value="20" min="5" max="120" required>
+          <!-- Step 3: Invisible Universal Slug with Live Link Preview -->
+          <div class="form-group" style="margin-bottom: 1.15rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+              <label style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-main);">
+                3. Live Customer Waitlist Link:
+              </label>
+              <span id="onboard-slug-status" style="font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <span style="color: #10b981;">✅ Universally Unique</span>
+              </span>
+            </div>
+
+            <div id="onboard-slug-preview-box" style="font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(0, 0, 0, 0.35); padding: 0.65rem 0.9rem; border-radius: 10px; border: 1.5px solid rgba(56, 189, 248, 0.25);">
+              <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">
+                <span style="opacity: 0.85;">🔗 URL:</span>
+                <strong id="onboard-slug-url-display" style="color: #38bdf8; font-family: monospace;">https://waitlink.app?s=...</strong>
+              </div>
+              <button type="button" id="btn-toggle-slug-edit" onclick="toggleSlugEdit()" style="background: none; border: none; color: #94a3b8; font-size: 0.74rem; cursor: pointer; text-decoration: underline; padding: 0; font-weight: 600;">Customize</button>
+            </div>
+
+            <!-- Collapsible Custom Slug Input (Friction-Free) -->
+            <div id="onboard-slug-custom-container" class="hidden" style="margin-top: 0.5rem;">
+              <div class="slug-input-wrapper" id="onboard-slug-wrapper">
+                <span class="slug-prefix">waitlink.app?s=</span>
+                <input type="text" id="onboard-slug" placeholder="apex-barber" oninput="handleManualSlugInput(this.value)" autocomplete="off" spellcheck="false">
+              </div>
+              <div id="onboard-slug-suggestion-chip" class="hidden" onclick="applySlugSuggestion()" style="cursor: pointer; font-size: 0.72rem; padding: 0.2rem 0.65rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; border-radius: 9999px; font-weight: 700; margin-top: 0.35rem; display: inline-block;"></div>
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;">
-            Launch Shop & Generate QR Code 🎉
+          <!-- Turnaround Info Notice -->
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
+            <span>⏱️ Default turnaround: <strong id="onboard-baseline-display" style="color: var(--text-main);">20 min / visit</strong></span>
+            <span style="color: #10b981; font-weight: 600;">✓ Starter Plan Free Forever</span>
+          </div>
+
+          <!-- 1-Tap Big Primary Action Button -->
+          <button type="submit" id="btn-onboard-submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem 1.25rem; font-size: 1.05rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; border-radius: 10px; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; transition: transform 0.15s ease;">
+            <span>🚀 Launch My Live Queue (Free Forever) →</span>
           </button>
+
+          <p style="text-align: center; margin: 0.75rem 0 0 0; font-size: 0.72rem; color: var(--text-muted);">
+            🔒 Profile settings, store hours (9 AM - 7 PM), and services are 100% editable anytime in Shop Settings.
+          </p>
         </form>
       </div>
     </div>
@@ -2841,10 +2865,43 @@ Dedicated Support Manager
       <button class="close-btn" onclick="closeRegistrationSuccessModal()" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.25rem; opacity: 0.7;" title="Close Modal">✕</button>
       
       <!-- Celebration Header -->
-      <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div style="text-align: center; margin-bottom: 1.25rem;">
         <div style="font-size: 3rem; margin-bottom: 0.2rem; filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.5));">🎉🚀</div>
         <h3 style="font-size: 1.6rem; color: var(--text-main); margin: 0; font-family: var(--font-family-heading);" id="reg-success-shop-name">Shop Onboarding Complete!</h3>
         <p style="font-size: 0.88rem; color: #10b981; margin: 0.35rem 0 0 0; font-weight: 600;" id="reg-success-email-notice">Your live queue & public check-in page are active</p>
+      </div>
+
+      <!-- Pre-Publishing Review Warning & Confirmation Notice -->
+      <div id="reg-success-review-banner" style="background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.5); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);">
+        <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
+          <span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.4));">⚠️</span>
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.35rem;">
+              <h4 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: #fbbf24; font-family: var(--font-family-heading);">
+                Action Required: Review Your Shop Settings Before Publishing!
+              </h4>
+              <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; background: rgba(245, 158, 11, 0.25); color: #fde68a; padding: 0.15rem 0.55rem; border-radius: 9999px;">Pre-Launch Check</span>
+            </div>
+            <p style="margin: 0 0 0.75rem 0; font-size: 0.84rem; color: var(--text-light); line-height: 1.45;">
+              Before sharing your customer Live URL or displaying your lobby QR code, verify that your shop profile and default settings match your business:
+            </p>
+            <ul style="margin: 0 0 1rem 1.15rem; padding: 0; font-size: 0.82rem; color: #cbd5e1; line-height: 1.6;">
+              <li><strong>Store Hours:</strong> Pre-configured to <code style="color: #fde68a; background: rgba(0,0,0,0.3); padding: 0.1rem 0.35rem; border-radius: 4px;">9:00 AM – 7:00 PM</code>. Update if your business hours or open days differ.</li>
+              <li><strong>Service Catalog:</strong> Loaded <code style="color: #fde68a; background: rgba(0,0,0,0.3); padding: 0.1rem 0.35rem; border-radius: 4px;" id="reg-review-service-count">6 realistic industry services</code> with turnaround times. Customize, add pricing, or disable services you don't offer.</li>
+              <li><strong>Storefront & Contact:</strong> Verify your address and phone number so customers can easily reach and navigate to your location.</li>
+            </ul>
+
+            <!-- Prominent Primary Confirmation / Submit Buttons in Banner -->
+            <div style="display: flex; flex-wrap: wrap; gap: 0.65rem;">
+              <button type="button" id="btn-reg-review-settings" class="btn btn-warning" onclick="launchFromRegistration('owner')" style="font-weight: 800; padding: 0.75rem 1.35rem; font-size: 0.92rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000; border: none; border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span>⚙️ Review & Confirm Shop Settings Now →</span>
+              </button>
+              <button type="button" id="btn-reg-jump-desk" class="btn btn-secondary" onclick="launchFromRegistration('desk')" style="font-weight: 700; padding: 0.75rem 1.15rem; font-size: 0.92rem; border-color: rgba(255, 255, 255, 0.25); color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span>💈 Jump Straight to Live Front Desk →</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Live Customer QR Code Preview Box -->
@@ -3477,6 +3534,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=7.6"></script>
+  <script src="app.js?v=7.7"></script>
 </body>
 </html>

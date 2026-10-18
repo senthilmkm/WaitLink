@@ -6751,5 +6751,92 @@ html[data-theme="light"] .filter-select {
   box-shadow: none !important;
 }
 
+/* 10. 15-Second Shop Launch: Industry Preset Selection Chips & Review Banner */
+.onboard-industry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 0.55rem;
+}
 
+.onboard-industry-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  text-align: center;
+}
 
+.onboard-industry-chip:hover {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.onboard-industry-chip.active {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+  transform: scale(1.02);
+}
+
+.onboard-industry-chip .chip-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+  line-height: 1;
+}
+
+.onboard-industry-chip .chip-title {
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.25;
+}
+
+/* Light theme overrides for onboard-industry-chip & review banner */
+html[data-theme="light"] .onboard-industry-chip {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] .onboard-industry-chip:hover {
+  background: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+html[data-theme="light"] .onboard-industry-chip.active {
+  background: #d1fae5 !important;
+  border-color: #059669 !important;
+  color: #064e3b !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+html[data-theme="light"] #onboarding-modal .modal-card {
+  background: #ffffff !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(16, 185, 129, 0.15) !important;
+}
+
+html[data-theme="light"] #reg-success-review-banner {
+  background: #fef3c7 !important;
+  border-color: #f59e0b !important;
+}
+
+html[data-theme="light"] #reg-success-review-banner h4 {
+  color: #92400e !important;
+}
+
+html[data-theme="light"] #reg-success-review-banner p,
+html[data-theme="light"] #reg-success-review-banner ul,
+html[data-theme="light"] #reg-success-review-banner li {
+  color: #451a03 !important;
+}

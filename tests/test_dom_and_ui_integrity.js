@@ -470,6 +470,115 @@ it("Cancellation attribution accurately distinguishes desk cancellations from cu
   assert.ok(appJs.includes("const isDeskCanc = isItemCancelledByDesk(item);"), "openAuditModal must use isItemCancelledByDesk");
 });
 
+console.log("\n--- 6. 15-Second Shop Launch Onboarding Flow, Presets & Pre-Publishing Review Banner ---");
+
+it("DEMO_INDUSTRY_PRESETS contains all 8 industry presets with >= 5-6 realistic services each", () => {
+  const industryKeys = ["auto", "salon", "clinic", "pet", "restaurant", "repair", "tattoo", "general"];
+  
+  // Extract DEMO_INDUSTRY_PRESETS definition from app.js safely
+  const presetMatch = appJs.match(/const DEMO_INDUSTRY_PRESETS\s*=\s*(\{[\s\S]*?\n\};)/);
+  assert.ok(presetMatch, "DEMO_INDUSTRY_PRESETS must be defined in app.js");
+  
+  // Verify all 8 presets exist
+  industryKeys.forEach(key => {
+    assert.ok(appJs.includes(`${key}: {`), `DEMO_INDUSTRY_PRESETS missing preset for: ${key}`);
+  });
+
+  // Execute sandboxed check of DEMO_INDUSTRY_PRESETS object
+  const sandbox = {};
+  const vm = require("vm");
+  vm.runInNewContext(`${presetMatch[0]}; presets = DEMO_INDUSTRY_PRESETS;`, sandbox);
+  const presets = sandbox.presets;
+
+  assert.strictEqual(Object.keys(presets).length, 8, "Must contain exactly 8 industry presets");
+
+  industryKeys.forEach(key => {
+    const p = presets[key];
+    assert.ok(p, `Preset ${key} must exist`);
+    assert.ok(p.label, `Preset ${key} must have label`);
+    assert.ok(p.icon, `Preset ${key} must have icon`);
+    assert.ok(Array.isArray(p.services), `Preset ${key} must have services array`);
+    assert.ok(p.services.length >= 5, `Preset ${key} must have at least 5 to 6 services, found: ${p.services.length}`);
+    assert.strictEqual(p.services.length, 6, `Preset ${key} must have exactly 6 realistic services`);
+
+    // Verify service schema
+    p.services.forEach(srv => {
+      assert.ok(srv.id, `Service in ${key} missing id`);
+      assert.ok(srv.name, `Service in ${key} missing name`);
+      assert.ok(srv.estDurationMin >= 5 && srv.estDurationMin <= 120, `Service ${srv.name} duration out of bounds`);
+      assert.ok(srv.icon, `Service ${srv.name} missing icon`);
+      assert.strictEqual(srv.enabled, true, `Service ${srv.name} must be enabled: true`);
+    });
+  });
+});
+
+it("15-Second Shop Launch modal (#onboarding-modal) contains streamlined UI and all 8 industry chips", () => {
+  assert.ok(html.includes('id="onboarding-modal"'), "Missing #onboarding-modal");
+  assert.ok(html.includes("15-Second Shop Launch"), "Missing 15-Second Shop Launch title in onboarding modal");
+  assert.ok(html.includes('id="onboard-shopname"'), "Missing #onboard-shopname input");
+  assert.ok(html.includes('id="onboard-industry"'), "Missing #onboard-industry hidden input");
+  assert.ok(html.includes('id="onboard-industry-grid"'), "Missing #onboard-industry-grid container");
+
+  // Verify all 8 preset chips are wired in the DOM
+  const chips = [
+    "onboard-chip-salon",
+    "onboard-chip-auto",
+    "onboard-chip-clinic",
+    "onboard-chip-pet",
+    "onboard-chip-restaurant",
+    "onboard-chip-repair",
+    "onboard-chip-tattoo",
+    "onboard-chip-general"
+  ];
+  chips.forEach(chipId => {
+    assert.ok(html.includes(`id="${chipId}"`), `Missing industry chip: #${chipId}`);
+  });
+
+  // Verify invisible slug preview and primary submit button
+  assert.ok(html.includes('id="onboard-slug-preview-box"'), "Missing #onboard-slug-preview-box");
+  assert.ok(html.includes('id="onboard-slug-url-display"'), "Missing #onboard-slug-url-display");
+  assert.ok(html.includes('id="btn-onboard-submit"'), "Missing #btn-onboard-submit");
+  assert.ok(html.includes("Launch My Live Queue (Free Forever)"), "Missing primary submit button text");
+  
+  // Verify friction-free: address, promo text/dates, and plan tier selection dropdown are removed from initial launch form
+  assert.ok(!html.includes('id="onboard-promo-card"'), "Premature onboard-promo-card must be removed from 15-second launch");
+  assert.ok(!html.includes('id="onboard-promo-lockable-content"'), "Premature promo lockable content must be removed from launch");
+});
+
+it("Universal invisible slug engine & industry preset wiring in app.js", () => {
+  assert.ok(appJs.includes("function renderOnboardIndustryGrid()"), "app.js missing renderOnboardIndustryGrid");
+  assert.ok(appJs.includes("function selectOnboardIndustry("), "app.js missing selectOnboardIndustry");
+  assert.ok(appJs.includes("function handleOnboardShopNameInput("), "app.js missing handleOnboardShopNameInput");
+  assert.ok(appJs.includes("function toggleSlugEdit()"), "app.js missing toggleSlugEdit");
+  assert.ok(appJs.includes("async function handleOnboardingSubmit("), "handleOnboardingSubmit must be async for Firestore slug verification");
+  
+  // Check that handleOnboardingSubmit seeds preset services and default store hours (9 AM - 7 PM)
+  assert.ok(appJs.includes("state.config.services = initialServices;"), "handleOnboardingSubmit must seed initialServices");
+  assert.ok(appJs.includes("defaultHours = { open: \"09:00\", close: \"19:00\""), "handleOnboardingSubmit must seed 9 AM - 7 PM hours");
+  assert.ok(appJs.includes("planTitle = \"Starter Tier (Free)\";"), "New shops must launch on Starter Tier (Free)");
+  assert.ok(appJs.includes("planPrice = 0;"), "New shops must initialize with planPrice = 0");
+});
+
+it("Onboarding completion notice screen (#modal-registration-success) contains Pre-Publishing Review Banner & Submit Action Buttons", () => {
+  assert.ok(html.includes('id="modal-registration-success"'), "Missing #modal-registration-success");
+  assert.ok(html.includes('id="reg-success-review-banner"'), "Missing #reg-success-review-banner in completion modal");
+  assert.ok(html.includes("Action Required: Review Your Shop Settings Before Publishing!"), "Missing review warning headline");
+  assert.ok(html.includes("9:00 AM – 7:00 PM"), "Missing Store Hours 9 AM - 7 PM in review checklist");
+  assert.ok(html.includes('id="reg-review-service-count"'), "Missing #reg-review-service-count");
+  assert.ok(html.includes('id="btn-reg-review-settings"'), "Missing primary review submit button #btn-reg-review-settings");
+  assert.ok(html.includes('id="btn-reg-jump-desk"'), "Missing secondary jump button #btn-reg-jump-desk");
+  assert.ok(html.includes("Review & Confirm Shop Settings Now"), "Missing button label 'Review & Confirm Shop Settings Now'");
+  assert.ok(html.includes("Jump Straight to Live Front Desk"), "Missing button label 'Jump Straight to Live Front Desk'");
+});
+
+it("style.css provides rich responsive styling and high-contrast light mode overrides for onboarding", () => {
+  assert.ok(css.includes(".onboard-industry-grid"), "style.css missing .onboard-industry-grid");
+  assert.ok(css.includes(".onboard-industry-chip"), "style.css missing .onboard-industry-chip");
+  assert.ok(css.includes(".onboard-industry-chip.active"), "style.css missing .onboard-industry-chip.active");
+  assert.ok(css.includes('html[data-theme="light"] .onboard-industry-chip'), "style.css missing light mode chip overrides");
+  assert.ok(css.includes('html[data-theme="light"] #reg-success-review-banner'), "style.css missing light mode review banner overrides");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
