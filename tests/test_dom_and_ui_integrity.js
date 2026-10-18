@@ -584,6 +584,28 @@ it("style.css provides rich responsive styling and high-contrast light mode over
   assert.ok(css.includes('html[data-theme="light"] #reg-success-review-banner'), "style.css missing light mode review banner overrides");
 });
 
+it("Owner Analytics metrics headers have tight 0.25rem spacing, #section-shop-settings is defined, and launchFromRegistration auto-scrolls to center", () => {
+  assert.ok(html.includes('id="section-shop-settings"'), "Missing #section-shop-settings container ID in index.html");
+  assert.ok(html.includes("Today's Live Flow"), "Missing Today's Live Flow heading");
+  assert.ok(html.includes("Business Intelligence & Analytics"), "Missing Business Intelligence & Analytics heading");
+  assert.ok(appJs.includes('document.getElementById("section-shop-settings")'), "launchFromRegistration must target section-shop-settings");
+  assert.ok(appJs.includes('el.scrollIntoView({ behavior: "smooth", block: "center" })'), "launchFromRegistration must scroll to center of screen");
+});
+
+it("Front Desk and Owner Analytics navigation buttons are strictly suppressed in demo and signed-out guest states", () => {
+  assert.ok(appJs.includes('deskTab.classList.add("hidden")'), "applyUserRole/handleSignOut must hide deskTab for signed out guests");
+  assert.ok(appJs.includes('ownerTab.classList.add("hidden")'), "applyUserRole/handleSignOut must hide ownerTab for signed out guests");
+  assert.ok(appJs.includes('mobileTabDesk.classList.add("hidden")'), "applyUserRole/handleSignOut must hide mobileTabDesk for signed out guests");
+  assert.ok(appJs.includes('mobileTabOwner.classList.add("hidden")'), "applyUserRole/handleSignOut must hide mobileTabOwner for signed out guests");
+});
+
+it("Shop Settings & Branding Profile sub-tabs provide enhanced visibility and high-contrast styles", () => {
+  assert.ok(css.includes(".settings-subtabs-nav"), "style.css missing .settings-subtabs-nav");
+  assert.ok(css.includes(".settings-subtab-btn"), "style.css missing .settings-subtab-btn");
+  assert.ok(css.includes(".settings-subtab-btn.active"), "style.css missing .settings-subtab-btn.active");
+  assert.ok(css.includes("color: #cbd5e1;"), "style.css must have bright slate color for subtab buttons");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

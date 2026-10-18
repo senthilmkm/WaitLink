@@ -6869,11 +6869,11 @@ function applyUserRole(user) {
     return syncPromise || Promise.resolve();
   } else if (state.isDemoMode) {
     state.userRole = "Guest";
-    if (shopChipContainer) shopChipContainer.classList.remove("hidden");
-    if (deskTab) deskTab.classList.remove("hidden");
-    if (ownerTab) ownerTab.classList.remove("hidden");
-    if (mobileTabDesk) mobileTabDesk.classList.remove("hidden");
-    if (mobileTabOwner) mobileTabOwner.classList.remove("hidden");
+    if (shopChipContainer) shopChipContainer.classList.add("hidden");
+    if (deskTab) deskTab.classList.add("hidden");
+    if (ownerTab) ownerTab.classList.add("hidden");
+    if (mobileTabDesk) mobileTabDesk.classList.add("hidden");
+    if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
     if (mobileTabSuperAdmin) mobileTabSuperAdmin.classList.add("hidden");
 
     if (authBtnLabel) authBtnLabel.textContent = "🔑 Sign In";
@@ -7122,6 +7122,14 @@ async function handleSignOut(e) {
   // 7. Reset active shop to default demo sandbox mode for logged out guests
   launchDemoMode();
   applyUserRole(null);
+  const deskTab = document.getElementById("tab-desk");
+  const ownerTab = document.getElementById("tab-owner");
+  const mobileTabDesk = document.getElementById("mobile-tab-desk");
+  const mobileTabOwner = document.getElementById("mobile-tab-owner");
+  if (deskTab) deskTab.classList.add("hidden");
+  if (ownerTab) ownerTab.classList.add("hidden");
+  if (mobileTabDesk) mobileTabDesk.classList.add("hidden");
+  if (mobileTabOwner) mobileTabOwner.classList.add("hidden");
   renderShopDropdown();
   renderAll();
   switchView("home");
@@ -7949,6 +7957,14 @@ https://waitlink.app`;
 function launchFromRegistration(view) {
   closeRegistrationSuccessModal();
   switchView(view);
+  if (view === "owner") {
+    setTimeout(() => {
+      const el = document.getElementById("section-shop-settings") || document.getElementById("settings-subtabs-nav");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150);
+  }
 }
 
 function goToConfigSection(section) {
