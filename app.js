@@ -539,7 +539,7 @@ const state = {
   deskHistoryPage: 1,
   ownerHistoryPage: 1,
   historyPageSize: 20,
-  deskViewMode: localStorage.getItem("waitlink_desk_view_mode") || "grid",
+  deskViewMode: SafeStorage.get("waitlink_desk_view_mode", "grid"),
   stageFocusedIndex: 0,
   revealedPhoneIds: new Set(),
   // Staff RBAC & Multi-Tenant Owner Directory
@@ -587,9 +587,9 @@ const DEFAULT_RETENTION_CONFIG = {
 };
 
 try {
-  const cachedRet = localStorage.getItem("waitlink_retention_config");
+  const cachedRet = SafeStorage.getJSON("waitlink_retention_config", null);
   if (cachedRet) {
-    state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...JSON.parse(cachedRet) };
+    state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...cachedRet };
   }
 } catch (e) {}
 
@@ -719,7 +719,7 @@ function checkMonthlyCheckinLimit() {
 }
 
 // Theme Mode Manager (Dark / Light)
-let currentThemeMode = localStorage.getItem("waitlink_theme") || "dark";
+let currentThemeMode = SafeStorage.get("waitlink_theme", "dark");
 
 function initTheme() {
   setThemeMode(currentThemeMode);
@@ -727,7 +727,7 @@ function initTheme() {
 
 function setThemeMode(theme) {
   currentThemeMode = theme;
-  localStorage.setItem("waitlink_theme", theme);
+  SafeStorage.set("waitlink_theme", theme);
   document.documentElement.setAttribute("data-theme", theme);
   updateThemeToggleUI();
 }
@@ -13499,7 +13499,6 @@ function renderOwnerShopsTable(shopsList) {
     const tierPillBg = isEnterprise ? "rgba(129, 140, 248, 0.15)" : (isPro ? "rgba(6, 182, 212, 0.15)" : "rgba(16, 185, 129, 0.15)");
     const tierLabel = isDemo ? "Starter (Demo)" : (isEnterprise ? "Enterprise" : (isPro ? "Pro Business" : "Starter"));
 
-    const isSandbox = shopSlug === "main-st-barbers";
     const isActiveShop = state.config.slug === shopSlug;
     const currentWait = isActiveShop ? (state.queue ? state.queue.length : 0) : "0";
     const todayServed = isActiveShop ? getTodayCalledVisits().length : "--";
