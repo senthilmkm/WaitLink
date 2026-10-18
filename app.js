@@ -2966,8 +2966,8 @@ function renderAll() {
   const deskInput = document.getElementById("customer-name-input");
   if (deskInput) {
     deskInput.placeholder = isClinical
-      ? "Enter patient name or initials (e.g. Marcus S.)"
-      : "Enter customer name or initials (e.g. Marcus S.)";
+      ? "Patient Name or Initials"
+      : "Customer Name or Initials";
   }
   const deskBtnText = document.getElementById("desk-checkin-btn-text");
   if (deskBtnText) {
@@ -4674,19 +4674,19 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
   const checkInFormatted = item.checkedInAt ? formatHistoryDateTime(item.checkedInAt) : "--";
   const isCalled = item.status === "called";
   const outcomeFormatted = isCalled 
-    ? (item.calledAt ? `<span style="color: #10b981; font-weight: 600;">📞 ${formatHistoryDateTime(item.calledAt)}</span>` : "--")
+    ? (item.calledAt ? `<span style="color: #10b981; font-weight: 600;">📞 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--")
     : (item.cancelledAt 
-        ? `<span style="color: #f43f5e; font-weight: 500;">🚫 ${formatHistoryDateTime(item.cancelledAt)}</span>` 
-        : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 ${formatHistoryDateTime(item.calledAt)}</span>` : "--"));
+        ? `<span style="color: #f43f5e; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.cancelledAt)}</span><span class="history-time-compact">${formatTime(item.cancelledAt)}</span></span>` 
+        : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--"));
 
   let statusTagHtml = `<span class="status-tag called" data-tooltip="Customer called for service">Called</span>`;
   if (!isCalled) {
     const byDesk = isItemCancelledByDesk(item);
     if (!byDesk) {
-      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);" data-tooltip="Customer tapped Leave Line on their phone">📱 Left Line</span>`;
+      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);" data-tooltip="Customer tapped Leave Line on their phone"><span class="tag-full">📱 Left Line</span><span class="tag-compact">📱 Left</span></span>`;
     } else {
       const staffTooltip = item.cancelledByOperator ? `Cancelled by ${escapeHtml(item.cancelledByOperator)} at Front Desk` : "Cancelled or marked No-Show by Front Desk";
-      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);" data-tooltip="${staffTooltip}">🖥️ Desk Cancelled</span>`;
+      statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);" data-tooltip="${staffTooltip}"><span class="tag-full">🖥️ Desk Cancelled</span><span class="tag-compact">🖥️ Cancelled</span></span>`;
     }
   } else if (item.delayedMinutes) {
     statusTagHtml = `

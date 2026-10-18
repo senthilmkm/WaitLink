@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=5.0">
+  <link rel="stylesheet" href="style.css?v=5.2">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -597,7 +597,7 @@
             <option value="custom">Pick Specific Date...</option>
           </select>
           <input type="date" id="history-date-picker" class="filter-date-input hidden" onchange="onDeskFilterChange()">
-          <input type="text" id="history-search-input" class="filter-search-input" placeholder="🔍 Search customer or ticket..." oninput="onDeskFilterChange()">
+          <input type="text" id="history-search-input" class="filter-search-input" placeholder="🔍 Search name or ticket..." oninput="onDeskFilterChange()">
         </div>
       </div>
 
@@ -1208,7 +1208,7 @@
             <option value="custom">Pick Specific Date...</option>
           </select>
           <input type="date" id="owner-history-date-picker" class="filter-date-input hidden" onchange="onOwnerFilterChange()">
-          <input type="text" id="owner-history-search-input" class="filter-search-input" placeholder="🔍 Search customer or ticket..." oninput="onOwnerFilterChange()">
+          <input type="text" id="owner-history-search-input" class="filter-search-input" placeholder="🔍 Search name or ticket..." oninput="onOwnerFilterChange()">
         </div>
         <button class="btn-text" onclick="clearDailyHistory()">Reset Today's Analytics</button>
       </div>
@@ -3477,6 +3477,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=7.4"></script>
+  <script src="app.js?v=7.6"></script>
 </body>
 </html>

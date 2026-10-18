@@ -1537,12 +1537,25 @@ select optgroup,
 }
 
 .status-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
   position: relative;
+  white-space: nowrap;
+}
+
+.history-time-compact,
+.tag-compact {
+  display: none;
+}
+
+.history-time-full,
+.tag-full {
+  display: inline;
 }
 
 .status-tag.called {
@@ -3006,7 +3019,7 @@ body.drawer-open {
   }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 768px) {
   .history-table th:nth-child(3),
   .history-table td:nth-child(3) {
     display: none !important;
@@ -3014,18 +3027,34 @@ body.drawer-open {
   .history-table th,
   .history-table td {
     padding: 0.55rem 0.4rem !important;
-    font-size: 0.78rem !important;
+    font-size: 0.8rem !important;
   }
   .history-table td:nth-child(4) span {
     white-space: nowrap !important;
   }
   .btn-row-primary {
     padding: 0.35rem 0.55rem !important;
-    font-size: 0.76rem !important;
+    font-size: 0.78rem !important;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .history-toolbar,
+  .history-filter-group {
+    width: 100% !important;
+  }
+  .history-filter-group {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .filter-select,
+  .filter-date-input,
+  .filter-search-input {
+    width: 100% !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+  }
   .main-content {
     padding: 1rem 0.75rem;
   }
@@ -3033,16 +3062,79 @@ body.drawer-open {
     grid-template-columns: 1fr 1fr;
     gap: 0.65rem;
   }
+  .metrics-grid > .metric-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
   .shop-title {
     font-size: 1.4rem;
   }
-  .input-group {
+  .desk-input-field-wrapper {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .input-group:not(.desk-input-field-wrapper) {
     flex-direction: column;
     align-items: stretch;
   }
-  .input-group .btn {
+  .input-group:not(.desk-input-field-wrapper) .btn {
     width: 100%;
     justify-content: center;
+  }
+  /* On compact mobile screens, hide Column 5 (Wait Duration) so Customer, Status, Outcome Time, and Action fit comfortably without clipping */
+  .history-table th:nth-child(5),
+  .history-table td:nth-child(5) {
+    display: none !important;
+  }
+  .history-table th,
+  .history-table td {
+    padding: 0.5rem 0.3rem !important;
+    font-size: 0.76rem !important;
+  }
+  .history-table td:first-child,
+  .history-table th:first-child {
+    padding-left: 0.45rem !important;
+  }
+  .history-table td:last-child,
+  .history-table th:last-child {
+    padding-right: 0.45rem !important;
+  }
+  .history-time-full {
+    display: none !important;
+  }
+  .history-time-compact {
+    display: inline !important;
+    white-space: nowrap !important;
+  }
+  .tag-full {
+    display: none !important;
+  }
+  .tag-compact {
+    display: inline !important;
+    white-space: nowrap !important;
+  }
+  .status-tag {
+    padding: 0.18rem 0.4rem !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+    letter-spacing: -0.01em;
+  }
+  .btn-row-primary {
+    padding: 0.28rem 0.45rem !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+  .btn-row-more {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 1rem !important;
+  }
+  .row-actions-group {
+    gap: 0.2rem !important;
+  }
+  .pagination-container {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    align-items: center !important;
   }
   .customer-title-row {
     width: 100%;
