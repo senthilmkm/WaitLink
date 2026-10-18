@@ -529,6 +529,8 @@ const state = {
     enableServices: true,
     services: [...DEFAULT_DEMO_SERVICES],
     clinicalPrivacyEnabled: false,
+    isActive: true,
+    status: "active",
     firebaseConfig: DEFAULT_FIREBASE_CONFIG
   },
   queue: [], // Active waiting items
@@ -1418,6 +1420,8 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.dateFormat !== undefined) state.config.dateFormat = data.dateFormat;
       if (data.tagline !== undefined) state.config.tagline = data.tagline;
       if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
+      if (data.isActive !== undefined) state.config.isActive = data.isActive;
+      if (data.status !== undefined) state.config.status = data.status;
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
@@ -1543,6 +1547,12 @@ function loadConfig() {
   }
   if (state.config.clinicalPrivacyEnabled === undefined) {
     state.config.clinicalPrivacyEnabled = false;
+  }
+  if (state.config.isActive === undefined) {
+    state.config.isActive = true;
+  }
+  if (!state.config.status) {
+    state.config.status = state.config.isActive ? "active" : "paused";
   }
   if (!Array.isArray(state.config.services) || state.config.services.length === 0) {
     state.config.services = [
@@ -1956,6 +1966,100 @@ function updateConfigUI() {
     }
   }
   updatePosterUI();
+  updateShopStatusUI();
+}
+
+// Synchronize Shop Active/Paused Status Across Screen Configs (No Race Conditions)
+function updateShopStatusUI() {
+  const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
+
+  // 1. Shop Settings General Tab Status Card & Toggle
+  const activeCheckbox = document.getElementById("owner-shop-active-checkbox");
+  if (activeCheckbox) {
+    activeCheckbox.checked = isShopActive;
+  }
+  const statusCard = document.getElementById("owner-shop-status-card");
+  const statusTitle = document.getElementById("owner-shop-status-title");
+  const toggleText = document.getElementById("owner-shop-active-toggle-text");
+  const toggleWrapper = document.getElementById("owner-shop-status-toggle-wrapper");
+
+  if (statusCard && statusTitle && toggleText) {
+    if (isShopActive) {
+      statusCard.style.background = "rgba(16, 185, 129, 0.06)";
+      statusCard.style.borderColor = "rgba(16, 185, 129, 0.35)";
+      statusTitle.style.color = "#34d399";
+      statusTitle.innerHTML = `<span id="owner-shop-status-icon">🟢</span> Shop Queue Status: Active (Open)`;
+      toggleText.textContent = "Active / Accepting Walk-ins";
+      if (toggleWrapper) {
+        toggleWrapper.style.background = "rgba(16, 185, 129, 0.2)";
+        toggleWrapper.style.borderColor = "rgba(16, 185, 129, 0.4)";
+      }
+    } else {
+      statusCard.style.background = "rgba(245, 158, 11, 0.08)";
+      statusCard.style.borderColor = "rgba(245, 158, 11, 0.4)";
+      statusTitle.style.color = "#fbbf24";
+      statusTitle.innerHTML = `<span id="owner-shop-status-icon">⏸️</span> Shop Queue Status: Paused (Closed to Walk-ins)`;
+      toggleText.textContent = "Paused (Click to Open)";
+      if (toggleWrapper) {
+        toggleWrapper.style.background = "rgba(245, 158, 11, 0.2)";
+        toggleWrapper.style.borderColor = "rgba(245, 158, 11, 0.4)";
+      }
+    }
+  }
+
+  // 2. Front Desk Operator Banner & Subtitle
+  const deskPausedBanner = document.getElementById("desk-shop-paused-banner");
+  if (deskPausedBanner) {
+    if (!isShopActive) {
+      deskPausedBanner.classList.remove("hidden");
+      deskPausedBanner.style.setProperty("display", "flex", "important");
+    } else {
+      deskPausedBanner.classList.add("hidden");
+      deskPausedBanner.style.setProperty("display", "none", "important");
+    }
+  }
+
+  const deskSubtitle = document.getElementById("desk-shop-subtitle");
+  if (deskSubtitle) {
+    deskSubtitle.textContent = isShopActive ? "Live Front Desk Queue" : "Live Front Desk Queue • ⏸️ Paused";
+  }
+
+  // 3. Customer Public Screen Banner & CTA
+  const publicPausedBanner = document.getElementById("public-shop-paused-banner");
+  if (publicPausedBanner) {
+    if (!isShopActive) {
+      publicPausedBanner.classList.remove("hidden");
+      publicPausedBanner.style.display = "block";
+    } else {
+      publicPausedBanner.classList.add("hidden");
+      publicPausedBanner.style.display = "none";
+    }
+  }
+
+  const publicShopBadge = document.getElementById("public-shop-badge");
+  if (publicShopBadge) {
+    if (!isShopActive) {
+      publicShopBadge.textContent = "⏸️ QUEUE PAUSED";
+      publicShopBadge.style.background = "rgba(245, 158, 11, 0.2)";
+      publicShopBadge.style.color = "#fbbf24";
+      publicShopBadge.style.borderColor = "rgba(245, 158, 11, 0.4)";
+    } else {
+      publicShopBadge.textContent = "LIVE WALK-IN QUEUE";
+      publicShopBadge.style.background = "";
+      publicShopBadge.style.color = "";
+      publicShopBadge.style.borderColor = "";
+    }
+  }
+
+  const publicJoinBtnText = document.getElementById("public-join-btn-text");
+  if (publicJoinBtnText) {
+    const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+    if (!isShopActive) {
+      publicJoinBtnText.textContent = "⏸️ Queue Temporarily Paused";
+    } else {
+      publicJoinBtnText.textContent = isClinical ? "🩺 Join Patient Reception Line" : "🎟️ Join Queue Now";
+    }
+  }
 }
 
 // Dedicated High-Fidelity Printable Window Poster UI & QR Synchronizer
@@ -2203,6 +2307,8 @@ function saveData() {
         dateFormat: state.config.dateFormat || "MM/DD/YYYY",
         services: state.config.services || [],
         logoUrl: state.config.logoUrl || "",
+        isActive: state.config.isActive !== false,
+        status: state.config.isActive === false ? "paused" : (state.config.status || "active"),
         queue: state.queue,
         history: cappedHistory,
         updatedAt: Date.now()
@@ -3029,6 +3135,7 @@ function renderPublicView() {
   restoreActiveTicket();
   renderPublicServiceChips();
   renderDeskServiceSelect();
+  updateShopStatusUI();
 }
 
 function renderPublicContactBar() {
@@ -3777,6 +3884,11 @@ function populateOwnerInputs() {
     }
   }
 
+  const activeCheck = document.getElementById("owner-shop-active-checkbox");
+  if (activeCheck) {
+    activeCheck.checked = (state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive");
+  }
+
   // Enforce tier lockdown on inputs immediately after populating
   updateTierFeatureLockdown();
 }
@@ -3910,6 +4022,10 @@ async function saveOwnerSettings() {
     || state.config.dateFormat 
     || "MM/DD/YYYY";
 
+  const isActive = document.getElementById("owner-shop-active-checkbox") 
+    ? document.getElementById("owner-shop-active-checkbox").checked 
+    : (state.config.isActive !== false);
+
   state.config = {
     ...state.config,
     shopName,
@@ -3926,6 +4042,8 @@ async function saveOwnerSettings() {
     clinicalPrivacyEnabled,
     timeFormat,
     dateFormat,
+    isActive,
+    status: isActive ? "active" : "paused",
     twilio: {
       enabled: twilioEnable,
       accountSid: twilioAccountSid,
@@ -5224,6 +5342,7 @@ function renderPublicView() {
   restoreActiveTicket();
   renderPublicServiceChips();
   renderDeskServiceSelect();
+  updateShopStatusUI();
 }
 
 function parsePromoTimestamp(dateStr, isEnd = false) {
@@ -8031,13 +8150,23 @@ function loadSuperAdminShops() {
 // Inspect a specific shop's Front Desk
 function inspectShop(slug, isSilent = false) {
   if (!slug) return;
-  
   let targetName = slug;
   if (Array.isArray(state.registeredShops)) {
     const found = state.registeredShops.find(s => (s.slug || s.id) === slug);
     if (found) {
       targetName = found.name || found.shopName || slug;
       if (found.ownerEmail) state.config.ownerEmail = found.ownerEmail;
+      if (found.isActive !== undefined) state.config.isActive = found.isActive;
+      if (found.status !== undefined) state.config.status = found.status;
+    }
+  }
+  if (Array.isArray(state.ownerDirectoryShops)) {
+    const foundDir = state.ownerDirectoryShops.find(s => (s.slug || s.id) === slug);
+    if (foundDir) {
+      targetName = foundDir.name || foundDir.shopName || slug;
+      if (foundDir.ownerEmail) state.config.ownerEmail = foundDir.ownerEmail;
+      if (foundDir.isActive !== undefined) state.config.isActive = foundDir.isActive;
+      if (foundDir.status !== undefined) state.config.status = foundDir.status;
     }
   }
   if (targetName === slug && Array.isArray(state.myShops)) {
@@ -8045,6 +8174,8 @@ function inspectShop(slug, isSilent = false) {
     if (foundMy) {
       targetName = foundMy.shopName || slug;
       if (foundMy.ownerEmail) state.config.ownerEmail = foundMy.ownerEmail;
+      if (foundMy.isActive !== undefined) state.config.isActive = foundMy.isActive;
+      if (foundMy.status !== undefined) state.config.status = foundMy.status;
     }
   }
 
@@ -8154,9 +8285,20 @@ function renderSuperAdminShopsTable() {
             <option value="enterprise" ${currentTierKey === 'enterprise' ? 'selected' : ''} style="background: #0f172a; color: #818cf8;">Enterprise ($49 / mo)</option>
           </select>
         </td>
-        <td><span class="status-pill"><span class="pulse-dot"></span> Active</span></td>
+        <td>
+          ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+            <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><span class="pulse-dot"></span> Active</span>
+          ` : `
+            <span class="status-pill" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);"><span>⏸️</span> Paused</span>
+          `}
+        </td>
         <td>
           <div class="actions-cell">
+            ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', false)" style="color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);" title="SuperAdmin: Pause this shop queue">⏸️ Pause</button>
+            ` : `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', true)" style="color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08);" title="SuperAdmin: Open and resume this shop queue">▶️ Open</button>
+            `}
             <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
             <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">Settings ⚙️</button>
             <button class="btn-text-sm" 
@@ -10505,6 +10647,12 @@ if (typeof document !== "undefined") {
 // ==========================================
 
 function openPublicCheckInModal() {
+  const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
+  if (!isShopActive) {
+    showToast("⏸️ This walk-in queue is temporarily paused by the shop owner.");
+    return;
+  }
+
   const modal = document.getElementById("modal-customer-checkin");
   const shopSub = document.getElementById("public-checkin-shop-subtitle");
   if (shopSub) shopSub.textContent = `Checking in at ${state.config.shopName || 'WaitLink Shop'}`;
@@ -10524,6 +10672,12 @@ function closePublicCheckInModal() {
 
 function handlePublicSelfCheckIn(event) {
   event.preventDefault();
+  const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
+  if (!isShopActive) {
+    showToast("⏸️ Walk-in arrivals are currently paused for this location.");
+    return;
+  }
+
   const nameInput = document.getElementById("public-customer-name");
   const phoneInput = document.getElementById("public-customer-phone");
 
@@ -11053,6 +11207,12 @@ async function performClientSideLazyCleanup() {
 // ==========================================
 
 function toggleInlineCheckInForm(show) {
+  const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
+  if (show && !isShopActive) {
+    showToast("⏸️ This walk-in queue is temporarily paused by the shop owner. Please check back shortly!");
+    return;
+  }
+
   const btnContainer = document.getElementById("public-join-btn-container");
   const card = document.getElementById("public-inline-checkin-card");
   const nameInput = document.getElementById("inline-customer-name");
@@ -11081,6 +11241,12 @@ function toggleInlineCheckInForm(show) {
 
 function handlePublicInlineCheckIn(event) {
   event.preventDefault();
+  const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
+  if (!isShopActive) {
+    showToast("⏸️ Walk-in arrivals are currently paused for this location.");
+    return;
+  }
+
   const nameInput = document.getElementById("inline-customer-name");
   const phoneInput = document.getElementById("inline-customer-phone");
   const tcpaCheck = document.getElementById("inline-tcpa-consent");
@@ -12777,12 +12943,27 @@ function renderOwnerShopsTable(shopsList) {
           <span style="font-size: 0.85rem; color: #cbd5e1;">${todayServed} served today</span>
         </td>
         <td>
-          <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
-            <span class="pulse-dot"></span> Open
-          </span>
+          ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+            <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+              <span class="pulse-dot"></span> Open
+            </span>
+          ` : `
+            <span class="status-pill" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">
+              <span>⏸️</span> Paused
+            </span>
+          `}
         </td>
         <td>
           <div class="actions-cell">
+            ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', false)" style="color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);" title="Temporarily pause walk-in check-ins">
+                ⏸️ Pause
+              </button>
+            ` : `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', true)" style="color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08);" title="Resume and open queue">
+                ▶️ Open
+              </button>
+            `}
             <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(shopSlug)}'); switchView('desk');" title="Open Front Desk Operator">
               🖥️ Front Desk
             </button>
@@ -12807,6 +12988,126 @@ function renderOwnerShopsTable(shopsList) {
       </tr>
     `;
   }).join("");
+}
+
+// Toggle active/paused status for current shop (invoked from Shop Settings or Front Desk resume button)
+async function handleToggleActiveShop(makeActive) {
+  const newActive = !!makeActive;
+  const newStatus = newActive ? "active" : "paused";
+
+  // 1. Immediate in-memory & SafeStorage update (Zero race conditions)
+  state.config.isActive = newActive;
+  state.config.status = newStatus;
+  saveConfig();
+
+  // Synchronize in-memory directories
+  const currentSlug = state.config.slug;
+  if (Array.isArray(state.ownerDirectoryShops)) {
+    const s = state.ownerDirectoryShops.find(x => (x.slug === currentSlug || x.id === currentSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+  if (Array.isArray(state.registeredShops)) {
+    const s = state.registeredShops.find(x => (x.slug === currentSlug || x.id === currentSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+  if (Array.isArray(state.myShops)) {
+    const s = state.myShops.find(x => (x.slug === currentSlug || x.id === currentSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+
+  // 2. Reflect immediately across all open screen configs
+  updateShopStatusUI();
+  renderOwnerShopsTable();
+  if (typeof renderSuperAdminShopsTable === "function") {
+    renderSuperAdminShopsTable();
+  }
+  renderPublicView();
+
+  showToast(newActive ? "🟢 Shop Queue is now Active (Accepting Walk-ins)" : "⏸️ Shop Queue is now Paused (Walk-ins Closed)");
+
+  // 3. Atomic Firestore partial merge
+  if (db && currentSlug) {
+    try {
+      await db.collection("shops").doc(currentSlug).set({
+        isActive: newActive,
+        status: newStatus,
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Firestore shop status sync notice:", err);
+      showToast("⚠️ Cloud Sync Notice: Status updated locally. Syncing to cloud in background.");
+    }
+  }
+}
+
+// 1-Tap Toggle shop active/paused from Owner Directory table or SuperAdmin table
+async function toggleShopActiveFromDirectory(shopSlug, makeActive) {
+  if (!shopSlug) return;
+  const newActive = !!makeActive;
+  const newStatus = newActive ? "active" : "paused";
+
+  // If toggling currently inspected/active shop, mutate state.config
+  if (state.config.slug === shopSlug) {
+    state.config.isActive = newActive;
+    state.config.status = newStatus;
+    saveConfig();
+  }
+
+  // Synchronize in-memory caches
+  if (Array.isArray(state.ownerDirectoryShops)) {
+    const s = state.ownerDirectoryShops.find(x => (x.slug === shopSlug || x.id === shopSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+  if (Array.isArray(state.registeredShops)) {
+    const s = state.registeredShops.find(x => (x.slug === shopSlug || x.id === shopSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+  if (Array.isArray(state.myShops)) {
+    const s = state.myShops.find(x => (x.slug === shopSlug || x.id === shopSlug));
+    if (s) {
+      s.isActive = newActive;
+      s.status = newStatus;
+    }
+  }
+
+  // Reflect immediately in DOM
+  renderOwnerShopsTable();
+  if (typeof renderSuperAdminShopsTable === "function") {
+    renderSuperAdminShopsTable();
+  }
+  updateShopStatusUI();
+  renderPublicView();
+
+  const formattedName = formatSlugToTitle(shopSlug);
+  showToast(newActive ? `🟢 "${formattedName}" is now Open` : `⏸️ "${formattedName}" is now Paused`);
+
+  // Atomic partial write with { merge: true }
+  if (db) {
+    try {
+      await db.collection("shops").doc(shopSlug).set({
+        isActive: newActive,
+        status: newStatus,
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Firestore shop status sync notice:", err);
+    }
+  }
 }
 
 // Filter Owned Shops Table by search query
@@ -13709,6 +14010,9 @@ window.handleStaffAuthSubmit = handleStaffAuthSubmit;
 window.switchOwnerDirTab = switchOwnerDirTab;
 window.loadOwnerDirectory = loadOwnerDirectory;
 window.renderOwnerShopsTable = renderOwnerShopsTable;
+window.handleToggleActiveShop = handleToggleActiveShop;
+window.toggleShopActiveFromDirectory = toggleShopActiveFromDirectory;
+window.updateShopStatusUI = updateShopStatusUI;
 window.filterOwnerShops = filterOwnerShops;
 window.loadStaffRoles = loadStaffRoles;
 window.renderStaffCards = renderStaffCards;

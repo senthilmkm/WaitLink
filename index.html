@@ -485,6 +485,17 @@
         </button>
       </div>
 
+      <!-- Shop Queue Paused Operator Notice Banner -->
+      <div id="desk-shop-paused-banner" class="hidden" style="display: none !important; margin-bottom: 1rem; padding: 0.65rem 1rem; background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: var(--radius-sm); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; color: #fbbf24; font-weight: 600;">
+          <span>⏸️</span>
+          <span>Shop Queue is Currently Paused (Customer walk-ins closed). You can still serve active tickets.</span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="handleToggleActiveShop(true)" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; border-color: rgba(16, 185, 129, 0.5); color: #34d399; font-weight: 700; background: rgba(16, 185, 129, 0.1);">
+          ▶️ Resume Queue
+        </button>
+      </div>
+
       <!-- Quick Add Check-In Card -->
       <div class="card checkin-card">
         <form id="checkin-form" onsubmit="handleCheckIn(event)" class="desk-checkin-form">
@@ -812,8 +823,24 @@
               </div>
             </div>
 
+            <!-- Shop Operational Status (Active / Paused) Toggle Card -->
+            <div class="card" id="owner-shop-status-card" style="margin-top: 1.25rem; padding: 1rem; border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.06); border: 1.5px solid rgba(16, 185, 129, 0.35); transition: all 0.3s ease;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
+                <strong id="owner-shop-status-title" style="color: #34d399; font-size: 0.92rem; display: flex; align-items: center; gap: 0.45rem;">
+                  <span id="owner-shop-status-icon">🟢</span> Shop Queue Status: Active (Open)
+                </strong>
+                <label id="owner-shop-status-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.4); user-select: none;">
+                  <input type="checkbox" id="owner-shop-active-checkbox" checked onchange="handleToggleActiveShop(this.checked)" style="accent-color: #10b981; cursor: pointer;"> 
+                  <span id="owner-shop-active-toggle-text">Active / Accepting Walk-ins</span>
+                </label>
+              </div>
+              <p id="owner-shop-status-desc" style="font-size: 0.78rem; color: var(--text-muted); margin: 0; line-height: 1.45;">
+                When paused, customer walk-in check-in is temporarily halted on your public link. Front desk staff can continue to call and serve any remaining visitors.
+              </p>
+            </div>
+
             <!-- Clinical & Healthcare Privacy Mode Toggle -->
-            <div class="card" id="owner-clinical-privacy-card" style="margin-top: 1.25rem; padding: 1rem; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.06); border: 1.5px solid rgba(99, 102, 241, 0.35);">
+            <div class="card" id="owner-clinical-privacy-card" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.06); border: 1.5px solid rgba(99, 102, 241, 0.35);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
                 <strong style="color: #a5b4fc; font-size: 0.92rem; display: flex; align-items: center; gap: 0.45rem;">
                   <span>🏥</span> Clinical & Healthcare Privacy Mode
@@ -1253,7 +1280,7 @@
         <div class="public-card">
           <div class="public-header">
             <img id="public-shop-logo" class="public-logo-img hidden" alt="Shop Logo">
-            <div class="shop-badge">LIVE WALK-IN QUEUE</div>
+            <div class="shop-badge" id="public-shop-badge">LIVE WALK-IN QUEUE</div>
             <h1 class="public-shop-name" id="public-shop-name">Live Walk-In Queue</h1>
 
             <!-- Store Hours Banner (Placed immediately below shop name) -->
@@ -1264,6 +1291,15 @@
 
             <!-- Address & Phone Contact Bar (Clean compact layout, NO isolated dot) -->
             <div class="public-contact-bar" id="public-contact-bar"></div>
+          </div>
+
+          <!-- Inactive / Paused Notice Banner -->
+          <div id="public-shop-paused-banner" class="hidden" style="display: none; margin: 0.85rem 0; padding: 1rem 1.15rem; background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 1.3rem; margin-bottom: 0.25rem;">⏸️</div>
+            <strong style="color: #fbbf24; font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">Walk-In Queue Temporarily Paused</strong>
+            <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0; line-height: 1.45;">
+              This location is currently not accepting new walk-ins. If you already have an active ticket, staff will still call your turn.
+            </p>
           </div>
 
           <!-- Active Promotional Banner -->
@@ -2698,7 +2734,8 @@ Dedicated Support Manager
                 <li>✓ Audible Turn Chimes & Sound Alerts</li>
                 <li style="color: var(--text-subtle); opacity: 0.85;"><span style="color: #ef4444; font-weight: 700;">✕</span> <strong>0 SMS Included</strong> (Live Web Card &amp; Lobby Calling only)</li>
                 <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Custom Shop Logo Branding</li>
-                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Business Analytics &amp; CSV History Export</li>
+                <li>✓ 📊 <strong style="color: #10b981;">Today's Real-Time Analytics</strong> (Live Turnaround &amp; Traffic)</li>
+                <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Historical CSV Data Exports &amp; 90-Day Trends</li>
               </ul>
             </div>
             <button class="btn btn-secondary btn-sm" id="tier-btn-starter" onclick="selectUpgradeTier('starter')" style="width: 100%; margin-top: 1.25rem;">Select Starter ($0)</button>
@@ -2720,9 +2757,9 @@ Dedicated Support Manager
                 <li>✓ 📱 <strong>Automated SMS Alerts (Twilio)</strong></li>
                 <li>✓ 📷 Custom Shop Logo &amp; Accent Colors</li>
                 <li>✓ 🎁 Promotional Offer Banners</li>
-                <li>✓ 📊 Owner Business Intelligence Dashboard</li>
-                <li>✓ 📉 Peak Rush Window &amp; Walk-Away Analytics</li>
-                <li>✓ 📥 Unlimited CSV History Export</li>
+                <li>✓ 📊 <strong>90-Day Deep Trend Intelligence</strong> &amp; Comparisons</li>
+                <li>✓ 📉 <strong>Peak Rush Window &amp; Walk-Away Loss Tracking</strong></li>
+                <li>✓ 📥 <strong>Unlimited CSV History Data Exports</strong></li>
                 <li>✓ 🔄 Multi-Device Front Desk Sync</li>
                 <li>✓ ⚡ Priority Cloud Firestore Latency</li>
                 <li style="color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700;">✕</span> Multi-Location Network (Unlimited Shops)</li>
@@ -3534,6 +3571,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=8.1"></script>
+  <script src="app.js?v=8.2"></script>
 </body>
 </html>

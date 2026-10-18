@@ -6850,3 +6850,32 @@ html[data-theme="light"] #reg-success-review-banner ul,
 html[data-theme="light"] #reg-success-review-banner li {
   color: #451a03 !important;
 }
+
+/* Light Mode Overrides for Shop Active/Paused Status & Banners */
+html[data-theme="light"] #owner-shop-status-card {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+html[data-theme="light"] #owner-shop-status-card p {
+  color: #334155 !important;
+}
+html[data-theme="light"] #owner-shop-status-title {
+  color: #15803d !important;
+}
+html[data-theme="light"] #owner-shop-status-toggle-wrapper {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+html[data-theme="light"] #desk-shop-paused-banner,
+html[data-theme="light"] #public-shop-paused-banner {
+  background: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+html[data-theme="light"] #desk-shop-paused-banner span,
+html[data-theme="light"] #public-shop-paused-banner strong {
+  color: #92400e !important;
+}
+html[data-theme="light"] #public-shop-paused-banner p {
+  color: #78350f !important;
+}

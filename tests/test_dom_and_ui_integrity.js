@@ -606,6 +606,52 @@ it("Shop Settings & Branding Profile sub-tabs provide enhanced visibility and hi
   assert.ok(css.includes("color: #cbd5e1;"), "style.css must have bright slate color for subtab buttons");
 });
 
+it("Shop active/inactive status toggle is implemented in Shop Settings, Shops Directory, Front Desk and Public View", () => {
+  // DOM IDs in index.html
+  assert.ok(html.includes('id="owner-shop-status-card"'), "index.html missing #owner-shop-status-card in Settings General tab");
+  assert.ok(html.includes('id="owner-shop-active-checkbox"'), "index.html missing #owner-shop-active-checkbox toggle");
+  assert.ok(html.includes('id="desk-shop-paused-banner"'), "index.html missing #desk-shop-paused-banner in Front Desk view");
+  assert.ok(html.includes('id="public-shop-paused-banner"'), "index.html missing #public-shop-paused-banner in Public view");
+  assert.ok(html.includes('id="public-shop-badge"'), "index.html missing #public-shop-badge in Public header");
+
+  // Functions & Handlers in app.js
+  assert.ok(appJs.includes("function updateShopStatusUI()"), "app.js missing updateShopStatusUI");
+  assert.ok(appJs.includes("async function handleToggleActiveShop("), "app.js missing handleToggleActiveShop");
+  assert.ok(appJs.includes("async function toggleShopActiveFromDirectory("), "app.js missing toggleShopActiveFromDirectory");
+  assert.ok(appJs.includes("window.handleToggleActiveShop = handleToggleActiveShop"), "app.js must export handleToggleActiveShop");
+  assert.ok(appJs.includes("window.toggleShopActiveFromDirectory = toggleShopActiveFromDirectory"), "app.js must export toggleShopActiveFromDirectory");
+  assert.ok(appJs.includes("window.updateShopStatusUI = updateShopStatusUI"), "app.js must export updateShopStatusUI");
+
+  // Zero-Race-Condition Atomic Firestore Write Pattern
+  assert.ok(appJs.includes("isActive: newActive"), "app.js missing active state mutation");
+  assert.ok(appJs.includes("{ merge: true }"), "app.js must use atomic merge: true to avoid race conditions");
+
+  // Check-in protection when paused
+  assert.ok(appJs.includes("Walk-in arrivals are currently paused"), "app.js must guard public checkin when paused");
+
+  // Light Mode High Contrast CSS
+  assert.ok(css.includes('html[data-theme="light"] #owner-shop-status-card'), "style.css missing light mode rule for status card");
+  assert.ok(css.includes('html[data-theme="light"] #desk-shop-paused-banner'), "style.css missing light mode rule for desk paused banner");
+});
+
+it("Pricing page and upgrade modal are synchronized with Option A (Real-Time Analytics for Starter)", () => {
+  const pricingHtml = fs.readFileSync(path.join(__dirname, "..", "pricing.html"), "utf8");
+  const archHtml = fs.readFileSync(path.join(__dirname, "..", "waitlinkarchitecture.html"), "utf8");
+
+  // pricing.html checks
+  assert.ok(pricingHtml.includes("Today's Live Queue & Turnaround Analytics"), "pricing.html Starter card missing live analytics");
+  assert.ok(pricingHtml.includes("Today's Real-Time Metrics"), "pricing.html matrix missing Starter real-time metrics");
+  assert.ok(pricingHtml.includes("Today's Live Shift"), "pricing.html matrix missing Starter live shift metrics");
+
+  // index.html upgrade modal checks
+  assert.ok(html.includes("Today's Real-Time Analytics"), "index.html upgrade modal missing Starter real-time analytics");
+  assert.ok(html.includes("90-Day Deep Trend Intelligence"), "index.html upgrade modal missing Pro 90-day deep trends");
+
+  // waitlinkarchitecture.html checks
+  assert.ok(archHtml.includes("Today's Real-Time Metrics"), "waitlinkarchitecture.html matrix missing Starter real-time metrics");
+  assert.ok(archHtml.includes("Today's Live Shift"), "waitlinkarchitecture.html matrix missing Starter live shift");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
