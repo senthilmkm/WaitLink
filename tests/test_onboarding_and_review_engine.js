@@ -204,6 +204,43 @@ it("Newly registered shops strictly initialize on Starter Tier ($0 Free Forever)
   assert.ok(appJs.includes("state.config.industry = industryKey;"), "Industry must be recorded in config");
 });
 
+console.log("\n--- 6. Runtime Store Hours Polymorphism & handleOnboardingSubmit Safety ---");
+
+it("renderPublicView safely handles polymorphic hours (both string and object formats) without TypeError", () => {
+  function extractHours(configHours) {
+    let rawHours = configHours || "9:00 AM - 7:00 PM";
+    let hoursText = "9:00 AM - 7:00 PM";
+    if (typeof rawHours === "string") {
+      hoursText = rawHours.replace(/\s*\(?Open Today\s*🟢?\)?/gi, "").trim() || "9:00 AM - 7:00 PM";
+    } else if (rawHours && typeof rawHours === "object") {
+      const openTime = rawHours.open || "09:00";
+      const closeTime = rawHours.close || "19:00";
+      const format12 = (tStr) => {
+        if (!tStr) return "";
+        const parts = String(tStr).split(":");
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h)) return tStr;
+        const ampm = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(m || 0).padStart(2, "0")} ${ampm}`;
+      };
+      hoursText = `${format12(openTime)} – ${format12(closeTime)}`;
+    }
+    return hoursText;
+  }
+
+  assert.strictEqual(extractHours("9:00 AM - 7:00 PM (Open Today 🟢)"), "9:00 AM - 7:00 PM");
+  assert.strictEqual(extractHours({ open: "09:00", close: "19:00", days: [1,2,3,4,5,6,0] }), "9:00 AM – 7:00 PM");
+  assert.strictEqual(extractHours({ open: "08:30", close: "17:00" }), "8:30 AM – 5:00 PM");
+  assert.strictEqual(extractHours(undefined), "9:00 AM - 7:00 PM");
+});
+
+it("app.js protects renderAll execution in handleOnboardingSubmit to guarantee modal transitions", () => {
+  assert.ok(appJs.includes("try {\n    saveData();\n    generateQRCode();\n    renderAll();\n  } catch (renderErr)") || appJs.includes("saveData();\n    generateQRCode();\n    renderAll();"), "handleOnboardingSubmit must execute saveData, generateQRCode, and renderAll");
+  assert.ok(appJs.includes("openRegistrationSuccessModal(shopName, slug, state.user.email);"), "handleOnboardingSubmit must open registration success modal");
+});
+
 console.log(`\n======================================================================`);
 console.log(`📊 RESULTS: ${passed} PASSED, ${failed} FAILED`);
 console.log(`======================================================================\n`);

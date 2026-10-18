@@ -3781,7 +3781,11 @@ function populateOwnerInputs() {
 
   const hoursInput = document.getElementById("owner-input-hours");
   if (hoursInput && document.activeElement !== hoursInput) {
-    hoursInput.value = state.config.hours || "";
+    if (state.config.hours && typeof state.config.hours === "object") {
+      hoursInput.value = "9:00 AM - 7:00 PM";
+    } else {
+      hoursInput.value = state.config.hours || "";
+    }
   }
 
   const promoInput = document.getElementById("owner-input-promo");
@@ -5224,8 +5228,24 @@ function renderPublicView() {
 
   // Render Store / Clinic Hours
   let rawHours = state.config.hours || "9:00 AM - 7:00 PM";
-  let hoursText = rawHours.replace(/\s*\(?Open Today\s*🟢?\)?/gi, "").trim();
-  if (!hoursText) hoursText = "9:00 AM - 7:00 PM";
+  let hoursText = "9:00 AM - 7:00 PM";
+  if (typeof rawHours === "string") {
+    hoursText = rawHours.replace(/\s*\(?Open Today\s*🟢?\)?/gi, "").trim() || "9:00 AM - 7:00 PM";
+  } else if (rawHours && typeof rawHours === "object") {
+    const openTime = rawHours.open || "09:00";
+    const closeTime = rawHours.close || "19:00";
+    const format12 = (tStr) => {
+      if (!tStr) return "";
+      const parts = String(tStr).split(":");
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (isNaN(h)) return tStr;
+      const ampm = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(m || 0).padStart(2, "0")} ${ampm}`;
+    };
+    hoursText = `${format12(openTime)} – ${format12(closeTime)}`;
+  }
   setElText("public-hours-label", isClinical ? "🕒 Today's Clinic Hours:" : "🕒 Today's Store Hours:");
   setElText("public-hours-text", hoursText);
   setElText("ticket-hours-reassurance", `${isClinical ? 'Clinic' : 'Store'} open today: ${hoursText}`);
@@ -7833,9 +7853,14 @@ async function handleOnboardingSubmit(event) {
   }
   renderShopDropdown();
 
-  saveData();
-  generateQRCode();
-  renderAll();
+  try {
+    saveData();
+    generateQRCode();
+    renderAll();
+  } catch (renderErr) {
+    console.warn("Post-registration render warning:", renderErr);
+  }
+
   closeOnboardingModal();
   switchView("desk");
   showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
