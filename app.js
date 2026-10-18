@@ -4209,7 +4209,6 @@ function renderQueue() {
   }
 
   const now = Date.now();
-  const showMoveToEnd = state.queue.length > 1;
 
   const cardsHtmlArray = state.queue.map((item, index) => {
     const elapsedSec = Math.floor((now - item.checkedInAt) / 1000);
@@ -4218,6 +4217,8 @@ function renderQueue() {
     const checkInClock = formatAppDateTime(item.checkedInAt);
 
     const isNextUp = index === 0;
+    const isLastInQueue = index === state.queue.length - 1;
+    const showMoveToEnd = state.queue.length > 1 && !isLastInQueue;
     const badgeText = isClinical 
       ? (isNextUp ? "🏥 NEXT PATIENT" : `PATIENT #${index + 1}`)
       : (isNextUp ? "#1 NEXT UP" : `#${index + 1} IN LINE`);
@@ -11631,6 +11632,12 @@ async function promptRequeueCustomer(id) {
 async function requeueActiveCustomerToEnd(id) {
   const item = state.queue.find(q => q.id === id);
   if (!item) return;
+
+  const currentIndex = state.queue.findIndex(q => q.id === id);
+  if (currentIndex === -1 || currentIndex >= state.queue.length - 1) {
+    showToast(`ℹ️ "${item.customerName}" is already at the end of the line.`);
+    return;
+  }
 
   const confirmed = await showConfirmDialog({
     title: "Move to End of Line?",

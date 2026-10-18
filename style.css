@@ -1129,7 +1129,8 @@ select optgroup,
   flex-wrap: wrap;
   align-items: stretch;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
   width: 100%;
   box-sizing: border-box;
 }
