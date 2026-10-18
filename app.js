@@ -4672,12 +4672,12 @@ function getItemActivities(item) {
 
 function buildHistoryRowHtml(item, isOwnerView = false) {
   const checkInFormatted = item.checkedInAt ? formatHistoryDateTime(item.checkedInAt) : "--";
-  const calledFormatted = item.calledAt ? formatHistoryDateTime(item.calledAt) : "--";
-  const cancelledFormatted = item.cancelledAt 
-    ? formatHistoryDateTime(item.cancelledAt) 
-    : (item.status === "cancelled" ? (item.calledAt ? formatHistoryDateTime(item.calledAt) : "--") : "--");
-  
   const isCalled = item.status === "called";
+  const outcomeFormatted = isCalled 
+    ? (item.calledAt ? `<span style="color: #10b981; font-weight: 600;">📞 ${formatHistoryDateTime(item.calledAt)}</span>` : "--")
+    : (item.cancelledAt 
+        ? `<span style="color: #f43f5e; font-weight: 500;">🚫 ${formatHistoryDateTime(item.cancelledAt)}</span>` 
+        : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 ${formatHistoryDateTime(item.calledAt)}</span>` : "--"));
 
   let statusTagHtml = `<span class="status-tag called" data-tooltip="Customer called for service">Called</span>`;
   if (!isCalled) {
@@ -4770,8 +4770,7 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
       <td>${customerNameCell}</td>
       <td>${statusTagHtml}</td>
       <td>${checkInFormatted}</td>
-      <td>${calledFormatted}</td>
-      <td>${cancelledFormatted}</td>
+      <td>${outcomeFormatted}</td>
       <td>${waitDurationDisplay}</td>
       <td class="row-actions-cell">${actionCell}</td>
     </tr>
@@ -4992,7 +4991,7 @@ function renderHistory() {
 
   const tbody = document.getElementById("history-tbody");
   const ownerTbody = document.getElementById("owner-history-tbody");
-  const emptyRow = '<tr class="empty-row"><td colspan="7">No customer visit logs found for selected filter.</td></tr>';
+  const emptyRow = '<tr class="empty-row"><td colspan="6">No customer visit logs found for selected filter.</td></tr>';
   const pageSize = state.historyPageSize || 20;
 
   // Render Front Desk History

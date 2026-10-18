@@ -461,6 +461,9 @@
           <p class="shop-subtitle" id="desk-shop-subtitle">Live Front Desk Queue</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none; font-size: 0.78rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.3rem 0.65rem; border-radius: var(--radius-sm); background: rgba(6, 182, 212, 0.08); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
+            📲 Install Tablet Mode
+          </button>
           <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
             <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
             <span id="desk-operator-role-pill" class="hidden" style="margin-left: 6px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);"></span>
@@ -559,9 +562,6 @@
           <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
             🔔 Sound Alerts: ON
           </button>
-          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: inline-flex; font-size: 0.8rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(6, 182, 212, 0.1); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
-            📲 Install Tablet Mode
-          </button>
           <span class="count-pill" id="queue-badge">0 Waiting</span>
         </div>
       </div>
@@ -608,14 +608,13 @@
               <th>Customer</th>
               <th>Status</th>
               <th>Checked In</th>
-              <th>Called Timestamp</th>
-              <th>Cancelled Timestamp</th>
+              <th>Outcome Time</th>
               <th>Wait Duration</th>
               <th style="text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="history-tbody">
-            <tr class="empty-row"><td colspan="7">No customer visit logs found.</td></tr>
+            <tr class="empty-row"><td colspan="6">No customer visit logs found.</td></tr>
           </tbody>
         </table>
       </div>
@@ -641,6 +640,10 @@
             <span class="status-pill-lg" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Your shop queue is automatically backed up and synchronized in real time across all staff devices, front desk tablets, and customer QR code screens.">
               <span class="pulse-dot"></span> <span id="firestore-status-label">Cloud Live Sync Connected</span>
             </span>
+            <span class="status-pill-lg" id="owner-header-plan-badge" onclick="openUpgradeModal()" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); color: #06b6d4; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" title="Click to view subscription plan details">
+              <span>⭐</span> <strong id="owner-plan-value">$0 / month</strong> &bull; <span id="owner-plan-caption">Starter Tier (Free)</span>
+              <button id="owner-metric-plan-btn" class="btn-text-sm hidden" style="display: none !important;"></button>
+            </span>
           </div>
           <p class="shop-subtitle" style="margin-top: 0.25rem;">Shop Overview & Analytics</p>
         </div>
@@ -649,20 +652,22 @@
         </div>
       </div>
 
-      <!-- Owner Quick Overview Cards -->
-      <div class="metrics-grid">
-        <div class="metric-card highlight" style="position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="metric-label">Subscription Plan</div>
-            <button id="owner-metric-plan-btn" class="btn-text-sm hidden" onclick="openUpgradeModal()" style="display: none !important; color: #10b981; border-color: rgba(16, 185, 129, 0.4); padding: 0.15rem 0.45rem; font-size: 0.725rem;">⚡ Upgrade</button>
-          </div>
-          <div class="metric-value" id="owner-plan-value" style="color: #10b981; font-size: 1.4rem;">$0 / month</div>
-          <div class="metric-caption" id="owner-plan-caption">Starter Tier (Free) &bull; Free Forever</div>
+      <!-- Section 1: Today's Live Flow -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; margin-top: 0.75rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
+          <span>⏱️</span> Today's Live Flow
         </div>
-        <div class="metric-card">
+      </div>
+      <div class="metrics-grid" style="margin-bottom: 1.5rem;">
+        <div class="metric-card highlight">
           <div class="metric-label">Total Visits Today</div>
           <div class="metric-value" id="owner-served-today">0</div>
           <div class="metric-caption">Completed walk-ins</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg Turnaround Time</div>
+          <div class="metric-value" id="owner-avg-turnaround">--</div>
+          <div class="metric-caption">Based on completed visits</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Peak Wait Time Today</div>
@@ -670,10 +675,19 @@
           <div class="metric-caption">Highest wait recorded</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Avg Turnaround Time</div>
-          <div class="metric-value" id="owner-avg-turnaround">--</div>
-          <div class="metric-caption">Based on completed visits</div>
+          <div class="metric-label">Currently Waiting</div>
+          <div class="metric-value" id="owner-lobby-count">0</div>
+          <div class="metric-caption">Active lobby load</div>
         </div>
+      </div>
+
+      <!-- Section 2: Business Intelligence & Revenue Insights -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #06b6d4; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
+          <span>📊</span> Business Intelligence & Analytics
+        </div>
+      </div>
+      <div class="metrics-grid">
         <div class="metric-card" id="card-metric-cancellations">
           <div class="metric-label">Walk-Away Loss (Cancellations)</div>
           <div class="metric-value" id="owner-cancellations" style="color: var(--accent-rose);">0 (0%)</div>
@@ -688,11 +702,6 @@
           <div class="metric-label">Staff Speed (Throughput)</div>
           <div class="metric-value" id="owner-throughput">--</div>
           <div class="metric-caption" id="owner-throughput-caption">Visits served per hour</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Active Lobby Load</div>
-          <div class="metric-value" id="owner-lobby-count">0</div>
-          <div class="metric-caption">Currently waiting in line</div>
         </div>
       </div>
 
@@ -1211,14 +1220,13 @@
               <th>Customer</th>
               <th>Status</th>
               <th>Checked In</th>
-              <th>Called Timestamp</th>
-              <th>Cancelled Timestamp</th>
+              <th>Outcome Time</th>
               <th>Wait Duration</th>
               <th style="text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="owner-history-tbody">
-            <tr class="empty-row"><td colspan="7">No customer visit logs found.</td></tr>
+            <tr class="empty-row"><td colspan="6">No customer visit logs found.</td></tr>
           </tbody>
         </table>
       </div>
@@ -1239,16 +1247,7 @@
     <section id="view-public" class="view-panel hidden">
       <div class="public-preview-container" style="max-width: 540px; margin: 0 auto; padding: 1rem 0.5rem 3rem 0.5rem;">
         
-        <!-- Mobile Public Header Bar with Verification Seal -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-size: 1.1rem;">⏳</span>
-            <span style="font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 1rem; color: var(--text-main);">WaitLink</span>
-          </div>
-          <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.3rem;">
-            <span>🛡️</span> Verified Shop
-          </span>
-        </div>
+        <!-- Public Main Card -->
 
         <!-- Main Public Card -->
         <div class="public-card">
@@ -3478,6 +3477,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=7.2"></script>
+  <script src="app.js?v=7.3"></script>
 </body>
 </html>
