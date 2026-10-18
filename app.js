@@ -3283,6 +3283,7 @@ function renderSubscriptionBadges() {
   const planPrice = isAuthenticated ? rawPrice : 0;
   const planTitle = isAuthenticated ? rawTitle : "Starter Tier (Free)";
   const isSubscribed = isAuthenticated && (planPrice > 0 || planTitle.includes("Pro") || planTitle.includes("Enterprise"));
+  const isPaid = isPaidTier();
 
   // 1. Home View Subscription Banner (ONLY shown for active paid subscribers on non-demo shops)
   const homeBanner = document.getElementById("home-active-subscription-banner");
@@ -5455,6 +5456,7 @@ function updateActiveTicketTimer() {
       if (posEl) { posEl.textContent = `Position #${queuePos + 1} in line`; posEl.style.color = "#10b981"; }
       if (subEl) subEl.textContent = `${queuePos} ${queuePos === 1 ? 'person' : 'people'} ahead of you in line.`;
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
+    }
   } else {
     const isCompleted = state.myTicket && (state.myTicket.status === "completed" || (state.history.some(h => h.id === state.myTicket.id && h.status === "completed")));
     if (isCompleted) {
