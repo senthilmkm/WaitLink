@@ -7928,6 +7928,15 @@ function renderSuperAdminShopsTable() {
               onclick="openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier))"
               style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1);" 
               title="SuperAdmin: Grant courtesy credits or set custom monthly SMS allowance">⚡ SMS Override</button>
+            ${isDemo ? `
+              <button class="btn-text-sm" 
+                data-name="${encodeURIComponent(shopName)}"
+                data-industry="${encodeURIComponent(shop.demoIndustry || '')}"
+                data-slug="${encodeURIComponent(shopSlug)}"
+                onclick="copyDemoPitchForShop(decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.industry), decodeURIComponent(this.dataset.slug))"
+                style="color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.1); font-weight: 700;" 
+                title="SuperAdmin: Copy cold outreach sales pitch tailored for this demo shop">📋 Pitch</button>
+            ` : ''}
             ${!isSandbox ? `
               <button class="btn-text-sm" 
                 data-slug="${encodeURIComponent(shopSlug)}" 
@@ -8853,6 +8862,26 @@ function copyDemoPitchFromModal() {
   if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(pitch).then(() => {
       showToast(`📋 Sales pitch for "${shopTitle}" copied to clipboard!`);
+    }).catch(() => {
+      prompt("Copy Demo Sales Pitch:", pitch);
+    });
+  } else {
+    prompt("Copy Demo Sales Pitch:", pitch);
+  }
+}
+
+// 1-Click Copy Sales Pitch for any Demo Shop in SuperAdmin Directory
+function copyDemoPitchForShop(shopTitle, industryKey, shopSlug) {
+  const origin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://waitlink.app";
+  const path = window.location.pathname || "/";
+  const finalSlug = String(shopSlug || "").trim();
+  const demoUrl = `${origin}${path}?s=${finalSlug}`;
+  const key = industryKey || detectIndustryFromText(shopTitle || finalSlug);
+  const pitch = generateDemoPitch(shopTitle || formatSlugToTitle(finalSlug), key, demoUrl);
+
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pitch).then(() => {
+      showToast(`📋 Sales pitch for "${shopTitle || finalSlug}" copied to clipboard!`);
     }).catch(() => {
       prompt("Copy Demo Sales Pitch:", pitch);
     });
