@@ -759,9 +759,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (shopParam) {
     state.config.slug = shopParam;
-    state.isDemoMode = !state.user && (shopParam === "main-st-barbers");
+    const isDemoSlug = shopParam === "main-st-barbers" || shopParam.startsWith("demo-") || shopParam.includes("demo");
+    state.isDemoMode = isDemoSlug;
     if (shopParam !== "main-st-barbers") {
-      state.config.shopName = formatSlugToTitle(shopParam);
+      const cleanTitleSlug = shopParam.startsWith("demo-") ? shopParam.replace(/^demo-/, "") : shopParam;
+      state.config.shopName = formatSlugToTitle(cleanTitleSlug);
     }
     // Clean queue & history so previous shop state never flashes or leaks
     state.queue = [];
@@ -811,8 +813,9 @@ document.addEventListener("DOMContentLoaded", () => {
       switchView("owner-directory", true);
     } else {
       // By default, custom shop URL visits are public customer check-in cards!
-      // If the visiting user is already logged in as the registered owner, auth resolution will auto-promote to desk.
-      if (state.config.slug === "main-st-barbers") {
+      // If the visiting user is on a demo sandbox, or already logged in as the registered owner, show Front Desk!
+      const isDemoSlug = state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo") || state.isDemoMode;
+      if (isDemoSlug) {
         switchView("desk", true);
       } else {
         switchView("public", true);
@@ -1344,13 +1347,15 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.hours !== undefined) state.config.hours = data.hours;
       if (data.estBaseWaitMin !== undefined) state.config.estBaseWaitMin = data.estBaseWaitMin;
       if (data.logoUrl !== undefined) state.config.logoUrl = data.logoUrl;
-      const isDemo = (state.config.slug === "main-st-barbers");
+      const isDemo = (state.config.slug === "main-st-barbers") || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo") || !!data.isDemoShop;
+      if (data.isDemoShop !== undefined) state.config.isDemoShop = !!data.isDemoShop;
+      if (isDemo) state.isDemoMode = true;
       if (data.enableServices !== undefined) {
         state.config.enableServices = !!data.enableServices;
       } else {
         state.config.enableServices = isDemo;
       }
-      if (Array.isArray(data.services)) {
+      if (Array.isArray(data.services) && data.services.length > 0) {
         state.config.services = data.services;
       } else if (isDemo) {
         state.config.services = [...DEFAULT_DEMO_SERVICES];
@@ -1502,8 +1507,13 @@ function loadConfig() {
     initDemoMode(demoParam, params.get("name") || (urlSlug ? formatSlugToTitle(urlSlug) : null));
   } else if (urlSlug) {
     state.config.slug = slugify(urlSlug);
+    const isDemoSlug = state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo");
+    if (isDemoSlug) {
+      state.isDemoMode = true;
+    }
     if (state.config.slug !== "main-st-barbers") {
-      state.config.shopName = formatSlugToTitle(state.config.slug);
+      const cleanTitleSlug = state.config.slug.startsWith("demo-") ? state.config.slug.replace(/^demo-/, "") : state.config.slug;
+      state.config.shopName = formatSlugToTitle(cleanTitleSlug);
       state.config.address = "";
       state.config.phone = "";
     }
@@ -1526,8 +1536,9 @@ function loadConfig() {
     trackMyShop(state.config.slug, state.config.shopName);
   }
 
-  // Ensure isDemoMode is false for any custom non-demo user shop
-  if (state.config.slug && state.config.slug !== "main-st-barbers" && !state.config.slug.startsWith("demo-") && !demoParam) {
+  // Ensure isDemoMode is false ONLY for live custom non-demo tenant shops
+  const isDemoSlug = state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo") || !!demoParam;
+  if (state.config.slug && !isDemoSlug) {
     state.isDemoMode = false;
   }
 
@@ -5317,7 +5328,11 @@ function switchView(viewName, isSilent = false) {
       (configOwnerEmail && userEmailClean === configOwnerEmail) ||
       isRegisteredOwner
     );
-    const isSandboxDemo = state.isDemoMode || state.config.slug === "main-st-barbers";
+    const isSandboxDemo = state.isDemoMode || 
+                          state.config.slug === "main-st-barbers" || 
+                          state.config.slug.startsWith("demo-") || 
+                          state.config.slug.includes("demo") || 
+                          !!state.config.isDemoShop;
 
     if (!isSuper && !isOwner && !isSandboxDemo) {
       if (!isSilent) {
@@ -5357,12 +5372,16 @@ function switchView(viewName, isSilent = false) {
     }
   }
 
-  // Handle Demo Mode Banner display (ONLY for Unauthenticated Guests exploring Main St Barbers Sandbox)
+  // Handle Demo Mode Banner display (Available for all demo sandboxes)
   const demoBanner = document.getElementById("demo-mode-banner");
   if (demoBanner) {
-    const isDemoSandbox = !state.user && state.isDemoMode && state.config.slug === "main-st-barbers";
+    const isDemoSandbox = (state.isDemoMode || state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-") || state.config.slug.includes("demo") || !!state.config.isDemoShop);
     if (isDemoSandbox && viewName !== "home") {
       demoBanner.classList.remove("hidden");
+      const bannerText = document.getElementById("demo-banner-text");
+      if (bannerText) {
+        bannerText.innerHTML = `You are exploring <strong>${escapeHtml(state.config.shopName || 'Demo Sandbox')}</strong>. Test calling customers, checking in, or 1-tap SMS alerts!`;
+      }
     } else {
       demoBanner.classList.add("hidden");
     }
@@ -7813,7 +7832,8 @@ function inspectShop(slug, isSilent = false) {
 
   state.config.slug = slug;
   state.config.shopName = targetName;
-  state.isDemoMode = !state.user && (slug === "main-st-barbers");
+  const isDemoSlug = (slug === "main-st-barbers") || String(slug).startsWith("demo-") || String(slug).includes("demo");
+  state.isDemoMode = isDemoSlug;
 
   loadData();
   saveConfig();

@@ -103,6 +103,12 @@ it("Platform SuperAdmin: Has comprehensive access to all screens", () => {
   assert.strictEqual(canUserAccessView("PlatformSuperAdmin", "admin"), true);
 });
 
+it("Demo Sandbox Access: Demo shops (main-st-barbers and demo-*) grant unauthenticated front desk access", () => {
+  const appJsCode = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+  assert.ok(appJsCode.includes('state.config.slug.startsWith("demo-")'), "app.js must exempt demo- slugs from login requirement");
+  assert.ok(appJsCode.includes('const isDemoSlug = state.config.slug === "main-st-barbers" || state.config.slug.startsWith("demo-")'), "app.js must default demo- visits to desk view");
+});
+
 // -------------------------------------------------------------------------
 // Tests: Action Permission Matrix
 // -------------------------------------------------------------------------
