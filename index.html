@@ -1703,6 +1703,9 @@
         <button class="tab-btn active" id="supertab-shops" onclick="switchSuperTab('shops')">
           🏢 Master Shops Directory
         </button>
+        <button class="tab-btn" id="supertab-revenue" onclick="switchSuperTab('revenue')">
+          📊 Revenue Metrics & Account 360°
+        </button>
         <button class="tab-btn" id="supertab-pricing" onclick="switchSuperTab('pricing')">
           💎 Pricing Config & Tiers
         </button>
@@ -1753,6 +1756,137 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- SuperPanel: Revenue Metrics & Account 360° -->
+      <div id="superpanel-revenue" class="hidden">
+        <div class="section-header">
+          <div>
+            <h2>📊 Revenue Metrics & Account 360°</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.2rem 0 0 0;">
+              Consolidated Account Financial Intelligence, Multi-Location Portfolios & Real-Time MRR Analytics
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="exportRevenueMetricsCsv()" style="display: flex; align-items: center; gap: 0.35rem;" title="Download complete account rollup as CSV">
+              <span>📥</span> Export Accounts CSV
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="renderSuperAdminRevenuePanel(true)" style="display: flex; align-items: center; gap: 0.35rem;" title="Recompute live metrics across all registered accounts">
+              <span>🔄</span> Refresh Metrics
+            </button>
+          </div>
+        </div>
+
+        <!-- Top Macro KPI Cards Row -->
+        <div class="revenue-kpi-grid">
+          <div class="metric-card">
+            <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Total Platform MRR</span>
+              <span style="font-size: 1.1rem;">💵</span>
+            </div>
+            <div class="metric-value" id="kpi-total-mrr" style="color: #10b981; font-size: 1.6rem; margin: 0.4rem 0;">$0.00 / mo</div>
+            <div class="metric-caption" id="kpi-total-arr">Annual Run-Rate: $0.00 / yr</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Paid Conversion Rate</span>
+              <span style="font-size: 1.1rem;">📈</span>
+            </div>
+            <div class="metric-value" id="kpi-conversion-rate" style="color: #38bdf8; font-size: 1.6rem; margin: 0.4rem 0;">0.0%</div>
+            <div class="metric-caption" id="kpi-paid-ratio">0 Paid / 0 Total Accounts</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Blended ARPU</span>
+              <span style="font-size: 1.1rem;">👥</span>
+            </div>
+            <div class="metric-value" id="kpi-blended-arpu" style="color: #c084fc; font-size: 1.6rem; margin: 0.4rem 0;">$0.00 / acct</div>
+            <div class="metric-caption" id="kpi-arppu">ARPPU (Paying Only): $0.00</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>30D SMS Top-Up Volume</span>
+              <span style="font-size: 1.1rem;">⚡</span>
+            </div>
+            <div class="metric-value" id="kpi-topup-sales" style="color: #f59e0b; font-size: 1.6rem; margin: 0.4rem 0;">$0.00</div>
+            <div class="metric-caption" id="kpi-topup-margin">Gross Margin: ~28% profit</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="revenue-toolbar card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; min-width: 240px; position: relative;">
+              <input 
+                type="text" 
+                id="revenue-search-input" 
+                placeholder="🔍 Search accounts by owner email, name, or shop slug..." 
+                oninput="filterRevenueAccountsTable()"
+                style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.6); color: #fff; font-size: 0.85rem; outline: none; box-sizing: border-box;"
+              >
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <select id="revenue-filter-tier" onchange="filterRevenueAccountsTable()" class="revenue-select" title="Filter by Subscription Plan Tier">
+                <option value="all">All Plan Tiers</option>
+                <option value="paid">Paying ($$+) Only</option>
+                <option value="starter">Free Starter Only</option>
+                <option value="pro">Pro ($30) Only</option>
+                <option value="enterprise">Enterprise ($99) Only</option>
+              </select>
+
+              <select id="revenue-filter-size" onchange="filterRevenueAccountsTable()" class="revenue-select" title="Filter by Number of Stores Owned">
+                <option value="all">All Account Sizes</option>
+                <option value="single">Single-Store (1 Location)</option>
+                <option value="multi">Multi-Location (2+ Stores)</option>
+              </select>
+
+              <select id="revenue-filter-signal" onchange="filterRevenueAccountsTable()" class="revenue-select" title="Filter by Growth or Churn Heuristic Signal">
+                <option value="all">All Growth Signals</option>
+                <option value="upsell_candidate">🔥 Upsell Candidates</option>
+                <option value="multi_location">⭐ Multi-Location Expansion</option>
+                <option value="enterprise_ready">💎 Enterprise Heavyweight</option>
+                <option value="churn_risk">⚠️ Churn Risk Alerts</option>
+                <option value="steady">✅ Steady Tenants</option>
+              </select>
+
+              <select id="revenue-sort-by" onchange="filterRevenueAccountsTable()" class="revenue-select" title="Sort Accounts">
+                <option value="mrr_desc">Highest MRR First</option>
+                <option value="mrr_asc">Lowest MRR First</option>
+                <option value="shops_desc">Most Locations First</option>
+                <option value="visits_desc">Highest 30D Foot Traffic</option>
+                <option value="recent_desc">Most Recent Activity</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Accounts Table Card -->
+        <div class="card history-card" id="revenue-accounts-card">
+          <table class="history-table" id="revenue-accounts-table">
+            <thead>
+              <tr>
+                <th style="min-width: 220px;">Registered Owner / Account</th>
+                <th style="min-width: 140px;">Locations</th>
+                <th style="min-width: 160px;">Plan Status</th>
+                <th style="min-width: 130px; text-align: right;">Monthly MRR</th>
+                <th style="min-width: 120px; text-align: center;">30D Visits</th>
+                <th style="min-width: 180px;">Growth Signal</th>
+                <th style="min-width: 130px; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="revenue-accounts-tbody">
+              <!-- Dynamically populated by renderSuperAdminRevenuePanel() -->
+            </tbody>
+          </table>
+          <div id="revenue-empty-state" class="hidden" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔍</div>
+            <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 0.25rem;">No Matching Accounts Found</h3>
+            <p style="font-size: 0.85rem; margin: 0;">Try adjusting your search terms or filter selections.</p>
+          </div>
         </div>
       </div>
 
@@ -3565,6 +3699,88 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- Account 360° Deep-Dive Slide-Out Drawer & Backdrop -->
+  <div id="account-360-backdrop" class="drawer-backdrop hidden" onclick="closeAccount360Drawer()"></div>
+  <div id="account-360-drawer" class="drawer-panel hidden">
+    <div class="drawer-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.95);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <h2 id="drawer-owner-name" style="margin: 0; font-size: 1.25rem; color: #fff;">Account Owner</h2>
+            <span id="drawer-auth-badge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 700;">Verified Owner</span>
+          </div>
+          <div id="drawer-owner-email" style="font-size: 0.85rem; color: #38bdf8; font-family: monospace; margin-top: 0.25rem;">owner@example.com</div>
+        </div>
+        <button class="btn-close-drawer" onclick="closeAccount360Drawer()" title="Close Drawer (Esc)" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">✕</button>
+      </div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.6rem;">
+        <div>📅 Member Since: <strong id="drawer-member-since" style="color: #fff;">--</strong></div>
+        <div>💳 Stripe Customer: <strong id="drawer-stripe-id" style="color: #fff; font-family: monospace;">cus_live_...</strong></div>
+      </div>
+    </div>
+
+    <div class="drawer-body" style="padding: 1.5rem; overflow-y: auto; max-height: calc(100vh - 120px);">
+      <!-- Storefronts Portfolio -->
+      <div style="margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0;">
+            🏬 Storefront Portfolio (<span id="drawer-shops-count">0</span>)
+          </h3>
+          <span id="drawer-active-shops-ratio" style="font-size: 0.75rem; color: #10b981; font-weight: 700;">--</span>
+        </div>
+        <div id="drawer-shops-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Dynamically populated shop cards -->
+        </div>
+      </div>
+
+      <!-- Financial & Value Rollup Box -->
+      <div class="card" style="padding: 1.25rem; background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #06b6d4; margin: 0 0 0.85rem 0;">
+          💰 Financial & Value Rollup
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">Monthly Run-Rate (MRR)</div>
+            <strong id="drawer-mrr-val" style="color: #10b981; font-size: 1.2rem;">$0.00 / mo</strong>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">Annualized Value (ARR)</div>
+            <strong id="drawer-arr-val" style="color: #fff; font-size: 1.2rem;">$0.00 / yr</strong>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">SMS Top-Up Purchases</div>
+            <strong id="drawer-topup-val" style="color: #f59e0b; font-size: 1rem;">$0.00</strong>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">Projected 24M LTV</div>
+            <strong id="drawer-ltv-val" style="color: #c084fc; font-size: 1rem;">$0.00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- SuperAdmin Founder Action Buttons -->
+      <div>
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.75rem 0;">
+          ⚡ Founder & Admin Actions
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="drawer-action-jump-desk" onclick="jumpToAccountPrimaryShop()" style="justify-content: center; gap: 0.35rem;">
+            <span>🔑</span> Inspect Front Desk
+          </button>
+          <button class="btn btn-secondary btn-sm" id="drawer-action-email-owner" onclick="emailAccountOwner()" style="justify-content: center; gap: 0.35rem;">
+            <span>✉️</span> Send Founder Email
+          </button>
+          <button class="btn btn-secondary btn-sm" id="drawer-action-grant-sms" onclick="grantCourtesySmsCreditsToAccount()" style="justify-content: center; gap: 0.35rem; color: #10b981; border-color: rgba(16, 185, 129, 0.4);">
+            <span>🎁</span> +250 Courtesy SMS
+          </button>
+          <button class="btn btn-primary btn-sm" id="drawer-action-override-tier" onclick="openAccountTierOverrideModal()" style="justify-content: center; gap: 0.35rem;">
+            <span>💎</span> Change Tier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
@@ -3577,6 +3793,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=8.4"></script>
+  <script src="app.js?v=8.5"></script>
 </body>
 </html>

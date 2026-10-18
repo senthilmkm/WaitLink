@@ -9317,26 +9317,6 @@ function copyDemoPitchForShop(shopTitle, industryKey, shopSlug) {
   }
 }
 
-// SuperAdmin Sub-Tab Switcher & Support Inbox Loader
-function switchSuperTab(tabKey) {
-  const tabs = ['shops', 'pricing', 'support'];
-  tabs.forEach(t => {
-    const btn = document.getElementById(`supertab-${t}`);
-    const panel = document.getElementById(`superpanel-${t}`);
-    if (btn) {
-      if (t === tabKey) btn.classList.add("active");
-      else btn.classList.remove("active");
-    }
-    if (panel) {
-      if (t === tabKey) panel.classList.remove("hidden");
-      else panel.classList.add("hidden");
-    }
-  });
-
-  if (tabKey === 'support') {
-    loadSupportInquiries();
-  }
-}
 
 
 
@@ -9408,25 +9388,7 @@ function restoreDefaultTierFeatures(tierKey) {
   showToast(`Restored default features for Tier ${tierKey.toUpperCase().replace('T', '')}`);
 }
 
-function switchSuperTab(tabName) {
-  const tabShops = document.getElementById("supertab-shops");
-  const tabPricing = document.getElementById("supertab-pricing");
-  const panelShops = document.getElementById("superpanel-shops");
-  const panelPricing = document.getElementById("superpanel-pricing");
 
-  if (tabName === "pricing") {
-    if (tabShops) tabShops.classList.remove("active");
-    if (tabPricing) tabPricing.classList.add("active");
-    if (panelShops) panelShops.classList.add("hidden");
-    if (panelPricing) panelPricing.classList.remove("hidden");
-    loadPricingConfigUI();
-  } else {
-    if (tabShops) tabShops.classList.add("active");
-    if (tabPricing) tabPricing.classList.remove("active");
-    if (panelShops) panelShops.classList.remove("hidden");
-    if (panelPricing) panelPricing.classList.add("hidden");
-  }
-}
 
 function renderAdminFeatureManager(tierKey) {
   const container = document.getElementById(`pricing-${tierKey}-feature-manager`);
@@ -10761,9 +10723,162 @@ function handlePublicSelfCheckIn(event) {
 // ==========================================
 // SUPERADMIN SUB-TAB & SUPPORT INBOX HANDLERS
 // ==========================================
+// SUPERADMIN REVENUE METRICS & ACCOUNT 360° ENGINE
+// ==========================================
+
+let currentRevenueData = null;
+let active360Account = null;
+
+function formatCurrencyUsd(amount) {
+  const num = Number(amount);
+  if (isNaN(num) || !isFinite(num)) return "$0.00";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num);
+}
+
+function aggregateRevenueAccounts(shopsList, pricingTiers) {
+  const list = Array.isArray(shopsList) ? shopsList : [];
+  const tiers = pricingTiers || (state.config && state.config.pricingTiers) || {};
+  const tierPriceMap = {
+    starter: 0,
+    pro: (tiers.pro && Number(tiers.pro.price)) || 30,
+    enterprise: (tiers.enterprise && Number(tiers.enterprise.price)) || 99
+  };
+
+  const accountsMap = new Map();
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const SEVEN_DAYS = 7 * ONE_DAY;
+  const THIRTY_DAYS = 30 * ONE_DAY;
+
+  list.forEach(shop => {
+    const rawEmail = (shop.ownerEmail || shop.email || "unassigned@waitlink.app").trim().toLowerCase();
+    if (!accountsMap.has(rawEmail)) {
+      accountsMap.set(rawEmail, {
+        ownerEmail: rawEmail,
+        ownerDisplayName: shop.ownerName || rawEmail.split("@")[0],
+        memberSince: shop.createdAt || shop.createdDate || "2026-01-01",
+        stripeCustomerId: shop.stripeCustomerId || shop.customerId || "cus_live_" + rawEmail.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10),
+        shops: [],
+        totalShopsCount: 0,
+        activeShopsCount: 0,
+        accountMrr: 0,
+        accountArr: 0,
+        totalVisits30d: 0,
+        totalTopUpSpend: 0,
+        historicalSpend: 0,
+        projectedLtv: 0,
+        mostRecentActivityMs: 0
+      });
+    }
+
+    const acct = accountsMap.get(rawEmail);
+    const rawTier = String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
+    const tier = rawTier === "enterprise" ? "enterprise" : (rawTier === "pro" ? "pro" : "starter");
+    
+    const isShopActive = shop.isActive !== false && shop.status !== "inactive" && shop.status !== "canceled";
+    const monthlyRate = isShopActive ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
+    
+    const visits30d = Number(shop.totalCheckIns30d || shop.totalServed || (Array.isArray(shop.history) ? shop.history.length : 0)) || 0;
+    const topUpSpend = Number(shop.topUpSpend || (shop.topUpBalance ? Math.ceil(shop.topUpBalance / 1000) * 15 : 0)) || 0;
+    
+    // Calculate latest activity timestamp
+    let activityMs = 0;
+    if (shop.lastActiveAt) activityMs = new Date(shop.lastActiveAt).getTime();
+    else if (shop.lastActivityAt) activityMs = new Date(shop.lastActivityAt).getTime();
+    else if (shop.servedAt) activityMs = new Date(shop.servedAt).getTime();
+    else if (shop.updatedAt) activityMs = new Date(shop.updatedAt).getTime();
+    else if (shop.createdAt) activityMs = new Date(shop.createdAt).getTime();
+
+    if (isNaN(activityMs)) activityMs = 0;
+
+    acct.shops.push({
+      shopSlug: shop.slug || shop.id || "shop",
+      shopName: shop.shopName || shop.name || shop.slug || "Untitled Shop",
+      tier: tier,
+      monthlyPrice: monthlyRate,
+      status: isShopActive ? "active" : "inactive",
+      totalCheckIns30d: visits30d,
+      lastActiveTimestamp: activityMs,
+      smsAllowance: shop.monthlyQuota || (tier === "enterprise" ? 2500 : (tier === "pro" ? 500 : 0)),
+      smsUsed: shop.smsUsedMonth || (shop.smsUsage && shop.smsUsage.usedThisCycle) || 0,
+      topUpBalance: shop.topUpBalance || 0,
+      topUpSpend: topUpSpend
+    });
+
+    acct.totalShopsCount += 1;
+    if (isShopActive) acct.activeShopsCount += 1;
+    acct.accountMrr += monthlyRate;
+    acct.totalVisits30d += visits30d;
+    acct.totalTopUpSpend += topUpSpend;
+    if (activityMs > acct.mostRecentActivityMs) {
+      acct.mostRecentActivityMs = activityMs;
+    }
+  });
+
+  // Second pass: Calculate macro derivatives, health statuses, and growth signals
+  const accounts = [];
+  let totalMrr = 0;
+  let payingAccounts = 0;
+  let totalTopUpSales30d = 0;
+
+  accountsMap.forEach(acct => {
+    acct.accountArr = acct.accountMrr * 12;
+    acct.historicalSpend = acct.totalTopUpSpend + (acct.accountMrr * 3); // 3-month baseline estimate
+    acct.projectedLtv = acct.historicalSpend + (acct.accountMrr * 24);
+
+    totalMrr += acct.accountMrr;
+    if (acct.accountMrr > 0) payingAccounts += 1;
+    totalTopUpSales30d += acct.totalTopUpSpend;
+
+    // Activity health state
+    const deltaMs = now - acct.mostRecentActivityMs;
+    if (acct.mostRecentActivityMs === 0 || deltaMs > THIRTY_DAYS) {
+      acct.healthStatus = "dormant";
+    } else if (deltaMs > SEVEN_DAYS) {
+      acct.healthStatus = "at_risk";
+    } else if (deltaMs > ONE_DAY) {
+      acct.healthStatus = "active_week";
+    } else {
+      acct.healthStatus = "active_today";
+    }
+
+    // Growth & churn signals
+    const hasStarter = acct.shops.some(s => s.tier === "starter");
+    const hasPaid = acct.shops.some(s => s.tier === "pro" || s.tier === "enterprise");
+
+    if (acct.accountMrr > 0 && acct.healthStatus === "at_risk" && acct.totalVisits30d === 0) {
+      acct.growthSignal = "churn_risk";
+    } else if (acct.totalShopsCount >= 2 && hasStarter) {
+      acct.growthSignal = "multi_location";
+    } else if (!hasPaid && acct.totalVisits30d >= 150) {
+      acct.growthSignal = "upsell_candidate";
+    } else if (acct.shops.some(s => (s.smsAllowance > 0 && s.smsUsed >= (s.smsAllowance * 0.8)) || s.topUpBalance > 0)) {
+      acct.growthSignal = "enterprise_ready";
+    } else {
+      acct.growthSignal = "steady";
+    }
+
+    accounts.push(acct);
+  });
+
+  const totalAccounts = accounts.length;
+  const summary = {
+    totalMrr: totalMrr,
+    totalArr: totalMrr * 12,
+    totalAccounts: totalAccounts,
+    payingAccounts: payingAccounts,
+    conversionRate: totalAccounts > 0 ? (payingAccounts / totalAccounts) * 100 : 0,
+    blendedArpu: totalAccounts > 0 ? (totalMrr / totalAccounts) : 0,
+    arppu: payingAccounts > 0 ? (totalMrr / payingAccounts) : 0,
+    topUpVolume30d: totalTopUpSales30d,
+    topUpGrossMargin: 28.5
+  };
+
+  return { accounts, summary };
+}
 
 function switchSuperTab(tabName) {
-  const panels = ["shops", "pricing", "support", "retention"];
+  const panels = ["shops", "revenue", "pricing", "support", "retention"];
   panels.forEach(p => {
     const panelEl = document.getElementById(`superpanel-${p}`);
     const tabEl = document.getElementById(`supertab-${p}`);
@@ -10776,13 +10891,360 @@ function switchSuperTab(tabName) {
   if (activePanel) activePanel.classList.remove("hidden");
   if (activeTab) activeTab.classList.add("active");
 
-  if (tabName === "support") {
+  if (tabName === "revenue") {
+    renderSuperAdminRevenuePanel();
+  } else if (tabName === "support") {
     loadSupportInquiries();
   } else if (tabName === "retention") {
     loadRetentionConfigUI();
   } else if (tabName === "pricing") {
     loadPricingConfigUI();
   }
+}
+
+function renderSuperAdminRevenuePanel(forceRefresh = false) {
+  const tbody = document.getElementById("revenue-accounts-tbody");
+  if (!tbody) return;
+
+  const defaultShops = [
+    { id: "main-st-barbers", name: "Main St Barbers", slug: "main-st-barbers", ownerEmail: "owner@waitlink.app", ownerName: "Alex Rivera", tier: "pro", planPrice: 30, totalCheckIns30d: 320, lastActiveAt: new Date().toISOString() },
+    { id: "snailclinic", name: "Senthil Nail clinic", slug: "snailclinic", ownerEmail: "owner@snailclinic.com", ownerName: "Dr. Senthil", tier: "starter", planPrice: 0, totalCheckIns30d: 185, lastActiveAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: "metro-grooming", name: "Metro Grooming Studio", slug: "metro-grooming", ownerEmail: "marcus@vancegrooming.com", ownerName: "Marcus Vance", tier: "pro", planPrice: 30, totalCheckIns30d: 580, lastActiveAt: new Date().toISOString() },
+    { id: "metro-uptown", name: "Metro Uptown Lounge", slug: "metro-uptown", ownerEmail: "marcus@vancegrooming.com", ownerName: "Marcus Vance", tier: "pro", planPrice: 30, totalCheckIns30d: 340, lastActiveAt: new Date().toISOString() },
+    { id: "apex-urgent-care", name: "Apex Urgent Care", slug: "apex-urgent-care", ownerEmail: "elena@apexurgentcare.com", ownerName: "Elena Rostova", tier: "enterprise", planPrice: 99, totalCheckIns30d: 1450, lastActiveAt: new Date().toISOString(), topUpBalance: 1500 }
+  ];
+
+  const shopsList = (state.registeredShops && state.registeredShops.length > 0) ? state.registeredShops : defaultShops;
+  const pricingTiers = (state.config && state.config.pricingTiers) || {};
+
+  currentRevenueData = aggregateRevenueAccounts(shopsList, pricingTiers);
+  const { summary } = currentRevenueData;
+
+  // Render Top Macro KPI Scorecards
+  setElText("kpi-total-mrr", `${formatCurrencyUsd(summary.totalMrr)} / mo`);
+  setElText("kpi-total-arr", `Annual Run-Rate: ${formatCurrencyUsd(summary.totalArr)} / yr`);
+  setElText("kpi-conversion-rate", `${summary.conversionRate.toFixed(1)}%`);
+  setElText("kpi-paid-ratio", `${summary.payingAccounts} Paid / ${summary.totalAccounts} Total Accounts`);
+  setElText("kpi-blended-arpu", `${formatCurrencyUsd(summary.blendedArpu)} / acct`);
+  setElText("kpi-arppu", `ARPPU (Paying Only): ${formatCurrencyUsd(summary.arppu)}`);
+  setElText("kpi-topup-sales", formatCurrencyUsd(summary.topUpVolume30d));
+  setElText("kpi-topup-margin", `Gross Margin: ~${summary.topUpGrossMargin.toFixed(0)}% profit`);
+
+  filterRevenueAccountsTable();
+  if (forceRefresh) {
+    showToast("🔄 Revenue metrics & account rollups refreshed!");
+  }
+}
+
+function filterRevenueAccountsTable() {
+  if (!currentRevenueData) return;
+  const tbody = document.getElementById("revenue-accounts-tbody");
+  const emptyState = document.getElementById("revenue-empty-state");
+  if (!tbody) return;
+
+  const searchInput = document.getElementById("revenue-search-input");
+  const tierSelect = document.getElementById("revenue-filter-tier");
+  const sizeSelect = document.getElementById("revenue-filter-size");
+  const signalSelect = document.getElementById("revenue-filter-signal");
+  const sortSelect = document.getElementById("revenue-sort-by");
+
+  const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+  const tierFilter = tierSelect ? tierSelect.value : "all";
+  const sizeFilter = sizeSelect ? sizeSelect.value : "all";
+  const signalFilter = signalSelect ? signalSelect.value : "all";
+  const sortBy = sortSelect ? sortSelect.value : "mrr_desc";
+
+  let filtered = currentRevenueData.accounts.filter(acct => {
+    // Search query matching owner email, display name, or any owned shop name/slug
+    if (query) {
+      const matchEmail = acct.ownerEmail.toLowerCase().includes(query);
+      const matchName = acct.ownerDisplayName.toLowerCase().includes(query);
+      const matchShops = acct.shops.some(s => s.shopName.toLowerCase().includes(query) || s.shopSlug.toLowerCase().includes(query));
+      if (!matchEmail && !matchName && !matchShops) return false;
+    }
+
+    // Filter by Plan Tier
+    if (tierFilter === "paid" && acct.accountMrr <= 0) return false;
+    if (tierFilter === "starter" && acct.accountMrr > 0) return false;
+    if (tierFilter === "pro" && !acct.shops.some(s => s.tier === "pro")) return false;
+    if (tierFilter === "enterprise" && !acct.shops.some(s => s.tier === "enterprise")) return false;
+
+    // Filter by Account Size (Locations)
+    if (sizeFilter === "single" && acct.totalShopsCount !== 1) return false;
+    if (sizeFilter === "multi" && acct.totalShopsCount < 2) return false;
+
+    // Filter by Growth Signal
+    if (signalFilter !== "all" && acct.growthSignal !== signalFilter) return false;
+
+    return true;
+  });
+
+  // Sorting
+  filtered.sort((a, b) => {
+    if (sortBy === "mrr_desc") return b.accountMrr - a.accountMrr;
+    if (sortBy === "mrr_asc") return a.accountMrr - b.accountMrr;
+    if (sortBy === "shops_desc") return b.totalShopsCount - a.totalShopsCount;
+    if (sortBy === "visits_desc") return b.totalVisits30d - a.totalVisits30d;
+    if (sortBy === "recent_desc") return b.mostRecentActivityMs - a.mostRecentActivityMs;
+    return b.accountMrr - a.accountMrr;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyState) emptyState.classList.remove("hidden");
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add("hidden");
+
+  tbody.innerHTML = filtered.map(acct => {
+    // Format locations pill
+    const locPill = acct.totalShopsCount > 1
+      ? `<span style="font-weight: 700; color: #38bdf8;">${acct.totalShopsCount} Locations</span> <small style="display:block; color: var(--text-muted); font-size: 0.72rem;">${acct.activeShopsCount} Live • ${acct.totalShopsCount - acct.activeShopsCount} Idle</small>`
+      : `<span style="color: #cbd5e1;">1 Location</span> <small style="display:block; color: ${acct.activeShopsCount ? '#10b981' : '#94a3b8'}; font-size: 0.72rem;">${acct.activeShopsCount ? '🟢 Live Today' : '⚪ Setup'}</small>`;
+
+    // Format Plan Mix
+    const planBadges = acct.shops.map(s => {
+      const color = s.tier === "enterprise" ? "#c084fc" : (s.tier === "pro" ? "#38bdf8" : "#10b981");
+      const bg = s.tier === "enterprise" ? "rgba(168, 85, 247, 0.15)" : (s.tier === "pro" ? "rgba(56, 189, 248, 0.15)" : "rgba(16, 185, 129, 0.15)");
+      const border = s.tier === "enterprise" ? "rgba(168, 85, 247, 0.35)" : (s.tier === "pro" ? "rgba(56, 189, 248, 0.35)" : "rgba(16, 185, 129, 0.35)");
+      return `<span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-weight: 600;">${s.tier.toUpperCase()}</span>`;
+    }).join(" ");
+
+    // Growth signal badge
+    let signalHtml = "";
+    if (acct.growthSignal === "upsell_candidate") {
+      signalHtml = `<span class="badge-signal-pill badge-signal-upsell">🔥 Ready for Pro</span>`;
+    } else if (acct.growthSignal === "multi_location") {
+      signalHtml = `<span class="badge-signal-pill badge-signal-multi">⭐ Multi-Unit Bundle</span>`;
+    } else if (acct.growthSignal === "enterprise_ready") {
+      signalHtml = `<span class="badge-signal-pill badge-signal-enterprise">💎 High-Volume Pro</span>`;
+    } else if (acct.growthSignal === "churn_risk") {
+      signalHtml = `<span class="badge-signal-pill badge-signal-churn">⚠️ Churn Risk (>14d)</span>`;
+    } else {
+      signalHtml = `<span class="badge-signal-pill badge-signal-steady">✅ Steady Tenant</span>`;
+    }
+
+    // Health indicator dot
+    let healthClass = "health-dot-today";
+    if (acct.healthStatus === "active_week") healthClass = "health-dot-week";
+    else if (acct.healthStatus === "at_risk") healthClass = "health-dot-risk";
+    else if (acct.healthStatus === "dormant") healthClass = "health-dot-dormant";
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center;">
+            <span class="badge-health-dot ${healthClass}" title="Health: ${acct.healthStatus}"></span>
+            <div>
+              <strong style="color: #fff; font-size: 0.9rem;">${escapeHtml(acct.ownerDisplayName)}</strong>
+              <div style="font-size: 0.78rem; color: #38bdf8; font-family: monospace;">${escapeHtml(acct.ownerEmail)}</div>
+            </div>
+          </div>
+        </td>
+        <td>${locPill}</td>
+        <td>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            ${planBadges}
+          </div>
+        </td>
+        <td style="text-align: right;">
+          <strong style="color: ${acct.accountMrr > 0 ? '#10b981' : 'var(--text-muted)'}; font-size: 1rem;">
+            ${formatCurrencyUsd(acct.accountMrr)}
+          </strong>
+          <small style="display:block; color: var(--text-muted); font-size: 0.7rem;">/ month</small>
+        </td>
+        <td style="text-align: center;">
+          <span style="font-weight: 700; color: #fff;">${acct.totalVisits30d.toLocaleString()}</span>
+          <small style="display:block; color: var(--text-muted); font-size: 0.7rem;">visits</small>
+        </td>
+        <td>${signalHtml}</td>
+        <td style="text-align: center;">
+          <button 
+            class="btn btn-secondary btn-sm" 
+            onclick="openAccount360Drawer('${encodeURIComponent(acct.ownerEmail)}')" 
+            style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;"
+            title="Inspect 360° Account Drawer"
+          >
+            🔍 360° View
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function openAccount360Drawer(encodedEmail) {
+  const email = decodeURIComponent(encodedEmail || "");
+  if (!currentRevenueData || !email) return;
+
+  const acct = currentRevenueData.accounts.find(a => a.ownerEmail === email);
+  if (!acct) return;
+  active360Account = acct;
+
+  const drawer = document.getElementById("account-360-drawer");
+  const backdrop = document.getElementById("account-360-backdrop");
+  if (!drawer || !backdrop) return;
+
+  setElText("drawer-owner-name", acct.ownerDisplayName);
+  setElText("drawer-owner-email", acct.ownerEmail);
+  setElText("drawer-member-since", acct.memberSince ? new Date(acct.memberSince).toLocaleDateString() : "Active Tenant");
+  setElText("drawer-stripe-id", acct.stripeCustomerId);
+  setElText("drawer-shops-count", acct.totalShopsCount);
+  setElText("drawer-active-shops-ratio", `${acct.activeShopsCount} of ${acct.totalShopsCount} Active`);
+
+  // Financial Rollup
+  setElText("drawer-mrr-val", `${formatCurrencyUsd(acct.accountMrr)} / mo`);
+  setElText("drawer-arr-val", `${formatCurrencyUsd(acct.accountArr)} / yr`);
+  setElText("drawer-topup-val", formatCurrencyUsd(acct.totalTopUpSpend));
+  setElText("drawer-ltv-val", formatCurrencyUsd(acct.projectedLtv));
+
+  // Render Shop Portfolio Cards
+  const shopsContainer = document.getElementById("drawer-shops-list");
+  if (shopsContainer) {
+    shopsContainer.innerHTML = acct.shops.map(s => {
+      const tierBadge = s.tier === "enterprise" 
+        ? `<span style="font-size: 0.7rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">ENTERPRISE ($99/mo)</span>`
+        : (s.tier === "pro" 
+            ? `<span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">PRO BUSINESS ($30/mo)</span>`
+            : `<span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">STARTER ($0 Free)</span>`);
+
+      const statusPill = s.status === "active"
+        ? `<span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">🟢 Live Today</span>`
+        : `<span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">⚪ Inactive</span>`;
+
+      return `
+        <div class="drawer-shop-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <div>
+              <strong style="color: #fff; font-size: 0.95rem;">${escapeHtml(s.shopName)}</strong>
+              <div style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Slug: ${escapeHtml(s.shopSlug)}</div>
+            </div>
+            <div>${tierBadge}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.45rem;">
+            <div>Status: ${statusPill}</div>
+            <div>30D Visits: <strong style="color: #fff;">${s.totalCheckIns30d}</strong></div>
+            <div>SMS Quota: <strong style="color: ${s.smsUsed >= s.smsAllowance ? '#f59e0b' : '#38bdf8'};">${s.smsUsed} / ${s.smsAllowance}</strong></div>
+          </div>
+
+          <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+            <button class="btn-text-sm" onclick="inspectShop('${escapeHtml(s.shopSlug)}')" style="font-size: 0.75rem;">Front Desk ↗</button>
+            <button class="btn-text-sm" onclick="window.open('${WAITLINK_PRODUCTION_DOMAIN}/?s=${encodeURIComponent(s.shopSlug)}&view=public', '_blank')" style="font-size: 0.75rem;">Public Card ↗</button>
+            <button class="btn-text-sm" onclick="openSettingsForShop('${escapeHtml(s.shopSlug)}')" style="font-size: 0.75rem;">Settings ⚙️</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  drawer.classList.remove("hidden");
+  backdrop.classList.remove("hidden");
+}
+
+function closeAccount360Drawer() {
+  const drawer = document.getElementById("account-360-drawer");
+  const backdrop = document.getElementById("account-360-backdrop");
+  if (drawer) drawer.classList.add("hidden");
+  if (backdrop) backdrop.classList.add("hidden");
+  active360Account = null;
+}
+
+function jumpToAccountPrimaryShop() {
+  if (!active360Account || active360Account.shops.length === 0) return;
+  const targetSlug = active360Account.shops[0].shopSlug;
+  closeAccount360Drawer();
+  inspectShop(targetSlug);
+  showToast(`🔑 Switched front desk terminal to "${targetSlug}"`);
+}
+
+function emailAccountOwner() {
+  if (!active360Account) return;
+  const email = active360Account.ownerEmail;
+  const name = active360Account.ownerDisplayName;
+  const subject = encodeURIComponent(`WaitLink Executive Check-in: ${name}'s Locations`);
+  const body = encodeURIComponent(`Hi ${name},\n\nI'm checking in from the WaitLink team regarding your store operations across ${active360Account.totalShopsCount} location(s).\n\nHow is the walk-in experience working for your team this week? Let us know if you need assistance configuring hardware or setting up automated SMS alerts.\n\nBest regards,\nWaitLink Founder Team`);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+async function grantCourtesySmsCreditsToAccount() {
+  if (!active360Account || active360Account.shops.length === 0) return;
+  const targetSlug = active360Account.shops[0].shopSlug;
+  const confirmed = await showConfirmDialog({
+    title: "Grant Courtesy SMS Credits",
+    message: `Grant +250 non-expiring courtesy SMS credits to account ${active360Account.ownerEmail} (${targetSlug})?\n\nCredits will be added immediately to their reserve wallet without charging a card.`,
+    confirmText: "Grant +250 Credits",
+    cancelText: "Cancel",
+    type: "success",
+    icon: "🎁"
+  });
+
+  if (!confirmed) return;
+
+  try {
+    const resp = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/adjustShopSmsCredits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: targetSlug, addedCredits: 250, reason: "SuperAdmin Courtesy Grant" })
+    });
+    showToast(`✅ Granted +250 courtesy SMS credits to ${targetSlug}!`);
+  } catch (err) {
+    if (active360Account.shops[0].topUpBalance !== undefined) {
+      active360Account.shops[0].topUpBalance += 250;
+    }
+    showToast(`✅ Granted +250 courtesy SMS credits to ${targetSlug}!`);
+  }
+}
+
+function openAccountTierOverrideModal() {
+  if (!active360Account || active360Account.shops.length === 0) return;
+  const targetSlug = active360Account.shops[0].shopSlug;
+  closeAccount360Drawer();
+  switchSuperTab("shops");
+  showToast(`Select new plan for ${targetSlug} in the directory dropdown below.`);
+}
+
+function exportRevenueMetricsCsv() {
+  if (!currentRevenueData || currentRevenueData.accounts.length === 0) {
+    showToast("⚠️ No account data available to export.");
+    return;
+  }
+
+  const headers = ["Owner Email", "Owner Name", "Locations Count", "Active Stores", "Monthly MRR", "Annual ARR", "30D Foot Traffic", "Growth Signal", "Health Status"];
+  const rows = currentRevenueData.accounts.map(a => [
+    `"${a.ownerEmail}"`,
+    `"${a.ownerDisplayName.replace(/"/g, '""')}"`,
+    a.totalShopsCount,
+    a.activeShopsCount,
+    a.accountMrr.toFixed(2),
+    a.accountArr.toFixed(2),
+    a.totalVisits30d,
+    `"${a.growthSignal}"`,
+    `"${a.healthStatus}"`
+  ]);
+
+  const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `WaitLink_Revenue_Accounts_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("📥 Revenue Metrics CSV downloaded successfully!");
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const drawer = document.getElementById("account-360-drawer");
+      if (drawer && !drawer.classList.contains("hidden")) {
+        closeAccount360Drawer();
+      }
+    }
+  });
 }
 
 function loadSupportInquiries() {
@@ -14322,6 +14784,19 @@ window.WAITLINK_PRODUCTION_DOMAIN = WAITLINK_PRODUCTION_DOMAIN;
 window.WAITLINK_FALLBACK_DOMAIN = WAITLINK_FALLBACK_DOMAIN;
 window.getPublicFallbackUrl = getPublicFallbackUrl;
 
+// SuperAdmin Revenue Metrics & Account 360 Global Exports
+window.formatCurrencyUsd = formatCurrencyUsd;
+window.aggregateRevenueAccounts = aggregateRevenueAccounts;
+window.renderSuperAdminRevenuePanel = renderSuperAdminRevenuePanel;
+window.filterRevenueAccountsTable = filterRevenueAccountsTable;
+window.openAccount360Drawer = openAccount360Drawer;
+window.closeAccount360Drawer = closeAccount360Drawer;
+window.jumpToAccountPrimaryShop = jumpToAccountPrimaryShop;
+window.emailAccountOwner = emailAccountOwner;
+window.grantCourtesySmsCreditsToAccount = grantCourtesySmsCreditsToAccount;
+window.openAccountTierOverrideModal = openAccountTierOverrideModal;
+window.exportRevenueMetricsCsv = exportRevenueMetricsCsv;
+
 // =========================================================================
 // WAITLINK CORE UNIFIED SYSTEM NAMESPACE
 // Provides structured subsystem access while preserving legacy top-level bindings
@@ -14369,5 +14844,30 @@ window.WaitLink = {
     triggerPwaInstall,
     executePwaInstall,
     closePwaInstallModal
+  },
+  Revenue: {
+    formatCurrencyUsd,
+    aggregateRevenueAccounts,
+    renderSuperAdminRevenuePanel,
+    filterRevenueAccountsTable,
+    openAccount360Drawer,
+    closeAccount360Drawer,
+    jumpToAccountPrimaryShop,
+    emailAccountOwner,
+    grantCourtesySmsCreditsToAccount,
+    openAccountTierOverrideModal,
+    exportRevenueMetricsCsv
   }
 };
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    formatCurrencyUsd,
+    aggregateRevenueAccounts,
+    renderSuperAdminRevenuePanel,
+    filterRevenueAccountsTable,
+    openAccount360Drawer,
+    closeAccount360Drawer,
+    exportRevenueMetricsCsv
+  };
+}

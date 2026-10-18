@@ -57,11 +57,66 @@ it("index.html contains all 6 Shop Owner Settings sub-tab panes", () => {
   assert.ok(html.includes('id="settings-pane-marketing"'), "Missing Marketing settings pane (#settings-pane-marketing)");
 });
 
-it("index.html contains SuperAdmin tabs (Master Shops Directory, Pricing Config & Tiers)", () => {
+it("index.html contains SuperAdmin tabs (Master Shops Directory, Revenue Metrics, Pricing, Support, Retention)", () => {
   assert.ok(html.includes('id="supertab-shops"'), "Missing SuperAdmin shops tab (#supertab-shops)");
+  assert.ok(html.includes('id="supertab-revenue"'), "Missing SuperAdmin revenue tab (#supertab-revenue)");
   assert.ok(html.includes('id="supertab-pricing"'), "Missing SuperAdmin pricing tab (#supertab-pricing)");
   assert.ok(html.includes('id="supertab-support"'), "Missing SuperAdmin support tab (#supertab-support)");
   assert.ok(html.includes('id="supertab-retention"'), "Missing SuperAdmin retention tab (#supertab-retention)");
+});
+
+it("SuperAdmin Revenue Metrics & Account 360° panel contains complete KPI cards, toolbar, grid and drawer", () => {
+  assert.ok(html.includes('id="superpanel-revenue"'), "Missing #superpanel-revenue");
+  assert.ok(html.includes('id="kpi-total-mrr"'), "Missing #kpi-total-mrr");
+  assert.ok(html.includes('id="kpi-total-arr"'), "Missing #kpi-total-arr");
+  assert.ok(html.includes('id="kpi-conversion-rate"'), "Missing #kpi-conversion-rate");
+  assert.ok(html.includes('id="kpi-paid-ratio"'), "Missing #kpi-paid-ratio");
+  assert.ok(html.includes('id="kpi-blended-arpu"'), "Missing #kpi-blended-arpu");
+  assert.ok(html.includes('id="kpi-arppu"'), "Missing #kpi-arppu");
+  assert.ok(html.includes('id="kpi-topup-sales"'), "Missing #kpi-topup-sales");
+  assert.ok(html.includes('id="kpi-topup-margin"'), "Missing #kpi-topup-margin");
+
+  // Filter toolbar
+  assert.ok(html.includes('id="revenue-search-input"'), "Missing #revenue-search-input");
+  assert.ok(html.includes('id="revenue-filter-tier"'), "Missing #revenue-filter-tier");
+  assert.ok(html.includes('id="revenue-filter-size"'), "Missing #revenue-filter-size");
+  assert.ok(html.includes('id="revenue-filter-signal"'), "Missing #revenue-filter-signal");
+  assert.ok(html.includes('id="revenue-sort-by"'), "Missing #revenue-sort-by");
+
+  // Grid
+  assert.ok(html.includes('id="revenue-accounts-table"'), "Missing #revenue-accounts-table");
+  assert.ok(html.includes('id="revenue-accounts-tbody"'), "Missing #revenue-accounts-tbody");
+
+  // Account 360 Drawer & Backdrop
+  assert.ok(html.includes('id="account-360-backdrop"'), "Missing #account-360-backdrop");
+  assert.ok(html.includes('id="account-360-drawer"'), "Missing #account-360-drawer");
+  assert.ok(html.includes('id="drawer-shops-list"'), "Missing #drawer-shops-list");
+  assert.ok(html.includes('id="drawer-mrr-val"'), "Missing #drawer-mrr-val");
+  assert.ok(html.includes('id="drawer-arr-val"'), "Missing #drawer-arr-val");
+  assert.ok(html.includes('id="drawer-topup-val"'), "Missing #drawer-topup-val");
+  assert.ok(html.includes('id="drawer-ltv-val"'), "Missing #drawer-ltv-val");
+  assert.ok(html.includes('id="drawer-action-jump-desk"'), "Missing #drawer-action-jump-desk");
+  assert.ok(html.includes('id="drawer-action-email-owner"'), "Missing #drawer-action-email-owner");
+  assert.ok(html.includes('id="drawer-action-grant-sms"'), "Missing #drawer-action-grant-sms");
+  assert.ok(html.includes('id="drawer-action-override-tier"'), "Missing #drawer-action-override-tier");
+
+  // app.js functions
+  assert.ok(appJs.includes("function aggregateRevenueAccounts("), "Missing aggregateRevenueAccounts in app.js");
+  assert.ok(appJs.includes("function formatCurrencyUsd("), "Missing formatCurrencyUsd in app.js");
+  assert.ok(appJs.includes("function renderSuperAdminRevenuePanel("), "Missing renderSuperAdminRevenuePanel in app.js");
+  assert.ok(appJs.includes("function filterRevenueAccountsTable("), "Missing filterRevenueAccountsTable in app.js");
+  assert.ok(appJs.includes("function openAccount360Drawer("), "Missing openAccount360Drawer in app.js");
+  assert.ok(appJs.includes("function closeAccount360Drawer("), "Missing closeAccount360Drawer in app.js");
+  assert.ok(appJs.includes("function exportRevenueMetricsCsv("), "Missing exportRevenueMetricsCsv in app.js");
+
+  // style.css classes
+  assert.ok(css.includes(".revenue-kpi-grid"), "Missing .revenue-kpi-grid in style.css");
+  assert.ok(css.includes(".drawer-panel"), "Missing .drawer-panel in style.css");
+  assert.ok(css.includes(".drawer-backdrop"), "Missing .drawer-backdrop in style.css");
+  assert.ok(css.includes(".badge-signal-upsell"), "Missing .badge-signal-upsell in style.css");
+  assert.ok(css.includes(".badge-signal-multi"), "Missing .badge-signal-multi in style.css");
+  assert.ok(css.includes(".badge-signal-enterprise"), "Missing .badge-signal-enterprise in style.css");
+  assert.ok(css.includes(".badge-signal-churn"), "Missing .badge-signal-churn in style.css");
 });
 
 // -------------------------------------------------------------------------
