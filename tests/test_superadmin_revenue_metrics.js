@@ -85,11 +85,12 @@ function aggregateRevenueAccounts(shopsList, pricingTiers) {
     }
 
     const acct = accountsMap.get(rawEmail);
-    const rawTier = String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
+    const isDemo = !!(shop.isDemoShop || (shop.slug && shop.slug.startsWith("demo-")) || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
+    const rawTier = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? "starter" : String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
     const tier = rawTier === "enterprise" ? "enterprise" : (rawTier === "pro" ? "pro" : "starter");
     
     const isShopActive = shop.isActive !== false && shop.status !== "inactive" && shop.status !== "canceled";
-    const monthlyRate = isShopActive ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
+    const monthlyRate = (isShopActive && !isDemo) ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
     
     const visits30d = Number(shop.totalCheckIns30d || shop.totalServed || (Array.isArray(shop.history) ? shop.history.length : 0)) || 0;
     const topUpSpend = Number(shop.topUpSpend || (shop.topUpBalance ? Math.ceil(shop.topUpBalance / 1000) * 15 : 0)) || 0;
@@ -287,6 +288,37 @@ it("assigns shops without an owner email to fallback 'unassigned@waitlink.app'",
   assert.strictEqual(result.accounts.length, 1);
   assert.strictEqual(result.accounts[0].ownerEmail, "unassigned@waitlink.app");
   assert.strictEqual(result.accounts[0].totalShopsCount, 2);
+});
+
+it("normalizes sandbox demo shops with 'demo-' slug or 'Demo Sandbox' plan to Starter Tier ($0 MRR)", () => {
+  const demoShops = [
+    {
+      slug: "demo-oil-change",
+      shopName: "Express Oil Demo",
+      ownerEmail: "superadmin@waitlink.app",
+      isDemoShop: true,
+      planTitle: "Pro Business Tier (Demo Sandbox)",
+      planPrice: 15,
+      isActive: true
+    },
+    {
+      slug: "demo-dental-urgent",
+      shopName: "Metro Dental Demo",
+      ownerEmail: "superadmin@waitlink.app",
+      isDemoShop: true,
+      tier: "starter",
+      isActive: true
+    }
+  ];
+
+  const result = aggregateRevenueAccounts(demoShops, DEFAULT_PRICING_TIERS);
+  assert.strictEqual(result.accounts.length, 1);
+  const acct = result.accounts[0];
+  assert.strictEqual(acct.shops[0].tier, "starter");
+  assert.strictEqual(acct.shops[0].monthlyPrice, 0);
+  assert.strictEqual(acct.accountMrr, 0, "Demo shops must not inflate MRR");
+  assert.strictEqual(result.summary.totalMrr, 0);
+  assert.strictEqual(result.summary.payingAccounts, 0);
 });
 
 // -------------------------------------------------------------------------

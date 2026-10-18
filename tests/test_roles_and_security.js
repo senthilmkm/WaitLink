@@ -276,5 +276,44 @@ it("openTopUpModal and initiateTopUpCheckout are strictly blocked for unauthenti
   assert.ok(appJs.includes("Top-Up checkout is disabled in demo mode"), "initiateTopUpCheckout missing demo guard");
 });
 
+// -------------------------------------------------------------------------
+// Tests: Multi-Tenant Shop Isolation, Concurrency & Ticket Scoping
+// -------------------------------------------------------------------------
+console.log("\n--- 6. Multi-Tenant Shop Isolation, Concurrency & Ticket Scoping ---");
+
+it("launchDemoShopFromModal strictly initializes demo shops on Starter Tier ($0 Free Forever)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  // Verify demo shop defaults in launchDemoShopFromModal
+  assert.ok(appJs.includes('planTitle: "Starter Tier (Free)"'), "launchDemoShopFromModal must set Starter Tier (Free)");
+  assert.ok(appJs.includes('planPrice: 0'), "launchDemoShopFromModal must set planPrice: 0");
+  assert.ok(appJs.includes('tier: "starter"'), "launchDemoShopFromModal must set tier: starter");
+  assert.ok(!appJs.includes('planTitle: "Pro Business Tier (Demo Sandbox)"'), "Pro Business Tier (Demo Sandbox) must be purged");
+});
+
+it("Customer check-ins strictly tag tickets with shopSlug and isolate state.myTicket per shop", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  assert.ok(appJs.includes("shopSlug: state.config.slug"), "Check-in handlers must tag newItem with shopSlug");
+  assert.ok(appJs.includes("state.myTicket.shopSlug === state.config.slug"), "subscribeFirestore must check ticket shopSlug before queue merge");
+  assert.ok(appJs.includes("state.myTicket = SafeStorage.getJSON(`waitlink_ticket_${slug}`) || null;"), "inspectShop must isolate state.myTicket to target slug");
+});
+
+it("Eliminated shadowed duplicate functions renderPublicView and startTimerTicker to prevent memory leaks and DOM thrashing", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  const renderPublicMatches = appJs.match(/function renderPublicView\s*\(/g) || [];
+  assert.strictEqual(renderPublicMatches.length, 1, "There must be exactly ONE declaration of renderPublicView");
+
+  const startTimerMatches = appJs.match(/function startTimerTicker\s*\(/g) || [];
+  assert.strictEqual(startTimerMatches.length, 1, "There must be exactly ONE declaration of startTimerTicker");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);

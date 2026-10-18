@@ -1360,8 +1360,8 @@ function subscribeFirestore(forceResubscribe = false) {
 
       if (Array.isArray(data.queue)) {
         let mergedQueue = [...data.queue];
-        // Ensure recently checked-in local ticket is never dropped while Firestore transaction propagates
-        if (state.myTicket && !mergedQueue.some(q => q.id === state.myTicket.id)) {
+        // Ensure recently checked-in local ticket is never dropped while Firestore transaction propagates, strictly isolated to this shop
+        if (state.myTicket && (!state.myTicket.shopSlug || state.myTicket.shopSlug === state.config.slug) && !mergedQueue.some(q => q.id === state.myTicket.id)) {
           const isRecentlyCreated = (Date.now() - (state.myTicket.checkedInAt || 0)) < 90000;
           const isNotInHistory = !Array.isArray(data.history) || !data.history.some(h => h.id === state.myTicket.id);
           if (isRecentlyCreated && isNotInHistory) {
@@ -2164,6 +2164,10 @@ function loadData() {
     state.queue = [];
   }
 
+  // Restore active customer ticket strictly scoped to current shop
+  const savedTicket = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
+  state.myTicket = (savedTicket && savedTicket.id) ? savedTicket : null;
+
   if (savedHistory) {
     try { state.history = JSON.parse(savedHistory); } catch (e) { state.history = []; }
   } else if (isMainStDemo) {
@@ -2420,6 +2424,7 @@ function handleCheckIn(event) {
 
   const newItem = {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+    shopSlug: state.config.slug,
     customerName: name,
     phone: phone || null,
     checkedInAt: Date.now(),
@@ -2451,7 +2456,7 @@ function handleCheckIn(event) {
     });
   }
 
-  addQueueItemAtomic(newItem);
+  addQueueItemAtomic(newItem, false);
   if (input) input.value = "";
   if (phoneInput) phoneInput.value = "";
   if (serviceSelect) serviceSelect.value = "";
@@ -3155,24 +3160,6 @@ function renderAll() {
   renderSubscriptionBadges();
   renderSmsWalletUI();
   populateOwnerServicesUI();
-}
-
-function renderPublicView() {
-  setElText("public-shop-name", state.config.shopName || "Main St Barbers");
-  setElText("public-footer-shop-name", state.config.shopName || "Main St Barbers");
-
-  renderPublicContactBar();
-
-  const estWait = calculateEstimatedWait(-1);
-  setElText("public-wait-display", estWait > 0 ? `~ ${estWait} MINS` : "NO WAIT ⚡");
-
-  const qCount = state.queue.length;
-  setElText("public-queue-summary", `${qCount} ${qCount === 1 ? 'person' : 'people'} currently waiting in line`);
-
-  restoreActiveTicket();
-  renderPublicServiceChips();
-  renderDeskServiceSelect();
-  updateShopStatusUI();
 }
 
 function renderPublicContactBar() {
@@ -5431,16 +5418,6 @@ function renderPublicPromoBanner() {
   } else {
     promoBanner.classList.add("hidden");
   }
-}
-
-// Timer Ticker (Updates waiting counters every second)
-function startTimerTicker() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    renderQueue();
-    updateActiveTicketTimer();
-    renderPublicPromoBanner();
-  }, 1000);
 }
 
 function updateActiveTicketTimer() {
@@ -8226,9 +8203,10 @@ function inspectShop(slug, isSilent = false) {
     }
   }
 
-  // Reset in-memory queue & history before switching to target shop
+  // Reset in-memory queue, history & ticket before switching to target shop
   state.queue = [];
   state.history = [];
+  state.myTicket = SafeStorage.getJSON(`waitlink_ticket_${slug}`) || null;
 
   state.config.slug = slug;
   state.config.shopName = targetName;
@@ -8301,15 +8279,14 @@ function renderSuperAdminShopsTable() {
     const rawName = shop.name || shop.shopName || shopSlug;
     const shopName = String(rawName).trim().replace(/[\r\n]+/g, ' ');
     const docId = String(shop.id || shop.slug || shopSlug).trim();
-    const price = shop.planPrice !== undefined ? shop.planPrice : 0;
+    const isSandbox = shopSlug === 'main-st-barbers' || docId === 'main-st-barbers';
+    const isDemo = !!(shop.isDemoShop || shopSlug.startsWith("demo-") || isSandbox || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
+    const price = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? 0 : (shop.planPrice !== undefined ? shop.planPrice : 0);
     totalMRR += price;
     
     const currentTierKey = price >= 49 ? 'enterprise' : (price >= 15 ? 'pro' : 'starter');
     const borderColor = currentTierKey === 'enterprise' ? '#6366f1' : (currentTierKey === 'pro' ? '#06b6d4' : '#10b981');
     const bgColor = currentTierKey === 'enterprise' ? 'rgba(99, 102, 241, 0.15)' : (currentTierKey === 'pro' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)');
-
-    const isSandbox = shopSlug === 'main-st-barbers' || docId === 'main-st-barbers';
-    const isDemo = !!(shop.isDemoShop || shopSlug.startsWith("demo-") || isSandbox);
 
     return `
       <tr>
@@ -9220,8 +9197,9 @@ async function launchDemoShopFromModal() {
         demoIndustry: preset.id,
         ownerEmail: SUPERADMIN_EMAIL,
         ownerUid: (state.user && state.user.uid) || "superadmin",
-        planTitle: "Pro Business Tier (Demo Sandbox)",
-        planPrice: 15,
+        planTitle: "Starter Tier (Free)",
+        planPrice: 0,
+        tier: "starter",
         unitLabel: preset.unitLabel,
         tagline: preset.tagline,
         services: [...preset.services],
@@ -10697,20 +10675,13 @@ function handlePublicSelfCheckIn(event) {
 
   const newItem = {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+    shopSlug: state.config.slug,
     customerName: customerName,
     phone: phone,
     checkedInAt: Date.now()
   };
 
-  state.myTicket = newItem;
-  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
-  try {
-    const u = new URL(window.location.href);
-    u.searchParams.set("ticket", newItem.id);
-    window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
-  } catch (e) {}
-
-  addQueueItemAtomic(newItem);
+  addQueueItemAtomic(newItem, true);
 
   closePublicCheckInModal();
   renderAll();
@@ -10772,11 +10743,12 @@ function aggregateRevenueAccounts(shopsList, pricingTiers) {
     }
 
     const acct = accountsMap.get(rawEmail);
-    const rawTier = String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
+    const isDemo = !!(shop.isDemoShop || (shop.slug && shop.slug.startsWith("demo-")) || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
+    const rawTier = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? "starter" : String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
     const tier = rawTier === "enterprise" ? "enterprise" : (rawTier === "pro" ? "pro" : "starter");
     
     const isShopActive = shop.isActive !== false && shop.status !== "inactive" && shop.status !== "canceled";
-    const monthlyRate = isShopActive ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
+    const monthlyRate = (isShopActive && !isDemo) ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
     
     const visits30d = Number(shop.totalCheckIns30d || shop.totalServed || (Array.isArray(shop.history) ? shop.history.length : 0)) || 0;
     const topUpSpend = Number(shop.topUpSpend || (shop.topUpBalance ? Math.ceil(shop.topUpBalance / 1000) * 15 : 0)) || 0;
@@ -11831,6 +11803,7 @@ function handlePublicInlineCheckIn(event) {
 
   const newItem = {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+    shopSlug: state.config.slug,
     customerName: customerName,
     phone: phone,
     tcpaConsent: !!(cleanPhoneDigits.length > 0 && tcpaCheck && tcpaCheck.checked),
@@ -11842,15 +11815,7 @@ function handlePublicInlineCheckIn(event) {
   };
 
   state.selectedPublicService = null;
-  state.myTicket = newItem;
-  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
-  try {
-    const u = new URL(window.location.href);
-    u.searchParams.set("ticket", newItem.id);
-    window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
-  } catch (e) {}
-
-  addQueueItemAtomic(newItem);
+  addQueueItemAtomic(newItem, true);
 
   renderAll();
 
@@ -11874,6 +11839,9 @@ function handlePublicInlineCheckIn(event) {
 }
 
 function restoreActiveTicket() {
+  if (state.myTicket && state.myTicket.shopSlug && state.myTicket.shopSlug !== state.config.slug) {
+    state.myTicket = null;
+  }
   if (!state.myTicket) {
     // Check URL ticket parameter first
     const params = new URLSearchParams(window.location.search);
@@ -12461,20 +12429,24 @@ function renderDeskServiceSelect() {
 }
 
 // Atomic Check-in Handler for Concurrency Protection
-function addQueueItemAtomic(newItem) {
+function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
+  if (!newItem.shopSlug) newItem.shopSlug = state.config.slug;
   state.queue.push(newItem);
-  state.myTicket = newItem;
-  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
 
-  // Synchronize ticket into URL so page reloads or tab switches never lose ticket context
-  if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
-    try {
-      const u = new URL(window.location.href);
-      if (u.searchParams.get("view") === "public" || u.searchParams.get("mode") === "public" || u.searchParams.get("mode") === "customer") {
-        u.searchParams.set("ticket", newItem.id);
-        window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
-      }
-    } catch (e) {}
+  if (isSelfCheckIn) {
+    state.myTicket = newItem;
+    SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
+
+    // Synchronize ticket into URL so page reloads or tab switches never lose ticket context
+    if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.get("view") === "public" || u.searchParams.get("mode") === "public" || u.searchParams.get("mode") === "customer") {
+          u.searchParams.set("ticket", newItem.id);
+          window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
+        }
+      } catch (e) {}
+    }
   }
 
   const { queueKey } = getStorageKeys();
@@ -12528,12 +12500,8 @@ function updateTickingTimers() {
     }
   });
 
-  const ticketTimerDisplay = document.getElementById("ticket-timer-display");
-  if (ticketTimerDisplay && state.myTicket && state.myTicket.checkedInAt) {
-    const elapsedSec = Math.floor((now - state.myTicket.checkedInAt) / 1000);
-    const elapsedMin = Math.floor(elapsedSec / 60);
-    const secs = elapsedSec % 60;
-    ticketTimerDisplay.textContent = `Waited ${elapsedMin < 10 ? '0' : ''}${elapsedMin}:${secs < 10 ? '0' : ''}${secs}`;
+  if (typeof updateActiveTicketTimer === "function") {
+    updateActiveTicketTimer();
   }
 }
 
@@ -13521,13 +13489,15 @@ function renderOwnerShopsTable(shopsList) {
     const shopSlug = String(rawSlug).trim();
     const shopName = String(shop.shopName || shop.name || shopSlug).trim();
     const docId = String(shop.id || shopSlug).trim();
-    const price = shop.planPrice !== undefined ? shop.planPrice : 0;
-    const isEnterprise = price >= 49 || (shop.planTitle && shop.planTitle.includes("Enterprise"));
-    const isPro = price >= 15 || (shop.planTitle && shop.planTitle.includes("Pro"));
+    const isSandbox = shopSlug === "main-st-barbers";
+    const isDemo = !!(shop.isDemoShop || shopSlug.startsWith("demo-") || isSandbox || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
+    const price = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? 0 : (shop.planPrice !== undefined ? shop.planPrice : 0);
+    const isEnterprise = !isDemo && (price >= 49 || (shop.planTitle && shop.planTitle.includes("Enterprise")));
+    const isPro = !isDemo && (price >= 15 || (shop.planTitle && shop.planTitle.includes("Pro")));
     
     const tierPillColor = isEnterprise ? "#818cf8" : (isPro ? "#06b6d4" : "#10b981");
     const tierPillBg = isEnterprise ? "rgba(129, 140, 248, 0.15)" : (isPro ? "rgba(6, 182, 212, 0.15)" : "rgba(16, 185, 129, 0.15)");
-    const tierLabel = isEnterprise ? "Enterprise" : (isPro ? "Pro Business" : "Starter");
+    const tierLabel = isDemo ? "Starter (Demo)" : (isEnterprise ? "Enterprise" : (isPro ? "Pro Business" : "Starter"));
 
     const isSandbox = shopSlug === "main-st-barbers";
     const isActiveShop = state.config.slug === shopSlug;
