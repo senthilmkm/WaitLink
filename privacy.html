@@ -32,26 +32,64 @@
     <div style="margin-bottom: 2rem;">
       <span class="hero-badge">🔒 LEGAL DOCUMENT</span>
       <h1 style="color: #fff; font-size: 2.25rem; margin-top: 0.5rem;">Privacy Policy</h1>
-      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Updated: October 16, 2026 &bull; Version 2.5</p>
+      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Updated: October 18, 2026 &bull; Version 2.6</p>
     </div>
 
     <!-- Section 1 -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">1. Zero-Friction Customer Privacy Mandate</h2>
-      <p>WaitLink is built on a strict privacy-first principle: <strong>walk-in customers checking into a line are never required to register accounts, enter passwords, or provide sensitive personal data</strong>. Customer check-in names or initials are used solely for identifying line position during active visits.</p>
+      <p>WaitLink is built on a strict privacy-first principle: <strong>walk-in customers checking into a line are never required to register accounts, enter passwords, install native apps, or provide sensitive personal data</strong>. Customer check-in names or initials are used solely for identifying line position during active visits, and guest data is never monetized or sold.</p>
     </div>
 
-    <!-- Section 2 -->
+    <!-- Section 2: Role-Based Data Segregation & Permission Boundaries -->
+    <div class="card" style="padding: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #a5b4fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>👥</span> 2. Role-Based Data Segregation &amp; Permission Boundaries
+      </h2>
+      <p>To prevent unauthorized data exposure and shoulder-surfing in public waiting lobbies, WaitLink strictly segregates data access across four distinct user roles:</p>
+      <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+        <div style="padding: 1rem; background: var(--bg-dark); border-radius: var(--radius-md); border-left: 3px solid #38bdf8;">
+          <h3 style="color: #38bdf8; font-size: 1rem; margin-bottom: 0.35rem;">Guest User (Walk-in Customer / Visitor)</h3>
+          <p style="margin: 0; font-size: 0.9rem;">
+            <strong>Data Collected:</strong> Transient display name or alias, optional mobile phone number for SMS notifications, selected service, and check-in timestamp.<br>
+            <strong>Data Visibility:</strong> Guests have access strictly to their own dynamic digital ticket (live position, estimated wait countdown, party size). Guests have <strong>ZERO visibility</strong> into other customers' phone numbers, full names, or shop administrative settings. Guests can cancel their own ticket at any time with 1 tap.
+          </p>
+        </div>
+        <div style="padding: 1rem; background: var(--bg-dark); border-radius: var(--radius-md); border-left: 3px solid #10b981;">
+          <h3 style="color: #10b981; font-size: 1rem; margin-bottom: 0.35rem;">Front Desk User (Staff / Receptionist / Operator)</h3>
+          <p style="margin: 0; font-size: 0.9rem;">
+            <strong>Authentication &amp; Access:</strong> Authenticated via 4-digit Station PIN or secure 1-Click Station URL.<br>
+            <strong>Operational Scope:</strong> Front desk personnel can view the active line, call next, seat guests, mark completions or no-shows, and manually register walk-ins without smartphones.<br>
+            <strong>Strict Boundaries:</strong> In Clinical Mode, phone numbers are masked by default (<code>+1 (•••) •••-1234</code>) to prevent lobby shoulder-surfing. Front desk operators are <strong>strictly barred</strong> from viewing shop financial records, Stripe billing portals, SMS credit purchasing, business profile deletion, or owner Google/email credentials.
+          </p>
+        </div>
+        <div style="padding: 1rem; background: var(--bg-dark); border-radius: var(--radius-md); border-left: 3px solid #f59e0b;">
+          <h3 style="color: #f59e0b; font-size: 1rem; margin-bottom: 0.35rem;">Shop Owner (Business Administrator)</h3>
+          <p style="margin: 0; font-size: 0.9rem;">
+            <strong>Scope &amp; Governance:</strong> Full administrative control over shop profiles, custom branding, service catalogs, operating hours, staff PIN management, SMS message templates, and historical analytics.<br>
+            <strong>Privacy Controls:</strong> Owners govern queue retention policies (7, 90, or 365 days), execute GDPR/CCPA consumer deletion requests, manage Stripe subscriptions, and export RFC 4180 audit logs with PII masking.
+          </p>
+        </div>
+        <div style="padding: 1rem; background: var(--bg-dark); border-radius: var(--radius-md); border-left: 3px solid #ec4899;">
+          <h3 style="color: #f472b6; font-size: 1rem; margin-bottom: 0.35rem;">SuperAdmin (Platform Operator)</h3>
+          <p style="margin: 0; font-size: 0.9rem;">
+            <strong>Infrastructure Telemetry:</strong> Strictly monitored administrative oversight reserved for platform stability, multi-tenant isolation, carrier SMS deliverability health, and automated security auditing. Platform operators never access customer PII except when explicitly requested for technical debugging or legally mandated.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3 -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. Information We Collect & Why Phone Numbers Are Collected</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">3. Information We Collect &amp; Why Phone Numbers Are Collected</h2>
       <p><strong>For Business Owners:</strong> When you set up a shop account, we store your email address, business name, custom URL slug, shop address/hours, optional logo image, and selected subscription tier.</p>
       <p><strong>For Walk-in Customers:</strong> We temporarily store transient check-in names (e.g. "Marcus S.") and optional mobile cell phone numbers if voluntarily provided. <strong>Why we collect phone numbers:</strong> Customer phone numbers are collected strictly and solely to deliver operational, real-time SMS text notifications when your turn at a business chair or table is ready. Daily visit history logs can be reset by the shop owner at any time.</p>
     </div>
 
-    <!-- Section 3: SMS Privacy & Mobile Data Protection (CTIA / TCPA Compliant) -->
+    <!-- Section 4: SMS Privacy & Mobile Data Protection (CTIA / TCPA Compliant) -->
     <div class="card" style="padding: 2rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #10b981; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>📱</span> 3. SMS Text Notification Privacy &amp; Mobile Data Disclaimer (CTIA / TCPA Compliant)
+        <span>📱</span> 4. SMS Text Notification Privacy &amp; Mobile Data Disclaimer (CTIA / TCPA Compliant)
       </h2>
       <p>WaitLink integrates with carrier-authorized SMS gateways (Twilio) to send operational line position text messages. We strictly enforce CTIA and TCPA privacy standards:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
@@ -64,12 +102,12 @@
       </ul>
     </div>
 
-    <!-- Section 4: Clinical & Healthcare Privacy Mode -->
+    <!-- Section 5: Clinical & Healthcare Privacy Mode -->
     <div class="card" style="padding: 2rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #06b6d4; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>🏥</span> 4. Clinical & Healthcare Privacy Mode (Urgent Care, Walk-in Clinics & Wellness)
+        <span>🏥</span> 5. Clinical &amp; Healthcare Privacy Mode (Urgent Care, Walk-in Clinics &amp; Wellness)
       </h2>
-      <p>WaitLink includes an advanced <strong>Clinical & Healthcare Privacy Mode</strong> purpose-built for urgent care centers, medical walk-ins, outpatient clinics, and wellness practices where patient confidentiality is paramount:</p>
+      <p>WaitLink includes an advanced <strong>Clinical &amp; Healthcare Privacy Mode</strong> purpose-built for urgent care centers, medical walk-ins, outpatient clinics, and wellness practices where patient confidentiality is paramount:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
         <li><strong>Public Screen Patient Name Masking:</strong> Full patient names are automatically masked on public lobby monitors and customer mobile cards (e.g., <em>"Jonathan Edwards"</em> is displayed as <em>"Jonathan E."</em>).</li>
         <li><strong>Front Desk Phone Protection with Tap-to-Reveal:</strong> Patient phone numbers are masked by default on front desk terminals (e.g., <code>+1 (•••) •••-1359</code>). Front desk receptionists can tap a secure toggle to temporarily reveal the number when direct verification is required, preventing lobby shoulder-surfing.</li>
@@ -78,10 +116,10 @@
       </ul>
     </div>
 
-    <!-- Section 5: Queue History Retention & PII Auto-Masking -->
+    <!-- Section 6: Queue History Retention & PII Auto-Masking -->
     <div class="card" style="padding: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #a5b4fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>🛡️</span> 5. Queue History Data Retention, Privacy Auto-Masking & CSV Reporting
+        <span>🛡️</span> 6. Queue History Data Retention, Privacy Auto-Masking &amp; CSV Reporting
       </h2>
       <p>In accordance with data minimization standards under CCPA, TCPA, and GDPR, WaitLink enforces automated queue history lifecycle policies governed centrally by Platform Administrators:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
@@ -104,28 +142,47 @@
       </ul>
     </div>
 
-    <!-- Section 6: Stripe Payment Security -->
+    <!-- Section 7: SafeStorage & Private Browsing Privacy (Edge InPrivate, Safari Private, Chrome Incognito) -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Stripe Payment Security</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🔒</span> 7. SafeStorage &amp; Private Browsing Privacy Guarantees
+      </h2>
+      <p>WaitLink includes an innovative, zero-fail <strong>SafeStorage Architecture</strong> designed to respect modern browser privacy sandboxes, including <strong>Microsoft Edge InPrivate</strong>, <strong>Apple Safari Private Browsing</strong>, <strong>Google Chrome Incognito</strong>, and Firefox Private Windows:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li><strong>Zero Tracking Cookies:</strong> WaitLink does not deploy third-party advertising cookies, fingerprinting scripts, or cross-site tracking pixels.</li>
+        <li><strong>Volatile In-Memory RAM Fallback:</strong> If a user's browser disables or restricts HTML5 <code>LocalStorage</code>, WaitLink automatically redirects all session storage to an isolated, in-memory RAM structure. When the browser tab or private window is closed, all temporary session and ticket data is immediately and permanently erased from memory.</li>
+        <li><strong>Audited Key Isolation:</strong> All client storage keys (such as <code>waitlink_theme</code>, <code>waitlink_config</code>, <code>waitlink_ticket_*</code>, and <code>waitlink_staff_session</code>) are strictly namespaced, encrypted when required, and restricted solely to the WaitLink origin domain.</li>
+      </ul>
+    </div>
+
+    <!-- Section 8: Stripe Payment Security -->
+    <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. Stripe Payment Security</h2>
       <p>All subscription transactions for Pro Business ($15/mo) and Enterprise ($49/mo) plans are handled securely by <strong>Stripe</strong> (PCI-DSS Level 1 Compliant). WaitLink servers never store or process raw credit card numbers or billing CVC codes.</p>
     </div>
 
-    <!-- Section 7: Data Encryption & Storage -->
+    <!-- Section 9: Data Encryption & Storage -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">7. Data Encryption & Storage</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Data Encryption &amp; Cloud Security</h2>
       <p>All data transmitted between web browsers, front desk tablets, and Google Cloud Infrastructure is encrypted in transit using <strong>TLS 1.3</strong> and encrypted at rest with <strong>AES-256</strong> industry encryption standards.</p>
     </div>
 
-    <!-- Section 8: LocalStorage & Session Storage -->
+    <!-- Section 10: Individual Rights (GDPR & CCPA) -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. LocalStorage & Cookies</h2>
-      <p>WaitLink uses HTML5 LocalStorage to maintain active shop preferences, temporary customer ticket timers, and sound notification settings locally on your device. We do not sell user data to third-party ad networks.</p>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">10. Consumer Rights (GDPR, CCPA &amp; State Regulations)</h2>
+      <p>Depending on your jurisdiction, Guests and Business Owners enjoy comprehensive statutory rights regarding their personal information:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li><strong>Right to Know &amp; Access:</strong> You have the right to request a complete disclosure of any personal data stored by WaitLink on your behalf.</li>
+        <li><strong>Right to Erasure ("Right to Be Forgotten"):</strong> Guests can remove themselves from queues instantly, and may request permanent deletion of any past visit records. Shop Owners can permanently delete their shop account and associated logs at any time.</li>
+        <li><strong>Right to Opt-Out of SMS:</strong> Reply <strong>STOP</strong> at any time to immediately revoke SMS dispatch authorization.</li>
+        <li><strong>Non-Discrimination:</strong> We do not discriminate against any user for exercising their statutory privacy rights.</li>
+      </ul>
     </div>
 
-    <!-- Section 9: DPO Contact -->
+    <!-- Section 11: DPO Contact -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Data Protection Officer Contact</h2>
-      <p>If you have questions about your business data, privacy rights, or data deletion requests, contact our Data Protection Officer directly at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">11. Data Protection Officer Contact</h2>
+      <p>If you have questions about your business data, privacy rights, role-based controls, or data deletion requests, contact our Data Protection Officer directly at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
     </div>
 
   </main>

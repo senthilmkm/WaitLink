@@ -69,7 +69,11 @@
       <div class="faq-filter-pills" role="tablist" aria-label="Filter questions by topic">
         <button class="faq-pill active" data-filter="all" onclick="setCategoryFilter('all')">
           <span>✨ All</span>
-          <span class="pill-count" id="count-all">16</span>
+          <span class="pill-count" id="count-all">21</span>
+        </button>
+        <button class="faq-pill" data-filter="roles" onclick="setCategoryFilter('roles')">
+          <span>👥 Roles & Access</span>
+          <span class="pill-count" id="count-roles">4</span>
         </button>
         <button class="faq-pill" data-filter="sms" onclick="setCategoryFilter('sms')">
           <span>📱 SMS & Alerts</span>
@@ -80,7 +84,7 @@
           <span class="pill-count" id="count-pricing">3</span>
         </button>
         <button class="faq-pill" data-filter="staff" onclick="setCategoryFilter('staff')">
-          <span>👥 Staff & Stations</span>
+          <span>🖥️ Staff & Stations</span>
           <span class="pill-count" id="count-staff">3</span>
         </button>
         <button class="faq-pill" data-filter="privacy" onclick="setCategoryFilter('privacy')">
@@ -93,14 +97,14 @@
         </button>
         <button class="faq-pill" data-filter="hardware" onclick="setCategoryFilter('hardware')">
           <span>🖨️ QR & Setup</span>
-          <span class="pill-count" id="count-hardware">3</span>
+          <span class="pill-count" id="count-hardware">4</span>
         </button>
       </div>
 
       <!-- Results Toolbar & Meta -->
       <div class="faq-toolbar-meta">
         <div id="faq-results-counter" class="faq-result-count">
-          Showing all <strong>16</strong> questions
+          Showing all <strong>21</strong> questions
         </div>
         <button id="faq-toggle-all-btn" class="faq-action-link-btn" onclick="toggleExpandAll()">
           <span id="faq-toggle-all-icon">📖</span>
@@ -364,7 +368,7 @@
       </div>
 
       <!-- 16. Offline & Network Drop -->
-      <div class="faq-item" data-category="hardware" data-keywords="offline internet connectivity drop wifi network drop localstorage cache sync firestore seamless reconnect client side disconnect resilience recover">
+      <div class="faq-item" data-category="hardware" data-keywords="offline internet connectivity drop wifi network drop localstorage cache sync firestore seamless reconnect client side disconnect resilience recover safe storage in memory">
         <button class="faq-question" onclick="toggleFaq(this)">
           <span>
             <span class="faq-category-badge faq-badge-hardware">QR & Setup</span>
@@ -373,10 +377,95 @@
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-answer">
-          <p>WaitLink includes client-side HTML5 LocalStorage caching. If network drops, queue actions are cached safely on your device and sync seamlessly with Google Cloud Firestore as soon as internet connection is restored.</p>
+          <p>WaitLink includes client-side SafeStorage caching with in-memory fallbacks. If your network connection drops, queue actions are cached locally on your device and sync seamlessly with Google Cloud Firestore as soon as internet connectivity is restored—guaranteeing zero data loss during busy shifts.</p>
         </div>
       </div>
 
+      <!-- 17. Master Role Entitlement Matrix -->
+      <div class="faq-item" data-category="roles" data-keywords="roles entitlements matrix permissions access guest customer front desk staff counter receptionist shop owner business admin superadmin privileges hierarchy separation">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-roles">Roles & Access</span>
+            <span class="faq-question-text">What is the difference between Guest, Front Desk Staff, and Shop Owner roles?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink enforces strict Role-Based Access Control (RBAC) to keep customer queues seamless while protecting business financials:</p>
+          <ul>
+            <li><strong>👤 Guest User (Walk-in Customer):</strong> Zero account or app required. Joins via window QR poster or lobby kiosk. Receives an interactive digital ticket with real-time wait estimation and optional turn-ready SMS alerts. Can cancel or leave the line anytime.</li>
+            <li><strong>🖥️ Front Desk User (Counter Staff / Operator):</strong> Accesses front desk queue control via 1-Click Station Link, iPad QR, or counter PIN passcode. Can call next ("SERVE NEXT"), seat customers, mark visits complete or no-show, adjust wait times, and manually add walk-in guests. <em>Strictly restricted from billing, subscription upgrades, SMS wallet purchasing, and shop deletion.</em></li>
+            <li><strong>👑 Shop Owner (Business Account Admin):</strong> Authenticated via Google or Email. Full business sovereignty: manages storefront hours and services, provisions staff accounts and individual PINs, oversees Stripe billing and non-expiring SMS top-ups, configures data retention & HIPAA privacy policies, and exports 90-day/365-day CSV history logs.</li>
+            <li><strong>⚡ SuperAdmin (Platform Operator):</strong> System-wide infrastructure monitoring, revenue metrics, global compliance audits, and multi-tenant tenant isolation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 18. Guest Experience & Queue Leaving -->
+      <div class="faq-item" data-category="roles" data-keywords="guest customer walk in cancel leave line leave queue place position countdown safe storage mobile web browser ticket tracking drop out remove self cancel">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-roles">Roles & Access</span>
+            <span class="faq-question-text">How does a Guest track their spot in line, and can they leave the queue if plans change?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>When a walk-in customer scans your lobby QR poster, their phone opens their personal live digital ticket. They can see their position in line (e.g., <em>"2 ahead of you"</em>), real-time ticking wait time calculated from your shop's recent service velocity, and their selected service.</p>
+          <p>If their schedule changes, guests can tap <strong>"Leave Queue"</strong> directly on their ticket card. WaitLink prompts for confirmation, immediately frees their spot in line, and automatically moves up everyone behind them in real time. If a customer accidentally closes their browser tab, WaitLink's cross-browser SafeStorage automatically restores their active ticket upon reopening the shop URL.</p>
+        </div>
+      </div>
+
+      <!-- 19. Front Desk Boundaries & Protection -->
+      <div class="faq-item" data-category="roles" data-keywords="front desk staff boundaries security restrictions billing stripe protected counter cashier receptionist tablet pin no show manual add walk in">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-roles">Roles & Access</span>
+            <span class="faq-question-text">What can Front Desk staff do, and what are they restricted from accessing?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Front desk staff are empowered with full floor queue operational authority without risking owner security:</p>
+          <ul>
+            <li><strong>Allowed Actions:</strong> Call next waiting customer, seat guests, complete visits, mark no-shows, modify estimated wait times, and manually add walk-in guests who do not have a smartphone.</li>
+            <li><strong>Strictly Blocked Actions:</strong> Counter staff cannot access owner Stripe billing, view invoices or payment methods, upgrade/downgrade subscription tiers, purchase SMS packs, rename or delete the shop, change store operating hours/services, or access master owner Google/Email credentials. Front desk screens also mask customer phone numbers by default with a secure tap-to-reveal toggle to protect customer privacy from lobby onlookers.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 20. Shop Owner Staff & Multi-Location Management -->
+      <div class="faq-item" data-category="roles" data-keywords="shop owner business owner multi location staff directory pin station url ipad qr code manage staff permissions custom hours services">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-roles">Roles & Access</span>
+            <span class="faq-question-text">How does a Shop Owner provision staff logins and manage multiple locations?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Shop owners navigate to <strong>Account ▾ &rarr; 🏢 My Shops & Staff Directory</strong>. From this centralized dashboard, owners can:</p>
+          <ul>
+            <li><strong>Provision Counter Staff:</strong> Create individual staff logins with custom role titles (e.g., <em>Intake Greeter</em>, <em>Floor Specialist</em>) and unique 4-digit PIN passcodes.</li>
+            <li><strong>Generate 1-Click Station Links &amp; QRs:</strong> Create bookmarkable station links and printable iPad QR codes for each station so counter staff log in instantly without typing master passwords.</li>
+            <li><strong>Multi-Location Network:</strong> Seamlessly switch between multiple storefronts using the top <strong>MY SHOPS</strong> selector. Each location retains its own isolated live queue, service menu, staff team, and customer analytics.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 21. Lobby Kiosk Mode -->
+      <div class="faq-item" data-category="hardware" data-keywords="kiosk self check in self-service entrance tablet ipad lobby stand walk in guest mode touch screen locked">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-hardware">QR & Setup</span>
+            <span class="faq-question-text">Can walk-in guests check themselves in using a lobby tablet kiosk?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes! WaitLink includes a dedicated <strong>Self-Check-In Kiosk Mode</strong> (accessible via <code>?view=kiosk</code> or the header view switcher). Place any iPad or Android tablet at your store entrance in Kiosk Mode. Walk-in guests tap the screen, enter their name, pick their desired service, and optionally enter their cell phone number for SMS alerts. Kiosk Mode automatically locks out administrative controls and resets to a welcoming start screen after each check-in.</p>
+        </div>
+      </div>
     </div>
 
     <!-- Need More Help Banner -->
@@ -509,15 +598,20 @@
 
     // Semantic Synonym Dictionaries
     const SYNONYMS = {
+      "roles": ["role", "permission", "permissions", "access", "entitlement", "entitlements", "guest", "customer", "staff", "owner", "superadmin"],
+      "guest": ["customer", "walkin", "walk-in", "visitor", "client", "ticket", "line", "leave", "cancel", "kiosk"],
+      "customer": ["guest", "walkin", "walk-in", "visitor", "ticket", "line"],
+      "owner": ["admin", "manager", "proprietor", "creator", "billing", "account", "multi-location", "directory"],
       "sms": ["text", "texts", "message", "messages", "txt", "twilio", "dispatch", "telecom"],
       "text": ["sms", "twilio", "message"],
       "price": ["pricing", "cost", "costs", "fee", "fees", "tier", "tiers", "subscription", "plan", "plans", "dollar", "bill", "billing"],
       "pricing": ["price", "cost", "fee", "tier", "subscription", "plan", "starter", "pro", "enterprise"],
       "cost": ["price", "pricing", "fee", "subscription", "plan"],
       "free": ["starter", "zero", "$0"],
-      "staff": ["employee", "receptionist", "greeter", "desk", "worker", "user", "role", "roles", "pin", "station", "ipad", "tablet"],
+      "staff": ["employee", "receptionist", "greeter", "desk", "worker", "user", "role", "roles", "pin", "station", "ipad", "tablet", "operator"],
       "ipad": ["tablet", "station", "device", "screen", "kiosk"],
-      "tablet": ["ipad", "station", "device", "screen"],
+      "tablet": ["ipad", "station", "device", "screen", "kiosk"],
+      "kiosk": ["self-check-in", "self-service", "entrance", "tablet", "lobby"],
       "privacy": ["hipaa", "gdpr", "ccpa", "tcpa", "pii", "clinical", "security", "anonymize", "mask"],
       "hipaa": ["clinical", "healthcare", "privacy", "doctor", "patient", "medical"],
       "clinical": ["hipaa", "medical", "doctor", "patient", "clinic", "urgent", "healthcare"],
@@ -527,7 +621,7 @@
       "poster": ["flyer", "print", "window", "lobby", "qr", "storefront", "display"],
       "qr": ["code", "scan", "camera", "poster", "link"],
       "loss": ["walk-away", "walkaway", "cancellation", "abandon", "abandonment"],
-      "offline": ["wifi", "internet", "disconnect", "drop", "network", "cache", "localstorage"]
+      "offline": ["wifi", "internet", "disconnect", "drop", "network", "cache", "localstorage", "safestorage"]
     };
 
     function buildFaqIndex() {
@@ -557,7 +651,7 @@
     }
 
     function updateCategoryCounts() {
-      const counts = { all: faqIndex.length, sms: 0, pricing: 0, staff: 0, privacy: 0, analytics: 0, hardware: 0 };
+      const counts = { all: faqIndex.length, roles: 0, sms: 0, pricing: 0, staff: 0, privacy: 0, analytics: 0, hardware: 0 };
       faqIndex.forEach(item => {
         if (counts[item.category] !== undefined) counts[item.category]++;
       });

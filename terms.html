@@ -32,18 +32,50 @@
     <div style="margin-bottom: 2rem;">
       <span class="hero-badge">📜 LEGAL TERMS</span>
       <h1 style="color: #fff; font-size: 2.25rem; margin-top: 0.5rem;">Terms of Service</h1>
-      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Modified: October 16, 2026 &bull; Version 2.5</p>
+      <p style="font-size: 0.875rem; color: var(--text-subtle);">Last Modified: October 18, 2026 &bull; Version 2.6</p>
     </div>
 
     <!-- Section 1 -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">1. Acceptance of Agreement</h2>
-      <p>By registering a business waitlist, creating a shop profile, or checking into a line via the WaitLink web application ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, you may not use the Service.</p>
+      <p>By registering a business waitlist, creating a shop profile, managing front desk queues, or checking into a line via the WaitLink web application ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, you may not use the Service.</p>
     </div>
 
-    <!-- Section 2 -->
+    <!-- Section 2: User Roles, Permissions & Account Entitlements -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. Subscription Tiers, SMS Quotas &amp; Stripe Billing</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">2. User Roles, Permissions &amp; Account Entitlements</h2>
+      <p>WaitLink enforces strict Role-Based Access Control (RBAC). By accessing or interacting with the Service, you agree to the entitlements and constraints of your specific role:</p>
+      <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
+        <li style="margin-bottom: 0.85rem;">
+          <strong>👤 Guest User (Walk-in Customer / Visitor):</strong>
+          <span style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Walk-in customers are granted a limited, revocable, non-exclusive license to scan lobby QR posters, view public waitlist screens, join an active shop queue, monitor live ticking wait estimations, and receive automated transactional turn-ready text messages. Guests are <strong>never required to create a user account, set a password, or install a native app</strong>. Guests may cancel their position at any time via the "Leave Queue" button on their active digital ticket. Guests agree to submit only their own authentic name and valid mobile number, and agree not to spam, generate fictitious queue entries, or disrupt merchant operations.
+          </span>
+        </li>
+        <li style="margin-bottom: 0.85rem;">
+          <strong>🖥️ Front Desk User (Counter Staff / Operator):</strong>
+          <span style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Front Desk users access the Service via an assigned shop slug and staff counter credentials (station username and 4-digit PIN, 1-Click Station URL, or tablet QR scan). Front Desk users are authorized to manage floor operations: calling next waiting customers, seating patrons, marking visits completed, recording cancellations or no-shows, adjusting wait estimates, and adding walk-in customers manually. <strong>Strict Restrictions:</strong> Front Desk users are strictly prohibited from attempting to view, access, or modify Shop Owner billing information, Stripe payment credentials, subscription tiers, or SMS credit wallets; they may not delete, rename, or transfer ownership of any shop, nor alter master owner credentials.
+          </span>
+        </li>
+        <li style="margin-bottom: 0.85rem;">
+          <strong>👑 Shop Owner (Business Account Administrator):</strong>
+          <span style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Shop Owners authenticate via Google Sign-In or verified Email/Password. The Shop Owner possesses full administrative authority over their registered business locations: configuring store operating hours, services menus, turnaround baseline speeds, branding assets, and promotional banners; provisioning and revoking Front Desk staff accounts and PINs; managing Stripe recurring subscriptions and non-expiring SMS top-up wallets; configuring automated data retention (7, 90, or 365 days) and Clinical Privacy Mode; and exporting lawful CSV visit logs. Shop Owners warrant that all telephone numbers collected via WaitLink are gathered with proper consumer notice and consent in compliance with the TCPA, CTIA, and applicable consumer protection statutes.
+          </span>
+        </li>
+        <li>
+          <strong>⚡ SuperAdmin (Platform Operator):</strong>
+          <span style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Platform operators maintain global system infrastructure, database health, automated retention purges, carrier routing compliance, multi-tenant security isolation, and platform dispute resolution. SuperAdmin access is strictly restricted to authorized WaitLink engineering personnel.
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Section 3 -->
+    <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">3. Subscription Tiers, SMS Quotas &amp; Stripe Billing</h2>
       <p>WaitLink offers free and paid subscription plans governed by automated cloud metering:</p>
       <ul style="margin: 0.5rem 0 1rem 1.25rem;">
         <li><strong>Starter Tier (Free):</strong> Includes core single-shop waitlist tracking with a 7-day rolling history window at no charge ($0/mo). Does not include outbound carrier SMS credits (0 SMS); queues operate via live customer mobile web cards and lobby screen displays.</li>
@@ -54,10 +86,10 @@
       <p>All credit card transactions, recurring subscriptions, and top-up purchases are processed securely via <strong>Stripe Checkout API</strong> (PCI-DSS Level 1 compliant). Subscription and top-up fees are non-refundable once billed, except where required by law.</p>
     </div>
 
-    <!-- Section 3: SMS Text Notification Terms & CTIA Disclaimer -->
+    <!-- Section 4: SMS Text Notification Terms & CTIA Disclaimer -->
     <div class="card" style="padding: 2rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #10b981; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>📱</span> 3. SMS Text Notification Terms, Quota Metering &amp; CTIA Disclaimer
+        <span>📱</span> 4. SMS Text Notification Terms, Quota Metering &amp; CTIA Disclaimer
       </h2>
       <p>WaitLink enables business owners to send automated SMS text messages to walk-in customers regarding their waitlist position. By using the SMS text notification feature, you agree to the following terms:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
@@ -70,25 +102,25 @@
       </ul>
     </div>
 
-    <!-- Section 4: Queue History Retention & PII Anonymization Policy -->
+    <!-- Section 5: Queue History Retention & PII Anonymization Policy -->
     <div class="card" style="padding: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #a5b4fc; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>🛡️</span> 4. Queue History Retention, PII Anonymization & CSV Export Terms
+        <span>🛡️</span> 5. Queue History Retention, PII Anonymization &amp; CSV Export Terms
       </h2>
       <p>WaitLink enforces automated data lifecycle governance across customer visit history:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
         <li><strong>Tier History Windows:</strong> Historical queue entries are retained based on active plan limits: 7 days on Starter, 90 days on Pro Business, and 365 days on Enterprise. Records older than the tier limit are subject to automatic pruning.</li>
         <li><strong>Automated 30-Day PII Anonymization:</strong> After 30 days, personal identifiers (telephone numbers and last names) are irrevocably masked to protect consumer privacy while preserving turnaround time metrics for business reporting.</li>
-        <li><strong>CSV Export Rights & Data Portability:</strong> Pro and Enterprise subscribers may export historical records in RFC 4180 CSV standard format. Exported files automatically respect privacy masking and are provided solely for lawful internal accounting, operational review, and patient traffic auditing.</li>
+        <li><strong>CSV Export Rights &amp; Data Portability:</strong> Pro and Enterprise subscribers may export historical records in RFC 4180 CSV standard format. Exported files automatically respect privacy masking and are provided solely for lawful internal accounting, operational review, and patient traffic auditing.</li>
       </ul>
     </div>
 
-    <!-- Section 5: Clinical & Healthcare Privacy Mode Terms -->
+    <!-- Section 6: Clinical & Healthcare Privacy Mode Terms -->
     <div class="card" style="padding: 2rem; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
       <h2 style="color: #06b6d4; font-size: 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>🏥</span> 5. Clinical & Healthcare Privacy Mode Terms
+        <span>🏥</span> 6. Clinical &amp; Healthcare Privacy Mode Terms
       </h2>
-      <p>Healthcare providers, urgent care clinics, and wellness practices may activate <strong>Clinical & Healthcare Privacy Mode</strong>. By enabling this mode, the business agrees that:</p>
+      <p>Healthcare providers, urgent care clinics, and wellness practices may activate <strong>Clinical &amp; Healthcare Privacy Mode</strong>. By enabling this mode, the business agrees that:</p>
       <ul style="margin: 0.75rem 0 1rem 1.25rem; color: #fff;">
         <li>Public displays will strictly truncate patient names to first name and last initial (e.g. <em>"Jonathan E."</em>).</li>
         <li>Front desk staff are responsible for maintaining confidentiality when using the phone tap-to-reveal toggle on front desk screens.</li>
@@ -97,28 +129,34 @@
       </ul>
     </div>
 
-    <!-- Section 6: Business Owner Responsibilities -->
+    <!-- Section 7: Business Owner Responsibilities -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">6. Business Owner Responsibilities</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">7. Business Owner Responsibilities</h2>
       <p>Shop owners are responsible for maintaining the accuracy of their public business details, storefront poster display, staff access, and security of their account credentials.</p>
     </div>
 
-    <!-- Section 7: Service Availability & SLA -->
+    <!-- Section 8: Service Availability, Offline SafeStorage & SLA -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">7. Service Availability & SLA</h2>
-      <p>WaitLink targets a <strong>99.9% uptime</strong> for real-time Cloud Firestore queue synchronization. While offline queue caching is supported, temporary network outages beyond our control do not constitute a breach of agreement.</p>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. Service Availability, Offline SafeStorage &amp; SLA</h2>
+      <p>WaitLink targets a <strong>99.9% uptime</strong> for real-time Cloud Firestore queue synchronization. The Service includes resilient SafeStorage caching with in-memory fallbacks to maintain active operations even under private browsing modes or intermittent internet drops. Temporary network outages beyond our control do not constitute a breach of agreement.</p>
     </div>
 
-    <!-- Section 8: Acceptable Use & Conduct -->
+    <!-- Section 9: Acceptable Use & Conduct -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">8. Acceptable Use & Conduct</h2>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Acceptable Use &amp; Conduct</h2>
       <p>Users agree not to exploit, spam, flood, or manipulate waitlist queues, harvest customer data without authorization, or create deceptive business profiles. Violations will result in immediate shop termination.</p>
     </div>
 
-    <!-- Section 9: Contacting Legal Support -->
+    <!-- Section 10: Limitation of Liability & Warranty Disclaimers -->
+    <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">10. Limitation of Liability &amp; Disclaimers</h2>
+      <p>The Service is provided on an "as-is" and "as-available" basis. In no event shall WaitLink or its operators be liable for indirect, incidental, special, consequential, or punitive damages, including loss of business revenue, customer walk-away loss, or telecommunication carrier delivery failures.</p>
+    </div>
+
+    <!-- Section 11: Contacting Legal Support -->
     <div class="card" style="padding: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">9. Contacting Legal Support</h2>
-      <p>For inquiries regarding these Terms of Service or legal compliance, contact our Support & Legal Team at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
+      <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem;">11. Contacting Legal Support</h2>
+      <p>For inquiries regarding these Terms of Service or legal compliance, contact our Support &amp; Legal Team at <strong style="color: var(--primary);">senthil930@gmail.com</strong>.</p>
     </div>
 
   </main>
