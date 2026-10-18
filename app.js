@@ -3275,17 +3275,11 @@ function renderSubscriptionBadges() {
     }
   }
 
-  // 4. Starter Upgrade Callout Banner on Owner Dashboard (Strictly shown only for authenticated owners on live non-demo shops)
-  const isPaid = isPaidTier();
+  // 4. Starter Upgrade Callout Banner suppressed on Owner Dashboard to keep screen clean and decluttered
   const ownerUpgradeCallout = document.getElementById("owner-starter-upgrade-callout");
   if (ownerUpgradeCallout) {
-    if (isAuthenticated && !isPaid && !state.isStaffSession && !isDemo) {
-      ownerUpgradeCallout.classList.remove("hidden");
-      ownerUpgradeCallout.style.setProperty("display", "flex", "important");
-    } else {
-      ownerUpgradeCallout.classList.add("hidden");
-      ownerUpgradeCallout.style.setProperty("display", "none", "important");
-    }
+    ownerUpgradeCallout.classList.add("hidden");
+    ownerUpgradeCallout.style.setProperty("display", "none", "important");
   }
 
   // 5. CSV Pro Badges (Only shown for authenticated starter owners on live shops)
@@ -3613,22 +3607,9 @@ function renderOwnerMetrics() {
 
   const ownerCancelEl = document.getElementById("owner-cancellations");
   if (ownerCancelEl) {
-    if (!isPaid) {
-      ownerCancelEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
-      if (cancelCap) cancelCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
-      if (cardCancel) {
-        cardCancel.style.cursor = "pointer";
-        cardCancel.title = "Walk-Away Cancellation Loss Tracking is a Pro feature ($15/mo). Click to upgrade.";
-        cardCancel.onclick = () => {
-          showToast("🔒 Walk-Away Cancellation Loss Tracking is a Pro Business feature ($15/mo). Upgrade to unlock!");
-          openUpgradeModal();
-        };
-      }
-    } else {
-      if (cardCancel) { cardCancel.onclick = null; cardCancel.style.cursor = "default"; cardCancel.title = ""; }
-      if (cancelCap) cancelCap.textContent = "Cancelled walk-ins today";
-      ownerCancelEl.textContent = `${cancelledCount} (${cancellationRate}%)`;
-    }
+    if (cardCancel) { cardCancel.onclick = null; cardCancel.style.cursor = "default"; cardCancel.title = ""; }
+    if (cancelCap) cancelCap.textContent = "Cancelled walk-ins today";
+    ownerCancelEl.textContent = `${cancelledCount} (${cancellationRate}%)`;
   }
 
   const ownerLobbyEl = document.getElementById("owner-lobby-count");
@@ -3659,57 +3640,44 @@ function renderOwnerMetrics() {
   const peakCap = document.getElementById("owner-peakhour-caption");
   const ownerPeakHourEl = document.getElementById("owner-peak-hour");
 
-  if (!isPaid) {
-    if (ownerPeakHourEl) {
-      ownerPeakHourEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
-    }
-    if (peakCap) peakCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
-    if (cardPeakHour) {
-      cardPeakHour.style.cursor = "pointer";
-      cardPeakHour.title = "Peak Rush Hour Window Insights is a Pro feature ($15/mo). Click to upgrade.";
-      cardPeakHour.onclick = () => {
-        showToast("🔒 Peak Rush Hour Window Insights is a Pro Business feature ($15/mo). Upgrade to unlock!");
-        openUpgradeModal();
-      };
-    }
-  } else {
-    if (cardPeakHour) { cardPeakHour.onclick = null; cardPeakHour.style.cursor = "default"; cardPeakHour.title = ""; }
-    if (peakCap) peakCap.textContent = "Highest traffic hour";
+  if (cardPeakHour) { cardPeakHour.onclick = null; cardPeakHour.style.cursor = "default"; cardPeakHour.title = ""; }
+  if (peakCap) peakCap.textContent = "Highest traffic hour";
 
-    const todayEntries = [...state.history, ...state.queue].filter(item => {
+  const todayEntries = [...state.history, ...state.queue].filter(item => {
+    const ts = item.checkedInAt || item.calledAt;
+    return ts && ts >= startOfToday;
+  });
+
+  if (todayEntries.length > 0) {
+    const hourCounts = {};
+    todayEntries.forEach(item => {
       const ts = item.checkedInAt || item.calledAt;
-      return ts && ts >= startOfToday;
+      const date = new Date(ts);
+      const hour = date.getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
 
-    if (todayEntries.length > 0) {
-      const hourCounts = {};
-      todayEntries.forEach(item => {
-        const ts = item.checkedInAt || item.calledAt;
-        const date = new Date(ts);
-        const hour = date.getHours();
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-      });
-
-      let maxHour = -1;
-      let maxCount = 0;
-      Object.keys(hourCounts).forEach(h => {
-        if (hourCounts[h] > maxCount) {
-          maxCount = hourCounts[h];
-          maxHour = parseInt(h, 10);
-        }
-      });
-
-      if (ownerPeakHourEl && maxHour !== -1) {
-        const ampm = maxHour >= 12 ? "PM" : "AM";
-        const displayHour = maxHour % 12 === 0 ? 12 : maxHour % 12;
-        const nextH = maxHour + 1;
-        const nextHour = nextH % 12 === 0 ? 12 : nextH % 12;
-        const nextAmpm = nextH >= 12 && nextH < 24 ? "PM" : "AM";
-        ownerPeakHourEl.textContent = `${displayHour} ${ampm} - ${nextHour} ${nextAmpm}`;
+    let maxHour = -1;
+    let maxCount = 0;
+    Object.keys(hourCounts).forEach(h => {
+      if (hourCounts[h] > maxCount) {
+        maxCount = hourCounts[h];
+        maxHour = parseInt(h, 10);
       }
-    } else {
-      if (ownerPeakHourEl) ownerPeakHourEl.textContent = "--";
+    });
+
+    if (ownerPeakHourEl && maxHour !== -1) {
+      const ampm = maxHour >= 12 ? "PM" : "AM";
+      const displayHour = maxHour % 12 === 0 ? 12 : maxHour % 12;
+      const nextH = maxHour + 1;
+      const nextHour = nextH % 12 === 0 ? 12 : nextH % 12;
+      const nextAmpm = nextH >= 12 && nextH < 24 ? "PM" : "AM";
+      ownerPeakHourEl.textContent = `${displayHour} ${ampm} - ${nextHour} ${nextAmpm}`;
+    } else if (ownerPeakHourEl) {
+      ownerPeakHourEl.textContent = "--";
     }
+  } else {
+    if (ownerPeakHourEl) ownerPeakHourEl.textContent = "--";
   }
 
   // Calculate Staff Speed (Visits / Hour)
@@ -3717,35 +3685,20 @@ function renderOwnerMetrics() {
   const speedCap = document.getElementById("owner-throughput-caption");
   const ownerThroughputEl = document.getElementById("owner-throughput");
 
-  if (!isPaid) {
-    if (ownerThroughputEl) {
-      ownerThroughputEl.innerHTML = `<span style="font-size: 1.05rem; color: #06b6d4; font-weight: 700;">🔒 Pro Tier</span>`;
-    }
-    if (speedCap) speedCap.innerHTML = `<span style="color: #06b6d4; text-decoration: underline; cursor: pointer;">Upgrade to unlock</span>`;
-    if (cardThroughput) {
-      cardThroughput.style.cursor = "pointer";
-      cardThroughput.title = "Staff Speed (Throughput) Analytics is a Pro feature ($15/mo). Click to upgrade.";
-      cardThroughput.onclick = () => {
-        showToast("🔒 Staff Speed (Throughput) Analytics is a Pro Business feature ($15/mo). Upgrade to unlock!");
-        openUpgradeModal();
-      };
-    }
-  } else {
-    if (cardThroughput) { cardThroughput.onclick = null; cardThroughput.style.cursor = "default"; cardThroughput.title = ""; }
-    if (speedCap) speedCap.textContent = "Visits served per hour";
+  if (cardThroughput) { cardThroughput.onclick = null; cardThroughput.style.cursor = "default"; cardThroughput.title = ""; }
+  if (speedCap) speedCap.textContent = "Visits served per hour";
 
-    if (ownerThroughputEl) {
-      if (todayCalledVisits.length > 0) {
-        const timestamps = todayCalledVisits.map(v => v.calledAt || v.checkedInAt);
-        const minTime = Math.min(...timestamps);
-        const maxTime = Math.max(...timestamps, Date.now());
-        // Minimum elapsed window set to 0.1 hour (6 minutes) to avoid artificial under-reporting early in the day
-        const hoursElapsed = Math.max(0.1, (maxTime - minTime) / (1000 * 60 * 60));
-        const throughput = (servedCount / hoursElapsed).toFixed(1);
-        ownerThroughputEl.textContent = `${throughput} / hr`;
-      } else {
-        ownerThroughputEl.textContent = "--";
-      }
+  if (ownerThroughputEl) {
+    if (todayCalledVisits.length > 0) {
+      const timestamps = todayCalledVisits.map(v => v.calledAt || v.checkedInAt);
+      const minTime = Math.min(...timestamps);
+      const maxTime = Math.max(...timestamps, Date.now());
+      // Minimum elapsed window set to 0.1 hour (6 minutes) to avoid artificial under-reporting early in the day
+      const hoursElapsed = Math.max(0.1, (maxTime - minTime) / (1000 * 60 * 60));
+      const throughput = (servedCount / hoursElapsed).toFixed(1);
+      ownerThroughputEl.textContent = `${throughput} / hr`;
+    } else {
+      ownerThroughputEl.textContent = "--";
     }
   }
 
