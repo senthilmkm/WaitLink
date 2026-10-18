@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=4.9">
+  <link rel="stylesheet" href="style.css?v=5.0">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -496,7 +496,7 @@
                 type="text" 
                 id="customer-name-input" 
                 class="desk-input-element" 
-                placeholder="Customer Name or Initials (e.g. Marcus S.)" 
+                placeholder="Customer Name or Initials" 
                 autocomplete="off" 
                 required 
                 autofocus
@@ -516,7 +516,7 @@
                 type="tel" 
                 id="desk-customer-phone" 
                 class="desk-secondary-input" 
-                placeholder="Mobile Cell Phone (Optional, e.g. 980-253-1359)"
+                placeholder="Mobile Phone (Optional)"
               >
             </div>
             <!-- Desk Service Selector (Populated dynamically when enabled) -->
@@ -524,7 +524,7 @@
               <span class="desk-secondary-icon">✂️</span>
               <span class="desk-secondary-label">Service:</span>
               <select id="desk-service-select" class="desk-secondary-select">
-                <option value="">-- Select Service (Optional) --</option>
+                <option value="">Service (Optional)</option>
               </select>
             </div>
           </div>
@@ -790,7 +790,7 @@
 
                 <div class="form-group">
                   <label id="owner-label-hours" for="owner-input-hours">Today's Store Hours (Optional)</label>
-                  <input type="text" id="owner-input-hours" placeholder="e.g. 9:00 AM - 7:00 PM (Open Today)">
+                  <input type="text" id="owner-input-hours" placeholder="e.g. 9:00 AM - 7:00 PM">
                 </div>
 
                 <div class="form-group">
@@ -1259,7 +1259,7 @@
             <!-- Store Hours Banner (Placed immediately below shop name) -->
             <div id="public-hours-box" style="margin-top: 0.35rem; font-size: 0.8rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; background: rgba(16, 185, 129, 0.08); padding: 0.22rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.25);">
               <span id="public-hours-label">🕒 Today's Store Hours:</span>
-              <span id="public-hours-text">9:00 AM - 7:00 PM (Open Today 🟢)</span>
+              <span id="public-hours-text">9:00 AM - 7:00 PM</span>
             </div>
 
             <!-- Address & Phone Contact Bar (Clean compact layout, NO isolated dot) -->
@@ -3477,6 +3477,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=7.3"></script>
+  <script src="app.js?v=7.4"></script>
 </body>
 </html>

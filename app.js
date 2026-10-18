@@ -5194,10 +5194,12 @@ function renderPublicView() {
   }
 
   // Render Store / Clinic Hours
-  const hoursText = state.config.hours || "9:00 AM - 7:00 PM (Open Today 🟢)";
+  let rawHours = state.config.hours || "9:00 AM - 7:00 PM";
+  let hoursText = rawHours.replace(/\s*\(?Open Today\s*🟢?\)?/gi, "").trim();
+  if (!hoursText) hoursText = "9:00 AM - 7:00 PM";
   setElText("public-hours-label", isClinical ? "🕒 Today's Clinic Hours:" : "🕒 Today's Store Hours:");
   setElText("public-hours-text", hoursText);
-  setElText("ticket-hours-reassurance", `${isClinical ? 'Clinic' : 'Store'} open today: ${state.config.hours || '9:00 AM - 7:00 PM'}`);
+  setElText("ticket-hours-reassurance", `${isClinical ? 'Clinic' : 'Store'} open today: ${hoursText}`);
 
   // Render Address & Phone Bar
   renderPublicContactBar();
@@ -11525,7 +11527,7 @@ function renderDeskServiceSelect() {
   container.classList.remove("hidden");
 
   const currentVal = selectEl.value;
-  selectEl.innerHTML = `<option value="">-- Select Service (Optional) --</option>` + activeServices.map(s => `
+  selectEl.innerHTML = `<option value="">Service (Optional)</option>` + activeServices.map(s => `
     <option value="${s.id}">${escapeHtml(s.icon || '✂️')} ${escapeHtml(s.name)} (${s.estDurationMin}m)</option>
   `).join("");
 
