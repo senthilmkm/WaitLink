@@ -652,6 +652,30 @@ it("Pricing page and upgrade modal are synchronized with Option A (Real-Time Ana
   assert.ok(archHtml.includes("Today's Live Shift"), "waitlinkarchitecture.html matrix missing Starter live shift");
 });
 
+it("Customer QR Code Join Flow: Ticket persistence, URL sync, in-flight ticket protection and completion states", () => {
+  // DOM Elements
+  assert.ok(html.includes('id="ticket-active-actions"'), "index.html missing #ticket-active-actions container");
+  assert.ok(html.includes('id="ticket-completed-actions"'), "index.html missing #ticket-completed-actions container");
+  assert.ok(html.includes('onclick="resetMyTicketView()"'), "index.html missing resetMyTicketView button");
+
+  // getPublicUrl staging and environment awareness
+  assert.ok(appJs.includes("isHostedStaging"), "app.js getPublicUrl must detect hosted staging domains (*.web.app / *.firebaseapp.com)");
+
+  // URL search parameter synchronization
+  assert.ok(appJs.includes('u.searchParams.set("ticket", newItem.id)'), "app.js must synchronize ticket ID to URL search params");
+  assert.ok(appJs.includes("window.history.replaceState"), "app.js must use replaceState to maintain ticket context without reload");
+
+  // In-flight ticket protection in subscribeFirestore
+  assert.ok(appJs.includes("mergedQueue.push(state.myTicket)"), "subscribeFirestore must retain in-flight myTicket during snapshot propagation");
+
+  // In-flight ticket grace period and completion handling in restoreActiveTicket
+  assert.ok(appJs.includes("isRecentlyCreated"), "restoreActiveTicket must protect recently created tickets from premature nullification");
+  assert.ok(appJs.includes("🎉 VISIT COMPLETED"), "restoreActiveTicket and timer must display graceful visit completion banner");
+
+  // Window export
+  assert.ok(appJs.includes("window.resetMyTicketView = resetMyTicketView"), "app.js must export resetMyTicketView on window");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

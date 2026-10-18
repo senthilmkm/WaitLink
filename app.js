@@ -1359,16 +1359,25 @@ function subscribeFirestore(forceResubscribe = false) {
       let newCheckInDetected = false;
 
       if (Array.isArray(data.queue)) {
-        const currentIds = new Set(data.queue.map(q => q.id));
+        let mergedQueue = [...data.queue];
+        // Ensure recently checked-in local ticket is never dropped while Firestore transaction propagates
+        if (state.myTicket && !mergedQueue.some(q => q.id === state.myTicket.id)) {
+          const isRecentlyCreated = (Date.now() - (state.myTicket.checkedInAt || 0)) < 90000;
+          const isNotInHistory = !Array.isArray(data.history) || !data.history.some(h => h.id === state.myTicket.id);
+          if (isRecentlyCreated && isNotInHistory) {
+            mergedQueue.push(state.myTicket);
+          }
+        }
+        const currentIds = new Set(mergedQueue.map(q => q.id));
         if (previousQueueIds !== null) {
-          data.queue.forEach(item => {
+          mergedQueue.forEach(item => {
             if (!previousQueueIds.has(item.id)) {
               newCheckInDetected = true;
             }
           });
         }
         previousQueueIds = currentIds;
-        state.queue = data.queue;
+        state.queue = mergedQueue;
       }
 
       if (Array.isArray(data.history)) state.history = data.history;
@@ -1466,7 +1475,17 @@ function subscribeFirestore(forceResubscribe = false) {
               } else {
                 state.config.services = [];
               }
-              if (Array.isArray(data.queue)) state.queue = data.queue;
+              if (Array.isArray(data.queue)) {
+                let mergedFallbackQueue = [...data.queue];
+                if (state.myTicket && !mergedFallbackQueue.some(q => q.id === state.myTicket.id)) {
+                  const isRecentlyCreated = (Date.now() - (state.myTicket.checkedInAt || 0)) < 90000;
+                  const isNotInHistory = !Array.isArray(data.history) || !data.history.some(h => h.id === state.myTicket.id);
+                  if (isRecentlyCreated && isNotInHistory) {
+                    mergedFallbackQueue.push(state.myTicket);
+                  }
+                }
+                state.queue = mergedFallbackQueue;
+              }
               if (Array.isArray(data.history)) state.history = data.history;
               if (data.tagline !== undefined) state.config.tagline = data.tagline;
               if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
@@ -1657,9 +1676,10 @@ function formatSlugToTitle(slug) {
 }
 
 function getPublicUrl() {
-  // Always enforce the clean canonical domain for customer-facing public links and SMS
+  // Respect current test/staging host (e.g. *.web.app, *.firebaseapp.com, localhost) so QR code testing opens in same host
   const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-  const baseUrl = isLocal ? window.location.origin : "https://waitlink.app";
+  const isHostedStaging = typeof window !== "undefined" && (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com"));
+  const baseUrl = (isLocal || isHostedStaging) ? window.location.origin : "https://waitlink.app";
   const cleanSlug = slugify(state.config.slug || state.config.shopName || "main-st-barbers");
   return `${baseUrl}/?s=${encodeURIComponent(cleanSlug)}&view=public`;
 }
@@ -5435,21 +5455,29 @@ function updateActiveTicketTimer() {
       if (posEl) { posEl.textContent = `Position #${queuePos + 1} in line`; posEl.style.color = "#10b981"; }
       if (subEl) subEl.textContent = `${queuePos} ${queuePos === 1 ? 'person' : 'people'} ahead of you in line.`;
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
-    }
   } else {
-    // Visit / Consultation In Progress: Hide redundant top badge so only bolded status below name shows
-    if (badgeEl) badgeEl.style.display = "none";
-    const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
-    if (posEl) {
-      posEl.textContent = isClinical ? "Consultation In Progress" : "Visit In Progress";
-      posEl.style.color = "#3b82f6";
+    const isCompleted = state.myTicket && (state.myTicket.status === "completed" || (state.history.some(h => h.id === state.myTicket.id && h.status === "completed")));
+    if (isCompleted) {
+      if (badgeEl) { badgeEl.style.display = "block"; badgeEl.textContent = "🎉 VISIT COMPLETED"; badgeEl.style.color = "#10b981"; }
+      if (posEl) { posEl.textContent = "Service Finished ✓"; posEl.style.color = "#10b981"; }
+      if (subEl) subEl.textContent = `Thank you for visiting ${state.config.shopName || 'WaitLink Shop'}! Have a wonderful day.`;
+      if (ticketCard) ticketCard.style.border = "2px solid #10b981";
+      if (ticketTimerEl) ticketTimerEl.textContent = "Completed";
+    } else {
+      // Visit / Consultation In Progress: Hide redundant top badge so only bolded status below name shows
+      if (badgeEl) badgeEl.style.display = "none";
+      const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+      if (posEl) {
+        posEl.textContent = isClinical ? "Consultation In Progress" : "Visit In Progress";
+        posEl.style.color = "#3b82f6";
+      }
+      if (subEl) {
+        subEl.textContent = isClinical
+          ? `Please proceed to examination room or front desk at ${state.config.shopName || 'Healthcare Clinic'}.`
+          : `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`;
+      }
+      if (ticketCard) ticketCard.style.border = "2px solid #3b82f6";
     }
-    if (subEl) {
-      subEl.textContent = isClinical
-        ? `Please proceed to examination room or front desk at ${state.config.shopName || 'Healthcare Clinic'}.`
-        : `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`;
-    }
-    if (ticketCard) ticketCard.style.border = "2px solid #3b82f6";
   }
 }
 
@@ -10693,14 +10721,22 @@ function handlePublicSelfCheckIn(event) {
     checkedInAt: Date.now()
   };
 
+  state.myTicket = newItem;
+  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set("ticket", newItem.id);
+    window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
+  } catch (e) {}
+
   addQueueItemAtomic(newItem);
 
   closePublicCheckInModal();
   renderAll();
 
   // Find line position
-  const queuePos = state.queue.length;
-  showToast(`✅ You joined the queue! Position #${queuePos}. Timer started!`);
+  const queuePos = state.queue.findIndex(item => item.id === newItem.id) + 1;
+  showToast(`✅ You joined the queue! Position #${queuePos || 1}. Timer started!`);
 }
 
 // ==========================================
@@ -11326,8 +11362,11 @@ function handlePublicInlineCheckIn(event) {
 
   state.selectedPublicService = null;
   state.myTicket = newItem;
+  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
   try {
-    localStorage.setItem(`waitlink_ticket_${state.config.slug}`, JSON.stringify(newItem));
+    const u = new URL(window.location.href);
+    u.searchParams.set("ticket", newItem.id);
+    window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
   } catch (e) {}
 
   addQueueItemAtomic(newItem);
@@ -11349,7 +11388,7 @@ function handlePublicInlineCheckIn(event) {
     restoreActiveTicket();
   }
 
-  showToast(`✅ You joined the queue! Position #${queuePos}. Timer started!`);
+  showToast(`✅ You joined the queue! Position #${queuePos || 1}. Timer started!`);
   if (submitBtn) setTimeout(() => { submitBtn.disabled = false; }, 800);
 }
 
@@ -11360,14 +11399,12 @@ function restoreActiveTicket() {
     const urlTicketId = params.get("ticket") || params.get("t");
     
     let ticketToFind = urlTicketId;
+    let savedParsed = null;
     if (!ticketToFind) {
-      try {
-        const saved = localStorage.getItem(`waitlink_ticket_${state.config.slug}`);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          ticketToFind = parsed.id;
-        }
-      } catch (e) {}
+      savedParsed = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
+      if (savedParsed && savedParsed.id) {
+        ticketToFind = savedParsed.id;
+      }
     }
 
     if (ticketToFind) {
@@ -11377,6 +11414,10 @@ function restoreActiveTicket() {
       }
       if (match) {
         state.myTicket = match;
+      } else if (savedParsed) {
+        state.myTicket = savedParsed;
+      } else if (urlTicketId) {
+        state.myTicket = { id: urlTicketId, customerName: "You", checkedInAt: Date.now() };
       }
     }
   }
@@ -11386,6 +11427,8 @@ function restoreActiveTicket() {
   const ticketCard = document.getElementById("public-active-ticket-card");
   const timerBox = document.getElementById("public-timer-box");
   const infoBox = document.querySelector(".public-info-box");
+  const activeActions = document.getElementById("ticket-active-actions");
+  const completedActions = document.getElementById("ticket-completed-actions");
 
   if (state.myTicket) {
     const queueItem = state.queue.find(q => q.id === state.myTicket.id);
@@ -11400,7 +11443,9 @@ function restoreActiveTicket() {
       if (timerBox) timerBox.classList.add("hidden");
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
-      if (infoBox) infoBox.classList.add("hidden"); // Hide 3-point trust box on active ticket card
+      if (infoBox) infoBox.classList.add("hidden");
+      if (activeActions) activeActions.style.display = "flex";
+      if (completedActions) { completedActions.classList.add("hidden"); completedActions.style.display = "none"; }
       
       if (ticketCard) {
         const badgeEl = document.getElementById("ticket-badge-display");
@@ -11470,8 +11515,9 @@ function restoreActiveTicket() {
       }
     } else if (historyItem && historyItem.status === "called") {
       state.myTicket = historyItem;
+      if (activeActions) activeActions.style.display = "flex";
+      if (completedActions) { completedActions.classList.add("hidden"); completedActions.style.display = "none"; }
       if (ticketCard) {
-        // Hide redundant upper-case top badge when visit is in progress; the bold status below customer name is displayed
         const badgeEl = document.getElementById("ticket-badge-display");
         if (badgeEl) badgeEl.style.display = "none";
 
@@ -11485,7 +11531,6 @@ function restoreActiveTicket() {
           setElText("ticket-subtitle-display", `Enjoy your service at ${state.config.shopName || 'WaitLink Shop'}!`);
         }
 
-        // TCPA SMS Consent Verified Badge
         const tcpaBadge = document.getElementById("ticket-sms-consent-badge");
         if (tcpaBadge) {
           if (state.myTicket.phone && (state.myTicket.tcpaConsent || state.myTicket.tcpaConsentTimestamp)) {
@@ -11516,7 +11561,6 @@ function restoreActiveTicket() {
           if (lateLocked) lateLocked.classList.remove("hidden");
           if (reportedMinsEl) reportedMinsEl.textContent = state.myTicket.delayedMinutes || 5;
         } else {
-          // Grace Period Delay Alert for Called Customers (+5m and +10m chips only!)
           if (lateTitle) lateTitle.textContent = isClinical ? "🏃 Just called but delayed? Notify clinic reception:" : "🏃 Just called but delayed? Notify front desk:";
           if (lateChips) lateChips.classList.remove("hidden");
           if (lateChip15) lateChip15.classList.add("hidden");
@@ -11528,10 +11572,65 @@ function restoreActiveTicket() {
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
       if (infoBox) infoBox.classList.add("hidden");
+    } else if (historyItem && historyItem.status === "completed") {
+      state.myTicket = historyItem;
+      if (timerBox) timerBox.classList.add("hidden");
+      if (btnContainer) btnContainer.classList.add("hidden");
+      if (inlineCard) inlineCard.classList.add("hidden");
+      if (infoBox) infoBox.classList.add("hidden");
+      if (ticketCard) {
+        ticketCard.classList.remove("hidden");
+        ticketCard.style.border = "2px solid #10b981";
+        setElText("ticket-badge-display", "🎉 VISIT COMPLETED");
+        const badgeEl = document.getElementById("ticket-badge-display");
+        if (badgeEl) { badgeEl.style.display = "block"; badgeEl.style.color = "#10b981"; }
+        setElText("ticket-customer-name", state.myTicket.customerName || "You");
+        setElText("ticket-position-display", "Service Finished ✓");
+        const posEl = document.getElementById("ticket-position-display");
+        if (posEl) posEl.style.color = "#10b981";
+        setElText("ticket-subtitle-display", `Thank you for visiting ${state.config.shopName || 'WaitLink Shop'}! Have a wonderful day.`);
+        const timerEl = document.getElementById("ticket-timer-display");
+        if (timerEl) timerEl.textContent = "Completed";
+        const lateContainer = document.getElementById("ticket-running-late-container");
+        if (lateContainer) lateContainer.classList.add("hidden");
+      }
+      if (activeActions) activeActions.style.display = "none";
+      if (completedActions) { completedActions.classList.remove("hidden"); completedActions.style.display = "block"; }
     } else {
+      // Check if ticket was created recently (< 90 seconds ago) and is still propagating to server snapshot
+      const isRecentlyCreated = state.myTicket && (Date.now() - (state.myTicket.checkedInAt || 0)) < 90000;
+      if (isRecentlyCreated) {
+        if (timerBox) timerBox.classList.add("hidden");
+        if (btnContainer) btnContainer.classList.add("hidden");
+        if (inlineCard) inlineCard.classList.add("hidden");
+        if (infoBox) infoBox.classList.add("hidden");
+        if (activeActions) activeActions.style.display = "flex";
+        if (completedActions) { completedActions.classList.add("hidden"); completedActions.style.display = "none"; }
+        if (ticketCard) {
+          ticketCard.classList.remove("hidden");
+          const badgeEl = document.getElementById("ticket-badge-display");
+          if (badgeEl) badgeEl.style.display = "block";
+          setElText("ticket-badge-display", "⚡ YOU ARE IN LINE");
+          setElText("ticket-customer-name", state.myTicket.customerName || "You");
+          const estPos = state.queue.length || 1;
+          setElText("ticket-position-display", `Position #${estPos} in line`);
+          setElText("ticket-subtitle-display", "Spot secured! Syncing with live queue...");
+          updateActiveTicketTimer();
+        }
+        return;
+      }
+
       // Ticket was cancelled or completed
       state.myTicket = null;
-      try { localStorage.removeItem(`waitlink_ticket_${state.config.slug}`); } catch (e) {}
+      SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.has("ticket") || u.searchParams.has("t")) {
+          u.searchParams.delete("ticket");
+          u.searchParams.delete("t");
+          window.history.replaceState({}, document.title, u.toString());
+        }
+      } catch (e) {}
       if (timerBox) timerBox.classList.remove("hidden");
       if (btnContainer) btnContainer.classList.remove("hidden");
       if (ticketCard) ticketCard.classList.add("hidden");
@@ -11592,18 +11691,49 @@ async function cancelMyTicket() {
 
   cancelCustomer(ticketId, customerName, "customer");
   state.myTicket = null;
-  try { localStorage.removeItem(`waitlink_ticket_${state.config.slug}`); } catch (e) {}
+  SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.delete("ticket");
+    u.searchParams.delete("t");
+    window.history.replaceState({}, document.title, u.toString());
+  } catch (e) {}
 
   const btnContainer = document.getElementById("public-join-btn-container");
   const ticketCard = document.getElementById("public-active-ticket-card");
   const timerBox = document.getElementById("public-timer-box");
+  const infoBox = document.querySelector(".public-info-box");
 
   if (ticketCard) ticketCard.classList.add("hidden");
   if (timerBox) timerBox.classList.remove("hidden");
   if (btnContainer) btnContainer.classList.remove("hidden");
+  if (infoBox) infoBox.classList.remove("hidden");
 
   renderAll();
   showToast("You have left the waitlist.");
+}
+
+function resetMyTicketView() {
+  state.myTicket = null;
+  SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.delete("ticket");
+    u.searchParams.delete("t");
+    window.history.replaceState({}, document.title, u.toString());
+  } catch (e) {}
+
+  const btnContainer = document.getElementById("public-join-btn-container");
+  const ticketCard = document.getElementById("public-active-ticket-card");
+  const timerBox = document.getElementById("public-timer-box");
+  const infoBox = document.querySelector(".public-info-box");
+
+  if (ticketCard) ticketCard.classList.add("hidden");
+  if (timerBox) timerBox.classList.remove("hidden");
+  if (btnContainer) btnContainer.classList.remove("hidden");
+  if (infoBox) infoBox.classList.remove("hidden");
+
+  renderAll();
 }
 
 async function reportRunningLate(minutes) {
@@ -11853,14 +11983,21 @@ function renderDeskServiceSelect() {
 function addQueueItemAtomic(newItem) {
   state.queue.push(newItem);
   state.myTicket = newItem;
-  try {
-    localStorage.setItem(`waitlink_ticket_${state.config.slug}`, JSON.stringify(newItem));
-  } catch (e) {}
+  SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
+
+  // Synchronize ticket into URL so page reloads or tab switches never lose ticket context
+  if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
+    try {
+      const u = new URL(window.location.href);
+      if (u.searchParams.get("view") === "public" || u.searchParams.get("mode") === "public" || u.searchParams.get("mode") === "customer") {
+        u.searchParams.set("ticket", newItem.id);
+        window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
+      }
+    } catch (e) {}
+  }
 
   const { queueKey } = getStorageKeys();
-  try {
-    localStorage.setItem(queueKey, JSON.stringify(state.queue));
-  } catch (e) {}
+  SafeStorage.set(queueKey, state.queue);
 
   if (db && state.config.slug) {
     const shopRef = db.collection("shops").doc(state.config.slug);
@@ -14031,6 +14168,7 @@ window.mutateQueueAtomic = mutateQueueAtomic;
 window.persistHistoryItemToSubcollection = persistHistoryItemToSubcollection;
 window.hashStaffPasscode = hashStaffPasscode;
 window.SafeStorage = SafeStorage;
+window.resetMyTicketView = resetMyTicketView;
 
 /* ==========================================================================
    Progressive Web App (PWA) & Tablet Standalone Logic
