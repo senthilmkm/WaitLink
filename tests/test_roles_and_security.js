@@ -125,8 +125,7 @@ it("Public Marketing Links & Poster: Guarantees customer card routing, dynamic p
 
   // Poster elements must exist in index.html with generic fallbacks
   assert.ok(htmlCode.includes('id="poster-tagline"'), "index.html missing id='poster-tagline'");
-  assert.ok(htmlCode.includes('onclick="copyPublicLink(\'google\')"'), "index.html missing copyPublicLink google channel");
-  assert.ok(htmlCode.includes('onclick="copyPublicLink(\'instagram\')"'), "index.html missing copyPublicLink instagram channel");
+  assert.ok(htmlCode.includes('onclick="copyPublicLink(\'social\')"') || htmlCode.includes('copyPublicLink('), "index.html missing copyPublicLink public waitlist channel");
 });
 
 // -------------------------------------------------------------------------

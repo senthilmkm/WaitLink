@@ -702,7 +702,7 @@
           <span style="font-size: 1.6rem;">🚀</span>
           <div>
             <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">Unlock Pro Business Tier ($15/mo)</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Automate Twilio SMS alerts, upload your custom logo branding, activate promo banners & download unlimited CSV history.</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Automate customer SMS alerts, upload your custom logo branding, activate promo banners & download unlimited CSV history.</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()" style="font-weight: 700; gap: 0.35rem;">⚡ Upgrade to Pro ($15/mo)</button>
@@ -940,7 +940,7 @@
                   </div>
                 </div>
                 <label id="twilio-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.35rem 0.85rem; border-radius: 9999px; border: 1.5px solid rgba(16, 185, 129, 0.45); box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);">
-                  <input type="checkbox" id="twilio-enable-checkbox" checked onchange="onTwilioToggleChange()" style="accent-color: #10b981; cursor: pointer; width: 16px; height: 16px;"> Enable Twilio SMS
+                  <input type="checkbox" id="twilio-enable-checkbox" checked onchange="onTwilioToggleChange()" style="accent-color: #10b981; cursor: pointer; width: 16px; height: 16px;"> Enable Automated SMS
                 </label>
               </div>
 
@@ -1135,26 +1135,31 @@
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                <!-- Link 1: Google Business Profile -->
-                <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                  <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">📍 GOOGLE MAPS / BUSINESS PROFILE</div>
-                  <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Add to your Google Business Profile as your official "Check Wait Time" link.</div>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('google')" style="width: 100%;">🔗 Copy Google Maps Link</button>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                <!-- Link 1: Unified Online & Social Link -->
+                <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem;">
+                      <span>🌐</span> Public Waitlist Link (Google Maps & Instagram Bio)
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.45rem 0 1rem 0; line-height: 1.45;">
+                      Add this link to your Google Business Profile ("Check Wait Time"), Instagram bio, Facebook, or website so customers can view live wait times and check in.
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('social')" style="width: 100%; font-weight: 700;">🔗 Copy Public Waitlist Link</button>
                 </div>
 
-                <!-- Link 2: Instagram / Facebook Bio -->
-                <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                  <div style="font-size: 0.75rem; color: #ec4899; font-weight: 700; text-transform: uppercase;">📸 INSTAGRAM / SOCIAL BIO</div>
-                  <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Paste in your Instagram bio link ("Tap to view today's live wait time").</div>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('instagram')" style="width: 100%; border-color: rgba(236, 72, 153, 0.4); color: #ec4899;">📸 Copy Instagram Bio Link</button>
-                </div>
-
-                <!-- Link 3: Storefront QR Poster -->
-                <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                  <div style="font-size: 0.75rem; color: #10b981; font-weight: 700; text-transform: uppercase;">🖨️ WINDOW QR POSTER</div>
-                  <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem 0;">Print a high-resolution 8.5" x 11" QR poster for your front window or desk.</div>
-                  <button type="button" class="btn btn-primary btn-sm" onclick="switchView('poster')" style="width: 100%;">🖨️ Open Printable QR Poster</button>
+                <!-- Link 2: Storefront QR Poster -->
+                <div style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-size: 0.75rem; color: #10b981; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 0.45rem;">
+                      <span>🖨️</span> Storefront Window QR Poster
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.45rem 0 1rem 0; line-height: 1.45;">
+                      Print a high-resolution 8.5" x 11" poster for your front entrance window or reception desk with your shop's scannable check-in QR code.
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="switchView('poster')" style="width: 100%; font-weight: 700;">🖨️ Open Printable QR Poster</button>
                 </div>
               </div>
             </div>
