@@ -7180,3 +7180,100 @@ html[data-theme="light"] #revenue-search-input {
   margin-bottom: 1rem;
 }
 
+/* ==========================================================================
+   Queue Security & Modern Toggle Switch Controls
+   ========================================================================== */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.16);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-sizing: border-box;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.toggle-switch:hover .toggle-slider {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Checked State for Rolling QR (Cyan Glow) */
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #06b6d4 !important;
+  border-color: #0891b2 !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(22px);
+  background-color: #ffffff;
+}
+
+/* Checked State for GPS Proximity (Emerald Glow) */
+.toggle-switch input#owner-toggle-gps-proximity:checked + .toggle-slider {
+  background-color: #10b981 !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+/* Disabled State (Admin Locked) */
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Light Theme Support */
+html[data-theme="light"] .toggle-slider {
+  background-color: #cbd5e1;
+  border-color: #94a3b8;
+}
+
+html[data-theme="light"] .toggle-switch:hover .toggle-slider {
+  background-color: #94a3b8;
+}
+
+html[data-theme="light"] .toggle-switch input:checked + .toggle-slider {
+  background-color: #0891b2 !important;
+}
+
+html[data-theme="light"] .toggle-switch input#owner-toggle-gps-proximity:checked + .toggle-slider {
+  background-color: #10b981 !important;
+}
+

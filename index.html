@@ -1286,9 +1286,9 @@
                     Rotates check-in QR codes every 60 seconds on iPad Kiosks & TV displays. Prevents remote queue hoarding and photo sharing.
                   </p>
                 </div>
-                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
-                  <input type="checkbox" id="owner-toggle-rolling-qr" style="opacity: 0; width: 0; height: 0;">
-                  <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.15); transition: .3s; border-radius: 24px;"></span>
+                <label class="toggle-switch" title="Toggle Dynamic Rolling QR Codes">
+                  <input type="checkbox" id="owner-toggle-rolling-qr" onchange="handleOwnerToggleRollingQr(this.checked)">
+                  <span class="toggle-slider"></span>
                 </label>
               </div>
             </div>
@@ -1302,9 +1302,9 @@
                     Requires patrons scanning printed window posters to be within physical walking distance of your storefront.
                   </p>
                 </div>
-                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
-                  <input type="checkbox" id="owner-toggle-gps-proximity" style="opacity: 0; width: 0; height: 0;">
-                  <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.15); transition: .3s; border-radius: 24px;"></span>
+                <label class="toggle-switch" title="Toggle Storefront GPS Proximity Guard">
+                  <input type="checkbox" id="owner-toggle-gps-proximity" onchange="handleOwnerToggleGpsProximity(this.checked)">
+                  <span class="toggle-slider"></span>
                 </label>
               </div>
 

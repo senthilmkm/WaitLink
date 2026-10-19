@@ -3758,27 +3758,15 @@ function updateTierFeatureLockdown() {
 
   // 4. Dynamic Rolling QR Lockdown (Pro Feature)
   const rollingBadge = document.getElementById("security-rolling-pro-badge");
-  const rollingToggle = document.getElementById("owner-toggle-rolling-qr");
   if (!isPaid) {
     if (rollingBadge) {
       rollingBadge.textContent = "🔒 PRO";
       rollingBadge.title = "Upgrade to Pro Business ($15/mo) to enable Dynamic Rolling QR Codes";
     }
-    if (rollingToggle && !(state.config.security && state.config.security.adminLocked)) {
-      rollingToggle.onclick = function(e) {
-        if (rollingToggle.checked && !isPaidTier()) {
-          rollingToggle.checked = false;
-          showToast("🔒 Dynamic 60-Second Rolling QR Codes is a Pro Business feature ($15/mo). Upgrade to protect your live queue!");
-          openUpgradeModal();
-        }
-      };
-    }
   } else {
     if (rollingBadge) {
       rollingBadge.textContent = "PRO INCLUDED";
-    }
-    if (rollingToggle && !(state.config.security && state.config.security.adminLocked)) {
-      rollingToggle.onclick = null;
+      rollingBadge.title = "Dynamic Rolling QR Codes are enabled with your Pro plan";
     }
   }
 }
@@ -4055,6 +4043,11 @@ function populateOwnerInputs() {
   }
   if (toggleGps && document.activeElement !== toggleGps) {
     toggleGps.checked = !!sec.gpsProximityEnabled;
+  }
+  const gpsControls = document.getElementById("gps-controls-container");
+  if (gpsControls) {
+    gpsControls.style.opacity = sec.gpsProximityEnabled ? "1" : "0.5";
+    gpsControls.style.pointerEvents = sec.gpsProximityEnabled ? "auto" : "none";
   }
   if (selectRadius && document.activeElement !== selectRadius) {
     selectRadius.value = String(sec.gpsRadiusMeters || 100);
@@ -12089,6 +12082,67 @@ function updateRollingQrDisplay() {
   generateQRCode(token);
 }
 
+// Shop Owner Interactive Toggle Handlers
+function handleOwnerToggleRollingQr(enabled) {
+  const toggle = document.getElementById("owner-toggle-rolling-qr");
+  const isPaid = isPaidTier();
+
+  if (state.config.security && state.config.security.adminLocked) {
+    if (toggle) toggle.checked = !!state.config.security.rollingQrEnabled;
+    showToast("🔒 Store security policies are locked by Platform SuperAdmin.");
+    return;
+  }
+
+  if (enabled && !isPaid) {
+    if (toggle) toggle.checked = false;
+    showToast("🔒 Dynamic 60-Second Rolling QR Codes is a Pro Business feature ($15/mo). Upgrade to protect your live queue!");
+    openUpgradeModal();
+    return;
+  }
+
+  state.config.security = state.config.security || {};
+  state.config.security.rollingQrEnabled = !!enabled;
+
+  if (enabled) {
+    showToast("🔄 Dynamic Rolling QR Codes enabled (rotates every 60s). Click 'Save Shop Profile' to persist.");
+  } else {
+    showToast("Static QR Code restored. Click 'Save Shop Profile' to persist.");
+  }
+
+  if (state.activeView === "poster" || state.activeView === "kiosk") {
+    startRollingQrKioskLoop();
+  }
+}
+
+function handleOwnerToggleGpsProximity(enabled) {
+  const toggle = document.getElementById("owner-toggle-gps-proximity");
+  const gpsControls = document.getElementById("gps-controls-container");
+
+  if (state.config.security && state.config.security.adminLocked) {
+    if (toggle) toggle.checked = !!state.config.security.gpsProximityEnabled;
+    showToast("🔒 Store security policies are locked by Platform SuperAdmin.");
+    return;
+  }
+
+  state.config.security = state.config.security || {};
+  state.config.security.gpsProximityEnabled = !!enabled;
+
+  if (gpsControls) {
+    gpsControls.style.opacity = enabled ? "1" : "0.5";
+    gpsControls.style.pointerEvents = enabled ? "auto" : "none";
+  }
+
+  if (enabled) {
+    if (!state.config.security.storeLatitude || !state.config.security.storeLongitude) {
+      showToast("📍 Storefront GPS Proximity enabled! Please tap '1-Tap Capture GPS' to set store coordinates.");
+    } else {
+      showToast("📍 Storefront GPS Proximity Guard enabled. Click 'Save Shop Profile' to persist.");
+    }
+  } else {
+    showToast("Storefront GPS Proximity Guard disabled.");
+  }
+}
+
 // 1-Tap Geolocation Capture for Shop Owners
 function captureStoreGpsLocation() {
   const display = document.getElementById("owner-gps-coords-display");
@@ -15417,7 +15471,9 @@ window.WaitLink = {
     dismissSecurityBanner,
     savePlatformSecurityConfig,
     loadPlatformSecurityConfigUI,
-    initSecurityConfigRealtimeSync
+    initSecurityConfigRealtimeSync,
+    handleOwnerToggleRollingQr,
+    handleOwnerToggleGpsProximity
   }
 };
 
@@ -15431,6 +15487,8 @@ if (typeof window !== "undefined") {
   window.validateCustomerSecurityAccess = validateCustomerSecurityAccess;
   window.dismissSecurityBanner = dismissSecurityBanner;
   window.savePlatformSecurityConfig = savePlatformSecurityConfig;
+  window.handleOwnerToggleRollingQr = handleOwnerToggleRollingQr;
+  window.handleOwnerToggleGpsProximity = handleOwnerToggleGpsProximity;
 }
 
 if (typeof module !== "undefined" && module.exports) {
