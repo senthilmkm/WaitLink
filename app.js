@@ -624,7 +624,17 @@ const state = {
     clinicalPrivacyEnabled: false,
     isActive: true,
     status: "active",
-    firebaseConfig: DEFAULT_FIREBASE_CONFIG
+    firebaseConfig: DEFAULT_FIREBASE_CONFIG,
+    security: {
+      rollingQrEnabled: false,
+      rollingQrIntervalSec: 60,
+      rollingSecret: "sec_mainst",
+      gpsProximityEnabled: false,
+      gpsRadiusMeters: 100,
+      storeLatitude: null,
+      storeLongitude: null,
+      adminLocked: false
+    }
   },
   queue: [], // Active waiting items
   history: [], // Called or cancelled items today
@@ -650,7 +660,22 @@ const state = {
     last_cleanup_timestamp: 0,
     updatedAt: Date.now(),
     updatedBy: "System Default"
-  }
+  },
+  platformSecurityConfig: {
+    rollingQrPlatformActive: true,
+    gpsProximityPlatformActive: true,
+    defaultRollingIntervalSec: 60,
+    validationGraceWindowSec: 180,
+    defaultGpsRadiusMeters: 100,
+    tierEntitlements: {
+      starter: { rollingQrAllowed: false, gpsProximityAllowed: true, maxRadiusMeters: 100 },
+      pro: { rollingQrAllowed: true, gpsProximityAllowed: true, maxRadiusMeters: 250 },
+      enterprise: { rollingQrAllowed: true, gpsProximityAllowed: true, maxRadiusMeters: 1000 }
+    },
+    updatedAt: Date.now(),
+    updatedBy: "System Default"
+  },
+  customerGpsVerified: false
 };
 window.state = state;
 
@@ -986,6 +1011,7 @@ function initFirestore() {
     subscribeFirestore();
     initPricingConfigRealtimeSync();
     initRetentionConfigRealtimeSync();
+    initSecurityConfigRealtimeSync();
   } catch (e) {
     console.warn("Firestore initialization error:", e);
   }
@@ -3729,6 +3755,32 @@ function updateTierFeatureLockdown() {
       twilioCard.style.cursor = "default";
     }
   }
+
+  // 4. Dynamic Rolling QR Lockdown (Pro Feature)
+  const rollingBadge = document.getElementById("security-rolling-pro-badge");
+  const rollingToggle = document.getElementById("owner-toggle-rolling-qr");
+  if (!isPaid) {
+    if (rollingBadge) {
+      rollingBadge.textContent = "🔒 PRO";
+      rollingBadge.title = "Upgrade to Pro Business ($15/mo) to enable Dynamic Rolling QR Codes";
+    }
+    if (rollingToggle && !(state.config.security && state.config.security.adminLocked)) {
+      rollingToggle.onclick = function(e) {
+        if (rollingToggle.checked && !isPaidTier()) {
+          rollingToggle.checked = false;
+          showToast("🔒 Dynamic 60-Second Rolling QR Codes is a Pro Business feature ($15/mo). Upgrade to protect your live queue!");
+          openUpgradeModal();
+        }
+      };
+    }
+  } else {
+    if (rollingBadge) {
+      rollingBadge.textContent = "PRO INCLUDED";
+    }
+    if (rollingToggle && !(state.config.security && state.config.security.adminLocked)) {
+      rollingToggle.onclick = null;
+    }
+  }
 }
 
 // Onboarding Modal Plan Selection Handler
@@ -3989,6 +4041,62 @@ function populateOwnerInputs() {
     activeCheck.checked = (state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive");
   }
 
+  // Populate Queue Security Inputs
+  const sec = state.config.security || {};
+  const toggleRolling = document.getElementById("owner-toggle-rolling-qr");
+  const toggleGps = document.getElementById("owner-toggle-gps-proximity");
+  const selectRadius = document.getElementById("owner-select-gps-radius");
+  const coordsDisplay = document.getElementById("owner-gps-coords-display");
+  const adminLockedBanner = document.getElementById("owner-security-admin-locked-banner");
+  const btnCapture = document.getElementById("btn-capture-store-gps");
+
+  if (toggleRolling && document.activeElement !== toggleRolling) {
+    toggleRolling.checked = !!sec.rollingQrEnabled;
+  }
+  if (toggleGps && document.activeElement !== toggleGps) {
+    toggleGps.checked = !!sec.gpsProximityEnabled;
+  }
+  if (selectRadius && document.activeElement !== selectRadius) {
+    selectRadius.value = String(sec.gpsRadiusMeters || 100);
+  }
+  if (coordsDisplay) {
+    if (sec.storeLatitude && sec.storeLongitude) {
+      coordsDisplay.textContent = `${sec.storeLatitude}°, ${sec.storeLongitude}°`;
+    } else {
+      coordsDisplay.textContent = "Not Set";
+    }
+  }
+
+  // Admin Locked Protection
+  if (sec.adminLocked) {
+    if (adminLockedBanner) adminLockedBanner.classList.remove("hidden");
+    if (toggleRolling) toggleRolling.disabled = true;
+    if (toggleGps) toggleGps.disabled = true;
+    if (selectRadius) selectRadius.disabled = true;
+    if (btnCapture) btnCapture.disabled = true;
+  } else {
+    if (adminLockedBanner) adminLockedBanner.classList.add("hidden");
+    if (toggleRolling) toggleRolling.disabled = false;
+    if (toggleGps) toggleGps.disabled = false;
+    if (selectRadius) selectRadius.disabled = false;
+    if (btnCapture) btnCapture.disabled = false;
+  }
+
+  // Platform Master Kill Switch Visibility
+  const platformRollingActive = state.platformSecurityConfig ? state.platformSecurityConfig.rollingQrPlatformActive !== false : true;
+  const platformGpsActive = state.platformSecurityConfig ? state.platformSecurityConfig.gpsProximityPlatformActive !== false : true;
+
+  const rollingSubpanel = toggleRolling ? toggleRolling.closest(".security-card-subpanel") : null;
+  const gpsSubpanel = toggleGps ? toggleGps.closest(".security-card-subpanel") : null;
+
+  if (rollingSubpanel) rollingSubpanel.style.display = platformRollingActive ? "block" : "none";
+  if (gpsSubpanel) gpsSubpanel.style.display = platformGpsActive ? "block" : "none";
+
+  const secTabBtn = document.getElementById("settings-subtab-btn-security");
+  if (secTabBtn) {
+    secTabBtn.style.display = (!platformRollingActive && !platformGpsActive) ? "none" : "inline-flex";
+  }
+
   // Enforce tier lockdown on inputs immediately after populating
   updateTierFeatureLockdown();
 }
@@ -4111,6 +4219,38 @@ async function saveOwnerSettings() {
     return;
   }
 
+  const rollingCheck = document.getElementById("owner-toggle-rolling-qr");
+  const gpsCheck = document.getElementById("owner-toggle-gps-proximity");
+  const gpsRadiusSelect = document.getElementById("owner-select-gps-radius");
+
+  const rollingQrEnabled = rollingCheck ? rollingCheck.checked : false;
+  const gpsProximityEnabled = gpsCheck ? gpsCheck.checked : false;
+  const gpsRadiusMeters = gpsRadiusSelect ? (parseInt(gpsRadiusSelect.value, 10) || 100) : 100;
+
+  // Paywall Gate: Dynamic Rolling QR (Pro / Enterprise feature)
+  if (rollingQrEnabled && !isPaid) {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.opacity = "1";
+    }
+    if (saveStatus) saveStatus.style.display = "none";
+    showToast("🔒 Dynamic 60-Second Rolling QR Codes is a Pro Business feature ($15/mo). Upgrade to protect your live queue!");
+    openUpgradeModal();
+    return;
+  }
+
+  // Preserve existing security settings if adminLocked
+  const existingSec = state.config.security || {};
+  let finalSec = { ...existingSec };
+  if (!existingSec.adminLocked) {
+    finalSec.rollingQrEnabled = rollingQrEnabled;
+    finalSec.gpsProximityEnabled = gpsProximityEnabled;
+    finalSec.gpsRadiusMeters = gpsRadiusMeters;
+    finalSec.rollingSecret = existingSec.rollingSecret || "sec_" + Math.random().toString(36).substring(2, 10);
+  }
+
   const clinicalPrivacyEnabled = document.getElementById("owner-clinical-privacy-checkbox") 
     ? document.getElementById("owner-clinical-privacy-checkbox").checked 
     : !!state.config.clinicalPrivacyEnabled;
@@ -4144,6 +4284,7 @@ async function saveOwnerSettings() {
     dateFormat,
     isActive,
     status: isActive ? "active" : "paused",
+    security: finalSec,
     twilio: {
       enabled: twilioEnable,
       accountSid: twilioAccountSid,
@@ -5715,10 +5856,18 @@ function switchView(viewName, isSilent = false) {
 
   if (viewName === "superadmin") {
     loadRetentionConfigUI();
+    loadPlatformSecurityConfigUI();
   }
 
-  if (viewName === "poster") {
+  if (viewName === "poster" || viewName === "kiosk") {
     updatePosterUI();
+    startRollingQrKioskLoop();
+  } else {
+    stopRollingQrKioskLoop();
+  }
+
+  if (viewName === "public") {
+    validateCustomerSecurityAccess();
   }
 }
 
@@ -6454,12 +6603,15 @@ function handleCreateShopSubmit(event) {
   handleOnboardingSubmit(event);
 }
 
-// Generate QR Code for Poster
-function generateQRCode() {
+// Generate QR Code for Poster / Kiosk
+function generateQRCode(token = null) {
   const qrBox = document.getElementById("qrcode-box");
   if (!qrBox) return;
   qrBox.innerHTML = "";
-  const publicUrl = getPublicUrl();
+  let publicUrl = getPublicUrl();
+  if (token) {
+    publicUrl += (publicUrl.includes("?") ? "&" : "?") + `t=${encodeURIComponent(token)}`;
+  }
 
   let qrGenerated = false;
 
@@ -6504,9 +6656,22 @@ function copyPublicLink(channel = "public") {
   }
 }
 
-// Settings Modal
+// Settings Modal (SuperAdmin Per-Shop Configuration)
 function openSettingsModal() {
-  document.getElementById("settings-modal").classList.remove("hidden");
+  const modal = document.getElementById("settings-modal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+
+  const sec = state.config.security || {};
+  const lockEl = document.getElementById("setting-admin-lock-security");
+  const rollingEl = document.getElementById("setting-admin-force-rolling-qr");
+  const gpsEl = document.getElementById("setting-admin-force-gps-proximity");
+  const radiusEl = document.getElementById("setting-admin-gps-radius");
+
+  if (lockEl) lockEl.checked = !!sec.adminLocked;
+  if (rollingEl) rollingEl.checked = !!sec.rollingQrEnabled;
+  if (gpsEl) gpsEl.checked = !!sec.gpsProximityEnabled;
+  if (radiusEl) radiusEl.value = String(sec.gpsRadiusMeters || 100);
 }
 
 function closeSettingsModal() {
@@ -6536,11 +6701,25 @@ async function saveSettings() {
     }
   }
 
+  const sec = state.config.security || {};
+  const lockEl = document.getElementById("setting-admin-lock-security");
+  const rollingEl = document.getElementById("setting-admin-force-rolling-qr");
+  const gpsEl = document.getElementById("setting-admin-force-gps-proximity");
+  const radiusEl = document.getElementById("setting-admin-gps-radius");
+
   state.config = {
+    ...state.config,
     shopName,
     slug,
     estBaseWaitMin: baseWait,
-    firebaseConfig
+    firebaseConfig,
+    security: {
+      ...sec,
+      adminLocked: lockEl ? lockEl.checked : !!sec.adminLocked,
+      rollingQrEnabled: rollingEl ? rollingEl.checked : !!sec.rollingQrEnabled,
+      gpsProximityEnabled: gpsEl ? gpsEl.checked : !!sec.gpsProximityEnabled,
+      gpsRadiusMeters: radiusEl ? (parseInt(radiusEl.value, 10) || 100) : (sec.gpsRadiusMeters || 100)
+    }
   };
 
   saveConfig();
@@ -10724,12 +10903,45 @@ function closePublicCheckInModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function handlePublicSelfCheckIn(event) {
+async function handlePublicSelfCheckIn(event) {
   event.preventDefault();
   const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
   if (!isShopActive) {
     showToast("⏸️ Walk-in arrivals are currently paused for this location.");
     return;
+  }
+
+  // Security Gate: Dynamic Rolling QR Check
+  const sec = state.config.security || {};
+  if (sec.rollingQrEnabled) {
+    const token = new URLSearchParams(window.location.search).get("t");
+    const slug = state.config.slug || "main-st-barbers";
+    const secret = sec.rollingSecret || "waitlink-salt";
+    if (!isRollingTokenValid(slug, secret, token, 60)) {
+      showToast("⏳ Code Expired. Please scan the live QR code on the counter screen.");
+      return;
+    }
+  }
+
+  // Security Gate: Storefront GPS Proximity Check
+  if (sec.gpsProximityEnabled && sec.storeLatitude && sec.storeLongitude && !state.customerGpsVerified) {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, enableHighAccuracy: true });
+        });
+        const dist = calculateHaversineDistanceMeters(pos.coords.latitude, pos.coords.longitude, sec.storeLatitude, sec.storeLongitude);
+        const allowedRadius = (sec.gpsRadiusMeters || 100) + Math.min(pos.coords.accuracy || 0, 75);
+        if (dist > allowedRadius) {
+          showToast("🚶 Too Far from Shop. Please scan the QR code when you arrive at the store.");
+          return;
+        }
+        state.customerGpsVerified = true;
+      } catch (geoErr) {
+        showToast("📍 Location permission required to verify storefront proximity.");
+        return;
+      }
+    }
   }
 
   const nameInput = document.getElementById("public-customer-name");
@@ -11756,6 +11968,263 @@ async function performClientSideLazyCleanup() {
 }
 
 // ==========================================
+// ANTI-SPAM, DYNAMIC ROLLING QR & GPS PROXIMITY GUARDS
+// ==========================================
+
+const DEFAULT_PLATFORM_SECURITY_CONFIG = {
+  rollingQrPlatformActive: true,
+  gpsProximityPlatformActive: true,
+  defaultRollingIntervalSec: 60,
+  validationGraceWindowSec: 180,
+  defaultGpsRadiusMeters: 100,
+  tierEntitlements: {
+    starter: { rollingQrAllowed: false, gpsProximityAllowed: true, maxRadiusMeters: 100 },
+    pro: { rollingQrAllowed: true, gpsProximityAllowed: true, maxRadiusMeters: 250 },
+    enterprise: { rollingQrAllowed: true, gpsProximityAllowed: true, maxRadiusMeters: 1000 }
+  },
+  updatedAt: 0,
+  updatedBy: "System Default"
+};
+
+/**
+ * Generates a deterministic time-sliced cryptographic token for dynamic QR display.
+ * Pure synchronous implementation with bitwise hashing - guaranteed $0.00 cost, zero race conditions.
+ */
+function generateRollingTokenSync(slug, secret, intervalSec = 60, timeOverride = null) {
+  const now = timeOverride !== null ? timeOverride : Date.now();
+  const timeSlice = Math.floor(now / 1000 / intervalSec);
+  const str = `${slug || "shop"}:${secret || "waitlink-salt"}:${timeSlice}`;
+  let h1 = 0x811c9dc5, h2 = 0x27d4eb2f;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193);
+    h2 = Math.imul(h2 ^ ch, 0x01000193);
+  }
+  const part1 = (h1 >>> 0).toString(16).padStart(8, "0");
+  const part2 = (h2 >>> 0).toString(16).padStart(8, "0");
+  return (part1 + part2).slice(0, 8);
+}
+
+/**
+ * Validates rolling QR token against 3-slice sliding window (Current T, T-1, T-2).
+ * 180-second grace window guarantees zero friction for legitimate in-store walk-in patrons.
+ */
+function isRollingTokenValid(slug, secret, token, intervalSec = 60, now = Date.now()) {
+  if (!token || typeof token !== "string") return false;
+  const cleanToken = token.trim().toLowerCase();
+  if (cleanToken.length !== 8) return false;
+  for (let i = 0; i <= 2; i++) {
+    const checkTime = now - (i * intervalSec * 1000);
+    const expected = generateRollingTokenSync(slug, secret, intervalSec, checkTime).toLowerCase();
+    if (cleanToken === expected) return true;
+  }
+  return false;
+}
+
+/**
+ * Calculates Great-Circle distance between two coordinates using spherical Haversine formula.
+ * Executes in client CPU memory with zero billable API calls.
+ */
+function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (lat1 === null || lon1 === null || lat2 === null || lon2 === null ||
+      lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
+      isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+    return Infinity;
+  }
+  const R = 6371e3; // Earth radius in meters
+  const toRad = deg => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+// Kiosk / Station Mode Dynamic Rolling QR Loop
+let rollingQrProgressInterval = null;
+let currentRollingQrSecondsLeft = 60;
+
+function startRollingQrKioskLoop() {
+  stopRollingQrKioskLoop();
+  const indicator = document.getElementById("kiosk-rolling-indicator");
+  const isRollingActive = !!(state.config.security && state.config.security.rollingQrEnabled);
+  const isPlatformActive = state.platformSecurityConfig ? state.platformSecurityConfig.rollingQrPlatformActive !== false : true;
+
+  if (!isRollingActive || !isPlatformActive) {
+    if (indicator) indicator.classList.add("hidden");
+    return;
+  }
+
+  if (indicator) indicator.classList.remove("hidden");
+  currentRollingQrSecondsLeft = 60;
+  updateRollingQrDisplay();
+
+  rollingQrProgressInterval = setInterval(() => {
+    currentRollingQrSecondsLeft--;
+    const label = document.getElementById("rolling-timer-label");
+    const bar = document.getElementById("rolling-progress-bar");
+    if (label) label.textContent = `Rotating in ${Math.max(1, currentRollingQrSecondsLeft)}s`;
+    if (bar) bar.style.width = `${(Math.max(0, currentRollingQrSecondsLeft) / 60) * 100}%`;
+
+    if (currentRollingQrSecondsLeft <= 0) {
+      currentRollingQrSecondsLeft = 60;
+      updateRollingQrDisplay();
+    }
+  }, 1000);
+}
+
+function stopRollingQrKioskLoop() {
+  if (rollingQrProgressInterval) {
+    clearInterval(rollingQrProgressInterval);
+    rollingQrProgressInterval = null;
+  }
+}
+
+function updateRollingQrDisplay() {
+  const slug = state.config.slug || "main-st-barbers";
+  const secret = (state.config.security && state.config.security.rollingSecret) || "waitlink-salt";
+  const token = generateRollingTokenSync(slug, secret, 60);
+  generateQRCode(token);
+}
+
+// 1-Tap Geolocation Capture for Shop Owners
+function captureStoreGpsLocation() {
+  const display = document.getElementById("owner-gps-coords-display");
+  const btn = document.getElementById("btn-capture-store-gps");
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    showToast("⚠️ Geolocation is not supported by your browser.");
+    return;
+  }
+  if (btn) btn.textContent = "📍 Locating...";
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = parseFloat(pos.coords.latitude.toFixed(6));
+      const lon = parseFloat(pos.coords.longitude.toFixed(6));
+      state.config.security = state.config.security || {};
+      state.config.security.storeLatitude = lat;
+      state.config.security.storeLongitude = lon;
+      if (display) display.textContent = `${lat}°, ${lon}°`;
+      if (btn) btn.textContent = "✓ Location Set";
+      showToast(`📍 Store coordinates captured: ${lat}, ${lon}`);
+      setTimeout(() => { if (btn) btn.textContent = "📍 1-Tap Capture GPS"; }, 2500);
+    },
+    err => {
+      console.warn("GPS capture failed:", err);
+      if (btn) btn.textContent = "📍 1-Tap Capture GPS";
+      showToast("⚠️ Location permission denied. Please enable location access in your browser.");
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+}
+
+// Public Customer View Security Status Validator
+function validateCustomerSecurityAccess() {
+  const sec = state.config.security || {};
+  const banner = document.getElementById("public-security-banner");
+  const bannerIcon = document.getElementById("public-security-banner-icon");
+  const bannerText = document.getElementById("public-security-banner-text");
+
+  if (sec.rollingQrEnabled) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("t");
+    const slug = state.config.slug || "main-st-barbers";
+    const secret = sec.rollingSecret || "waitlink-salt";
+    const isValid = isRollingTokenValid(slug, secret, token, 60);
+
+    if (!isValid) {
+      if (banner) {
+        banner.className = "public-security-banner expired";
+        if (bannerIcon) bannerIcon.textContent = "⏳";
+        if (bannerText) bannerText.innerHTML = "<strong>Code Expired</strong> &bull; Please scan the live QR code on the counter screen.";
+        banner.classList.remove("hidden");
+      }
+      return { allowed: false, reason: "expired_qr" };
+    }
+  }
+
+  if (banner) banner.classList.add("hidden");
+  return { allowed: true };
+}
+
+function dismissSecurityBanner() {
+  const banner = document.getElementById("public-security-banner");
+  if (banner) banner.classList.add("hidden");
+}
+
+// SuperAdmin Platform Security Governance Handlers
+let securityConfigUnsubscribe = null;
+
+function initSecurityConfigRealtimeSync() {
+  if (!db || securityConfigUnsubscribe) return;
+  try {
+    securityConfigUnsubscribe = db.collection("settings").doc("security_config").onSnapshot(doc => {
+      if (doc.exists) {
+        state.platformSecurityConfig = { ...DEFAULT_PLATFORM_SECURITY_CONFIG, ...doc.data() };
+        SafeStorage.set("waitlink_security_config", state.platformSecurityConfig);
+      } else {
+        state.platformSecurityConfig = { ...DEFAULT_PLATFORM_SECURITY_CONFIG };
+      }
+      loadPlatformSecurityConfigUI();
+    }, err => {
+      console.warn("Security config realtime listener note:", err);
+    });
+  } catch (e) {
+    console.warn("Security config sync note:", e);
+  }
+}
+
+function loadPlatformSecurityConfigUI() {
+  const cfg = state.platformSecurityConfig || DEFAULT_PLATFORM_SECURITY_CONFIG;
+  const toggleRolling = document.getElementById("platform-security-rolling-toggle");
+  const toggleGps = document.getElementById("platform-security-gps-toggle");
+
+  if (toggleRolling && document.activeElement !== toggleRolling) {
+    toggleRolling.checked = cfg.rollingQrPlatformActive !== false;
+  }
+  if (toggleGps && document.activeElement !== toggleGps) {
+    toggleGps.checked = cfg.gpsProximityPlatformActive !== false;
+  }
+}
+
+function savePlatformSecurityConfig() {
+  if (!isSuperAdmin()) {
+    showToast("⚠️ SuperAdmin privileges required to save security policy.");
+    return;
+  }
+  const toggleRolling = document.getElementById("platform-security-rolling-toggle");
+  const toggleGps = document.getElementById("platform-security-gps-toggle");
+
+  const payload = {
+    ...state.platformSecurityConfig,
+    rollingQrPlatformActive: toggleRolling ? toggleRolling.checked : true,
+    gpsProximityPlatformActive: toggleGps ? toggleGps.checked : true,
+    updatedAt: Date.now(),
+    updatedBy: state.user ? state.user.email : SUPERADMIN_EMAIL
+  };
+
+  if (db) {
+    db.collection("settings").doc("security_config").set(payload, { merge: true })
+      .then(() => {
+        state.platformSecurityConfig = payload;
+        SafeStorage.set("waitlink_security_config", payload);
+        loadPlatformSecurityConfigUI();
+        showToast("✅ Platform anti-spam security policy saved and broadcasted!");
+      })
+      .catch(err => {
+        console.error("Error saving security config:", err);
+        showToast("❌ Failed to save security policy: " + err.message);
+      });
+  } else {
+    state.platformSecurityConfig = payload;
+    SafeStorage.set("waitlink_security_config", payload);
+    loadPlatformSecurityConfigUI();
+    showToast("Saved platform security policy locally.");
+  }
+}
+
+// ==========================================
 // INLINE CUSTOMER CHECK-IN EXPANSION HANDLERS
 // ==========================================
 
@@ -11792,7 +12261,7 @@ function toggleInlineCheckInForm(show) {
   }
 }
 
-function handlePublicInlineCheckIn(event) {
+async function handlePublicInlineCheckIn(event) {
   event.preventDefault();
   const isShopActive = state.config.isActive !== false && state.config.status !== "paused" && state.config.status !== "inactive";
   if (!isShopActive) {
@@ -11809,6 +12278,66 @@ function handlePublicInlineCheckIn(event) {
   const phone = phoneInput ? phoneInput.value.trim() : "";
 
   if (!customerName) return;
+
+  // Anti-Spam Guardrail 0A: Dynamic Rolling QR Check
+  const sec = state.config.security || {};
+  if (sec.rollingQrEnabled) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("t");
+    const slug = state.config.slug || "main-st-barbers";
+    const secret = sec.rollingSecret || "waitlink-salt";
+    if (!isRollingTokenValid(slug, secret, token, 60)) {
+      showToast("⏳ Code Expired. Please scan the live QR code on the counter screen.");
+      const banner = document.getElementById("public-security-banner");
+      if (banner) {
+        banner.className = "public-security-banner expired";
+        const icon = document.getElementById("public-security-banner-icon");
+        const txt = document.getElementById("public-security-banner-text");
+        if (icon) icon.textContent = "⏳";
+        if (txt) txt.innerHTML = "<strong>Code Expired</strong> &bull; Please scan the live QR code on the counter screen.";
+        banner.classList.remove("hidden");
+      }
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+  }
+
+  // Anti-Spam Guardrail 0B: Storefront GPS Proximity Check
+  if (sec.gpsProximityEnabled && sec.storeLatitude && sec.storeLongitude && !state.customerGpsVerified) {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, enableHighAccuracy: true });
+        });
+        const userLat = pos.coords.latitude;
+        const userLon = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy || 0;
+        const dist = calculateHaversineDistanceMeters(userLat, userLon, sec.storeLatitude, sec.storeLongitude);
+        const allowedRadius = (sec.gpsRadiusMeters || 100) + Math.min(accuracy, 75);
+
+        if (dist > allowedRadius) {
+          showToast("🚶 Too Far from Shop. Please scan the QR code when you arrive at the store.");
+          const banner = document.getElementById("public-security-banner");
+          if (banner) {
+            banner.className = "public-security-banner out-of-range";
+            const icon = document.getElementById("public-security-banner-icon");
+            const txt = document.getElementById("public-security-banner-text");
+            if (icon) icon.textContent = "🚶";
+            if (txt) txt.innerHTML = "<strong>Too Far from Shop</strong> &bull; Please scan the QR code when you arrive at the store.";
+            banner.classList.remove("hidden");
+          }
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+        state.customerGpsVerified = true;
+      } catch (geoErr) {
+        console.warn("GPS check error/denied:", geoErr);
+        showToast("📍 Location permission required to verify storefront proximity.");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+    }
+  }
 
   // TCPA Compliance Guardrail: If customer enters a phone number, affirmative SMS consent is legally required
   const cleanPhoneDigits = phone.replace(/\D/g, "");
@@ -14876,8 +15405,33 @@ window.WaitLink = {
     grantCourtesySmsCreditsToAccount,
     openAccountTierOverrideModal,
     exportRevenueMetricsCsv
+  },
+  Security: {
+    generateRollingTokenSync,
+    isRollingTokenValid,
+    calculateHaversineDistanceMeters,
+    startRollingQrKioskLoop,
+    stopRollingQrKioskLoop,
+    captureStoreGpsLocation,
+    validateCustomerSecurityAccess,
+    dismissSecurityBanner,
+    savePlatformSecurityConfig,
+    loadPlatformSecurityConfigUI,
+    initSecurityConfigRealtimeSync
   }
 };
+
+if (typeof window !== "undefined") {
+  window.generateRollingTokenSync = generateRollingTokenSync;
+  window.isRollingTokenValid = isRollingTokenValid;
+  window.calculateHaversineDistanceMeters = calculateHaversineDistanceMeters;
+  window.startRollingQrKioskLoop = startRollingQrKioskLoop;
+  window.stopRollingQrKioskLoop = stopRollingQrKioskLoop;
+  window.captureStoreGpsLocation = captureStoreGpsLocation;
+  window.validateCustomerSecurityAccess = validateCustomerSecurityAccess;
+  window.dismissSecurityBanner = dismissSecurityBanner;
+  window.savePlatformSecurityConfig = savePlatformSecurityConfig;
+}
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
@@ -14887,6 +15441,11 @@ if (typeof module !== "undefined" && module.exports) {
     filterRevenueAccountsTable,
     openAccount360Drawer,
     closeAccount360Drawer,
-    exportRevenueMetricsCsv
+    exportRevenueMetricsCsv,
+    generateRollingTokenSync,
+    isRollingTokenValid,
+    calculateHaversineDistanceMeters,
+    validateCustomerSecurityAccess,
+    savePlatformSecurityConfig
   };
 }

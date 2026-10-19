@@ -823,6 +823,9 @@
           <button type="button" class="settings-subtab-btn" data-subtab="marketing" onclick="switchSettingsSubTab('marketing')">
             <span>📣</span> <span>Marketing</span>
           </button>
+          <button type="button" class="settings-subtab-btn" id="settings-subtab-btn-security" data-subtab="security" onclick="switchSettingsSubTab('security')">
+            <span>🛡️</span> <span>Queue Security</span>
+          </button>
         </div>
         
         <div class="card-body" style="padding: 0;">
@@ -1261,6 +1264,71 @@
               </div>
             </div>
           </div>
+
+          <!-- 7. QUEUE SECURITY & ANTI-FRAUD TAB PANE -->
+          <div class="settings-subtab-pane hidden" id="settings-pane-security">
+            <div id="owner-security-admin-locked-banner" class="security-admin-locked-banner hidden">
+              <span>🔒</span>
+              <div>
+                <strong>Managed by Platform Administrator:</strong> Security policies for this location are currently enforced by WaitLink SuperAdmin.
+              </div>
+            </div>
+
+            <!-- Card 1: Dynamic Rolling QR (Pro Business Feature) -->
+            <div class="security-card-subpanel">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <h4 style="margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 700;">🔄 Dynamic Rolling QR Codes</h4>
+                    <span id="security-rolling-pro-badge" class="badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; font-size: 0.68rem; padding: 2px 7px; border-radius: 9999px; font-weight: 800; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span>
+                  </div>
+                  <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.25rem 0 0 0; line-height: 1.45;">
+                    Rotates check-in QR codes every 60 seconds on iPad Kiosks & TV displays. Prevents remote queue hoarding and photo sharing.
+                  </p>
+                </div>
+                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
+                  <input type="checkbox" id="owner-toggle-rolling-qr" style="opacity: 0; width: 0; height: 0;">
+                  <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.15); transition: .3s; border-radius: 24px;"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Card 2: Storefront GPS Proximity Guard -->
+            <div class="security-card-subpanel">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <div>
+                  <h4 style="margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 700;">📍 Storefront GPS Proximity Guard</h4>
+                  <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.25rem 0 0 0; line-height: 1.45;">
+                    Requires patrons scanning printed window posters to be within physical walking distance of your storefront.
+                  </p>
+                </div>
+                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;">
+                  <input type="checkbox" id="owner-toggle-gps-proximity" style="opacity: 0; width: 0; height: 0;">
+                  <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.15); transition: .3s; border-radius: 24px;"></span>
+                </label>
+              </div>
+
+              <div id="gps-controls-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                <div>
+                  <label for="owner-select-gps-radius" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.25rem;">Allowed Proximity Radius</label>
+                  <select id="owner-select-gps-radius" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem;">
+                    <option value="50">50 Meters (Immediate Storefront)</option>
+                    <option value="100" selected>100 Meters (Recommended / Plaza)</option>
+                    <option value="250">250 Meters (Shopping Mall / Complex)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.25rem;">Store Coordinates</label>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" id="btn-capture-store-gps" class="btn btn-secondary btn-sm" onclick="captureStoreGpsLocation()" style="font-size: 0.78rem; font-weight: 700;">
+                      📍 1-Tap Capture GPS
+                    </button>
+                    <span id="owner-gps-coords-display" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">Not Set</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Persistent Save & Sync Action Footer -->
@@ -1424,6 +1492,15 @@
             <div class="queue-status-text" id="public-queue-summary">0 people currently waiting in line</div>
           </div>
 
+          <!-- Minimalist Customer Security Alert Banner (Expired QR or Out of Range) -->
+          <div id="public-security-banner" class="public-security-banner hidden">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <span id="public-security-banner-icon">⏳</span>
+              <span id="public-security-banner-text">Code Expired &bull; Please scan the live QR code on the counter screen.</span>
+            </div>
+            <button type="button" class="public-security-banner-btn" onclick="dismissSecurityBanner()">Dismiss</button>
+          </div>
+
           <!-- Customer Self Check-In CTA Button -->
           <div id="public-join-btn-container" style="margin: 1.25rem 0 0.5rem 0;">
             <button class="btn btn-accent btn-lg" onclick="toggleInlineCheckInForm(true)" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
@@ -1567,6 +1644,16 @@
 
           <div class="qr-container">
             <div id="qrcode-box" style="cursor: pointer;" title="Click to test live customer card" onclick="window.open(getPublicUrl(), '_blank')"></div>
+            <!-- Dynamic Rolling QR Indicator for Kiosk / Station Display -->
+            <div id="kiosk-rolling-indicator" class="kiosk-rolling-indicator hidden">
+              <div class="rolling-badge">
+                <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px; border-radius: 50%; display: inline-block;"></span>
+                <span id="rolling-timer-label">Rotating in 60s</span>
+              </div>
+              <div class="rolling-progress-track">
+                <div id="rolling-progress-bar" class="rolling-progress-fill"></div>
+              </div>
+            </div>
           </div>
 
           <div class="poster-url-display">
@@ -2317,6 +2404,43 @@ Dedicated Support Manager
             </div>
           </div>
 
+          <!-- Card 4: Platform Security & Anti-Fraud Master Governance -->
+          <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+              <span style="font-size: 1.4rem;">🛡️</span>
+              <div>
+                <h3 style="color: var(--text-main); font-size: 1.05rem; margin: 0;">Platform Anti-Spam Governance</h3>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Master switches & cross-tenant queue protection</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <div>
+                  <span style="color: var(--text-main); font-size: 0.88rem; font-weight: 600;">Dynamic Rolling QR Master Switch</span>
+                  <p style="color: var(--text-muted); font-size: 0.74rem; margin: 0.15rem 0 0 0;">Platform availability on digital kiosks & screens</p>
+                </div>
+                <input type="checkbox" id="platform-security-rolling-toggle" checked style="width: 1.15rem; height: 1.15rem; accent-color: var(--primary);">
+              </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem; padding-top: 0.65rem; border-top: 1px solid var(--border-color);">
+              <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <div>
+                  <span style="color: var(--text-main); font-size: 0.88rem; font-weight: 600;">Storefront GPS Proximity Master Switch</span>
+                  <p style="color: var(--text-muted); font-size: 0.74rem; margin: 0.15rem 0 0 0;">Platform availability for printed posters</p>
+                </div>
+                <input type="checkbox" id="platform-security-gps-toggle" checked style="width: 1.15rem; height: 1.15rem; accent-color: #10b981;">
+              </label>
+            </div>
+
+            <div style="margin-top: 1.25rem;">
+              <button class="btn btn-primary" style="width: 100%; font-weight: 700;" onclick="savePlatformSecurityConfig()">
+                💾 Save Platform Security Policy
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -2476,6 +2600,31 @@ Dedicated Support Manager
           <label for="setting-firebase-config">Firestore Config (JSON)</label>
           <textarea id="setting-firebase-config" rows="4" placeholder='{"apiKey": "AIzaSy...", "projectId": "waitlink-prod", ...}'></textarea>
           <small class="form-hint">Leave blank to use default waitlink-app-8821 project.</small>
+        </div>
+
+        <div class="form-divider">👑 Platform Security & Anti-Fraud Overrides</div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-main);">
+            <input type="checkbox" id="setting-admin-lock-security" style="accent-color: var(--primary);">
+            <span>Lock Store Security Settings (Prevent Shop Owner Changes)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-main);">
+            <input type="checkbox" id="setting-admin-force-rolling-qr" style="accent-color: #06b6d4;">
+            <span>Admin Force-Enable Dynamic Rolling QR Codes</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-main);">
+            <input type="checkbox" id="setting-admin-force-gps-proximity" style="accent-color: #10b981;">
+            <span>Admin Force-Enable Storefront GPS Proximity Guard</span>
+          </label>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+            <span style="font-size: 0.78rem; color: var(--text-muted);">Admin Set Proximity Radius:</span>
+            <select id="setting-admin-gps-radius" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px;">
+              <option value="50">50m</option>
+              <option value="100" selected>100m</option>
+              <option value="250">250m</option>
+            </select>
+          </div>
         </div>
 
       </div>

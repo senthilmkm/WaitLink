@@ -17,7 +17,8 @@ const testSuites = [
   { name: "4. DOM Structure, Screens, Modals & UI Theme Integrity", file: "test_dom_and_ui_integrity.js" },
   { name: "5. Telecom SMS Limits, Carrier Math & Rollover Governance", file: "test_sms_topup_engine.js" },
   { name: "6. 15-Second Shop Launch, 8 Industry Catalogs & Pre-Publishing Review", file: "test_onboarding_and_review_engine.js" },
-  { name: "7. SuperAdmin Revenue Metrics, Unit Economics & Account 360° Engine", file: "test_superadmin_revenue_metrics.js" }
+  { name: "7. SuperAdmin Revenue Metrics, Unit Economics & Account 360° Engine", file: "test_superadmin_revenue_metrics.js" },
+  { name: "8. Anti-Spam, Dynamic Rolling QR & GPS Proximity Engine", file: "test_anti_spam_and_proximity_engine.js" }
 ];
 
 let totalSuitesPassed = 0;

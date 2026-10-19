@@ -48,13 +48,14 @@ it("index.html contains all major application view panels", () => {
   assert.ok(html.includes('id="view-owner-directory"'), "Missing Owner Multi-Shop Directory panel (#view-owner-directory)");
 });
 
-it("index.html contains all 6 Shop Owner Settings sub-tab panes", () => {
+it("index.html contains all 7 Shop Owner Settings sub-tab panes", () => {
   assert.ok(html.includes('id="settings-pane-general"'), "Missing General settings pane (#settings-pane-general)");
   assert.ok(html.includes('id="settings-pane-branding"'), "Missing Branding settings pane (#settings-pane-branding)");
   assert.ok(html.includes('id="settings-pane-services"'), "Missing Services settings pane (#settings-pane-services)");
   assert.ok(html.includes('id="settings-pane-promotions"'), "Missing Promotions settings pane (#settings-pane-promotions)");
   assert.ok(html.includes('id="settings-pane-notifications"'), "Missing Notifications settings pane (#settings-pane-notifications)");
   assert.ok(html.includes('id="settings-pane-marketing"'), "Missing Marketing settings pane (#settings-pane-marketing)");
+  assert.ok(html.includes('id="settings-pane-security"'), "Missing Queue Security settings pane (#settings-pane-security)");
 });
 
 it("index.html contains SuperAdmin tabs (Master Shops Directory, Revenue Metrics, Pricing, Support, Retention)", () => {

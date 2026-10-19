@@ -166,6 +166,12 @@ service cloud.firestore {
       allow read, update, delete: if isSuperAdmin();
     }
 
+    // 6.5. Anti-Spam Security Incident Audit Logs
+    match /security_audits/{auditId} {
+      allow create: if true; // Telemetry reports from client
+      allow read, update, delete: if isSuperAdmin();
+    }
+
     // 7. Users & Stripe Checkout Subcollections
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
