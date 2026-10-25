@@ -5141,7 +5141,7 @@ function toggleRowActionMenu(event, menuId) {
       btn.classList.add("active");
       const rect = btn.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      if (spaceBelow < 130) {
+      if (spaceBelow < 200) {
         menu.style.top = "auto";
         menu.style.bottom = "calc(100% + 4px)";
       } else {
@@ -8570,46 +8570,73 @@ function renderSuperAdminShopsTable() {
         </td>
         <td>
           ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
-            <span class="status-pill" style="background: rgba(168, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><span class="pulse-dot"></span> Active</span>
+            <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><span class="pulse-dot"></span> Active</span>
           ` : `
             <span class="status-pill" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);"><span>⏸️</span> Paused</span>
           `}
         </td>
-        <td>
-          <div class="actions-cell">
+        <td class="row-actions-cell" style="white-space: nowrap;">
+          <div class="row-actions-group" style="justify-content: flex-start;">
             ${isDemo ? `
               <button class="btn-text-sm" 
                 data-name="${encodeURIComponent(shopName)}"
                 data-industry="${encodeURIComponent(shop.demoIndustry || '')}"
                 data-slug="${encodeURIComponent(shopSlug)}"
                 onclick="copyDemoPitchForShop(decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.industry), decodeURIComponent(this.dataset.slug))"
-                style="color: #f3e8ff; border: 1.5px solid #a855f7; background: rgba(168, 85, 247, 0.25); font-weight: 800; box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);" 
+                style="color: #f3e8ff; border: 1.5px solid #a855f7; background: rgba(168, 85, 247, 0.25); font-weight: 800; padding: 0.32rem 0.65rem; border-radius: 6px; box-shadow: 0 0 10px rgba(168, 85, 247, 0.35); white-space: nowrap;" 
                 title="SuperAdmin: 1-Click copy cold outreach sales pitch tailored for this demo shop">📋 Pitch</button>
-            ` : ''}
-            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
-            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">⚙️ Settings</button>
-            <button class="btn-text-sm" 
-              data-slug="${encodeURIComponent(shopSlug)}" 
-              data-name="${encodeURIComponent(shopName)}"
-              data-tier="${encodeURIComponent(shop.planTitle || (price >= 49 ? 'Enterprise' : (price >= 15 ? 'Pro Business' : 'Starter')))}"
-              onclick="openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier))"
-              style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1);" 
-              title="SuperAdmin: Grant courtesy credits or set custom monthly SMS allowance">⚡ SMS</button>
-            ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
-              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', false)" style="color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);" title="SuperAdmin: Pause this shop queue">⏸️ Pause</button>
             ` : `
-              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', true)" style="color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08);" title="SuperAdmin: Open and resume this shop queue">▶️ Open</button>
+              <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))" style="padding: 0.32rem 0.65rem; font-weight: 600; border-radius: 6px; white-space: nowrap;">Inspect Desk</button>
             `}
-            ${!isSandbox ? `
-              <button class="btn-text-sm" 
-                data-slug="${encodeURIComponent(shopSlug)}" 
-                data-name="${encodeURIComponent(shopName)}" 
-                data-docid="${encodeURIComponent(docId)}" 
-                data-docids="${encodeURIComponent(JSON.stringify(shop.allDocIds || [docId]))}" 
-                onclick="handleDeleteShopClick(this)" 
-                style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
-                title="Permanently delete this tenant shop">🗑️</button>
-            ` : ''}
+            <div class="action-dropdown-wrapper">
+              <button type="button" class="btn-row-more" aria-label="More actions" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}')" title="More shop actions">
+                <span>•••</span>
+              </button>
+              <div id="sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}" class="row-actions-dropdown hidden" onclick="event.stopPropagation()">
+                ${isDemo ? `
+                  <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); inspectShop(decodeURIComponent(this.dataset.slug));">
+                    <span class="action-icon">🖥️</span>
+                    <span>Inspect Desk</span>
+                  </button>
+                ` : ''}
+                <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); openSettingsForShop(decodeURIComponent(this.dataset.slug));">
+                  <span class="action-icon">⚙️</span>
+                  <span>Shop Settings</span>
+                </button>
+                <button type="button" class="row-action-item" 
+                  data-slug="${encodeURIComponent(shopSlug)}" 
+                  data-name="${encodeURIComponent(shopName)}"
+                  data-tier="${encodeURIComponent(shop.planTitle || (price >= 49 ? 'Enterprise' : (price >= 15 ? 'Pro Business' : 'Starter')))}"
+                  onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier));">
+                  <span class="action-icon">⚡</span>
+                  <span>SMS Allowance</span>
+                </button>
+                ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+                  <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); toggleShopActiveFromDirectory(decodeURIComponent(this.dataset.slug), false);" style="color: #fbbf24;">
+                    <span class="action-icon">⏸️</span>
+                    <span>Pause Queue</span>
+                  </button>
+                ` : `
+                  <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); toggleShopActiveFromDirectory(decodeURIComponent(this.dataset.slug), true);" style="color: #34d399;">
+                    <span class="action-icon">▶️</span>
+                    <span>Resume Queue</span>
+                  </button>
+                `}
+                ${!isSandbox ? `
+                  <div class="dropdown-divider"></div>
+                  <button type="button" class="row-action-item" 
+                    data-slug="${encodeURIComponent(shopSlug)}" 
+                    data-name="${encodeURIComponent(shopName)}" 
+                    data-docid="${encodeURIComponent(docId)}" 
+                    data-docids="${encodeURIComponent(JSON.stringify(shop.allDocIds || [docId]))}" 
+                    onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); handleDeleteShopClick(this);" 
+                    style="color: #f43f5e;">
+                    <span class="action-icon">🗑️</span>
+                    <span>Delete Shop</span>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
           </div>
         </td>
       </tr>

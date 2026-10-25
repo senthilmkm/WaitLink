@@ -1876,10 +1876,24 @@
                 <td>owner@mainstbarbers.com</td>
                 <td><span class="status-tag called">$5 / mo</span></td>
                 <td><span class="status-pill"><span class="pulse-dot"></span> Active</span></td>
-                <td>
-                  <div class="actions-cell">
-                    <button class="btn-text-sm" onclick="inspectShop('main-st-barbers')">Inspect Desk</button>
-                    <button class="btn-text-sm" onclick="openSettingsForShop('main-st-barbers')">Settings ⚙️</button>
+                <td class="row-actions-cell" style="white-space: nowrap;">
+                  <div class="row-actions-group" style="justify-content: flex-start;">
+                    <button class="btn-text-sm" onclick="inspectShop('main-st-barbers')" style="padding: 0.32rem 0.65rem; font-weight: 600; border-radius: 6px; white-space: nowrap;">Inspect Desk</button>
+                    <div class="action-dropdown-wrapper">
+                      <button type="button" class="btn-row-more" aria-label="More actions" onclick="toggleRowActionMenu(event, 'sa-menu-main-st-barbers')" title="More shop actions">
+                        <span>•••</span>
+                      </button>
+                      <div id="sa-menu-main-st-barbers" class="row-actions-dropdown hidden" onclick="event.stopPropagation()">
+                        <button type="button" class="row-action-item" onclick="toggleRowActionMenu(event, 'sa-menu-main-st-barbers'); openSettingsForShop('main-st-barbers');">
+                          <span class="action-icon">⚙️</span>
+                          <span>Shop Settings</span>
+                        </button>
+                        <button type="button" class="row-action-item" onclick="toggleRowActionMenu(event, 'sa-menu-main-st-barbers'); openAdminCreditOverrideModal('main-st-barbers', 'Main St Barbers', 'Starter');">
+                          <span class="action-icon">⚡</span>
+                          <span>SMS Allowance</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -3984,6 +3998,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=9.4"></script>
+  <script src="app.js?v=9.5"></script>
 </body>
 </html>
