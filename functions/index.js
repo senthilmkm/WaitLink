@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const cors = require("cors")({ origin: true });
@@ -346,10 +347,10 @@ async function getOrInitSmsUsage(slug, shopData) {
   const usageRef = admin.firestore().collection("shops").doc(slug).collection("billing").doc("smsUsage");
   const snap = await usageRef.get();
   
-  const planPrice = shopData && shopData.planPrice !== undefined ? shopData.planPrice : 15;
-  const planTitle = String((shopData && shopData.planTitle) || "").toLowerCase();
-  const isEnterprise = planPrice >= 49 || planTitle.includes("enterprise");
-  const isPro = planPrice >= 15 || planTitle.includes("pro");
+  const planPrice = shopData && shopData.planPrice !== undefined && shopData.planPrice !== null ? Number(shopData.planPrice) : 0;
+  const subscriptionStatus = String((shopData && shopData.subscriptionStatus) || "").toLowerCase();
+  const isEnterprise = planPrice >= 49;
+  const isPro = planPrice >= 15 || subscriptionStatus === "active" || subscriptionStatus === "trialing";
   const baseMonthlyQuota = (shopData && shopData.customMonthlyQuota !== undefined && shopData.customMonthlyQuota !== null && !isNaN(parseInt(shopData.customMonthlyQuota, 10)))
     ? parseInt(shopData.customMonthlyQuota, 10)
     : (isEnterprise ? 2500 : (isPro ? 500 : 0));
@@ -491,10 +492,9 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
     }
 
-    // 1. Authenticate caller via Firebase ID Token OR verified Staff Terminal Credentials
+    // Firebase ID token only. A passcode hash sent by the browser is not a credential.
     const authHeader = req.headers.authorization || "";
     let decodedToken = null;
-    let isStaffAuthenticated = false;
 
     if (authHeader.startsWith("Bearer ")) {
       const idToken = authHeader.split("Bearer ")[1].trim();
@@ -505,36 +505,15 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       }
     }
 
-    const { to, body, from, accountSid, authToken, slug, staffUsername, staffPasscode, staffPasscodeHash } = req.body || {};
+    const { to, body, from, slug } = req.body || {};
     const cleanSlug = String(slug || "main-st-barbers").trim().toLowerCase();
+    const isStaffAuthenticated = !!(
+      decodedToken
+      && decodedToken.role === "staff"
+      && decodedToken.shopSlug === cleanSlug
+    );
 
-    // Check staff terminal credentials if no valid ID token
-    if (!decodedToken && staffUsername && (staffPasscode || staffPasscodeHash) && cleanSlug) {
-      try {
-        const staffSnap = await admin.firestore().collection("shops").doc(cleanSlug)
-          .collection("staff_roles")
-          .where("username", "==", String(staffUsername).trim().toLowerCase())
-          .limit(1)
-          .get();
-        if (!staffSnap.empty) {
-          const staffData = staffSnap.docs[0].data();
-          const crypto = require("crypto");
-          const computedHash = staffPasscode ? crypto.createHash("sha256").update(String(staffPasscode).trim()).digest("hex") : "";
-          const providedHash = staffPasscodeHash ? String(staffPasscodeHash).trim().toLowerCase() : "";
-
-          if (
-            (staffData.passcodeHash && (staffData.passcodeHash === computedHash || staffData.passcodeHash === providedHash)) ||
-            (staffData.passcode && staffPasscode && staffData.passcode === String(staffPasscode).trim())
-          ) {
-            isStaffAuthenticated = true;
-          }
-        }
-      } catch (staffErr) {
-        logger.warn("Staff credential check note:", staffErr.message);
-      }
-    }
-
-    if (!decodedToken && !isStaffAuthenticated) {
+    if (!decodedToken) {
       return res.status(401).json({ success: false, error: "Authentication required to dispatch SMS. Please sign in as Owner or use active Front Desk Staff Station credentials." });
     }
 
@@ -567,11 +546,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
         }
       }
 
-      const planPrice = shopData.planPrice !== undefined ? shopData.planPrice : 0;
-      const planTitle = String(shopData.planTitle || "").toLowerCase();
-      const isPaid = planPrice >= 15 || planTitle.includes("pro") || planTitle.includes("enterprise");
-
-      if (!isPaid) {
+      if (!shopIsPaid(shopData)) {
         return res.status(403).json({
           success: false,
           tierUpgradeRequired: true,
@@ -602,12 +577,9 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       });
     }
 
-    const activeSid = (accountSid && typeof accountSid === "string" && accountSid.trim().startsWith("AC")) 
-      ? accountSid.trim() 
-      : TWILIO_ACCOUNT_SID;
-    const activeToken = (authToken && typeof authToken === "string" && authToken.trim()) 
-      ? authToken.trim() 
-      : TWILIO_AUTH_TOKEN;
+    const activeSid = TWILIO_ACCOUNT_SID;
+    const activeToken = TWILIO_AUTH_TOKEN;
+    const callerLabel = isStaffAuthenticated ? `staff:${decodedToken.staffId || "desk"}` : (callerEmail || "owner");
 
     try {
       const auth = Buffer.from(`${activeSid}:${activeToken}`).toString("base64");
@@ -663,7 +635,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
           sid: data.sid,
           dispatchedAt: Date.now(),
           status: data.status || "delivered",
-          caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner")
+          caller: callerLabel
         });
         if (usageData.recentDispatches.length > 50) {
           usageData.recentDispatches.length = 50;
@@ -684,7 +656,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
             segments: neededSegments,
             bucket: bucketUsed,
             status: data.status || "delivered",
-            caller: isStaffAuthenticated ? `staff:${staffUsername}` : (callerEmail || "owner"),
+            caller: callerLabel,
             createdAt: Date.now()
           });
         } catch (dbErr) {
@@ -1097,10 +1069,19 @@ exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }
 
     const { tierKey, origin, slug } = req.body || {};
     const priceId = (tierKey === "enterprise") ? ENTERPRISE_PRICE_ID : PRO_PRICE_ID;
-    const hostOrigin = (origin && typeof origin === "string") ? origin.replace(/\/+$/, "") : "https://waitlink.app";
-    const shopSlug = slug || "main-st-barbers";
+    const hostOrigin = (origin && typeof origin === "string" && /^https?:\/\//.test(origin)) ? origin.replace(/\/+$/, "") : "https://waitlink.app";
+    const shopSlug = String(slug || "").trim().toLowerCase();
+    if (!shopSlug) {
+      return res.status(400).json({ success: false, error: "Parameter 'slug' is required." });
+    }
 
     try {
+      const decoded = await requireCaller(req);
+      const shopSnap = await admin.firestore().collection("shops").doc(shopSlug).get();
+      if (!shopSnap.exists) {
+        return res.status(404).json({ success: false, error: "Shop does not exist." });
+      }
+      assertShopOwner(decoded, shopSnap.data() || {});
       const postParams = new URLSearchParams({
         "payment_method_types[]": "card",
         "line_items[0][price]": priceId,
@@ -1108,7 +1089,10 @@ exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }
         "mode": "subscription",
         "success_url": `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&payment=success&tier=${encodeURIComponent(tierKey || 'pro')}&session_id={CHECKOUT_SESSION_ID}`,
         "cancel_url": `${hostOrigin}?s=${encodeURIComponent(shopSlug)}&action=upgrade&tier=${encodeURIComponent(tierKey || 'pro')}&payment=cancelled`,
-        "custom_text[submit][message]": "Need to compare options? Click the ← back arrow in the top-left header anytime to return to the WaitLink Subscription Plans page without charging your card."
+        "custom_text[submit][message]": "Need to compare options? Click the ← back arrow in the top-left header anytime to return to the WaitLink Subscription Plans page without charging your card.",
+        "metadata[shopSlug]": shopSlug,
+        "metadata[purpose]": "subscription",
+        "client_reference_id": shopSlug
       });
 
       const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -1138,9 +1122,9 @@ exports.createStripeCheckoutSession = onRequest({ cors: true, maxInstances: 10 }
       }
     } catch (err) {
       logger.error("Server error creating Stripe Checkout session:", err);
-      return res.status(500).json({
+      return res.status(err.status || 500).json({
         success: false,
-        error: "Internal server error connecting to Stripe: " + (err.message || "Unknown error")
+        error: err.status ? err.message : ("Internal server error connecting to Stripe: " + (err.message || "Unknown error"))
       });
     }
   });
@@ -1160,6 +1144,26 @@ exports.createStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
     const cleanSlug = String(slug || "").trim().toLowerCase();
     if (!cleanSlug) {
       return res.status(400).json({ success: false, error: "Parameter 'slug' is required." });
+    }
+
+    try {
+      const decodedTopUp = await requireCaller(req);
+      const shopForTopUp = await admin.firestore().collection("shops").doc(cleanSlug).get();
+      if (!shopForTopUp.exists) {
+        return res.status(404).json({ success: false, error: "Shop does not exist." });
+      }
+      const shopForTopUpData = shopForTopUp.data() || {};
+      assertShopOwner(decodedTopUp, shopForTopUpData);
+      if (!shopIsPaid(shopForTopUpData)) {
+        return res.status(403).json({
+          success: false,
+          tierUpgradeRequired: true,
+          error: "Automated SMS alerts require an active Pro Business ($15/mo) or Enterprise plan. Upgrade to buy SMS credits."
+        });
+      }
+    } catch (authErr) {
+      const status = authErr.status || 401;
+      return res.status(status).json({ success: false, error: authErr.message || "Unauthorized" });
     }
 
     let priceId = TOPUP_GROWTH_PRICE_ID;
@@ -1188,6 +1192,7 @@ exports.createStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
         "metadata[packId]": packId || "growth",
         "metadata[addedCredits]": String(credits),
         "metadata[amountTotal]": String(priceCents),
+        "metadata[purpose]": "topup",
         "success_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&topup=success&session_id={CHECKOUT_SESSION_ID}`,
         "cancel_url": `${hostOrigin}?s=${encodeURIComponent(cleanSlug)}&view=owner&subtab=notifications&topup=cancel`,
         "custom_text[submit][message]": "Click the ← back arrow in the top-left header anytime to return to WaitLink SMS Settings without charging your card."
@@ -1293,6 +1298,26 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
         return res.status(400).json({ success: false, error: `Session payment status is '${sessionData.payment_status}', not paid.` });
       }
 
+      const upgradeMeta = sessionData.metadata || {};
+      const upgradeShop = String(upgradeMeta.shopSlug || sessionData.client_reference_id || "");
+      if (sessionData.mode !== "subscription" || upgradeMeta.purpose !== "subscription" || upgradeShop !== cleanSlug) {
+        return res.status(403).json({ success: false, error: "This payment session does not belong to this shop's subscription." });
+      }
+      const upgradeAmount = sessionData.amount_total || 0;
+      if (upgradeAmount !== 1500 && upgradeAmount !== 4900) {
+        return res.status(403).json({ success: false, error: "This payment is not a WaitLink Pro or Enterprise subscription." });
+      }
+      const upgradeClaim = await claimStripeSession(cleanSessionId, cleanSlug, "subscription");
+      if (upgradeClaim.already) {
+        return res.status(200).json({
+          success: true,
+          alreadyUpgraded: true,
+          tierTitle: shopData.planTitle,
+          planPrice: shopData.planPrice,
+          sessionId: cleanSessionId
+        });
+      }
+
       // 4. Determine tier based on line items or amount
       let tierTitle = "Pro Business Tier";
       let tierPrice = 15;
@@ -1372,7 +1397,7 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
       });
     } catch (err) {
       logger.error("Error in verifyStripeSessionAndUpgrade:", err);
-      return res.status(500).json({ success: false, error: "Internal server error verifying session: " + err.message });
+      return res.status(err.status || 500).json({ success: false, error: err.status ? err.message : ("Internal server error verifying session: " + err.message) });
     }
   });
 });
@@ -1397,12 +1422,14 @@ exports.verifyStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
     const cleanSessionId = String(sessionId).trim();
 
     try {
+      const decodedTopUpVerify = await requireCaller(req);
       const shopDocRef = admin.firestore().collection("shops").doc(cleanSlug);
       const shopSnap = await shopDocRef.get();
       if (!shopSnap.exists) {
         return res.status(404).json({ success: false, error: "Shop does not exist." });
       }
       const shopData = shopSnap.data() || {};
+      assertShopOwner(decodedTopUpVerify, shopData);
 
       // Idempotency check: has this session already been credited?
       const topUpHistoryRef = shopDocRef.collection("top_ups").doc(cleanSessionId);
@@ -1436,20 +1463,36 @@ exports.verifyStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
         return res.status(400).json({ success: false, error: `Payment status is '${sessionData.payment_status}', not paid.` });
       }
 
-      // Determine added credits
-      let addedCredits = 1000;
-      let packName = "Growth Pack (+1,000 SMS)";
-      let packPrice = "$15.00";
-      const totalAmount = sessionData.amount_total || 1500;
-      if (sessionData.metadata && sessionData.metadata.addedCredits) {
-        addedCredits = parseInt(sessionData.metadata.addedCredits, 10) || 1000;
-      } else {
-        if (totalAmount >= 3900) { addedCredits = 2500; }
-        else if (totalAmount >= 1500) { addedCredits = 1000; }
-        else { addedCredits = 250; }
+      const topUpMeta = sessionData.metadata || {};
+      const topUpShop = String(topUpMeta.shopSlug || sessionData.client_reference_id || "");
+      if (sessionData.mode !== "payment" || topUpMeta.purpose !== "topup" || topUpShop !== cleanSlug) {
+        return res.status(403).json({ success: false, error: "This payment session does not belong to this shop." });
       }
-      if (addedCredits === 250) { packName = "Micro Pack (+250 SMS)"; packPrice = "$5.00"; }
-      else if (addedCredits === 2500) { packName = "Power Pack (+2,500 SMS)"; packPrice = "$39.00"; }
+
+      // Credits come from the amount Stripe collected, not from caller-supplied metadata.
+      let addedCredits = 0;
+      let packName = "";
+      let packPrice = "";
+      const totalAmount = sessionData.amount_total || 0;
+      if (totalAmount === 3900) { addedCredits = 2500; packName = "Power Pack (+2,500 SMS)"; packPrice = "$39.00"; }
+      else if (totalAmount === 1500) { addedCredits = 1000; packName = "Growth Pack (+1,000 SMS)"; packPrice = "$15.00"; }
+      else if (totalAmount === 500) { addedCredits = 250; packName = "Micro Pack (+250 SMS)"; packPrice = "$5.00"; }
+      else {
+        return res.status(403).json({ success: false, error: "This payment is not a WaitLink SMS credit pack." });
+      }
+
+      const topUpClaim = await claimStripeSession(cleanSessionId, cleanSlug, "topup");
+      if (topUpClaim.already) {
+        const usageSnapExisting = await shopDocRef.collection("billing").doc("smsUsage").get();
+        const curUsage = usageSnapExisting.data() || {};
+        return res.status(200).json({
+          success: true,
+          alreadyCredited: true,
+          addedCredits: addedCredits,
+          totalAvailable: curUsage.totalAvailable || 0,
+          packName: packName
+        });
+      }
 
       // Atomically update smsUsage
       const usageDocRef = shopDocRef.collection("billing").doc("smsUsage");
@@ -1508,7 +1551,7 @@ exports.verifyStripeTopUpSession = onRequest({ cors: true, maxInstances: 10 }, a
       });
     } catch (err) {
       logger.error("Error in verifyStripeTopUpSession:", err);
-      return res.status(500).json({ success: false, error: "Internal server error: " + err.message });
+      return res.status(err.status || 500).json({ success: false, error: err.status ? err.message : ("Internal server error: " + err.message) });
     }
   });
 });
@@ -1780,6 +1823,740 @@ exports.createStripePortalSession = onRequest({ cors: true, maxInstances: 10 }, 
       return res.status(500).json({ success: false, error: "Server error: " + err.message });
     }
   });
+});
+
+const crypto = require("crypto");
+
+function shopIsPaid(data) {
+  const price = data && data.planPrice !== undefined && data.planPrice !== null ? Number(data.planPrice) : 0;
+  const status = String((data && data.subscriptionStatus) || "").toLowerCase();
+  return price >= 15 || status === "active" || status === "trialing";
+}
+
+function generateRollingToken(slug, secret, intervalSec, timeMs) {
+  const timeSlice = Math.floor(timeMs / 1000 / intervalSec);
+  const str = `${slug || "shop"}:${secret || "waitlink-salt"}:${timeSlice}`;
+  let h1 = 0x811c9dc5;
+  let h2 = 0x27d4eb2f;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193);
+    h2 = Math.imul(h2 ^ ch, 0x01000193);
+  }
+  const part1 = (h1 >>> 0).toString(16).padStart(8, "0");
+  const part2 = (h2 >>> 0).toString(16).padStart(8, "0");
+  return (part1 + part2).slice(0, 8);
+}
+
+function rollingTokenIsRecent(slug, secret, token, intervalSec, now, maxAgeSec) {
+  if (!token || typeof token !== "string") return false;
+  const clean = token.trim().toLowerCase();
+  if (!/^[0-9a-f]{8}$/.test(clean)) return false;
+  const step = Math.max(1, parseInt(intervalSec, 10) || 60);
+  const slices = Math.ceil(Math.max(step, maxAgeSec) / step);
+  for (let i = 0; i <= slices; i++) {
+    if (generateRollingToken(slug, secret, step, now - (i * step * 1000)) === clean) return true;
+  }
+  return false;
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function staffGuardRef(shopId, username) {
+  const key = `${shopId || "shop"}__${username || "pin"}`.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 700);
+  return admin.firestore().collection("staff_login_guards").doc(key || "staff_guard");
+}
+
+async function consumeStaffLoginAttempt(shopId, username) {
+  const ref = staffGuardRef(shopId, username);
+  const max = 8;
+  const windowMs = 15 * 60 * 1000;
+  return admin.firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const now = Date.now();
+    const prev = snap.exists ? (snap.data() || {}) : {};
+    const inWindow = prev.windowStart && (now - prev.windowStart) < windowMs;
+    const failures = inWindow ? (parseInt(prev.failures, 10) || 0) : 0;
+    if (failures >= max) return false;
+    tx.set(ref, {
+      shopId: shopId || "",
+      failures: failures + 1,
+      windowStart: inWindow ? prev.windowStart : now,
+      updatedAt: now
+    });
+    return true;
+  });
+}
+
+async function clearStaffLoginAttempt(shopId, username) {
+  await staffGuardRef(shopId, username).set({
+    shopId: shopId || "",
+    failures: 0,
+    windowStart: Date.now(),
+    updatedAt: Date.now()
+  }, { merge: true });
+}
+
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+async function requireCaller(req) {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    throw httpError(401, "Missing or invalid authorization token.");
+  }
+  const idToken = authHeader.split("Bearer ")[1].trim();
+  try {
+    return await admin.auth().verifyIdToken(idToken);
+  } catch (authErr) {
+    throw httpError(401, "Unauthorized token.");
+  }
+}
+
+function assertShopOwner(decoded, shopData) {
+  const email = String((decoded && decoded.email) || "").toLowerCase();
+  const isSuper = email === String(SENDER_EMAIL || "").toLowerCase() || email === "senthil930@gmail.com";
+  if (isSuper) return;
+  const ownerEmail = String((shopData && shopData.ownerEmail) || "").toLowerCase();
+  const isOwner = (ownerEmail && ownerEmail === email) || (shopData && shopData.ownerUid && shopData.ownerUid === decoded.uid);
+  if (!isOwner) {
+    throw httpError(403, "Forbidden: You are not the registered owner of this shop.");
+  }
+}
+
+async function claimStripeSession(sessionId, slug, purpose) {
+  const ref = admin.firestore().collection("stripe_sessions").doc(String(sessionId));
+  return admin.firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists) {
+      const prev = snap.data() || {};
+      if (prev.slug === slug && prev.purpose === purpose) return { already: true };
+      throw httpError(409, "This payment session was already used.");
+    }
+    tx.set(ref, { slug, purpose, createdAt: Date.now() });
+    return { already: false };
+  });
+}
+
+function hashStaffPasscodeServer(passcode) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(passcode), salt, 32).toString("hex");
+  return `scrypt$${salt}$${hash}`;
+}
+
+function verifyStaffPasscodeRecord(record, passcode) {
+  const raw = String(passcode || "").trim();
+  if (!raw || !record) return false;
+  const stored = String(record.passcodeHash || "");
+  if (stored.startsWith("scrypt$")) {
+    const parts = stored.split("$");
+    if (parts.length !== 3) return false;
+    const calc = crypto.scryptSync(raw, parts[1], 32);
+    const prev = Buffer.from(parts[2], "hex");
+    if (prev.length !== calc.length) return false;
+    return crypto.timingSafeEqual(prev, calc);
+  }
+  const sha = crypto.createHash("sha256").update(raw).digest("hex");
+  if (stored && stored === sha) return true;
+  return !!(record.passcode && String(record.passcode).trim() === raw);
+}
+
+function stationKeyMatches(record, secret) {
+  const stored = String((record && record.stationKey) || "");
+  const raw = String(secret || "");
+  if (stored.length < 20 || raw.length !== stored.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(raw));
+  } catch (err) {
+    return false;
+  }
+}
+
+function publicLiveFromShop(data, queue, slug) {
+  const list = Array.isArray(queue) ? queue : [];
+  const base = parseInt(data.estBaseWaitMin, 10) || 20;
+  let total = 0;
+  list.forEach((item) => {
+    const duration = parseInt(item && item.selectedServiceDurationMin, 10);
+    total += duration > 0 ? duration : base;
+  });
+  const services = Array.isArray(data.services) ? data.services.map((service) => ({
+    id: service.id,
+    name: service.name,
+    icon: service.icon || "",
+    estDurationMin: service.estDurationMin || 20,
+    enabled: service.enabled !== false
+  })) : [];
+  return {
+    shopName: data.shopName || data.name || slug,
+    slug: data.slug || slug,
+    address: data.address || "",
+    phone: data.phone || "",
+    hours: data.hours || "",
+    estBaseWaitMin: base,
+    enableServices: !!data.enableServices,
+    services,
+    clinicalPrivacyEnabled: !!data.clinicalPrivacyEnabled,
+    logoUrl: shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true ? (data.logoUrl || "") : "",
+    promoText: shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true ? (data.promoText || "") : "",
+    promoStart: shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true ? (data.promoStart || "") : "",
+    promoEnd: shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true ? (data.promoEnd || "") : "",
+    isActive: data.isActive !== false && data.status !== "paused" && data.status !== "inactive",
+    status: data.status || (data.isActive === false ? "paused" : "active"),
+    tagline: data.tagline || "",
+    activeQueueCount: list.length,
+    currentAvgWaitMin: list.length === 0 ? 0 : Math.max(5, total),
+    isDemoShop: !!data.isDemoShop,
+    rollingQrEnabled: !!(data.security && data.security.rollingQrEnabled),
+    updatedAt: Date.now()
+  };
+}
+
+function publicTicketName(name) {
+  const clean = String(name || "").trim().replace(/\s+/g, " ");
+  if (!clean) return "";
+  const parts = clean.split(" ");
+  if (parts.length === 1) return parts[0].slice(0, 40);
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`.slice(0, 80);
+}
+
+function customerTicketPayload(item, slug, position, status) {
+  return {
+    id: item.id,
+    shopSlug: slug,
+    customerName: publicTicketName(item.customerName),
+    status: status || item.status || "waiting",
+    checkedInAt: item.checkedInAt || Date.now(),
+    linePosition: position || 0,
+    selectedServiceId: item.selectedServiceId || null,
+    selectedServiceName: item.selectedServiceName || null,
+    selectedServiceDurationMin: item.selectedServiceDurationMin || null,
+    delayedMinutes: item.delayedMinutes || 0,
+    lateReportCount: item.lateReportCount || 0,
+    updatedAt: Date.now()
+  };
+}
+
+function waitForQueueIndex(queue, index, baseWait) {
+  let total = 0;
+  const limit = Math.max(0, index);
+  for (let i = 0; i < limit && i < queue.length; i++) {
+    const duration = parseInt(queue[i].selectedServiceDurationMin, 10);
+    total += duration > 0 ? duration : baseWait;
+  }
+  return queue.length === 0 || limit === 0 ? 0 : Math.max(5, total);
+}
+
+async function resolveShopRef(rawSlug, rawName) {
+  const db = admin.firestore();
+  const cleanSlug = String(rawSlug || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  if (cleanSlug) {
+    const direct = await db.collection("shops").doc(cleanSlug).get();
+    if (direct.exists) return { ref: direct.ref, id: direct.id, data: direct.data() || {} };
+  }
+  const name = String(rawName || rawSlug || "").trim();
+  if (name) {
+    const byShopName = await db.collection("shops").where("shopName", "==", name).limit(1).get();
+    if (!byShopName.empty) {
+      const doc = byShopName.docs[0];
+      return { ref: doc.ref, id: doc.id, data: doc.data() || {} };
+    }
+    const byName = await db.collection("shops").where("name", "==", name).limit(1).get();
+    if (!byName.empty) {
+      const doc = byName.docs[0];
+      return { ref: doc.ref, id: doc.id, data: doc.data() || {} };
+    }
+  }
+  return null;
+}
+
+exports.staffLogin = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+    const { slug, shopName, username, passcode } = req.body || {};
+    const cleanUser = String(username || "").trim().toLowerCase();
+    const cleanPass = String(passcode || "").trim();
+    if (!cleanPass || (!slug && !shopName)) {
+      return res.status(400).json({ success: false, error: "Store location and passcode are required." });
+    }
+    try {
+      const shop = await resolveShopRef(slug, shopName);
+      if (!shop) {
+        const unknownAllowed = await consumeStaffLoginAttempt(String(slug || shopName || "unknown"), cleanUser);
+        if (!unknownAllowed) {
+          return res.status(429).json({ success: false, error: "Too many sign-in attempts. Wait a few minutes and try again." });
+        }
+        return res.status(404).json({ success: false, error: "Shop not found." });
+      }
+      const loginAllowed = await consumeStaffLoginAttempt(shop.id, cleanUser);
+      if (!loginAllowed) {
+        return res.status(429).json({ success: false, error: "Too many sign-in attempts. Wait a few minutes and try again." });
+      }
+      let query = shop.ref.collection("staff_roles");
+      if (cleanUser) query = query.where("username", "==", cleanUser);
+      const snap = await query.limit(25).get();
+      const matches = [];
+      snap.forEach((doc) => {
+        const data = doc.data() || {};
+        const passOk = verifyStaffPasscodeRecord(data, cleanPass);
+        const stationOk = !passOk && stationKeyMatches(data, cleanPass);
+        if (passOk || stationOk) matches.push({ id: doc.id, ref: doc.ref, data, passOk });
+      });
+      if (matches.length !== 1) {
+        return res.status(401).json({ success: false, error: "Invalid store, username, or passcode." });
+      }
+      const matched = matches[0];
+      const stored = String(matched.data.passcodeHash || "");
+      if (matched.passOk && !stored.startsWith("scrypt$")) {
+        await matched.ref.set({
+          passcodeHash: hashStaffPasscodeServer(cleanPass),
+          passcode: admin.firestore.FieldValue.delete(),
+          updatedAt: Date.now()
+        }, { merge: true });
+      }
+      await clearStaffLoginAttempt(shop.id, cleanUser);
+      const staffId = String(matched.id);
+      const uid = (`staff_${shop.id}_${staffId}`).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 128);
+      let token = "";
+      try {
+        token = await admin.auth().createCustomToken(uid || `staff_${staffId}`.slice(0, 128), {
+          role: "staff",
+          shopSlug: shop.id,
+          staffId
+        });
+      } catch (tokenErr) {
+        logger.error("Staff custom token error:", tokenErr);
+        return res.status(500).json({ success: false, error: "Staff sign-in could not be completed." });
+      }
+      return res.status(200).json({
+        success: true,
+        token,
+        slug: shop.id,
+        shopName: shop.data.shopName || shop.data.name || shop.id,
+        staff: {
+          id: staffId,
+          username: matched.data.username || cleanUser,
+          displayName: matched.data.displayName || matched.data.username || "Front Desk",
+          role: matched.data.role || "front_desk",
+          roleTitle: matched.data.roleTitle || "Front Desk",
+          permissions: matched.data.permissions || {},
+          assignedShop: shop.id,
+          assignedShopName: shop.data.shopName || shop.data.name || shop.id
+        }
+      });
+    } catch (err) {
+      logger.error("staffLogin error:", err);
+      return res.status(err.status || 500).json({ success: false, error: err.message || "Staff sign-in failed." });
+    }
+  });
+});
+
+exports.ensurePublicShopView = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+    const slug = String((req.body && req.body.slug) || "").trim().toLowerCase();
+    if (!slug) return res.status(400).json({ success: false, error: "Parameter 'slug' is required." });
+    try {
+      const shopSnap = await admin.firestore().collection("shops").doc(slug).get();
+      if (!shopSnap.exists) return res.status(404).json({ success: false, error: "Shop not found." });
+      const data = shopSnap.data() || {};
+      const live = publicLiveFromShop(data, data.queue || [], slug);
+      await shopSnap.ref.collection("public").doc("live").set(live);
+      return res.status(200).json({ success: true, shop: live });
+    } catch (err) {
+      logger.error("ensurePublicShopView error:", err);
+      return res.status(500).json({ success: false, error: "Could not load this shop's public wait." });
+    }
+  });
+});
+
+exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+    const body = req.body || {};
+    const action = String(body.action || "").trim().toLowerCase();
+    const slug = String(body.slug || "").trim().toLowerCase();
+    if (!slug || !action) {
+      return res.status(400).json({ success: false, error: "Parameters 'slug' and 'action' are required." });
+    }
+    const shopRef = admin.firestore().collection("shops").doc(slug);
+    try {
+      if (action === "qr") {
+        const shopSnap = await shopRef.get();
+        if (!shopSnap.exists) throw httpError(404, "Shop not found.");
+        const data = shopSnap.data() || {};
+        const sec = data.security && typeof data.security === "object" ? data.security : {};
+        const honorShopSecurity = shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true;
+        if (!honorShopSecurity || !sec.rollingQrEnabled) {
+          return res.status(200).json({ success: true, allowed: true, rolling: false });
+        }
+        const platformSnap = await admin.firestore().collection("settings").doc("security_config").get();
+        const platform = platformSnap.exists ? (platformSnap.data() || {}) : {};
+        if (platform.rollingQrPlatformActive === false) {
+          return res.status(200).json({ success: true, allowed: true, rolling: false });
+        }
+        const secret = sec.rollingSecret || "waitlink-salt";
+        const interval = parseInt(sec.rollingQrIntervalSec, 10) || 60;
+        const current = generateRollingToken(slug, secret, interval, Date.now());
+        const presented = String(body.rollingToken || "").trim().toLowerCase();
+        return res.status(200).json({ success: true, allowed: presented === current, rolling: true });
+      }
+      const result = await admin.firestore().runTransaction(async (tx) => {
+        const shopSnap = await tx.get(shopRef);
+        if (!shopSnap.exists) throw httpError(404, "Shop not found.");
+        const data = shopSnap.data() || {};
+        const queue = Array.isArray(data.queue) ? data.queue.slice() : [];
+        const history = Array.isArray(data.history) ? data.history.slice() : [];
+        const active = data.isActive !== false && data.status !== "paused" && data.status !== "inactive";
+
+        if (action === "checkin") {
+          if (!active) throw httpError(403, "Walk-in arrivals are currently paused for this location.");
+          if (queue.length >= 250) {
+            throw httpError(429, "This line is full right now. Please check with the front desk.");
+          }
+          const rateRef = shopRef.collection("public").doc("checkin_rate");
+          const rateSnap = await tx.get(rateRef);
+          const nowMs = Date.now();
+          const rate = rateSnap.exists ? (rateSnap.data() || {}) : {};
+          const inWindow = rate.windowStart && (nowMs - rate.windowStart) < 60000;
+          const recentCheckins = inWindow ? (parseInt(rate.count, 10) || 0) : 0;
+          if (recentCheckins >= 40) {
+            throw httpError(429, "This shop is taking check-ins too quickly. Wait a moment and try again.");
+          }
+          const sec = data.security && typeof data.security === "object" ? data.security : {};
+          let platform = {};
+          if (sec.rollingQrEnabled || sec.gpsProximityEnabled) {
+            const platformSnap = await tx.get(admin.firestore().collection("settings").doc("security_config"));
+            platform = platformSnap.exists ? (platformSnap.data() || {}) : {};
+          }
+          const honorShopSecurity = shopIsPaid(data) || slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true;
+          if (honorShopSecurity && sec.rollingQrEnabled && platform.rollingQrPlatformActive !== false) {
+            const secret = sec.rollingSecret || "waitlink-salt";
+            const interval = parseInt(sec.rollingQrIntervalSec, 10) || 60;
+            if (!rollingTokenIsRecent(slug, secret, body.rollingToken, interval, nowMs, 10 * 60)) {
+              throw httpError(403, "Code expired. Scan the live QR code on the counter screen.");
+            }
+          }
+          if (honorShopSecurity && sec.gpsProximityEnabled && platform.gpsProximityPlatformActive !== false && sec.storeLatitude && sec.storeLongitude) {
+            const lat = Number(body.latitude);
+            const lon = Number(body.longitude);
+            const accuracy = Math.min(Math.max(Number(body.accuracy) || 0, 0), 75);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+              throw httpError(403, "Location is required to join this line.");
+            }
+            const allowedMeters = (parseInt(sec.gpsRadiusMeters, 10) || 100) + accuracy;
+            if (distanceMeters(lat, lon, Number(sec.storeLatitude), Number(sec.storeLongitude)) > allowedMeters) {
+              throw httpError(403, "Too far from the shop to join this line.");
+            }
+          }
+          const customerName = String(body.customerName || "").trim();
+          if (customerName.length < 1 || customerName.length > 100) {
+            throw httpError(400, "Enter a name between 1 and 100 characters.");
+          }
+          const phone = String(body.phone || "").trim().slice(0, 30);
+          const phoneDigits = phone.replace(/\D/g, "");
+          if (phoneDigits.length >= 7 && queue.some((item) => String(item.phone || "").replace(/\D/g, "") === phoneDigits)) {
+            throw httpError(409, "A check-in with this phone number is already waiting in line.");
+          }
+          const period = new Date().toISOString().slice(0, 7);
+          let monthlyCount = data.monthlyCheckinPeriod === period ? (parseInt(data.monthlyCheckinCount, 10) || 0) : 0;
+          const demoShop = slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true;
+          if (!shopIsPaid(data) && !demoShop && monthlyCount >= 100) {
+            throw httpError(402, "This shop has reached its free monthly check-in limit. Please visit the front desk.");
+          }
+          const ticketSecret = crypto.randomBytes(18).toString("hex");
+          const newItem = {
+            id: "q_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex"),
+            shopSlug: slug,
+            customerName,
+            phone: phone || null,
+            tcpaConsent: !!body.tcpaConsent,
+            tcpaConsentTimestamp: body.tcpaConsent ? Date.now() : null,
+            checkedInAt: Date.now(),
+            checkedInVia: "public",
+            selectedServiceId: body.selectedServiceId || null,
+            selectedServiceName: body.selectedServiceName || null,
+            selectedServiceDurationMin: body.selectedServiceDurationMin || null,
+            ticketSecret
+          };
+          queue.push(newItem);
+          const position = queue.length;
+          const live = publicLiveFromShop(data, queue, slug);
+          tx.update(shopRef, {
+            queue,
+            monthlyCheckinPeriod: period,
+            monthlyCheckinCount: monthlyCount + 1,
+            activeQueueCount: queue.length,
+            currentAvgWaitMin: live.currentAvgWaitMin,
+            updatedAt: Date.now()
+          });
+          tx.set(rateRef, {
+            windowStart: inWindow ? rate.windowStart : nowMs,
+            count: recentCheckins + 1,
+            updatedAt: nowMs
+          });
+          tx.set(shopRef.collection("public").doc("live"), live);
+          tx.set(shopRef.collection("tickets").doc(newItem.id), customerTicketPayload(newItem, slug, position, "waiting"));
+      return {
+        ticket: {
+          ...customerTicketPayload(newItem, slug, position, "waiting"),
+          customerName,
+          phone: phone || "",
+          ticketSecret,
+          estimatedWaitMin: waitForQueueIndex(queue, position, live.estBaseWaitMin)
+        },
+            position,
+            activeQueueCount: queue.length,
+            currentAvgWaitMin: live.currentAvgWaitMin
+          };
+        }
+
+        const ticketId = String(body.ticketId || "").trim();
+        const ticketSecret = String(body.ticketSecret || "");
+        const index = queue.findIndex((item) => item && item.id === ticketId);
+        const historyIndex = index < 0 ? history.findIndex((item) => item && item.id === ticketId) : -1;
+        const held = index >= 0 ? queue[index] : (historyIndex >= 0 ? history[historyIndex] : null);
+        if (!ticketId || !held) throw httpError(404, "That ticket is not in this shop's line.");
+        if (!held.ticketSecret || held.ticketSecret !== ticketSecret) {
+          throw httpError(403, "This ticket cannot be changed from this device.");
+        }
+        if (action === "cancel" && index < 0) throw httpError(409, "This visit is no longer waiting in line.");
+
+        if (action === "cancel") {
+          const removed = queue.splice(index, 1)[0];
+          removed.status = "cancelled";
+          removed.cancelledBy = "customer";
+          removed.cancelledAt = Date.now();
+          history.unshift(removed);
+          const capped = history.slice(0, 50);
+          const live = publicLiveFromShop(data, queue, slug);
+          tx.update(shopRef, {
+            queue,
+            history: capped,
+            activeQueueCount: queue.length,
+            currentAvgWaitMin: live.currentAvgWaitMin,
+            updatedAt: Date.now()
+          });
+          tx.set(shopRef.collection("public").doc("live"), live);
+          tx.set(shopRef.collection("tickets").doc(ticketId), customerTicketPayload(removed, slug, 0, "cancelled"));
+          queue.forEach((item, idx) => {
+            tx.set(shopRef.collection("tickets").doc(item.id), customerTicketPayload(item, slug, idx + 1, "waiting"));
+          });
+          return { cancelled: true, activeQueueCount: queue.length, currentAvgWaitMin: live.currentAvgWaitMin };
+        }
+
+        if (action === "delay") {
+          const minutes = parseInt(body.minutes, 10);
+          if (![5, 10, 15].includes(minutes)) throw httpError(400, "Choose a 5, 10, or 15 minute delay.");
+          if (held.lateReportCount > 0 || held.delayedMinutes) {
+            throw httpError(409, "A delay was already sent for this ticket.");
+          }
+          held.delayedMinutes = minutes;
+          held.lateReportedAt = Date.now();
+          held.lateReportCount = 1;
+          const live = publicLiveFromShop(data, queue, slug);
+          const status = index >= 0 ? "waiting" : (held.status || "called");
+          const position = index >= 0 ? index + 1 : 0;
+          tx.update(shopRef, {
+            queue,
+            history: history.slice(0, 50),
+            updatedAt: Date.now()
+          });
+          tx.set(shopRef.collection("tickets").doc(ticketId), customerTicketPayload(held, slug, position, status));
+          return { delayed: true, minutes, linePosition: position, activeQueueCount: queue.length, currentAvgWaitMin: live.currentAvgWaitMin };
+        }
+
+        throw httpError(400, "Unknown queue action.");
+      });
+      return res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      logger.warn("publicQueueAction:", err.message || err);
+      return res.status(err.status || 500).json({ success: false, error: err.message || "Queue update failed." });
+    }
+  });
+});
+
+exports.createOwnerShop = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  return cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, error: "Method not allowed. Use POST." });
+    }
+    try {
+      const decoded = await requireCaller(req);
+      const email = String(decoded.email || "").trim().toLowerCase();
+      if (!email) return res.status(403).json({ success: false, error: "An email address is required to create a shop." });
+      const body = req.body || {};
+      const shopName = String(body.shopName || "").trim();
+      const slug = String(body.slug || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      if (shopName.length < 2 || shopName.length > 80) {
+        return res.status(400).json({ success: false, error: "Enter a shop name." });
+      }
+      if (slug.length < 3 || slug.length > 60 || slug === "main-st-barbers" || slug.startsWith("demo-")) {
+        return res.status(400).json({ success: false, error: "That shop link is not available." });
+      }
+      const isSuper = email === String(SENDER_EMAIL || "").toLowerCase() || email === "senthil930@gmail.com";
+      const db = admin.firestore();
+      const shopRef = db.collection("shops").doc(slug);
+      if ((await shopRef.get()).exists) {
+        return res.status(409).json({ success: false, error: "That shop link is already taken." });
+      }
+      let enterprise = isSuper;
+      if (!isSuper) {
+        const seen = new Map();
+        if (decoded.uid) {
+          const byUid = await db.collection("shops").where("ownerUid", "==", decoded.uid).get();
+          byUid.forEach((doc) => seen.set(doc.id, doc.data() || {}));
+        }
+        const byEmail = await db.collection("shops").where("ownerEmail", "==", email).get();
+        byEmail.forEach((doc) => seen.set(doc.id, doc.data() || {}));
+        const byLower = await db.collection("shops").where("ownerEmailLower", "==", email).get();
+        byLower.forEach((doc) => seen.set(doc.id, doc.data() || {}));
+        const real = [];
+        seen.forEach((data, id) => {
+          if (id === "main-st-barbers" || String(id).startsWith("demo-") || data.isDemoShop === true) return;
+          real.push(data);
+        });
+        enterprise = real.some((data) => Number(data.planPrice) >= 49);
+        if (!enterprise && real.length >= 1) {
+          return res.status(403).json({ success: false, error: "Starter and Pro include 1 shop location. Upgrade to Enterprise for another location." });
+        }
+      }
+      const services = Array.isArray(body.services) ? body.services.slice(0, 12).filter((service) => service && typeof service.name === "string") : [];
+      const payload = {
+        name: shopName,
+        shopName,
+        slug,
+        industry: String(body.industry || "salon").slice(0, 40),
+        services,
+        unitLabel: String(body.unitLabel || "Stations / Chairs").slice(0, 60),
+        clinicalPrivacyEnabled: !!body.clinicalPrivacyEnabled,
+        estBaseWaitMin: Math.min(Math.max(parseInt(body.estBaseWaitMin, 10) || 20, 5), 180),
+        hours: body.hours && typeof body.hours === "object" ? body.hours : { open: "09:00", close: "19:00", days: [1, 2, 3, 4, 5, 6, 0] },
+        address: String(body.address || "").slice(0, 200),
+        phone: "",
+        planTitle: "Starter Tier (Free)",
+        planPrice: 0,
+        ownerEmail: email,
+        ownerEmailLower: email,
+        ownerUid: decoded.uid || "",
+        queue: [],
+        history: [],
+        createdAt: Date.now()
+      };
+      const slotId = String(decoded.uid || email.replace(/[^a-z0-9]/g, "_")).slice(0, 700);
+      const slotRef = db.collection("owner_shop_slots").doc(slotId);
+      await db.runTransaction(async (tx) => {
+        const slot = await tx.get(slotRef);
+        const shopSnap = await tx.get(shopRef);
+        if (shopSnap.exists) throw httpError(409, "That shop link is already taken.");
+        const slotData = slot.exists ? (slot.data() || {}) : {};
+        if (!isSuper && slot.exists && slotData.enterprise !== true && slotData.slug && slotData.slug !== slug && !enterprise) {
+          throw httpError(403, "Starter and Pro include 1 shop location. Upgrade to Enterprise for another location.");
+        }
+        tx.set(shopRef, payload);
+        tx.set(slotRef, {
+          slug: slotData.slug || slug,
+          ownerUid: decoded.uid || "",
+          ownerEmail: email,
+          enterprise: enterprise === true,
+          updatedAt: Date.now()
+        }, { merge: true });
+      });
+      return res.status(200).json({ success: true, slug, shopName });
+    } catch (err) {
+      logger.error("createOwnerShop error:", err);
+      return res.status(err.status || 500).json({ success: false, error: err.message || "Could not create the shop." });
+    }
+  });
+});
+
+function historyTimestamp(item) {
+  if (!item) return 0;
+  return Number(item.checkedInAt || item.calledAt || item.completedAt || item.cancelledAt || 0) || 0;
+}
+
+async function normalizeShopOwnerEmail(doc) {
+  const data = doc.data() || {};
+  const email = String(data.ownerEmail || "").trim().toLowerCase();
+  if (!email) return;
+  if (data.ownerEmail === email && data.ownerEmailLower === email) return;
+  await doc.ref.update({ ownerEmail: email, ownerEmailLower: email });
+}
+
+async function scrubTicketSecrets(db, shopRef) {
+  let cursor = null;
+  let scanned = 0;
+  while (scanned < 1000) {
+    let query = shopRef.collection("tickets").orderBy(admin.firestore.FieldPath.documentId()).limit(200);
+    if (cursor) query = query.startAfter(cursor);
+    const snap = await query.get();
+    if (snap.empty) return;
+    cursor = snap.docs[snap.docs.length - 1];
+    scanned += snap.size;
+    const batch = db.batch();
+    let writes = 0;
+    snap.docs.forEach((entry) => {
+      const data = entry.data() || {};
+      if (data.phone === undefined && data.ticketSecret === undefined) return;
+      batch.update(entry.ref, {
+        phone: admin.firestore.FieldValue.delete(),
+        ticketSecret: admin.firestore.FieldValue.delete()
+      });
+      writes += 1;
+    });
+    if (writes) await batch.commit();
+    if (snap.size < 200) return;
+  }
+}
+
+exports.pruneShopHistory = onSchedule({ schedule: "every 24 hours", timeoutSeconds: 300, memory: "256MiB" }, async () => {
+  const db = admin.firestore();
+  const shops = await db.collection("shops").limit(400).get();
+  for (const doc of shops.docs) {
+    try {
+      await normalizeShopOwnerEmail(doc);
+      await scrubTicketSecrets(db, doc.ref);
+    } catch (err) {
+      logger.warn("Shop maintenance skipped:", doc.id, err.message || err);
+    }
+    if (doc.id === "main-st-barbers" || doc.id.startsWith("demo-")) continue;
+    const data = doc.data() || {};
+    if (data.isDemoShop === true) continue;
+    const price = Number(data.planPrice || 0);
+    const days = price >= 49 ? 365 : (shopIsPaid(data) ? 90 : 7);
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    const history = Array.isArray(data.history) ? data.history : [];
+    const kept = history.filter((item) => {
+      const ts = historyTimestamp(item);
+      return !ts || ts >= cutoff;
+    }).slice(0, 50);
+    if (kept.length !== history.length) {
+      await doc.ref.update({ history: kept, updatedAt: Date.now() });
+    }
+    const old = await doc.ref.collection("history").where("checkedInAt", "<", cutoff).limit(200).get();
+    if (old.empty) continue;
+    const batch = db.batch();
+    old.docs.forEach((entry) => batch.delete(entry.ref));
+    await batch.commit();
+  }
 });
 
 

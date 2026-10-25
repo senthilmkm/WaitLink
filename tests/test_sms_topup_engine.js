@@ -348,6 +348,7 @@ it("functions/index.js exports all required Cloud Functions", () => {
   const fnCode = fs.readFileSync(path.join(__dirname, "../functions/index.js"), "utf8");
   assert.ok(fnCode.includes("exports.sendTwilioSms"), "Missing exports.sendTwilioSms");
   assert.ok(fnCode.includes("exports.createStripeTopUpSession"), "Missing exports.createStripeTopUpSession");
+  assert.ok(fnCode.includes("Upgrade to buy SMS credits."), "Starter shops must be refused at SMS credit checkout");
   assert.ok(fnCode.includes("exports.verifyStripeTopUpSession"), "Missing exports.verifyStripeTopUpSession");
   assert.ok(fnCode.includes("exports.adjustShopSmsCredits"), "Missing exports.adjustShopSmsCredits");
   assert.ok(fnCode.includes("calculateSmsSegments"), "Missing calculateSmsSegments in functions");

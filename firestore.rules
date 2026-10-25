@@ -26,10 +26,21 @@ service cloud.firestore {
       );
     }
 
+    function shopIsDemo(shopId) {
+      return shopId == "main-st-barbers" || shopId.matches("^demo-.*");
+    }
+
+    function isStaffOfShop(shopId) {
+      return request.auth != null
+        && request.auth.token.keys().hasAll(["role", "shopSlug"])
+        && request.auth.token.role == "staff"
+        && request.auth.token.shopSlug == shopId;
+    }
+
     // Public Customer Queue Action Validator (Prevents malicious array wipes & overwrites)
     function isValidPublicShopUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      let hasValidKeys = affectedKeys.hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive']);
+      let hasValidKeys = affectedKeys.hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin']);
 
       let prevQ = ('queue' in resource.data && resource.data.queue is list) ? resource.data.queue.size() : 0;
       let newQ = ('queue' in request.resource.data && request.resource.data.queue is list) ? request.resource.data.queue.size() : 0;
@@ -64,34 +75,161 @@ service cloud.firestore {
              );
     }
 
+    function queueLen(data) {
+      return data.get('queue', []).size();
+    }
+
+    function historyLen(data) {
+      return data.get('history', []).size();
+    }
+
+    function shopPrice(data) {
+      return data.get('planPrice', 0);
+    }
+
+    function isUnpaidRealShop(data, shopId) {
+      return !shopIsDemo(shopId)
+        && data.get('isDemoShop', false) != true
+        && shopPrice(data) < 15
+        && data.get('subscriptionStatus', '') != 'active'
+        && data.get('subscriptionStatus', '') != 'trialing';
+    }
+
+    function monthlyCountOf(data) {
+      return ('monthlyCheckinCount' in data && data.monthlyCheckinCount is int) ? data.monthlyCheckinCount : 0;
+    }
+
+    function monthlyPeriodOf(data) {
+      return ('monthlyCheckinPeriod' in data && data.monthlyCheckinPeriod is string) ? data.monthlyCheckinPeriod : '';
+    }
+
+    // True only when a free shop's line grows by a new check-in, not a move back from history.
+    function queueGrowthNeedsMeter(shopId) {
+      return queueLen(request.resource.data) == queueLen(resource.data) + 1
+        && historyLen(request.resource.data) >= historyLen(resource.data)
+        && isUnpaidRealShop(resource.data, shopId);
+    }
+
+    // A new check-in cannot push a shop document past 250 waiting people.
+    // Moving someone back from history shrinks history, so that restore still fits.
+    function queueOverCapBlocked() {
+      return queueLen(request.resource.data) > 250
+        && queueLen(request.resource.data) > queueLen(resource.data)
+        && historyLen(request.resource.data) >= historyLen(resource.data);
+    }
+
+    function ownerEmailLowerMatchesOwnerEmail() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys().hasAny(['ownerEmailLower']);
+      let nextLower = request.resource.data.get('ownerEmailLower', '');
+      let nextEmail = request.resource.data.get('ownerEmail', '');
+      return !changed || (
+        nextLower is string
+        && nextEmail is string
+        && nextLower == nextEmail.lower()
+      );
+    }
+
+    function starterCheckinCounted() {
+      let nextCount = request.resource.data.get('monthlyCheckinCount', -1);
+      let nextPeriod = request.resource.data.get('monthlyCheckinPeriod', '');
+      let prevCount = resource.data.get('monthlyCheckinCount', 0);
+      let prevPeriod = resource.data.get('monthlyCheckinPeriod', '');
+      return nextCount is int
+        && nextPeriod is string
+        && nextPeriod.size() > 0
+        && nextCount >= 1
+        && nextCount <= 100
+        && (
+          (nextPeriod == prevPeriod && nextCount == prevCount + 1)
+          || (nextPeriod != prevPeriod && nextCount == 1)
+        );
+    }
+
+    function isSafePublicCard() {
+      return request.resource.data.keys().hasOnly([
+        'shopName', 'slug', 'address', 'phone', 'hours', 'estBaseWaitMin', 'enableServices', 'services',
+        'clinicalPrivacyEnabled', 'logoUrl', 'promoText', 'promoStart', 'promoEnd', 'isActive', 'status',
+        'tagline', 'activeQueueCount', 'currentAvgWaitMin', 'isDemoShop', 'rollingQrEnabled', 'updatedAt'
+      ]);
+    }
+
+    function isSafeTicketDoc() {
+      return request.resource.data.keys().hasOnly([
+        'id', 'shopSlug', 'customerName', 'status', 'checkedInAt', 'linePosition',
+        'selectedServiceId', 'selectedServiceName', 'selectedServiceDurationMin',
+        'delayedMinutes', 'lateReportCount', 'updatedAt'
+      ])
+      && (!('customerName' in request.resource.data) || (request.resource.data.customerName is string && request.resource.data.customerName.size() <= 100))
+      && !('phone' in request.resource.data)
+      && !('ticketSecret' in request.resource.data);
+    }
+
     // 1. Shops Collection (Multi-Tenant Queues & Settings)
     match /shops/{shopId} {
-      // Anyone can read a single shop doc (public wait times and queue display)
-      allow get: if true;
-      
-      // Listing/querying across shops is restricted to SuperAdmin or authenticated owners
-      allow list: if isSuperAdmin() || isAuthenticated();
+      // Missing slugs can be probed without returning customer data.
+      // Existing real shops are readable only by the owner, that shop's staff, or SuperAdmin.
+      // Demo sandboxes stay readable so the public sample desk still works.
+      allow get: if resource == null;
+      allow get: if shopIsDemo(shopId);
+      allow get: if isSuperAdmin();
+      allow get: if isStaffOfShop(shopId);
+      allow get: if resource != null && isShopOwner(resource.data);
+      allow get: if resource != null && resource.data.isDemoShop == true;
 
-      // Create new shop: authenticated users (defaulting to Starter plan) or SuperAdmin
-      allow create: if isSuperAdmin() || (
-        isAuthenticated() &&
-        request.resource.data.shopName is string &&
-        request.resource.data.slug is string &&
-        (!('planPrice' in request.resource.data) || request.resource.data.planPrice == 0)
+      // A signed-in owner can list only their own shops.
+      // ownerEmailLower keeps a shop visible when the saved email used different capitals.
+      // SuperAdmin can list the directory. Nobody can list every tenant's queue.
+      allow list: if isSuperAdmin() || (
+        isAuthenticated()
+        && request.auth.token.email is string
+        && resource.data.ownerEmail is string
+        && resource.data.ownerEmail == request.auth.token.email
       );
+      allow list: if isAuthenticated()
+        && request.auth.token.email is string
+        && resource.data.ownerEmailLower is string
+        && resource.data.ownerEmailLower == request.auth.token.email.lower();
 
-      // Update shop: SuperAdmin, Shop Owner (locked from changing pricing), or validated public customer check-in
-      allow update: if isSuperAdmin() || (
-        isShopOwner(resource.data) &&
-        // Shop owners cannot directly alter planPrice, planTitle, or Stripe credentials from the client SDK
+      // Owners create shops through createOwnerShop so a second location can be counted.
+      // SuperAdmin can still create demo shops from the directory.
+      allow create: if isSuperAdmin();
+
+      // Separate allow statements so a missing auth token cannot fail an unrelated role.
+      // Real-shop guests cannot write the private queue from the browser.
+      allow update: if isSuperAdmin();
+      allow update: if isShopOwner(resource.data) &&
+        !queueOverCapBlocked() &&
+        ownerEmailLowerMatchesOwnerEmail() &&
+        !queueGrowthNeedsMeter(shopId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'planPrice', 'planTitle', 'subscriptionStatus', 'stripeCustomerId', 'stripeSessionId'
-        ])
-      ) || (
-        // Restrict public customer self-checkin, self-cancel, and delay reporting
-        // Hardens against malicious queue wiping or array overwriting (P0 Security)
-        isValidPublicShopUpdate()
-      );
+          'planPrice', 'planTitle', 'subscriptionStatus', 'stripeCustomerId', 'stripeSessionId',
+          'customMonthlyQuota', 'isDemoShop'
+        ]);
+      allow update: if isShopOwner(resource.data) &&
+        !queueOverCapBlocked() &&
+        ownerEmailLowerMatchesOwnerEmail() &&
+        queueGrowthNeedsMeter(shopId) &&
+        starterCheckinCounted() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'planPrice', 'planTitle', 'subscriptionStatus', 'stripeCustomerId', 'stripeSessionId',
+          'customMonthlyQuota', 'isDemoShop'
+        ]);
+      allow update: if isStaffOfShop(shopId) &&
+        !queueOverCapBlocked() &&
+        !queueGrowthNeedsMeter(shopId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin'
+        ]);
+      allow update: if isStaffOfShop(shopId) &&
+        !queueOverCapBlocked() &&
+        queueGrowthNeedsMeter(shopId) &&
+        starterCheckinCounted() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin',
+          'monthlyCheckinCount', 'monthlyCheckinPeriod'
+        ]);
+      allow update: if shopIsDemo(shopId) && isValidPublicShopUpdate();
+      allow update: if resource.data.isDemoShop == true && isValidPublicShopUpdate();
 
       // Delete shop: SuperAdmin or verified Shop Owner
       allow delete: if isSuperAdmin() || isShopOwner(resource.data);
@@ -107,10 +245,30 @@ service cloud.firestore {
 
       // Step 4: Staff Roles & Permissions Subcollection (Front Desk RBAC)
       match /staff_roles/{staffId} {
-        allow write: if isSuperAdmin() || (
+        allow read, write: if isSuperAdmin() || (
           isAuthenticated() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data)
         );
-        allow read: if true;
+      }
+
+      // Public wait card. Counts, hours, and the service menu. No customer names or phones.
+      match /public/{docId} {
+        allow read: if docId == "live";
+        allow write: if docId == "live" && isSafePublicCard() && isSuperAdmin();
+        allow write: if docId == "live" && isSafePublicCard() && isStaffOfShop(shopId);
+        allow write: if docId == "live" && isSafePublicCard() && shopIsDemo(shopId);
+        allow write: if docId == "live" && isSafePublicCard() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data);
+      }
+
+      // One customer's own ticket. The phone number is not stored here.
+      match /tickets/{ticketId} {
+        allow get: if true;
+        allow list: if isSuperAdmin();
+        allow list: if isStaffOfShop(shopId);
+        allow list: if isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data);
+        allow write: if isSafeTicketDoc() && isSuperAdmin();
+        allow write: if isSafeTicketDoc() && isStaffOfShop(shopId);
+        allow write: if isSafeTicketDoc() && shopIsDemo(shopId);
+        allow write: if isSafeTicketDoc() && isShopOwner(get(/databases/$(database)/documents/shops/$(shopId)).data);
       }
 
       // Step 5: Billing, SMS Usage & Credit Wallet Subcollection
@@ -133,10 +291,31 @@ service cloud.firestore {
 
     // 2. Outbound SMS Messages (Twilio Extension Trigger Queue)
     match /messages/{messageId} {
-      // Outbound SMS message creation requires authentication
-      allow create: if isSuperAdmin() || (isAuthenticated() && request.resource.data.to is string && request.resource.data.body is string);
-      // Nobody on the public web can read, list, update, or delete SMS records
+      allow create: if isSuperAdmin()
+        && request.resource.data.to is string
+        && request.resource.data.body is string
+        && request.resource.data.shopSlug is string;
+      allow create: if isStaffOfShop(request.resource.data.shopSlug)
+        && request.resource.data.to is string
+        && request.resource.data.body is string;
+      allow create: if isAuthenticated()
+        && request.resource.data.to is string
+        && request.resource.data.body is string
+        && request.resource.data.shopSlug is string
+        && isShopOwner(get(/databases/$(database)/documents/shops/$(request.resource.data.shopSlug)).data);
       allow read, update, delete: if isSuperAdmin();
+    }
+
+    // Slug availability only. No shop profile and no customer records.
+    match /slug_registry/{slugId} {
+      allow get: if true;
+      allow list: if isSuperAdmin();
+      allow create, update: if isSuperAdmin() || (
+        isAuthenticated()
+        && request.resource.data.slug == slugId
+        && request.resource.data.keys().hasOnly(["slug", "ownerUid", "createdAt"])
+      );
+      allow delete: if isSuperAdmin();
     }
 
     // 3. Contact Support Inquiries

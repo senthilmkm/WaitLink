@@ -42,11 +42,11 @@ if (typeof window !== "undefined") {
     const reasonMsg = String(event.reason && event.reason.message ? event.reason.message : event.reason).toLowerCase();
     if (reasonMsg.includes("quotaexceeded") || reasonMsg.includes("notallowederror") || reasonMsg.includes("aborted")) {
       console.warn("[WaitLink Handled Rejection Notice]", event.reason);
-      try { event.preventDefault(); } catch (e) {}
+      try { event.preventDefault(); } catch (e) { }
       return;
     }
     console.warn("[WaitLink Unhandled Rejection Caught]", event.reason);
-    try { event.preventDefault(); } catch (e) {}
+    try { event.preventDefault(); } catch (e) { }
   });
 }
 
@@ -104,7 +104,7 @@ const SafeStorage = {
         window.localStorage.removeItem(key);
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return true;
   },
   clear() {
@@ -114,7 +114,7 @@ const SafeStorage = {
         window.localStorage.clear();
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return true;
   }
 };
@@ -137,7 +137,7 @@ const SafeSessionStorage = {
         const item = window.sessionStorage.getItem(key);
         if (item) return JSON.parse(item);
       }
-    } catch (e) {}
+    } catch (e) { }
     if (_inMemorySessionStore.has(String(key))) {
       try {
         return JSON.parse(_inMemorySessionStore.get(String(key)));
@@ -155,7 +155,7 @@ const SafeSessionStorage = {
         window.sessionStorage.setItem(key, valStr);
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return true;
   },
   remove(key) {
@@ -165,7 +165,7 @@ const SafeSessionStorage = {
         window.sessionStorage.removeItem(key);
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return true;
   },
   clear() {
@@ -175,7 +175,7 @@ const SafeSessionStorage = {
         window.sessionStorage.clear();
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return true;
   }
 };
@@ -227,11 +227,11 @@ function sha256(ascii) {
         + ((e & hash[5]) ^ ((~e) & hash[6]))
         + k[i]
         + (w[i] = (i < 16) ? w[i] : (
-            w[i - 16]
-            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-            + w[i - 7]
-            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-          ) | 0
+          w[i - 16]
+          + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+          + w[i - 7]
+          + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+        ) | 0
         );
       const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
         + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
@@ -704,7 +704,7 @@ try {
   if (cachedRet) {
     state.retentionConfig = { ...DEFAULT_RETENTION_CONFIG, ...cachedRet };
   }
-} catch (e) {}
+} catch (e) { }
 
 // Plan Tier Identification & Paywall Enforcement Helpers
 function getActivePlanInfo() {
@@ -785,7 +785,7 @@ function maskHistoricalPhone(phone) {
     return "***-****";
   }
   const last4 = digits.slice(-4);
-  
+
   if (cleaned.startsWith("+1") || (digits.length === 11 && digits.startsWith("1"))) {
     return `+1 (***) ***-${last4}`;
   } else if (digits.length === 10) {
@@ -1032,7 +1032,7 @@ function initAudioContext() {
     }
   }
   if (audioCtx && audioCtx.state === "suspended") {
-    audioCtx.resume().catch(() => {});
+    audioCtx.resume().catch(() => { });
   }
 }
 
@@ -1049,7 +1049,7 @@ function playFrontDeskChime() {
     if (!audioCtx) return;
 
     if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {});
+      audioCtx.resume().catch(() => { });
     }
 
     const now = audioCtx.currentTime;
@@ -1124,7 +1124,7 @@ let smsUsageUnsubscribe = null;
 function subscribeSmsUsage(slug) {
   if (!db || !slug) return;
   if (smsUsageUnsubscribe) {
-    try { smsUsageUnsubscribe(); } catch (e) {}
+    try { smsUsageUnsubscribe(); } catch (e) { }
     smsUsageUnsubscribe = null;
   }
   try {
@@ -1157,7 +1157,7 @@ function subscribeSmsUsage(slug) {
           uData.updatedAt = Date.now();
 
           // Sync back to Firestore quietly
-          doc.ref.set(uData, { merge: true }).catch(() => {});
+          doc.ref.set(uData, { merge: true }).catch(() => { });
         }
 
         state.smsUsage = uData;
@@ -1378,7 +1378,7 @@ async function verifyTopUpSessionBackend(sessionId) {
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -1499,11 +1499,11 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.phone !== undefined) state.config.phone = data.phone;
       if (data.ownerEmail !== undefined) state.config.ownerEmail = data.ownerEmail;
       // Auto-promote owner to Front Desk ONLY if pendingInitialView is set and URL does not request explicit customer view
-      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
-                                   new URLSearchParams(window.location.search).get("view") === "kiosk" || 
-                                   new URLSearchParams(window.location.search).get("mode") === "public" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "customer" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "kiosk";
+      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" ||
+        new URLSearchParams(window.location.search).get("view") === "kiosk" ||
+        new URLSearchParams(window.location.search).get("mode") === "public" ||
+        new URLSearchParams(window.location.search).get("mode") === "customer" ||
+        new URLSearchParams(window.location.search).get("mode") === "kiosk";
       if (!urlHasExplicitPublic && state.user && state.user.email && state.pendingInitialView) {
         const uEmail = state.user.email.toLowerCase().trim();
         const oEmail = (state.config.ownerEmail || "").toLowerCase().trim();
@@ -1785,7 +1785,7 @@ const WAITLINK_FALLBACK_DOMAIN = "https://waitlink-app-8821.web.app";
 function getPublicUrl(options = {}) {
   const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   const isHostedStaging = typeof window !== "undefined" && (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com"));
-  
+
   // Production domain used across the entire app is strictly https://waitlink.app.
   // The official fallback domain is https://waitlink-app-8821.web.app.
   let baseUrl = WAITLINK_PRODUCTION_DOMAIN;
@@ -2010,7 +2010,7 @@ function updateConfigUI() {
 
   setElText("menu-current-shop", state.config.shopName);
   setElText("mobile-drawer-shop-name", state.config.shopName);
-  
+
   // Set Owner Settings inputs
   setElValue("owner-input-address", state.config.address || "");
   setElValue("owner-input-phone", state.config.phone || "");
@@ -2033,7 +2033,7 @@ function updateConfigUI() {
   if (twilioCheck) twilioCheck.checked = (twilio.enabled !== false);
   setElValue("twilio-account-sid", twilio.accountSid || SECRETS.TWILIO_ACCOUNT_SID || "");
   setElValue("twilio-auth-token", twilio.authToken || SECRETS.TWILIO_AUTH_TOKEN || "");
-  
+
   const fromPhoneDigits = String(DEFAULT_TWILIO_FROM).replace(/\D/g, "");
   const last4 = fromPhoneDigits.slice(-4) || "7464";
   const maskedFromDisplay = `+1 (•••) •••-${last4}`;
@@ -2089,12 +2089,12 @@ function updateConfigUI() {
   setElText("owner-target-baseline", state.config.estBaseWaitMin + "m");
   setElValue("owner-input-time-format", state.config.timeFormat || "12h");
   setElValue("owner-input-date-format", state.config.dateFormat || "MM/DD/YYYY");
-  
+
   const ownerJsonInput = document.getElementById("owner-firestore-json");
   if (ownerJsonInput) {
     ownerJsonInput.value = state.config.firebaseConfig ? JSON.stringify(state.config.firebaseConfig, null, 2) : "";
   }
-  
+
   const statusLabel = document.getElementById("firestore-status-label");
   if (statusLabel) {
     if (state.config.firebaseConfig) {
@@ -2404,7 +2404,7 @@ async function mutateQueueAtomic(mutatorFn) {
         renderAll();
         return { success: true, fallback: true, ...mutation };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { success: false, error: txErr.message };
   }
 }
@@ -2780,7 +2780,7 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
       try {
         const idToken = await firebase.auth().currentUser.getIdToken();
         authHeader = `Bearer ${idToken}`;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const cloudRes = await fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendTwilioSms", {
@@ -2882,7 +2882,7 @@ async function sendTestSmsUI() {
 
   const ownerPhoneInput = document.getElementById("owner-input-phone");
   const targetPhone = (ownerPhoneInput && ownerPhoneInput.value.trim()) || state.config.phone || "9802531359";
-  
+
   if (!targetPhone || targetPhone.length < 7) {
     await showAlertDialog({
       title: "Business Phone Required",
@@ -2916,7 +2916,7 @@ async function sendTestSmsUI() {
   } else {
     const errMsg = result.error || "Unknown error";
     showToast(`⚠️ Twilio Notice: ${errMsg}`);
-    
+
     if ((result.data && result.data.quotaExhausted) || errMsg.includes("Quota Exhausted") || errMsg.includes("quota")) {
       await showAlertDialog({
         title: "SMS Quota Exhausted",
@@ -3233,7 +3233,7 @@ function renderAll() {
   const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
   const deskSubtitle = document.getElementById("desk-shop-subtitle");
   if (deskSubtitle) {
-    deskSubtitle.textContent = isClinical 
+    deskSubtitle.textContent = isClinical
       ? "Clinical Reception Desk • Confidential Patient Intake & Call"
       : "Live Front Desk Queue";
   }
@@ -3847,7 +3847,7 @@ function renderOwnerMetrics() {
 
   const ownerServedEl = document.getElementById("owner-served-today");
   if (ownerServedEl) ownerServedEl.textContent = servedCount;
-  
+
   const isPaid = isPaidTier();
   const cardCancel = document.getElementById("card-metric-cancellations");
   const cancelCap = document.getElementById("owner-cancellations-caption");
@@ -3868,7 +3868,7 @@ function renderOwnerMetrics() {
 
   const todayCalledVisits = getTodayCalledVisits();
   const startOfToday = getStartOfTodayTimestamp();
-  const todayQueueWaits = state.queue.filter(q => q.checkedInAt && q.checkedInAt >= startOfToday).map(q => Math.round((Date.now() - q.checkedInAt)/(1000*60)));
+  const todayQueueWaits = state.queue.filter(q => q.checkedInAt && q.checkedInAt >= startOfToday).map(q => Math.round((Date.now() - q.checkedInAt) / (1000 * 60)));
   const todayCalledWaits = todayCalledVisits.map(h => parseInt(h.waitDurationMin, 10) || 0);
   const allWaitsToday = [...todayCalledWaits, ...todayQueueWaits];
 
@@ -4244,19 +4244,19 @@ async function saveOwnerSettings() {
     finalSec.rollingSecret = existingSec.rollingSecret || "sec_" + Math.random().toString(36).substring(2, 10);
   }
 
-  const clinicalPrivacyEnabled = document.getElementById("owner-clinical-privacy-checkbox") 
-    ? document.getElementById("owner-clinical-privacy-checkbox").checked 
+  const clinicalPrivacyEnabled = document.getElementById("owner-clinical-privacy-checkbox")
+    ? document.getElementById("owner-clinical-privacy-checkbox").checked
     : !!state.config.clinicalPrivacyEnabled;
 
-  const timeFormat = (document.getElementById("owner-input-time-format") && document.getElementById("owner-input-time-format").value) 
-    || state.config.timeFormat 
+  const timeFormat = (document.getElementById("owner-input-time-format") && document.getElementById("owner-input-time-format").value)
+    || state.config.timeFormat
     || "12h";
-  const dateFormat = (document.getElementById("owner-input-date-format") && document.getElementById("owner-input-date-format").value) 
-    || state.config.dateFormat 
+  const dateFormat = (document.getElementById("owner-input-date-format") && document.getElementById("owner-input-date-format").value)
+    || state.config.dateFormat
     || "MM/DD/YYYY";
 
-  const isActive = document.getElementById("owner-shop-active-checkbox") 
-    ? document.getElementById("owner-shop-active-checkbox").checked 
+  const isActive = document.getElementById("owner-shop-active-checkbox")
+    ? document.getElementById("owner-shop-active-checkbox").checked
     : (state.config.isActive !== false);
 
   state.config = {
@@ -4283,8 +4283,8 @@ async function saveOwnerSettings() {
       accountSid: twilioAccountSid,
       authToken: twilioAuthToken,
       fromPhone: twilioFromPhone,
-      serveNowSmsTemplate: (document.getElementById("twilio-serve-now-template") && document.getElementById("twilio-serve-now-template").value.trim()) 
-        ? document.getElementById("twilio-serve-now-template").value.trim() 
+      serveNowSmsTemplate: (document.getElementById("twilio-serve-now-template") && document.getElementById("twilio-serve-now-template").value.trim())
+        ? document.getElementById("twilio-serve-now-template").value.trim()
         : DEFAULT_SERVE_NOW_SMS
     }
   };
@@ -4370,9 +4370,9 @@ function handleLogoFileUpload(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const img = new Image();
-    img.onload = function() {
+    img.onload = function () {
       // Re-encode via HTML5 Canvas (Sanitizes metadata/EXIF & auto-resizes to 512x512)
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -4557,21 +4557,21 @@ function renderQueue() {
     const isNextUp = index === 0;
     const isLastInQueue = index === state.queue.length - 1;
     const showMoveToEnd = state.queue.length > 1 && !isLastInQueue;
-    const badgeText = isClinical 
+    const badgeText = isClinical
       ? (isNextUp ? "🏥 NEXT PATIENT" : `PATIENT #${index + 1}`)
       : (isNextUp ? "#1 NEXT UP" : `#${index + 1} IN LINE`);
     const nextUpClass = isNextUp ? "next-up" : "";
 
-    const lateBadgeHtml = item.delayedMinutes 
-      ? `<span class="badge-late" title="Customer reported running late">🕒 LATE +${item.delayedMinutes}m</span>` 
+    const lateBadgeHtml = item.delayedMinutes
+      ? `<span class="badge-late" title="Customer reported running late">🕒 LATE +${item.delayedMinutes}m</span>`
       : '';
 
-    const servicePillHtml = item.selectedServiceName 
-      ? `<span class="badge-service" title="Selected Service">${isClinical ? '🩺' : '💈'} ${escapeHtml(item.selectedServiceName)} (${item.selectedServiceDurationMin || 20}m)</span>` 
+    const servicePillHtml = item.selectedServiceName
+      ? `<span class="badge-service" title="Selected Service">${isClinical ? '🩺' : '💈'} ${escapeHtml(item.selectedServiceName)} (${item.selectedServiceDurationMin || 20}m)</span>`
       : '';
 
-    const patientIdHtml = isClinical 
-      ? `<span class="badge-service" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3);" title="Confidential Patient Ticket ID">🔒 ID #${escapeHtml(String(item.id || '').slice(-4).toUpperCase())}</span>` 
+    const patientIdHtml = isClinical
+      ? `<span class="badge-service" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3);" title="Confidential Patient Ticket ID">🔒 ID #${escapeHtml(String(item.id || '').slice(-4).toUpperCase())}</span>`
       : '';
 
     const phoneDigits = item.phone ? String(item.phone).replace(/\D/g, '') : '';
@@ -4716,7 +4716,7 @@ function getFilteredHistoryList(isOwner = false) {
 
   const now = new Date();
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   const yesterdayDate = new Date(todayDate);
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
 
@@ -4778,7 +4778,7 @@ function findCustomerRecord(idRaw) {
   if (!idRaw) return null;
   let targetStr = String(idRaw || '').trim();
   let decodedStr = targetStr;
-  try { decodedStr = decodeURIComponent(targetStr); } catch(e) {}
+  try { decodedStr = decodeURIComponent(targetStr); } catch (e) { }
   const cleanTarget = targetStr.replace(/^(hist_|q_|ticket_)/, '');
   const cleanDecodedTarget = decodedStr.replace(/^(hist_|q_|ticket_)/, '');
 
@@ -4787,11 +4787,11 @@ function findCustomerRecord(idRaw) {
     const itemKey = String(item.id || '').trim();
     const cleanKey = itemKey.replace(/^(hist_|q_|ticket_)/, '');
     const name = String(item.customerName || '').trim();
-    return itemKey === targetStr || 
-           itemKey === decodedStr || 
-           cleanKey === cleanTarget || 
-           cleanKey === cleanDecodedTarget || 
-           (name && (name === targetStr || name === decodedStr || name.toLowerCase() === targetStr.toLowerCase() || name.toLowerCase() === decodedStr.toLowerCase()));
+    return itemKey === targetStr ||
+      itemKey === decodedStr ||
+      cleanKey === cleanTarget ||
+      cleanKey === cleanDecodedTarget ||
+      (name && (name === targetStr || name === decodedStr || name.toLowerCase() === targetStr.toLowerCase() || name.toLowerCase() === decodedStr.toLowerCase()));
   };
 
   return (state.history || []).find(matchItem) || (state.queue || []).find(matchItem) || null;
@@ -4908,8 +4908,8 @@ function logCustomerActivity(item, action, title, detail, icon = "📌", actor =
   if (!Array.isArray(item.activities)) {
     item.activities = [];
     if (item.checkedInAt) {
-      const checkInActor = item.checkedInBy 
-        ? item.checkedInBy 
+      const checkInActor = item.checkedInBy
+        ? item.checkedInBy
         : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : (item.checkedInVia ? `Customer (${item.checkedInVia})` : "Customer (Self Check-in)"));
       item.activities.push({
         action: "check_in",
@@ -4953,8 +4953,8 @@ function getItemActivities(item) {
 
   const list = [];
   if (item.checkedInAt) {
-    const checkInActor = item.checkedInBy 
-      ? item.checkedInBy 
+    const checkInActor = item.checkedInBy
+      ? item.checkedInBy
       : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : "Customer (Self Check-in)");
     list.push({
       action: "check_in",
@@ -4992,8 +4992,8 @@ function getItemActivities(item) {
   if (item.cancelledAt || item.status === "cancelled") {
     const ts = item.cancelledAt || item.calledAt || Date.now();
     const byDesk = isItemCancelledByDesk(item);
-    const cancelActor = byDesk 
-      ? (item.cancelledByOperator || (item.cancelledBy && item.cancelledBy !== "desk" && item.cancelledBy !== "customer" ? item.cancelledBy : null) || item.calledBy || item.completedBy || "Front Desk Staff") 
+    const cancelActor = byDesk
+      ? (item.cancelledByOperator || (item.cancelledBy && item.cancelledBy !== "desk" && item.cancelledBy !== "customer" ? item.cancelledBy : null) || item.calledBy || item.completedBy || "Front Desk Staff")
       : "Customer (Mobile Ticket)";
     list.push({
       action: "cancelled",
@@ -5011,11 +5011,11 @@ function getItemActivities(item) {
 function buildHistoryRowHtml(item, isOwnerView = false) {
   const checkInFormatted = item.checkedInAt ? formatHistoryDateTime(item.checkedInAt) : "--";
   const isCalled = item.status === "called";
-  const outcomeFormatted = isCalled 
+  const outcomeFormatted = isCalled
     ? (item.calledAt ? `<span style="color: #10b981; font-weight: 600;">📞 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--")
-    : (item.cancelledAt 
-        ? `<span style="color: #f43f5e; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.cancelledAt)}</span><span class="history-time-compact">${formatTime(item.cancelledAt)}</span></span>` 
-        : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--"));
+    : (item.cancelledAt
+      ? `<span style="color: #f43f5e; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.cancelledAt)}</span><span class="history-time-compact">${formatTime(item.cancelledAt)}</span></span>`
+      : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--"));
 
   let statusTagHtml = `<span class="status-tag called" data-tooltip="Customer called for service">Called</span>`;
   if (!isCalled) {
@@ -5089,8 +5089,8 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     rawName = maskHistoricalName(rawName, cfg.preserve_first_name !== false);
   }
 
-  const displayName = isOwnerView 
-    ? rawName 
+  const displayName = isOwnerView
+    ? rawName
     : formatPatientDisplayName(rawName, isClinical);
 
   const maskedBadgeHtml = isPiiMasked ? ` <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3); vertical-align: middle;" title="Patron PII auto-masked in compliance with data privacy policy">🛡️ MASKED</span>` : '';
@@ -5438,13 +5438,13 @@ function exportHistoryCSV() {
     const partySize = item.partySize || 1;
     const checkInStr = item.checkedInAt ? new Date(item.checkedInAt).toLocaleString() : "--";
     const calledStr = item.calledAt ? new Date(item.calledAt).toLocaleString() : "--";
-    const completedStr = item.completedAt 
-      ? new Date(item.completedAt).toLocaleString() 
+    const completedStr = item.completedAt
+      ? new Date(item.completedAt).toLocaleString()
       : (item.calledAt ? new Date(item.calledAt).toLocaleString() : "--");
 
     const waitMin = item.waitDurationMin !== undefined ? item.waitDurationMin : 0;
-    const servMin = item.serviceDurationMin !== undefined ? item.serviceDurationMin : (item.completedAt && item.calledAt ? Math.max(1, Math.round((item.completedAt - item.calledAt)/60000)) : 0);
-    
+    const servMin = item.serviceDurationMin !== undefined ? item.serviceDurationMin : (item.completedAt && item.calledAt ? Math.max(1, Math.round((item.completedAt - item.calledAt) / 60000)) : 0);
+
     let statusStr = "Served";
     if (item.status === "cancelled") {
       statusStr = isItemCancelledByDesk(item) ? "Desk Cancelled / No-Show" : "Left Line (Customer)";
@@ -5488,7 +5488,7 @@ function exportHistoryCSV() {
   const nowStr = new Date().toISOString().slice(0, 10);
   const earliestTs = filteredHistory[filteredHistory.length - 1].checkedInAt || cutoff;
   const startStr = new Date(earliestTs).toISOString().slice(0, 10);
-  
+
   link.href = url;
   link.download = `WaitLink_${shopSlug}_History_${startStr}_to_${nowStr}.csv`;
   document.body.appendChild(link);
@@ -5507,7 +5507,7 @@ function renderPublicView() {
   setElText("public-shop-name", state.config.shopName || (isClinical ? "Healthcare Clinic" : "Main St Barbers"));
   setElText("public-footer-shop-name", state.config.shopName || (isClinical ? "Healthcare Clinic" : "Main St Barbers"));
   setElText("public-wait-display", estWait > 0 ? `~ ${estWait} MINS` : "NO WAIT ⚡");
-  setElText("public-queue-summary", isClinical 
+  setElText("public-queue-summary", isClinical
     ? `${queueCount} ${queueCount === 1 ? 'patient' : 'patients'} currently waiting in clinic`
     : `${queueCount} ${queueCount === 1 ? 'person' : 'people'} currently waiting in line`
   );
@@ -5581,9 +5581,9 @@ function renderPublicView() {
 
 function parsePromoTimestamp(dateStr, isEnd = false) {
   if (!dateStr) return isEnd ? Infinity : 0;
-  
+
   let str = String(dateStr).trim();
-  
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     str += isEnd ? "T23:59:59" : "T00:00:00";
   } else if (isEnd && /^\d{4}-\d{2}-\d{2}T00:00$/.test(str)) {
@@ -5608,7 +5608,7 @@ function renderPublicPromoBanner() {
   if (promoText && isPaidTier()) {
     const now = Date.now();
     const startTime = parsePromoTimestamp(state.config.promoStart, false);
-    
+
     let endTime = Infinity;
     if (state.config.promoEnd) {
       endTime = parsePromoTimestamp(state.config.promoEnd, true);
@@ -5728,8 +5728,8 @@ function switchView(viewName, isSilent = false) {
     if (userEmailClean) {
       const cachedSlugs = SafeStorage.getJSON("waitlink_owned_slugs_" + userEmailClean, []);
       if (Array.isArray(cachedSlugs) && (
-        cachedSlugs.includes(state.config.slug) || 
-        (cachedSlugs.includes("stomada") && state.config.slug === "stomada-clinic") || 
+        cachedSlugs.includes(state.config.slug) ||
+        (cachedSlugs.includes("stomada") && state.config.slug === "stomada-clinic") ||
         (cachedSlugs.includes("stomada-clinic") && state.config.slug === "stomada")
       )) {
         isCachedOwner = true;
@@ -5759,11 +5759,11 @@ function switchView(viewName, isSilent = false) {
       (configOwnerEmail && userEmailClean === configOwnerEmail) ||
       isRegisteredOwner
     );
-    const isSandboxDemo = state.isDemoMode || 
-                          state.config.slug === "main-st-barbers" || 
-                          state.config.slug.startsWith("demo-") || 
-                          state.config.slug.includes("demo") || 
-                          !!state.config.isDemoShop;
+    const isSandboxDemo = state.isDemoMode ||
+      state.config.slug === "main-st-barbers" ||
+      state.config.slug.startsWith("demo-") ||
+      state.config.slug.includes("demo") ||
+      !!state.config.isDemoShop;
 
     if (!isSuper && !isOwner && !isSandboxDemo) {
       if (!isSilent) {
@@ -5964,7 +5964,7 @@ function renderShopDropdown() {
   // Build unified map of user shops: slug -> shopName (with duplicate name suppression)
   const shopMap = new Map();
   const seenShopNames = new Map(); // normalizedName -> slug
-  
+
   if (state.user) {
     const userEmail = (state.user.email || "").trim().toLowerCase();
 
@@ -6036,7 +6036,7 @@ function renderShopDropdown() {
   }
 
   let shopsListHtml = "";
-  
+
   // Render Custom User Shops (Demo is excluded for non-SuperAdmin business owners)
   if (shopMap.size > 0) {
     shopMap.forEach((name, slug) => {
@@ -6191,8 +6191,8 @@ function openCreateShopModal() {
   const planTitle = state.config.planTitle || "Starter Tier (Free)";
   const isEnterprise = planPrice === 49 || planTitle.includes("Enterprise");
 
-  const ownedShops = (state.registeredShops || []).filter(s => 
-    s && s.slug !== "main-st-barbers" && 
+  const ownedShops = (state.registeredShops || []).filter(s =>
+    s && s.slug !== "main-st-barbers" &&
     ((s.ownerEmail || "").toLowerCase() === email || (s.ownerUid && s.ownerUid === state.user.uid))
   );
 
@@ -6329,9 +6329,9 @@ function toggleSlugEdit() {
 
 // Reserved system slugs that cannot be claimed by tenant shops
 const RESERVED_SLUGS = new Set([
-  "home", "desk", "owner", "superadmin", "public", "admin", "api", "waitlink", 
-  "app", "settings", "main-st-barbers", "login", "register", "auth", "pricing", 
-  "terms", "privacy", "contact", "support", "dashboard", "analytics", "demo", 
+  "home", "desk", "owner", "superadmin", "public", "admin", "api", "waitlink",
+  "app", "settings", "main-st-barbers", "login", "register", "auth", "pricing",
+  "terms", "privacy", "contact", "support", "dashboard", "analytics", "demo",
   "billing", "account", "shop", "shops", "status", "help", "faq", "cookies", "reset-password"
 ]);
 
@@ -6775,7 +6775,7 @@ function initAuth() {
         showToast("⚠️ Domain authorization pending in Firebase Console.");
       }
     });
-  } catch (e) {}
+  } catch (e) { }
 
   firebase.auth().onAuthStateChanged(async user => {
     // If this terminal is currently running an active Staff session or in the middle of station link auto-login,
@@ -6861,7 +6861,7 @@ function fetchUserShopsAndSync(userEmail) {
   const emailClean = userEmail.trim().toLowerCase();
   const isSuper = emailClean === SUPERADMIN_EMAIL.toLowerCase();
 
-  const query = isSuper 
+  const query = isSuper
     ? db.collection("shops").limit(100)
     : db.collection("shops").where("ownerEmail", "==", userEmail).limit(50);
 
@@ -6901,7 +6901,7 @@ function fetchUserShopsAndSync(userEmail) {
 
 function syncUserShopSelection(fetchedShops, isSuper) {
   state.registeredShops = fetchedShops;
-  
+
   if (state.user && state.user.email) {
     const ownedSlugs = fetchedShops.map(s => s.slug || s.id);
     SafeStorage.set("waitlink_owned_slugs_" + state.user.email.toLowerCase().trim(), ownedSlugs);
@@ -6918,11 +6918,11 @@ function syncUserShopSelection(fetchedShops, isSuper) {
         state.config.shopName = currentOwned.name || currentOwned.shopName;
       }
       // If user had pendingInitialView or landed on home, promote to desk ONLY if not explicit public view request!
-      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" || 
-                                   new URLSearchParams(window.location.search).get("view") === "kiosk" || 
-                                   new URLSearchParams(window.location.search).get("mode") === "public" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "customer" ||
-                                   new URLSearchParams(window.location.search).get("mode") === "kiosk";
+      const urlHasExplicitPublic = new URLSearchParams(window.location.search).get("view") === "public" ||
+        new URLSearchParams(window.location.search).get("view") === "kiosk" ||
+        new URLSearchParams(window.location.search).get("mode") === "public" ||
+        new URLSearchParams(window.location.search).get("mode") === "customer" ||
+        new URLSearchParams(window.location.search).get("mode") === "kiosk";
       if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
@@ -7363,19 +7363,19 @@ async function handleSignOut(e) {
 
   // 1. Unsubscribe real-time cloud snapshot listeners
   if (typeof unsubscribeSnapshot === "function") {
-    try { unsubscribeSnapshot(); } catch (err) {}
+    try { unsubscribeSnapshot(); } catch (err) { }
     unsubscribeSnapshot = null;
   }
   if (typeof smsUsageUnsubscribe === "function") {
-    try { smsUsageUnsubscribe(); } catch (err) {}
+    try { smsUsageUnsubscribe(); } catch (err) { }
     smsUsageUnsubscribe = null;
   }
   if (typeof pricingConfigUnsubscribe === "function") {
-    try { pricingConfigUnsubscribe(); } catch (err) {}
+    try { pricingConfigUnsubscribe(); } catch (err) { }
     pricingConfigUnsubscribe = null;
   }
   if (typeof retentionConfigUnsubscribe === "function") {
-    try { retentionConfigUnsubscribe(); } catch (err) {}
+    try { retentionConfigUnsubscribe(); } catch (err) { }
     retentionConfigUnsubscribe = null;
   }
 
@@ -7435,7 +7435,7 @@ async function handleSignOut(e) {
         }
         keysToRemove.forEach(k => SafeStorage.remove(k));
       }
-    } catch (e) {}
+    } catch (e) { }
   } catch (err) {
     console.warn("Storage purge notice:", err);
   }
@@ -7449,7 +7449,7 @@ async function handleSignOut(e) {
   try {
     if (window.firebase && firebase.apps && firebase.apps.length > 0 && firebase.auth) {
       if (firebase.auth().currentUser) {
-        await firebase.auth().signOut().catch(() => {});
+        await firebase.auth().signOut().catch(() => { });
       }
     }
   } catch (err) {
@@ -7460,7 +7460,7 @@ async function handleSignOut(e) {
   try {
     const sensitiveInputs = document.querySelectorAll('input[type="password"], input[type="email"], #auth-email, #auth-password, #staff-login-pin, #staff-login-username');
     sensitiveInputs.forEach(inp => { if (inp) inp.value = ""; });
-  } catch (err) {}
+  } catch (err) { }
 
   // 7. Reset active shop to default demo sandbox mode for logged out guests
   launchDemoMode();
@@ -7786,9 +7786,9 @@ function handleAuthSubmit(event) {
     fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/sendBrevoPasswordReset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         email: email,
-        origin: window.location.origin 
+        origin: window.location.origin
       })
     })
       .then(async (res) => {
@@ -8078,8 +8078,8 @@ async function handleOnboardingSubmit(event) {
   const currentPlanPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const isEnterprise = currentPlanPrice === 49 || (state.config.planTitle || "").includes("Enterprise");
 
-  const ownedShops = (state.registeredShops || []).filter(s => 
-    s && s.slug !== "main-st-barbers" && 
+  const ownedShops = (state.registeredShops || []).filter(s =>
+    s && s.slug !== "main-st-barbers" &&
     ((s.ownerEmail || "").toLowerCase() === currentEmail || (s.ownerUid && s.ownerUid === state.user.uid))
   );
 
@@ -8165,7 +8165,7 @@ async function handleOnboardingSubmit(event) {
   try {
     const newUrl = `${window.location.pathname}?shop=${slug}`;
     window.history.pushState({ shop: slug }, "", newUrl);
-  } catch (e) {}
+  } catch (e) { }
 
   // Explicitly hide demo banner
   const demoBanner = document.getElementById("demo-mode-banner");
@@ -8313,7 +8313,7 @@ function launchFromRegistration(view) {
 function goToConfigSection(section) {
   closeRegistrationSuccessModal();
   switchView('owner');
-  
+
   setTimeout(() => {
     if (section === 'services') {
       const el = document.getElementById("services-table-container") || document.getElementById("owner-services-heading");
@@ -8349,19 +8349,19 @@ function sendAutomatedOnboardingEmail(shopName, slug, emailVal, ownerUrl, deskUr
       publicUrl: cleanPublic
     })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      setElText("reg-success-email-notice", `✅ Confirmation email delivered to ${emailVal}`);
-      showToast(`📧 Confirmation email delivered to ${emailVal}`);
-    } else {
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setElText("reg-success-email-notice", `✅ Confirmation email delivered to ${emailVal}`);
+        showToast(`📧 Confirmation email delivered to ${emailVal}`);
+      } else {
+        setElText("reg-success-email-notice", `✅ Shop registration complete! Links & QR code ready.`);
+      }
+    })
+    .catch(err => {
+      console.warn("Cloud welcome email dispatch notice:", err);
       setElText("reg-success-email-notice", `✅ Shop registration complete! Links & QR code ready.`);
-    }
-  })
-  .catch(err => {
-    console.warn("Cloud welcome email dispatch notice:", err);
-    setElText("reg-success-email-notice", `✅ Shop registration complete! Links & QR code ready.`);
-  });
+    });
 }
 
 function closeRegistrationSuccessModal() {
@@ -8486,7 +8486,7 @@ function inspectShop(slug, isSilent = false) {
   try {
     const newUrl = `${window.location.pathname}?s=${slug}`;
     window.history.pushState({ shop: slug }, "", newUrl);
-  } catch (e) {}
+  } catch (e) { }
 
   renderAll();
   updatePosterUI();
@@ -8530,7 +8530,7 @@ function renderSuperAdminShopsTable() {
     const isDemo = !!(shop.isDemoShop || shopSlug.startsWith("demo-") || isSandbox || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
     const price = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? 0 : (shop.planPrice !== undefined ? shop.planPrice : 0);
     totalMRR += price;
-    
+
     const currentTierKey = price >= 49 ? 'enterprise' : (price >= 15 ? 'pro' : 'starter');
     const borderColor = currentTierKey === 'enterprise' ? '#6366f1' : (currentTierKey === 'pro' ? '#06b6d4' : '#10b981');
     const bgColor = currentTierKey === 'enterprise' ? 'rgba(99, 102, 241, 0.15)' : (currentTierKey === 'pro' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)');
@@ -8538,8 +8538,20 @@ function renderSuperAdminShopsTable() {
     return `
       <tr>
         <td>
-          <strong>${escapeHtml(shopName)}</strong>
-          ${isDemo ? `<span style="margin-left: 6px; font-size: 0.68rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); padding: 1px 6px; border-radius: 4px; font-weight: 700;">Demo</span>` : ''}
+          <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+            <strong>${escapeHtml(shopName)}</strong>
+            ${isDemo ? `
+              <button type="button" 
+                data-name="${encodeURIComponent(shopName)}"
+                data-industry="${encodeURIComponent(shop.demoIndustry || '')}"
+                data-slug="${encodeURIComponent(shopSlug)}"
+                onclick="copyDemoPitchForShop(decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.industry), decodeURIComponent(this.dataset.slug))"
+                style="font-size: 0.68rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.45); padding: 1px 7px; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" 
+                title="SuperAdmin: 1-Click copy cold outreach sales pitch tailored for this demo shop">
+                Demo 📋
+              </button>
+            ` : ''}
+          </div>
         </td>
         <td><code>waitlink.app?s=${escapeHtml(shopSlug)}</code></td>
         <td>${escapeHtml(shop.ownerEmail || 'owner@waitlink.app')}</td>
@@ -8558,36 +8570,36 @@ function renderSuperAdminShopsTable() {
         </td>
         <td>
           ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
-            <span class="status-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><span class="pulse-dot"></span> Active</span>
+            <span class="status-pill" style="background: rgba(168, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><span class="pulse-dot"></span> Active</span>
           ` : `
             <span class="status-pill" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);"><span>⏸️</span> Paused</span>
           `}
         </td>
         <td>
           <div class="actions-cell">
-            ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
-              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', false)" style="color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);" title="SuperAdmin: Pause this shop queue">⏸️ Pause</button>
-            ` : `
-              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', true)" style="color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08);" title="SuperAdmin: Open and resume this shop queue">▶️ Open</button>
-            `}
-            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
-            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">Settings ⚙️</button>
-            <button class="btn-text-sm" 
-              data-slug="${encodeURIComponent(shopSlug)}" 
-              data-name="${encodeURIComponent(shopName)}"
-              data-tier="${encodeURIComponent(shop.planTitle || (price >= 49 ? 'Enterprise' : (price >= 15 ? 'Pro Business' : 'Starter')))}"
-              onclick="openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier))"
-              style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1);" 
-              title="SuperAdmin: Grant courtesy credits or set custom monthly SMS allowance">⚡ SMS Override</button>
             ${isDemo ? `
               <button class="btn-text-sm" 
                 data-name="${encodeURIComponent(shopName)}"
                 data-industry="${encodeURIComponent(shop.demoIndustry || '')}"
                 data-slug="${encodeURIComponent(shopSlug)}"
                 onclick="copyDemoPitchForShop(decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.industry), decodeURIComponent(this.dataset.slug))"
-                style="color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.1); font-weight: 700;" 
-                title="SuperAdmin: Copy cold outreach sales pitch tailored for this demo shop">📋 Pitch</button>
+                style="color: #f3e8ff; border: 1.5px solid #a855f7; background: rgba(168, 85, 247, 0.25); font-weight: 800; box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);" 
+                title="SuperAdmin: 1-Click copy cold outreach sales pitch tailored for this demo shop">📋 Pitch</button>
             ` : ''}
+            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))">Inspect Desk</button>
+            <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="openSettingsForShop(decodeURIComponent(this.dataset.slug))">⚙️ Settings</button>
+            <button class="btn-text-sm" 
+              data-slug="${encodeURIComponent(shopSlug)}" 
+              data-name="${encodeURIComponent(shopName)}"
+              data-tier="${encodeURIComponent(shop.planTitle || (price >= 49 ? 'Enterprise' : (price >= 15 ? 'Pro Business' : 'Starter')))}"
+              onclick="openAdminCreditOverrideModal(decodeURIComponent(this.dataset.slug), decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.tier))"
+              style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1);" 
+              title="SuperAdmin: Grant courtesy credits or set custom monthly SMS allowance">⚡ SMS</button>
+            ${(shop.isActive !== false && shop.status !== "inactive" && shop.status !== "paused") ? `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', false)" style="color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);" title="SuperAdmin: Pause this shop queue">⏸️ Pause</button>
+            ` : `
+              <button class="btn-text-sm" onclick="toggleShopActiveFromDirectory('${escapeHtml(shopSlug)}', true)" style="color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08);" title="SuperAdmin: Open and resume this shop queue">▶️ Open</button>
+            `}
             ${!isSandbox ? `
               <button class="btn-text-sm" 
                 data-slug="${encodeURIComponent(shopSlug)}" 
@@ -8596,7 +8608,7 @@ function renderSuperAdminShopsTable() {
                 data-docids="${encodeURIComponent(JSON.stringify(shop.allDocIds || [docId]))}" 
                 onclick="handleDeleteShopClick(this)" 
                 style="color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.1); cursor: pointer;" 
-                title="Permanently delete this tenant shop">🗑️ Delete</button>
+                title="Permanently delete this tenant shop">🗑️</button>
             ` : ''}
           </div>
         </td>
@@ -8820,7 +8832,7 @@ async function submitAdminCreditOverride() {
     if (firebase.auth().currentUser) {
       try {
         idToken = await firebase.auth().currentUser.getIdToken();
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const payload = {
@@ -9172,7 +9184,7 @@ async function cleanDuplicateShops() {
         const hasSpaceA = slugA.includes(" ");
         const hasSpaceB = slugB.includes(" ");
         if (hasSpaceA !== hasSpaceB) return hasSpaceA ? 1 : -1;
-        
+
         const expectedSlug = slugify(a.shopName || a.name || "");
         if (slugA === expectedSlug && slugB !== expectedSlug) return -1;
         if (slugB === expectedSlug && slugA !== expectedSlug) return 1;
@@ -9226,7 +9238,7 @@ async function cleanDuplicateShops() {
       idsToDelete.add(ghostSlug);
     }
 
-    const firestoreDeletions = Array.from(idsToDelete).map(id => 
+    const firestoreDeletions = Array.from(idsToDelete).map(id =>
       db.collection("shops").doc(id).delete().catch(console.warn)
     );
 
@@ -9256,7 +9268,7 @@ async function cleanDuplicateShops() {
   Promise.all(deletePromises).then(() => {
     SafeStorage.set("waitlink_registered_shops", state.registeredShops);
     SafeStorage.set("waitlink_my_shops", state.myShops);
-    
+
     // Log audit
     const auditEntry = {
       id: "audit_" + Date.now(),
@@ -10293,11 +10305,11 @@ let stripeInstance = null;
 // Initialize Stripe SDK and check for return payment status
 function initStripePaymentEngine() {
   if (typeof window === "undefined") return;
-  
+
   const urlParams = new URLSearchParams(window.location.search);
   const paymentStatus = urlParams.get("payment");
   const paidTier = urlParams.get("tier");
-  
+
   if (paymentStatus === "success") {
     const sessionId = urlParams.get("session_id");
     if (!sessionId) {
@@ -10305,7 +10317,7 @@ function initStripePaymentEngine() {
       try {
         const cleanUrl = window.location.pathname + window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
-      } catch (e) {}
+      } catch (e) { }
       return;
     }
 
@@ -10354,7 +10366,7 @@ function initStripePaymentEngine() {
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Handle SMS Top-Up pack return callback
@@ -10377,7 +10389,7 @@ function initStripePaymentEngine() {
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Handle direct navigation to upgrade modal via ?action=upgrade&tier=pro
@@ -10467,7 +10479,7 @@ async function verifyStripeSessionBackend(sessionId, idToken) {
     try {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -10750,7 +10762,7 @@ function showUpgradeProcessingOverlay(tierKey) {
   const overlay = document.getElementById("upgrade-processing-overlay");
   if (!overlay) return;
   currentUpgradingTier = tierKey;
-  
+
   const titleEl = document.getElementById("upgrade-proc-title");
   const descEl = document.getElementById("upgrade-proc-desc");
   const tierEl = document.getElementById("upgrade-proc-tier");
@@ -10883,7 +10895,7 @@ function openPublicCheckInModal() {
   const shopSub = document.getElementById("public-checkin-shop-subtitle");
   if (shopSub) shopSub.textContent = `Checking in at ${state.config.shopName || 'WaitLink Shop'}`;
   if (modal) modal.classList.remove("hidden");
-  
+
   const nameInput = document.getElementById("public-customer-name");
   if (nameInput) {
     nameInput.value = "";
@@ -11018,13 +11030,13 @@ function aggregateRevenueAccounts(shopsList, pricingTiers) {
     const isDemo = !!(shop.isDemoShop || (shop.slug && shop.slug.startsWith("demo-")) || (shop.planTitle && shop.planTitle.includes("Demo Sandbox")));
     const rawTier = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? "starter" : String(shop.tier || (shop.planPrice >= 49 ? "enterprise" : (shop.planPrice >= 15 ? "pro" : "starter"))).toLowerCase();
     const tier = rawTier === "enterprise" ? "enterprise" : (rawTier === "pro" ? "pro" : "starter");
-    
+
     const isShopActive = shop.isActive !== false && shop.status !== "inactive" && shop.status !== "canceled";
     const monthlyRate = (isShopActive && !isDemo) ? (shop.planPrice !== undefined ? Number(shop.planPrice) : (tierPriceMap[tier] || 0)) : 0;
-    
+
     const visits30d = Number(shop.totalCheckIns30d || shop.totalServed || (Array.isArray(shop.history) ? shop.history.length : 0)) || 0;
     const topUpSpend = Number(shop.topUpSpend || (shop.topUpBalance ? Math.ceil(shop.topUpBalance / 1000) * 15 : 0)) || 0;
-    
+
     // Calculate latest activity timestamp
     let activityMs = 0;
     if (shop.lastActiveAt) activityMs = new Date(shop.lastActiveAt).getTime();
@@ -11347,11 +11359,11 @@ function openAccount360Drawer(encodedEmail) {
   const shopsContainer = document.getElementById("drawer-shops-list");
   if (shopsContainer) {
     shopsContainer.innerHTML = acct.shops.map(s => {
-      const tierBadge = s.tier === "enterprise" 
+      const tierBadge = s.tier === "enterprise"
         ? `<span style="font-size: 0.7rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">ENTERPRISE ($99/mo)</span>`
-        : (s.tier === "pro" 
-            ? `<span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">PRO BUSINESS ($30/mo)</span>`
-            : `<span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">STARTER ($0 Free)</span>`);
+        : (s.tier === "pro"
+          ? `<span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">PRO BUSINESS ($30/mo)</span>`
+          : `<span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700;">STARTER ($0 Free)</span>`);
 
       const statusPill = s.status === "active"
         ? `<span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">🟢 Live Today</span>`
@@ -11668,7 +11680,7 @@ async function handleSendSupportReply(event) {
     try {
       const idToken = await firebase.auth().currentUser.getIdToken();
       if (idToken) authHeader = "Bearer " + idToken;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   fetch(cloudFnUrl, {
@@ -11684,29 +11696,29 @@ async function handleSendSupportReply(event) {
       shopName: state.config?.shopName || ""
     })
   })
-  .then(async res => {
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data && (data.messageId || data.success)) {
-      showToast(`✉️ Support reply email delivered directly to ${email}!`);
-    } else if (data && data.error) {
-      console.warn("Backend email dispatch error:", res.status, data);
-      showToast(`⚠️ Email dispatch notice: ${data.error}`);
-    } else {
+    .then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && (data.messageId || data.success)) {
+        showToast(`✉️ Support reply email delivered directly to ${email}!`);
+      } else if (data && data.error) {
+        console.warn("Backend email dispatch error:", res.status, data);
+        showToast(`⚠️ Email dispatch notice: ${data.error}`);
+      } else {
+        showToast(`✅ Reply recorded for ${email}!`);
+      }
+    })
+    .catch(err => {
+      console.warn("Backend email dispatch error:", err);
       showToast(`✅ Reply recorded for ${email}!`);
-    }
-  })
-  .catch(err => {
-    console.warn("Backend email dispatch error:", err);
-    showToast(`✅ Reply recorded for ${email}!`);
-  })
-  .finally(() => {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "🚀 Send Response & Mark Resolved";
-    }
-    closeSupportReplyModal();
-    loadSupportInquiries();
-  });
+    })
+    .finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "🚀 Send Response & Mark Resolved";
+      }
+      closeSupportReplyModal();
+      loadSupportInquiries();
+    });
 }
 
 // ==========================================
@@ -12020,8 +12032,8 @@ function isRollingTokenValid(slug, secret, token, intervalSec = 60, now = Date.n
  */
 function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
   if (lat1 === null || lon1 === null || lat2 === null || lon2 === null ||
-      lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
-      isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+    lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
+    isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
     return Infinity;
   }
   const R = 6371e3; // Earth radius in meters
@@ -12029,8 +12041,8 @@ function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c);
 }
@@ -12442,7 +12454,7 @@ async function handlePublicInlineCheckIn(event) {
   // Real-time re-verification guardrail: Check if services are still enabled by shop owner
   const activeServices = (state.config.services || []).filter(s => s.enabled);
   const isServicesActive = state.config.enableServices && activeServices.length > 0;
-  
+
   let validService = null;
   if (isServicesActive && state.selectedPublicService) {
     validService = activeServices.find(s => s.id === state.selectedPublicService.id) || null;
@@ -12476,7 +12488,7 @@ async function handlePublicInlineCheckIn(event) {
 
   if (btnContainer) btnContainer.classList.add("hidden");
   if (inlineCard) inlineCard.classList.add("hidden");
-  
+
   if (ticketCard) {
     restoreActiveTicket();
   }
@@ -12493,7 +12505,7 @@ function restoreActiveTicket() {
     // Check URL ticket parameter first
     const params = new URLSearchParams(window.location.search);
     const urlTicketId = params.get("ticket") || params.get("t");
-    
+
     let ticketToFind = urlTicketId;
     let savedParsed = null;
     if (!ticketToFind) {
@@ -12542,7 +12554,7 @@ function restoreActiveTicket() {
       if (infoBox) infoBox.classList.add("hidden");
       if (activeActions) activeActions.style.display = "flex";
       if (completedActions) { completedActions.classList.add("hidden"); completedActions.style.display = "none"; }
-      
+
       if (ticketCard) {
         const badgeEl = document.getElementById("ticket-badge-display");
         if (badgeEl) badgeEl.style.display = "block";
@@ -12726,7 +12738,7 @@ function restoreActiveTicket() {
           u.searchParams.delete("t");
           window.history.replaceState({}, document.title, u.toString());
         }
-      } catch (e) {}
+      } catch (e) { }
       if (timerBox) timerBox.classList.remove("hidden");
       if (btnContainer) btnContainer.classList.remove("hidden");
       if (ticketCard) ticketCard.classList.add("hidden");
@@ -12745,7 +12757,7 @@ function copyMyTicketLink() {
   if (!state.myTicket) return;
   const baseUrl = getPublicUrl();
   const ticketUrl = `${baseUrl}&ticket=${state.myTicket.id}`;
-  
+
   navigator.clipboard.writeText(ticketUrl).then(() => {
     showToast("🔗 Ticket tracking link copied! Bookmark or save to check anytime.");
   }).catch(() => {
@@ -12790,7 +12802,7 @@ async function cancelMyTicket() {
     u.searchParams.delete("ticket");
     u.searchParams.delete("t");
     window.history.replaceState({}, document.title, u.toString());
-  } catch (e) {}
+  } catch (e) { }
 
   const btnContainer = document.getElementById("public-join-btn-container");
   const ticketCard = document.getElementById("public-active-ticket-card");
@@ -12814,7 +12826,7 @@ function resetMyTicketView() {
     u.searchParams.delete("ticket");
     u.searchParams.delete("t");
     window.history.replaceState({}, document.title, u.toString());
-  } catch (e) {}
+  } catch (e) { }
 
   const btnContainer = document.getElementById("public-join-btn-container");
   const ticketCard = document.getElementById("public-active-ticket-card");
@@ -13089,7 +13101,7 @@ function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
           u.searchParams.set("ticket", newItem.id);
           window.history.replaceState({ ticketId: newItem.id }, document.title, u.toString());
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -13289,7 +13301,7 @@ function openCustomerAuditModal(id) {
   }
 
   const activities = getItemActivities(item);
-  
+
   // Step 3: PII Auto-Masking in Audit Log
   const targetTs = item.completedAt || item.calledAt || item.checkedInAt;
   const isPiiMasked = isRecordSubjectToPiiMasking(targetTs);
@@ -13299,18 +13311,18 @@ function openCustomerAuditModal(id) {
 
   setElText("audit-modal-customer-name", modalName + (isPiiMasked ? " (🛡️ Masked)" : ""));
   setElText("audit-modal-subtitle", `Complete Lifecycle Activity Audit Log • ${state.config.shopName || 'Shop'}`);
-  
+
   const isDeskCanc = isItemCancelledByDesk(item);
   const statusTag = item.status === "called" ? "Called (Completed)" : (item.status === "cancelled" ? (isDeskCanc ? "Desk Cancelled" : "Left Line (Customer)") : "In Active Queue");
   const statusColor = item.status === "called" ? "#10b981" : (item.status === "cancelled" ? (isDeskCanc ? "#f59e0b" : "#f43f5e") : "#06b6d4");
-  
+
   const statusEl = document.getElementById("audit-modal-status");
   if (statusEl) {
     statusEl.textContent = statusTag;
     statusEl.style.color = statusColor;
   }
 
-  setElText("audit-modal-waited", item.waitDurationMin ? `${item.waitDurationMin} mins` : (item.checkedInAt ? `${Math.round((Date.now() - item.checkedInAt)/(1000*60))} mins so far` : "--"));
+  setElText("audit-modal-waited", item.waitDurationMin ? `${item.waitDurationMin} mins` : (item.checkedInAt ? `${Math.round((Date.now() - item.checkedInAt) / (1000 * 60))} mins so far` : "--"));
   setElText("audit-modal-phone", modalPhone);
   setElText("audit-modal-count", `${activities.length} Recorded ${activities.length === 1 ? 'Event' : 'Events'}`);
 
@@ -13328,10 +13340,10 @@ function openCustomerAuditModal(id) {
       const actorName = resolveActivityActor(act, item);
       const isCustomerActor = actorName.toLowerCase().includes("customer");
       const isBotActor = actorName.toLowerCase().includes("bot") || actorName.toLowerCase().includes("twilio");
-      const actorBadgeStyle = isCustomerActor 
-        ? "background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);" 
-        : (isBotActor 
-          ? "background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35);" 
+      const actorBadgeStyle = isCustomerActor
+        ? "background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);"
+        : (isBotActor
+          ? "background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35);"
           : "background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);");
       const actorIcon = isCustomerActor ? "📱" : (isBotActor ? "🤖" : "👤");
 
@@ -13384,7 +13396,7 @@ window.openCustomerAuditModal = openCustomerAuditModal;
 window.closeCustomerAuditModal = closeCustomerAuditModal;
 
 // Global Event Delegation listener fallback for Audit Log buttons
-document.addEventListener("click", function(e) {
+document.addEventListener("click", function (e) {
   const auditTarget = e.target.closest && e.target.closest("[data-action='audit-log']");
   if (auditTarget) {
     e.preventDefault();
@@ -13460,7 +13472,7 @@ function handleMobileAuthAction() {
 }
 
 // Auto-close drawer and modals on Escape key or when window resizes back to desktop
-window.addEventListener("keydown", function(e) {
+window.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
     closeMobileNavDrawer();
     const upgradeModal = document.getElementById("upgrade-modal");
@@ -13474,7 +13486,7 @@ window.addEventListener("keydown", function(e) {
   }
 });
 
-window.addEventListener("resize", function() {
+window.addEventListener("resize", function () {
   if (window.innerWidth > 768) {
     const drawer = document.getElementById("mobile-nav-drawer");
     if (drawer && drawer.classList.contains("open")) {
@@ -13642,7 +13654,7 @@ function loginAsStaff(staffData, shopSlug, isAutoLogin = false) {
       cleanUrl.searchParams.delete("key");
       cleanUrl.searchParams.delete("passcode");
       window.history.replaceState({}, document.title, cleanUrl.toString());
-    } catch (e) {}
+    } catch (e) { }
   } else {
     showToast(`🚀 Welcome, ${staffData.displayName || staffData.username}! Front Desk ready.`);
   }
@@ -13695,7 +13707,7 @@ async function promptStaffPinSwitch() {
   });
 
   if (!pin) return;
-  
+
   if (!db) return;
   const cleanPin = pin.trim();
   const inputHash = await hashStaffPasscode(cleanPin);
@@ -13960,7 +13972,7 @@ async function loadOwnerDirectory(forceRefresh = false) {
       const query = isSuper
         ? db.collection("shops").limit(100)
         : db.collection("shops").where("ownerEmail", "==", state.user.email).limit(50);
-      
+
       const snap = await query.get();
       snap.forEach(doc => {
         const d = doc.data();
@@ -14045,7 +14057,7 @@ async function loadOwnerDirectory(forceRefresh = false) {
 
   if (staffShopFilter) {
     const prevVal = staffShopFilter.value;
-    staffShopFilter.innerHTML = `<option value="">-- All Owned Shops (${ownedShops.length}) --</option>` + 
+    staffShopFilter.innerHTML = `<option value="">-- All Owned Shops (${ownedShops.length}) --</option>` +
       ownedShops.map(s => `<option value="${escapeHtml(s.slug || s.id)}">${escapeHtml(s.shopName || s.name || s.slug)}</option>`).join("");
     if (prevVal) staffShopFilter.value = prevVal;
   }
@@ -14127,7 +14139,7 @@ function renderOwnerShopsTable(shopsList) {
     const price = (isDemo && !shop.stripeSubscriptionId && !shop.stripeCustomerId) ? 0 : (shop.planPrice !== undefined ? shop.planPrice : 0);
     const isEnterprise = !isDemo && (price >= 49 || (shop.planTitle && shop.planTitle.includes("Enterprise")));
     const isPro = !isDemo && (price >= 15 || (shop.planTitle && shop.planTitle.includes("Pro")));
-    
+
     const tierPillColor = isEnterprise ? "#818cf8" : (isPro ? "#06b6d4" : "#10b981");
     const tierPillBg = isEnterprise ? "rgba(129, 140, 248, 0.15)" : (isPro ? "rgba(6, 182, 212, 0.15)" : "rgba(16, 185, 129, 0.15)");
     const tierLabel = isDemo ? "Starter (Demo)" : (isEnterprise ? "Enterprise" : (isPro ? "Pro Business" : "Starter"));
@@ -14533,7 +14545,7 @@ function openStaffRoleModal(staffId, shopSlug) {
     const shops = (state.ownerDirectoryShops && state.ownerDirectoryShops.length > 0)
       ? state.ownerDirectoryShops
       : (state.registeredShops || [{ slug: state.config.slug, shopName: state.config.shopName }]);
-    
+
     shopSelect.innerHTML = shops.map(s => {
       const sSlug = s.slug || s.id;
       const sName = s.shopName || s.name || sSlug;
@@ -14574,7 +14586,7 @@ function openStaffRoleModal(staffId, shopSlug) {
   if (nameEl) nameEl.value = "";
   if (roleTitleEl) roleTitleEl.value = "Front Desk Receptionist";
   if (userEl) userEl.value = "";
-  
+
   const randomPin = String(Math.floor(1000 + Math.random() * 9000));
   if (passEl) passEl.value = randomPin;
 
@@ -14922,10 +14934,10 @@ function loadStaffActivityLog() {
   container.innerHTML = history.slice(0, 15).map(item => {
     const timeStr = item.calledAt ? new Date(item.calledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (item.checkedInAt ? new Date(item.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--');
     const isCancelled = item.status === "cancelled";
-    const actionBadge = isCancelled 
-      ? `<span style="color: #f43f5e; font-weight: 700;">✕ Cancelled</span>` 
+    const actionBadge = isCancelled
+      ? `<span style="color: #f43f5e; font-weight: 700;">✕ Cancelled</span>`
       : `<span style="color: #10b981; font-weight: 700;">✓ Served</span>`;
-    
+
     const staffActor = item.calledBy || item.completedBy || item.cancelledBy || item.checkedInBy || "Front Desk Staff";
 
     return `
@@ -14940,6 +14952,660 @@ function loadStaffActivityLog() {
         <div style="font-family: monospace; font-size: 0.78rem; color: var(--text-muted);">${timeStr}</div>
       </div>
     `;
+  }).join("");
+}
+
+/* ==========================================================================
+   Universal Modern Cosmetic Dialog System (Confirm / Alert / Prompt)
+   ========================================================================== */
+
+let _waitlinkDialogResolve = null;
+let _dialogMode = "confirm";
+
+function applyDialogTheme(type, customIcon) {
+  const card = document.getElementById("waitlink-dialog-card");
+  const iconEl = document.getElementById("dialog-icon");
+  if (!card) return;
+
+  card.classList.remove("dialog-theme-primary", "dialog-theme-danger", "dialog-theme-warning", "dialog-theme-success");
+
+  let defaultIcon = "ℹ️";
+  let themeClass = "dialog-theme-primary";
+
+  if (type === "danger") {
+    themeClass = "dialog-theme-danger";
+    defaultIcon = "🗑️";
+  } else if (type === "warning") {
+    themeClass = "dialog-theme-warning";
+    defaultIcon = "⚠️";
+  } else if (type === "success") {
+    themeClass = "dialog-theme-success";
+    defaultIcon = "✅";
+  } else {
+    themeClass = "dialog-theme-primary";
+    defaultIcon = "💬";
+  }
+
+  card.classList.add(themeClass);
+  if (iconEl) iconEl.textContent = customIcon || defaultIcon;
+}
+
+function showConfirmDialog({
+  title = "Confirm Action",
+  message = "Are you sure you want to proceed?",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  type = "primary",
+  icon = null,
+  category = "Action Required",
+  withNote = false,
+  noteLabel = "Staff Note / Reason (Optional):",
+  notePlaceholder = "e.g., Stepped out for coffee, No-show after 3 calls, Phone test...",
+  noteHint = "Visible on status mouse hover & in the customer lifecycle audit log."
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = resolve;
+    _dialogMode = withNote ? "confirmWithNote" : "confirm";
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const inputLabel = document.getElementById("dialog-input-label");
+    const inputEl = document.getElementById("dialog-input");
+    const inputHint = document.getElementById("dialog-input-hint");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) {
+      btnCancel.textContent = cancelText;
+      btnCancel.style.display = "inline-flex";
+    }
+    if (btnConfirm) btnConfirm.textContent = confirmText;
+
+    if (withNote) {
+      if (inputContainer) inputContainer.classList.remove("hidden");
+      if (inputLabel) inputLabel.textContent = noteLabel;
+      if (inputEl) {
+        inputEl.type = "text";
+        inputEl.placeholder = notePlaceholder;
+        inputEl.value = "";
+      }
+      if (inputHint) {
+        if (noteHint) {
+          inputHint.textContent = noteHint;
+          inputHint.classList.remove("hidden");
+        } else {
+          inputHint.classList.add("hidden");
+        }
+      }
+    } else {
+      if (inputContainer) inputContainer.classList.add("hidden");
+      if (inputHint) inputHint.classList.add("hidden");
+    }
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      if (withNote && inputEl) {
+        inputEl.focus();
+      } else if (btnConfirm) {
+        btnConfirm.focus();
+      }
+    }, 50);
+  });
+}
+
+function showAlertDialog({
+  title = "Notice",
+  message = "",
+  buttonText = "Got It",
+  type = "primary",
+  icon = null,
+  category = "Notice"
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = () => resolve();
+    _dialogMode = "alert";
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const inputHint = document.getElementById("dialog-input-hint");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop) {
+      window.alert(message);
+      resolve();
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) btnCancel.style.display = "none";
+    if (btnConfirm) btnConfirm.textContent = buttonText;
+    if (inputContainer) inputContainer.classList.add("hidden");
+    if (inputHint) inputHint.classList.add("hidden");
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      if (btnConfirm) btnConfirm.focus();
+    }, 50);
+  });
+}
+
+function showPromptDialog({
+  title = "Enter Information",
+  message = "Please enter the required information:",
+  placeholder = "",
+  defaultValue = "",
+  inputType = "text",
+  confirmText = "Submit",
+  cancelText = "Cancel",
+  type = "primary",
+  icon = "✏️",
+  category = "Input Required"
+} = {}) {
+  return new Promise(resolve => {
+    _waitlinkDialogResolve = resolve;
+    _dialogMode = "prompt";
+
+    const backdrop = document.getElementById("waitlink-dialog-backdrop");
+    const categoryEl = document.getElementById("dialog-category-tag");
+    const titleEl = document.getElementById("dialog-title");
+    const msgEl = document.getElementById("dialog-message");
+    const inputContainer = document.getElementById("dialog-input-container");
+    const inputLabel = document.getElementById("dialog-input-label");
+    const inputEl = document.getElementById("dialog-input");
+    const inputHint = document.getElementById("dialog-input-hint");
+    const btnCancel = document.getElementById("dialog-btn-cancel");
+    const btnConfirm = document.getElementById("dialog-btn-confirm");
+
+    if (!backdrop || !inputEl) {
+      resolve(window.prompt(message, defaultValue));
+      return;
+    }
+
+    if (categoryEl) categoryEl.textContent = category;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+    if (btnCancel) {
+      btnCancel.textContent = cancelText;
+      btnCancel.style.display = "inline-flex";
+    }
+    if (btnConfirm) btnConfirm.textContent = confirmText;
+
+    if (inputContainer) inputContainer.classList.remove("hidden");
+    if (inputLabel) inputLabel.textContent = "Enter details:";
+    if (inputHint) inputHint.classList.add("hidden");
+    inputEl.type = inputType;
+    inputEl.placeholder = placeholder;
+    inputEl.value = defaultValue;
+
+    applyDialogTheme(type, icon);
+
+    backdrop.classList.remove("hidden");
+    setTimeout(() => {
+      inputEl.focus();
+      inputEl.select();
+    }, 50);
+  });
+}
+
+function waitlinkDialogConfirm() {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  const inputEl = document.getElementById("dialog-input");
+
+  if (backdrop) backdrop.classList.add("hidden");
+
+  if (_waitlinkDialogResolve) {
+    if (_dialogMode === "confirmWithNote") {
+      const noteVal = inputEl ? inputEl.value.trim() : "";
+      _waitlinkDialogResolve({ confirmed: true, note: noteVal });
+    } else if (_dialogMode === "prompt") {
+      _waitlinkDialogResolve(inputEl ? inputEl.value : "");
+    } else {
+      _waitlinkDialogResolve(true);
+    }
+    _waitlinkDialogResolve = null;
+    _dialogMode = "confirm";
+  }
+}
+
+function waitlinkDialogCancel() {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  if (backdrop) backdrop.classList.add("hidden");
+
+  if (_waitlinkDialogResolve) {
+    if (_dialogMode === "prompt") {
+      _waitlinkDialogResolve(null);
+    } else {
+      _waitlinkDialogResolve(false);
+    }
+    _waitlinkDialogResolve = null;
+    _dialogMode = "confirm";
+  }
+}
+
+function waitlinkDialogDismiss() {
+  waitlinkDialogCancel();
+}
+
+// Global Keyboard navigation for modern dialogs (Escape to dismiss, Enter to submit)
+window.addEventListener("keydown", e => {
+  const backdrop = document.getElementById("waitlink-dialog-backdrop");
+  if (!backdrop || backdrop.classList.contains("hidden")) return;
+
+  if (e.key === "Escape") {
+    e.preventDefault();
+    waitlinkDialogDismiss();
+  } else if (e.key === "Enter") {
+    const inputContainer = document.getElementById("dialog-input-container");
+    if (inputContainer && !inputContainer.classList.contains("hidden")) {
+      e.preventDefault();
+      waitlinkDialogConfirm();
+    }
+  }
+});
+
+// Explicit window assignments for Owner Directory & Staff RBAC
+window.showConfirmDialog = showConfirmDialog;
+window.showAlertDialog = showAlertDialog;
+window.showPromptDialog = showPromptDialog;
+window.waitlinkDialogConfirm = waitlinkDialogConfirm;
+window.waitlinkDialogCancel = waitlinkDialogCancel;
+window.waitlinkDialogDismiss = waitlinkDialogDismiss;
+window.hasStaffPermission = hasStaffPermission;
+window.restoreStaffSessionIfPresent = restoreStaffSessionIfPresent;
+window.checkStaffAutoLogin = checkStaffAutoLogin;
+window.loginAsStaff = loginAsStaff;
+window.staffSignOut = staffSignOut;
+window.promptStaffPinSwitch = promptStaffPinSwitch;
+window.switchAuthTab = switchAuthTab;
+window.handleStaffAuthSubmit = handleStaffAuthSubmit;
+window.switchOwnerDirTab = switchOwnerDirTab;
+window.loadOwnerDirectory = loadOwnerDirectory;
+window.renderOwnerShopsTable = renderOwnerShopsTable;
+window.handleToggleActiveShop = handleToggleActiveShop;
+window.toggleShopActiveFromDirectory = toggleShopActiveFromDirectory;
+window.updateShopStatusUI = updateShopStatusUI;
+window.filterOwnerShops = filterOwnerShops;
+window.loadStaffRoles = loadStaffRoles;
+window.renderStaffCards = renderStaffCards;
+window.filterStaffByShop = filterStaffByShop;
+window.openStaffRoleModal = openStaffRoleModal;
+window.closeStaffRoleModal = closeStaffRoleModal;
+window.applyStaffPreset = applyStaffPreset;
+window.handleSaveStaffRole = handleSaveStaffRole;
+window.deleteStaffRole = deleteStaffRole;
+window.copyStaffStationLink = copyStaffStationLink;
+window.togglePasscodeBlur = togglePasscodeBlur;
+window.loadOwnerTerminals = loadOwnerTerminals;
+window.loadStaffActivityLog = loadStaffActivityLog;
+window.handleDeskModeChipClick = handleDeskModeChipClick;
+window.mutateQueueAtomic = mutateQueueAtomic;
+window.persistHistoryItemToSubcollection = persistHistoryItemToSubcollection;
+window.hashStaffPasscode = hashStaffPasscode;
+window.SafeStorage = SafeStorage;
+window.resetMyTicketView = resetMyTicketView;
+
+/* ==========================================================================
+   Progressive Web App (PWA) & Tablet Standalone Logic
+   ========================================================================== */
+let deferredPwaPrompt = null;
+
+function isPwaStandalone() {
+  const isIosStandalone = window.navigator && window.navigator.standalone === true;
+  const isDisplayStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+  return Boolean(isIosStandalone || isDisplayStandalone);
+}
+
+function isIosOrIpad() {
+  const userAgent = (window.navigator && window.navigator.userAgent) ? window.navigator.userAgent.toLowerCase() : "";
+  const isIos = /iphone|ipad|ipod/.test(userAgent);
+  const isMacTouch = /macintosh/.test(userAgent) && (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  return Boolean(isIos || isMacTouch);
+}
+
+function showPwaInstallPrompts(show) {
+  if (isPwaStandalone()) {
+    document.body.classList.add("pwa-standalone");
+    show = false;
+  }
+
+  const headerBtn = document.getElementById("pwa-install-header-btn");
+  const deskBtn = document.getElementById("desk-pwa-install-btn");
+  const menuBtn = document.getElementById("menu-pwa-install");
+  const mobileBtn = document.getElementById("mobile-item-pwa-install");
+
+  const displayStyle = show ? "inline-flex" : "none";
+  if (headerBtn) headerBtn.style.display = displayStyle;
+  if (deskBtn) deskBtn.style.display = displayStyle;
+  if (menuBtn) menuBtn.style.display = show ? "flex" : "none";
+  if (mobileBtn) mobileBtn.style.display = show ? "flex" : "none";
+}
+
+function initPwaSupport() {
+  // 1. Detect if already running standalone
+  if (isPwaStandalone()) {
+    document.body.classList.add("pwa-standalone");
+    showPwaInstallPrompts(false);
+    return;
+  }
+
+  // 2. Standard recommendation: Non-standalone browsers make Front Desk pill & menu tools accessible
+  showPwaInstallPrompts(true);
+
+  // 3. Catch browser install prompt on Android, Chrome, Edge & Desktop
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    showPwaInstallPrompts(true);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPwaPrompt = null;
+    document.body.classList.add("pwa-standalone");
+    showPwaInstallPrompts(false);
+    if (typeof showToast === "function") {
+      showToast("🎉 WaitLink Terminal installed to your home screen!");
+    }
+  });
+
+  // 4. Register Service Worker for offline shell and fast launches
+  if ("serviceWorker" in navigator && (window.location.protocol === "https:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] WaitLink Service Worker active (Scope:", reg.scope, ")");
+        })
+        .catch((err) => {
+          console.warn("[PWA] Service Worker registration note:", err);
+        });
+    });
+  }
+}
+
+function triggerPwaInstall() {
+  const modal = document.getElementById("pwa-install-modal");
+  const iosBox = document.getElementById("pwa-ios-instructions");
+  const directBox = document.getElementById("pwa-direct-install-box");
+  const desktopBox = document.getElementById("pwa-desktop-instructions");
+
+  if (!modal) return;
+
+  if (deferredPwaPrompt) {
+    if (directBox) directBox.style.display = "block";
+    if (iosBox) iosBox.style.display = "none";
+    if (desktopBox) desktopBox.style.display = "none";
+  } else if (isIosOrIpad()) {
+    if (iosBox) iosBox.style.display = "block";
+    if (directBox) directBox.style.display = "none";
+    if (desktopBox) desktopBox.style.display = "none";
+  } else {
+    // Desktop Chrome/Edge/Firefox/Safari where prompt has not fired yet
+    if (desktopBox) desktopBox.style.display = "block";
+    if (iosBox) iosBox.style.display = "none";
+    if (directBox) directBox.style.display = "none";
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function executePwaInstall() {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    deferredPwaPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === "accepted") {
+        console.log("[PWA] User accepted the installation");
+        closePwaInstallModal();
+      }
+      deferredPwaPrompt = null;
+    });
+  } else {
+    closePwaInstallModal();
+  }
+}
+
+function closePwaInstallModal() {
+  const modal = document.getElementById("pwa-install-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.isPwaStandalone = isPwaStandalone;
+window.isIosOrIpad = isIosOrIpad;
+window.initPwaSupport = initPwaSupport;
+window.triggerPwaInstall = triggerPwaInstall;
+window.executePwaInstall = executePwaInstall;
+window.closePwaInstallModal = closePwaInstallModal;
+window.WAITLINK_PRODUCTION_DOMAIN = WAITLINK_PRODUCTION_DOMAIN;
+window.WAITLINK_FALLBACK_DOMAIN = WAITLINK_FALLBACK_DOMAIN;
+window.getPublicFallbackUrl = getPublicFallbackUrl;
+
+// SuperAdmin Revenue Metrics & Account 360 Global Exports
+window.formatCurrencyUsd = formatCurrencyUsd;
+window.aggregateRevenueAccounts = aggregateRevenueAccounts;
+window.renderSuperAdminRevenuePanel = renderSuperAdminRevenuePanel;
+window.filterRevenueAccountsTable = filterRevenueAccountsTable;
+window.openAccount360Drawer = openAccount360Drawer;
+window.closeAccount360Drawer = closeAccount360Drawer;
+window.jumpToAccountPrimaryShop = jumpToAccountPrimaryShop;
+window.emailAccountOwner = emailAccountOwner;
+window.grantCourtesySmsCreditsToAccount = grantCourtesySmsCreditsToAccount;
+window.openAccountTierOverrideModal = openAccountTierOverrideModal;
+window.exportRevenueMetricsCsv = exportRevenueMetricsCsv;
+
+// =========================================================================
+// WAITLINK CORE UNIFIED SYSTEM NAMESPACE
+// Provides structured subsystem access while preserving legacy top-level bindings
+// =========================================================================
+window.WaitLink = {
+  version: "4.8.0",
+  state: state,
+  QueueEngine: {
+    mutateQueueAtomic,
+    addQueueItemAtomic,
+    callCustomer,
+    cancelCustomer,
+    requeueCustomer,
+    requeueActiveCustomerToEnd,
+    reportRunningLate
+  },
+  Security: {
+    hashStaffPasscode,
+    sha256,
+    loginAsStaff,
+    staffSignOut,
+    promptStaffPinSwitch,
+    checkStaffAutoLogin
+  },
+  Storage: {
+    saveData,
+    saveConfig,
+    persistHistoryItemToSubcollection,
+    SafeStorage
+  },
+  Dialogs: {
+    showAlertDialog,
+    showConfirmDialog,
+    showPromptDialog,
+    showToast
+  },
+  Audio: {
+    playFrontDeskChime,
+    toggleSoundAlerts
+  },
+  PWA: {
+    isPwaStandalone,
+    isIosOrIpad,
+    initPwaSupport,
+    triggerPwaInstall,
+    executePwaInstall,
+    closePwaInstallModal
+  },
+  Revenue: {
+    formatCurrencyUsd,
+    aggregateRevenueAccounts,
+    renderSuperAdminRevenuePanel,
+    filterRevenueAccountsTable,
+    openAccount360Drawer,
+    closeAccount360Drawer,
+    jumpToAccountPrimaryShop,
+    emailAccountOwner,
+    grantCourtesySmsCreditsToAccount,
+    openAccountTierOverrideModal,
+    exportRevenueMetricsCsv
+  },
+  Security: {
+    generateRollingTokenSync,
+    isRollingTokenValid,
+    calculateHaversineDistanceMeters,
+    startRollingQrKioskLoop,
+    stopRollingQrKioskLoop,
+    captureStoreGpsLocation,
+    validateCustomerSecurityAccess,
+    dismissSecurityBanner,
+    savePlatformSecurityConfig,
+    loadPlatformSecurityConfigUI,
+    initSecurityConfigRealtimeSync,
+    handleOwnerToggleRollingQr,
+    handleOwnerToggleGpsProximity
+  }
+};
+
+if (typeof window !== "undefined") {
+  window.generateRollingTokenSync = generateRollingTokenSync;
+  window.isRollingTokenValid = isRollingTokenValid;
+  window.calculateHaversineDistanceMeters = calculateHaversineDistanceMeters;
+  window.startRollingQrKioskLoop = startRollingQrKioskLoop;
+  window.stopRollingQrKioskLoop = stopRollingQrKioskLoop;
+  window.captureStoreGpsLocation = captureStoreGpsLocation;
+  window.validateCustomerSecurityAccess = validateCustomerSecurityAccess;
+  window.dismissSecurityBanner = dismissSecurityBanner;
+  window.savePlatformSecurityConfig = savePlatformSecurityConfig;
+  window.handleOwnerToggleRollingQr = handleOwnerToggleRollingQr;
+  window.handleOwnerToggleGpsProximity = handleOwnerToggleGpsProximity;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    formatCurrencyUsd,
+    aggregateRevenueAccounts,
+    renderSuperAdminRevenuePanel,
+    filterRevenueAccountsTable,
+    openAccount360Drawer,
+    closeAccount360Drawer,
+    exportRevenueMetricsCsv,
+    generateRollingTokenSync,
+    isRollingTokenValid,
+    calculateHaversineDistanceMeters,
+    validateCustomerSecurityAccess,
+    savePlatformSecurityConfig
+  };
+}
+
+        <div class="terminal-url-bar">
+          <span class="terminal-url-text">${escapeHtml(stationUrl)}</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyStaffStationLink('${escapeHtml(shopSlug)}', '${escapeHtml(staff.username)}')" style="flex-shrink: 0;">
+            📋 Copy Link
+          </button>
+        </div>
+
+        <div class="terminal-tip-box">
+          💡 <strong>iPad Setup Guide:</strong> Open this URL in Safari on your front desk iPad &rarr; Tap the Share button &rarr; Tap <strong>"Add to Home Screen"</strong> for a full-screen, 1-tap counter app.
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          ${stationUrl ? `<a href="${escapeHtml(stationUrl)}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; text-align: center; text-decoration: none; padding: 0.6rem;">🚀 Open Station</a>` : `<button type="button" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="copyStaffStationLink('${escapeHtml(shopSlug)}', '${escapeHtml(staff.username)}')">📋 Copy Station Link</button>`}
+        </div>
+      </div >
+  `;
+  }).join("");
+
+  // Render QR codes
+  setTimeout(() => {
+    staffList.forEach((_, idx) => {
+      const safeId = "term_qr_" + idx;
+      const el = document.getElementById(safeId);
+      if (el) {
+        const url = el.getAttribute("data-url");
+        el.innerHTML = "";
+        if (!url) {
+          el.innerHTML = `< div style = "font-size: 0.75rem; color: var(--text-muted); padding: 1rem;" > Copy the station link to create this code.</div > `;
+          return;
+        }
+        let rendered = false;
+        if (window.QRCode) {
+          try {
+            new QRCode(el, {
+              text: url,
+              width: 140,
+              height: 140,
+              colorDark: "#090d16",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+            if (el.children && el.children.length > 0) rendered = true;
+          } catch (e) {
+            console.warn("QRCode error:", e);
+          }
+        }
+        if (!rendered) {
+          el.innerHTML = `< img src = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}" alt = "Station QR" style = "width:140px; height:140px; border-radius:6px;" /> `;
+        }
+      }
+    });
+  }, 50);
+}
+
+// Render Recent Staff Activity Timeline
+function loadStaffActivityLog() {
+  const container = document.getElementById("owner-staff-activity-timeline");
+  if (!container) return;
+
+  const history = state.history || [];
+  if (history.length === 0) {
+    container.innerHTML = `< div style = "text-align: center; padding: 1.5rem; color: var(--text-muted);" > No activity logged yet today.Completed customer visits will appear here.</div > `;
+    return;
+  }
+
+  container.innerHTML = history.slice(0, 15).map(item => {
+    const timeStr = item.calledAt ? new Date(item.calledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (item.checkedInAt ? new Date(item.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--');
+    const isCancelled = item.status === "cancelled";
+    const actionBadge = isCancelled 
+      ? `< span style = "color: #f43f5e; font-weight: 700;" >✕ Cancelled</span > ` 
+      : `< span style = "color: #10b981; font-weight: 700;" >✓ Served</span > `;
+    
+    const staffActor = item.calledBy || item.completedBy || item.cancelledBy || item.checkedInBy || "Front Desk Staff";
+
+    return `
+  < div style = "display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px;" >
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.1rem;">${isCancelled ? '❌' : '📞'}</span>
+          <div>
+            <div><strong>${escapeHtml(item.customerName || 'Customer')}</strong> ${actionBadge}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Staff: <strong style="color: #38bdf8;">${escapeHtml(staffActor)}</strong> &bull; Waited: ${item.waitDurationMin || 0}m</div>
+          </div>
+        </div>
+        <div style="font-family: monospace; font-size: 0.78rem; color: var(--text-muted);">${timeStr}</div>
+      </div >
+  `;
   }).join("");
 }
 
