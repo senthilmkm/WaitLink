@@ -228,8 +228,7 @@ service cloud.firestore {
           'queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin',
           'monthlyCheckinCount', 'monthlyCheckinPeriod'
         ]);
-      allow update: if shopIsDemo(shopId) && isValidPublicShopUpdate();
-      allow update: if resource.data.isDemoShop == true && isValidPublicShopUpdate();
+      allow update: if isValidPublicShopUpdate();
 
       // Delete shop: SuperAdmin or verified Shop Owner
       allow delete: if isSuperAdmin() || isShopOwner(resource.data);

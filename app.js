@@ -1562,6 +1562,9 @@ function subscribeFirestore(forceResubscribe = false) {
           const isNotInHistory = !Array.isArray(data.history) || !data.history.some(h => h.id === state.myTicket.id);
           if (isRecentlyCreated && isNotInHistory) {
             mergedQueue.push(state.myTicket);
+          } else if (!isNotInHistory) {
+            state.myTicket = null;
+            SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
           }
         }
         const currentIds = new Set(mergedQueue.map(q => q.id));
@@ -1680,6 +1683,9 @@ function subscribeFirestore(forceResubscribe = false) {
                   const isNotInHistory = !Array.isArray(data.history) || !data.history.some(h => h.id === state.myTicket.id);
                   if (isRecentlyCreated && isNotInHistory) {
                     mergedFallbackQueue.push(state.myTicket);
+                  } else if (!isNotInHistory) {
+                    state.myTicket = null;
+                    SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
                   }
                 }
                 state.queue = mergedFallbackQueue;
@@ -2434,7 +2440,7 @@ async function mutateQueueAtomic(mutatorFn) {
 
       const mutation = mutatorFn(serverQueue, serverHistory);
       if (!mutation) {
-        return { aborted: true };
+        return { aborted: true, currentQueue: serverQueue, currentHistory: serverHistory };
       }
 
       const updatedQueue = Array.isArray(mutation.queue) ? mutation.queue : serverQueue;
@@ -2473,7 +2479,18 @@ async function mutateQueueAtomic(mutatorFn) {
       renderAll();
       return { success: true, ...result };
     } else {
-      return { success: false, aborted: true };
+      if (result && Array.isArray(result.currentQueue)) {
+        state.queue = result.currentQueue;
+        const { queueKey } = getStorageKeys();
+        SafeStorage.set(queueKey, state.queue);
+      }
+      if (result && Array.isArray(result.currentHistory)) {
+        state.history = result.currentHistory;
+        const { historyKey } = getStorageKeys();
+        SafeStorage.set(historyKey, state.history);
+      }
+      renderAll();
+      return { success: false, aborted: true, currentQueue: result ? result.currentQueue : null, currentHistory: result ? result.currentHistory : null };
     }
   } catch (txErr) {
     console.warn("Atomic queue transaction warning, applying optimistic local fallback:", txErr);
@@ -3109,7 +3126,16 @@ async function callCustomer(id) {
 
   if (!mutationResult.success) {
     if (mutationResult.aborted) {
-      showToast("⚠️ Notice: This customer was already called or removed by another counter station.");
+      state.queue = state.queue.filter(item => item.id !== id);
+      if (state.myTicket && state.myTicket.id === id) {
+        state.myTicket = null;
+        SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+      }
+      const { queueKey } = getStorageKeys();
+      SafeStorage.set(queueKey, state.queue);
+      renderAll();
+      const custName = (localItem && localItem.customerName) ? localItem.customerName : "This customer";
+      showToast(`⚠️ Notice: "${custName}" was already called or removed by another counter station.`);
     }
     return;
   }
@@ -3247,6 +3273,14 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
       showToast(`Cancelled ${cancelledRecordName}`);
     }
   } else if (mutationResult.aborted) {
+    state.queue = state.queue.filter(item => item.id !== id);
+    if (state.myTicket && state.myTicket.id === id) {
+      state.myTicket = null;
+      SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+    }
+    const { queueKey } = getStorageKeys();
+    SafeStorage.set(queueKey, state.queue);
+    renderAll();
     showToast("⚠️ Visit was already cancelled or removed.");
   }
 }
@@ -13562,10 +13596,25 @@ function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
       if (!doc.exists) {
         transaction.set(shopRef, { queue: [newItem], updatedAt: Date.now() }, { merge: true });
       } else {
-        const currentQueue = doc.data().queue || [];
+        const data = doc.data() || {};
+        const currentQueue = Array.isArray(data.queue) ? [...data.queue] : [];
         if (!currentQueue.some(q => q.id === newItem.id)) {
           currentQueue.push(newItem);
-          transaction.update(shopRef, { queue: currentQueue, updatedAt: Date.now() });
+          const updatePayload = {
+            queue: currentQueue,
+            updatedAt: Date.now()
+          };
+          const period = new Date().toISOString().slice(0, 7);
+          const prevPeriod = data.monthlyCheckinPeriod || "";
+          const prevCount = (typeof data.monthlyCheckinCount === "number" && Number.isInteger(data.monthlyCheckinCount)) ? data.monthlyCheckinCount : 0;
+          const nextCount = (period === prevPeriod) ? (prevCount + 1) : 1;
+          const isPaid = (data.planPrice >= 15) || (data.subscriptionStatus === "active") || (data.subscriptionStatus === "trialing");
+          const isDemo = (state.config.slug === "main-st-barbers") || String(state.config.slug).startsWith("demo-") || data.isDemoShop === true;
+          if (!isPaid && !isDemo) {
+            updatePayload.monthlyCheckinPeriod = period;
+            updatePayload.monthlyCheckinCount = nextCount;
+          }
+          transaction.update(shopRef, updatePayload);
         }
       }
     }).catch(err => {
@@ -13670,6 +13719,12 @@ async function requeueActiveCustomerToEnd(id) {
 
   if (mutationResult.success) {
     showToast(`⬇️ Moved "${item.customerName}" to end of line.`);
+  } else if (mutationResult.aborted) {
+    state.queue = state.queue.filter(q => q.id !== id);
+    const { queueKey } = getStorageKeys();
+    SafeStorage.set(queueKey, state.queue);
+    renderAll();
+    showToast(`⚠️ Notice: "${item.customerName}" is no longer in the active waiting line.`);
   }
 }
 
