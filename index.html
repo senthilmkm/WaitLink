@@ -223,7 +223,7 @@
                 <span>🏛️ System Architecture</span>
               </a>
               <button class="dropdown-item" id="item-main-st-demo" onclick="launchDemoMode(); closeAllDropdowns();">
-                <span>🎮 Main St Barbers Sandbox</span>
+                <span>🎮 Try Main St Barbers Demo</span>
               </button>
               <div class="dropdown-divider"></div>
             </div>
@@ -395,7 +395,7 @@
   <!-- Live Demo Mode Announcement Banner -->
   <div id="demo-mode-banner" class="demo-mode-banner hidden">
     <div class="demo-banner-content">
-      <span class="demo-badge">🎮 LIVE DEMO SANDBOX</span>
+      <span class="demo-badge">🎮 LIVE DEMO</span>
       <span id="demo-banner-text">You are exploring <strong>Main St Barbers</strong>. Test checking in, calling customers, or scanning the lobby QR code!</span>
     </div>
     <div class="demo-banner-actions">
@@ -406,14 +406,16 @@
   <!-- Main Application Container -->
   <main class="main-content">
 
-    <!-- VIEW 0: PRODUCT OVERVIEW & LANDING HERO -->
+    <!-- VIEW 0: PRODUCT OVERVIEW & HOME SCREEN -->
     <section id="view-home" class="view-panel active">
       
-      <!-- Hero Header Section -->
-      <div class="landing-hero">
+      <!-- ========================================================================= -->
+      <!-- A. OWNER DASHBOARD (Shown when a Shop Owner is logged in / has active shop) -->
+      <!-- ========================================================================= -->
+      <div id="home-owner-dashboard" class="home-owner-hub hidden">
         
-        <!-- Active Subscription Banner on Home Screen -->
-        <div id="home-active-subscription-banner" class="hidden" style="margin-bottom: 1.5rem; padding: 0.85rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+        <!-- Active Subscription Banner on Home Screen (Preserved for paid tiers) -->
+        <div id="home-active-subscription-banner" class="hidden" style="padding: 0.85rem 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <span style="font-size: 1.25rem;" id="home-tier-icon">💎</span>
             <div style="text-align: left;">
@@ -424,99 +426,230 @@
           <button class="btn btn-secondary btn-sm" onclick="openUpgradeModal()" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">Manage Plan ⚙️</button>
         </div>
 
-        <div class="hero-badge">🚀 Zero-Friction Walk-In Queue SaaS</div>
-        <h1 class="hero-title">Eliminate Walk-Away Customer Loss During Peak Rushes.</h1>
-        <p class="hero-subtitle">
-          The 1-tap live waitlist tracker for barbershops, clinics, salons, and cafes. No app downloads or account creation required for customers.
-        </p>
+        <!-- Welcome & Quick Status Header -->
+        <div class="owner-hub-header">
+          <div class="owner-hub-title-block">
+            <span class="owner-hub-shop-icon" id="hub-shop-icon">💈</span>
+            <div>
+              <div class="owner-hub-greeting">Shop Dashboard</div>
+              <h1 class="owner-hub-shop-name" id="hub-shop-name">Main St Barbers</h1>
+            </div>
+          </div>
+          <div class="owner-hub-status-bar">
+            <span class="owner-hub-status-pill open" id="hub-status-pill">
+              <span class="pulse-dot"></span> <span id="hub-status-text">Open &bull; Accepting Walk-Ins</span>
+            </span>
+            <span class="owner-hub-tier-badge" id="hub-tier-badge" onclick="openUpgradeModal()">
+              <span>⭐</span> <span id="hub-tier-text">Starter Plan</span>
+            </span>
+          </div>
+        </div>
 
-        <!-- Rich Hero Launcher Cards -->
-        <div class="hero-cta-cards">
+        <!-- 4 Large, Clear Primary Action Tiles -->
+        <div class="owner-hub-tiles-grid">
           
-          <div class="hero-card hero-card-demo" onclick="launchDemoMode()">
-            <div class="hero-card-icon">🎮</div>
-            <div class="hero-card-body">
-              <h3>Try Live Demo Sandbox</h3>
-              <p>Instantly explore Main St Barbers. Test checking in walk-in customers, calling them from the front desk, and inspecting real-time owner metrics.</p>
-              <span class="btn-hero-action">Launch Interactive Demo &rarr;</span>
+          <!-- Tile 1: Front Desk -->
+          <div class="hub-tile hub-tile-primary" onclick="switchView('desk')">
+            <div class="hub-tile-icon-box desk-icon-box">📋</div>
+            <div class="hub-tile-content">
+              <h3>Front Desk</h3>
+              <p>Check in walk-in customers, call who's next, and see who is waiting in line right now.</p>
+              <div class="hub-tile-metric">
+                <span class="hub-metric-num" id="hub-waiting-count">0</span>
+                <span class="hub-metric-lbl">waiting right now</span>
+              </div>
+            </div>
+            <span class="hub-tile-btn">Open Front Desk &rarr;</span>
+          </div>
+
+          <!-- Tile 2: Window QR Poster -->
+          <div class="hub-tile" onclick="switchView('poster')">
+            <div class="hub-tile-icon-box poster-icon-box">🖨️</div>
+            <div class="hub-tile-content">
+              <h3>Window QR Poster</h3>
+              <p>Ready-to-print flyer with your shop's QR code. Hang it on your door so walk-ins can scan and wait anywhere.</p>
+              <div class="hub-tile-tagline">
+                <span>📄 Ready for 8.5&times;11 print</span>
+              </div>
+            </div>
+            <span class="hub-tile-btn">View & Print Flyer &rarr;</span>
+          </div>
+
+          <!-- Tile 3: Customer Waitlist Link -->
+          <div class="hub-tile" onclick="copyPublicLink()">
+            <div class="hub-tile-icon-box link-icon-box">📲</div>
+            <div class="hub-tile-content">
+              <h3>Customer Waitlist Link</h3>
+              <p>Your live customer link. Share it on Instagram, your website, or Google Maps.</p>
+              <div class="hub-link-preview-box">
+                <code id="hub-shop-url-display">waitlink.app?s=main-st-barbers</code>
+              </div>
+            </div>
+            <div class="hub-tile-actions-row">
+              <span class="hub-tile-btn" onclick="event.stopPropagation(); copyPublicLink();">📋 Copy Link</span>
+              <span class="hub-tile-btn-secondary" onclick="event.stopPropagation(); switchView('public');">👁️ View as Customer</span>
             </div>
           </div>
 
-          <div class="hero-card hero-card-create" onclick="openCreateShopModal()">
-            <div class="hero-card-icon">⚡</div>
-            <div class="hero-card-body">
-              <h3>Create Your Free Shop Queue</h3>
-              <p>Set up your shop (e.g. Apex Barber Studio, City Clinic) and get your unique live queue URL and printable window QR poster in 10 seconds.</p>
-              <span class="btn-hero-action btn-accent-action">Launch Shop Waitlist &rarr;</span>
+          <!-- Tile 4: Shop Settings -->
+          <div class="hub-tile" onclick="switchView('owner')">
+            <div class="hub-tile-icon-box settings-icon-box">⚙️</div>
+            <div class="hub-tile-content">
+              <h3>Shop Settings</h3>
+              <p>Adjust your business hours, phone number, service menu prices, and automated text alerts.</p>
+              <div class="hub-tile-tagline">
+                <span>🕒 <span id="hub-hours-preview">Hours & Services</span></span>
+              </div>
+            </div>
+            <span class="hub-tile-btn">Edit Settings &rarr;</span>
+          </div>
+
+        </div>
+
+        <!-- Quick Today's Stats Bar -->
+        <div class="owner-hub-quick-stats">
+          <div class="hub-stat-item">
+            <span class="hub-stat-val" id="hub-stat-served">0</span>
+            <span class="hub-stat-lbl">Served Today</span>
+          </div>
+          <div class="hub-stat-divider"></div>
+          <div class="hub-stat-item">
+            <span class="hub-stat-val" id="hub-stat-waiting">0</span>
+            <span class="hub-stat-lbl">In Line Now</span>
+          </div>
+          <div class="hub-stat-divider"></div>
+          <div class="hub-stat-item">
+            <span class="hub-stat-val" id="hub-stat-estwait">~ 15m</span>
+            <span class="hub-stat-lbl">Estimated Wait</span>
+          </div>
+          <div class="hub-stat-divider"></div>
+          <div class="hub-stat-item" style="cursor: pointer;" onclick="switchView('owner')">
+            <span class="hub-stat-link">View Full Analytics &rarr;</span>
+          </div>
+        </div>
+
+        <!-- Switch / Create / Preview footer row -->
+        <div class="owner-hub-footer-row">
+          <button type="button" class="btn-text-sm" onclick="openCreateShopModal()" style="color: var(--primary); font-weight: 600;">+ Add Another Shop</button>
+          <span style="color: var(--text-muted);">&bull;</span>
+          <button type="button" class="btn-text-sm" onclick="toggleHomeMarketingView()" id="btn-toggle-marketing-view" style="color: var(--text-muted); font-weight: 500;">View Public Homepage</button>
+        </div>
+
+      </div>
+
+      <!-- ========================================================================= -->
+      <!-- B. CLEAN VISITOR LANDING (Shown to new visitors, prospective owners & guests) -->
+      <!-- ========================================================================= -->
+      <div id="home-visitor-landing" class="home-visitor-landing">
+        
+        <!-- Clean Hero Section -->
+        <div class="landing-hero clean-hero">
+          <div class="hero-badge">⏱️ Simple Walk-In Waitlist</div>
+          <h1 class="hero-title">Keep Your Waiting Line Organized.<br>Without The Crowded Lobby.</h1>
+          <p class="hero-subtitle">
+            Customers scan a QR code at your door to see their wait time. You text or call them when you're ready. Zero apps to download.
+          </p>
+
+          <!-- Simple 2-Button Hero Action Bar -->
+          <div class="hero-simple-actions">
+            <button class="btn btn-primary btn-hero-primary hero-card-create" onclick="openCreateShopModal()">
+              <span>⚡ Create Free Waitlist</span>
+              <span class="btn-subtext">Takes 10 seconds &bull; Free forever</span>
+            </button>
+            <button class="btn btn-secondary btn-hero-secondary hero-card-demo" onclick="launchDemoMode()">
+              <span>🎮 Try Live Demo</span>
+              <span class="btn-subtext">No signup required</span>
+            </button>
+          </div>
+
+          <!-- Industry Quick Badges -->
+          <div class="hero-industry-pills">
+            <span class="ind-pill">💈 Barbershops &amp; Salons</span>
+            <span class="ind-pill">🏥 Walk-In Clinics</span>
+            <span class="ind-pill">🚗 Auto Repair &amp; Detailing</span>
+            <span class="ind-pill">🐾 Pet Groomers</span>
+            <span class="ind-pill">🍽️ Walk-In Dining</span>
+          </div>
+        </div>
+
+        <!-- How It Works: 3 Dead-Simple Steps -->
+        <div class="how-it-works-card simplified-steps-card">
+          <h2 class="simplified-section-title">How It Works in 3 Simple Steps</h2>
+          <div class="steps-grid simplified-steps-grid">
+            
+            <div class="step-item simplified-step">
+              <div class="step-icon-circle">🖨️</div>
+              <span class="step-num-pill">Step 1</span>
+              <h4>Put Up Your QR Flyer</h4>
+              <p>Print your shop's flyer in 1 tap. Tape it to your front door, window, or check-in desk.</p>
+            </div>
+
+            <div class="step-item simplified-step">
+              <div class="step-icon-circle">📲</div>
+              <span class="step-num-pill">Step 2</span>
+              <h4>Customers Scan &amp; Wait Anywhere</h4>
+              <p>Customers scan with their phone camera to see their place in line. They can grab coffee or wait outside instead of packing your lobby.</p>
+            </div>
+
+            <div class="step-item simplified-step">
+              <div class="step-icon-circle">📞</div>
+              <span class="step-num-pill">Step 3</span>
+              <h4>Call or Text When Ready</h4>
+              <p>1-tap <strong>Serve Now</strong> from any phone, tablet, or PC to notify the customer their chair or bay is ready.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3 Big Everyday Benefits (Zero Jargon) -->
+        <div class="landing-features-section simplified-benefits-section">
+          <div class="section-title-center">
+            <h2>Why Business Owners Choose WaitLink</h2>
+            <p>Built for busy walk-in shops that just want something that works.</p>
+          </div>
+
+          <div class="features-grid simplified-benefits-grid">
+            <div class="feature-card simplified-benefit-card">
+              <div class="feature-icon">🛋️</div>
+              <h3>Calm, Peaceful Waiting Area</h3>
+              <p>Stop losing customers who see a full lobby and walk away. Give them a live countdown so they know exactly when to return.</p>
+            </div>
+
+            <div class="feature-card simplified-benefit-card">
+              <div class="feature-icon">📱</div>
+              <h3>Zero App Downloads for Customers</h3>
+              <p>Nobody wants to download an app or create an account just to get a haircut or oil change. WaitLink opens instantly in any phone browser.</p>
+            </div>
+
+            <div class="feature-card simplified-benefit-card">
+              <div class="feature-icon">🔒</div>
+              <h3>Private &amp; Secure</h3>
+              <p>Customer phone numbers are kept private and never sold. Name masking protects patient privacy for healthcare and wellness clinics.</p>
             </div>
           </div>
 
-        </div>
-      </div>
-
-      <!-- How It Works Step-by-Step -->
-      <div class="how-it-works-card">
-        <h3>How WaitLink Works in 4 Easy Steps</h3>
-        <div class="steps-grid">
-          <div class="step-item">
-            <span class="step-num">1</span>
-            <h4>Set Up Shop Profile</h4>
-            <p>Set up your shop name, custom link slug, and optional logo in 10 seconds.</p>
-          </div>
-          <div class="step-item">
-            <span class="step-num">2</span>
-            <h4>Print Window Poster</h4>
-            <p>Generate & print your shop's high-resolution QR poster for your entrance window.</p>
-          </div>
-          <div class="step-item">
-            <span class="step-num">3</span>
-            <h4>Customers Scan & Wait</h4>
-            <p>Walk-ins scan the QR code to check in on their phone browser & track live wait times.</p>
-          </div>
-          <div class="step-item">
-            <span class="step-num">4</span>
-            <h4>Staff Call 1-Tap</h4>
-            <p>Front desk staff call the next customer with 1-tap real-time sync across all devices!</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Core Features Section -->
-      <div class="landing-features-section">
-        <div class="section-title-center">
-          <h2>Built for Maximum Lobby Conversion & Zero Friction</h2>
-          <p>Keep your waiting area calm and give walk-in customers total peace of mind.</p>
-        </div>
-
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">📲</div>
-            <h3>1. Zero-Barrier QR Check-In</h3>
-            <p>Customers scan your lobby poster, type their name, and immediately view their live line position on their phone browser. Zero app downloads or SMS hassle.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🏥</div>
-            <h3>2. Clinical & Healthcare Privacy Mode</h3>
-            <p>Purpose-built for urgent care centers, medical walk-ins, and wellness practices. Auto-masks patient full names (e.g. Jonathan E.), masks phone numbers by default on front desk screen with staff tap-to-reveal toggle, generates anonymous patient ticket IDs (Patient #104), and hides sensitive medical service names on public customer screens.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📊</div>
-            <h3>3. Owner Business Intelligence & CSV Export</h3>
-            <p>Track Walk-Away Loss % (cancellations), Peak Rush Windows, Staff Handling Speed (Visits/Hr), and Lobby Load metrics with 1-click RFC 4180 CSV spreadsheet export.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🛡️</div>
-            <h3>4. History Retention & Automated PII Masking</h3>
-            <p>Tier-governed data lifecycle (7d / 90d / 365d). Automatically anonymizes customer phone numbers and last names after 30 days while preserving 100% of operational throughput analytics.</p>
+          <div style="text-align: center; margin-top: 2rem;">
+            <a href="pricing.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-weight: 600; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+              <span>💎 View Free &amp; Pro Pricing Plans</span>
+              <span style="font-size: 1.1rem;">&rarr;</span>
+            </a>
           </div>
         </div>
 
-        <div style="text-align: center; margin-top: 2.5rem;">
-          <a href="comparison.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-weight: 600; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
-            <span>🚀 View Feature & Value Comparison Matrix</span>
-            <span style="font-size: 1.1rem;">→</span>
-          </a>
+        <!-- Bottom Action CTA Banner -->
+        <div class="landing-bottom-cta">
+          <h2>Ready to set up your waitlist?</h2>
+          <p>Get your printable flyer and live waitlist link in 10 seconds.</p>
+          <div class="hero-simple-actions" style="justify-content: center; margin-top: 1.25rem;">
+            <button class="btn btn-primary btn-hero-primary" onclick="openCreateShopModal()">
+              <span>⚡ Create Free Shop Waitlist</span>
+            </button>
+            <button class="btn btn-secondary btn-hero-secondary hero-card-demo" onclick="launchDemoMode()">
+              <span>🎮 Try Demo First</span>
+            </button>
+          </div>
         </div>
+
       </div>
 
     </section>
@@ -650,7 +783,7 @@
         </summary>
         <div class="section-header activity-header">
           <h2>Customer Visit History Log</h2>
-          <button id="desk-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">Export CSV <span id="desk-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
+          <button id="desk-btn-export-csv" class="btn-text btn-export" onclick="exportHistoryCSV()">Export Excel / CSV <span id="desk-csv-pro-badge" class="hidden" style="font-size: 0.65rem; background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.4);">PRO</span></button>
         </div>
 
       <!-- Front Desk Retention & Privacy Notice Banner -->
@@ -764,7 +897,7 @@
             <div class="metric-caption" id="owner-peakhour-caption">Highest traffic hour</div>
           </div>
           <div class="metric-card" id="card-metric-throughput">
-            <div class="metric-label">Staff Speed (Throughput)</div>
+            <div class="metric-label">Staff Service Speed</div>
             <div class="metric-value" id="owner-throughput">--</div>
             <div class="metric-caption" id="owner-throughput-caption">Visits served per hour</div>
           </div>
@@ -827,7 +960,7 @@
                 </div>
                 
                 <div class="form-group">
-                  <label for="owner-input-slug">Shareable Link Slug</label>
+                  <label for="owner-input-slug">Your Shop Web Address</label>
                   <div class="slug-input-wrapper">
                     <span class="slug-prefix">waitlink.app?s=</span>
                     <input type="text" id="owner-input-slug" value="main-st-barbers" oninput="this.value = slugify(this.value); updateServeNowTemplatePreview();">

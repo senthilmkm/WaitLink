@@ -3261,7 +3261,125 @@ function renderAll() {
   renderSubscriptionBadges();
   renderSmsWalletUI();
   populateOwnerServicesUI();
+  renderHomeView();
 }
+
+// Render Simplified Owner Hub vs Clean Visitor Landing on Home Screen
+function renderHomeView() {
+  const ownerHub = document.getElementById("home-owner-dashboard");
+  const visitorLanding = document.getElementById("home-visitor-landing");
+  if (!ownerHub || !visitorLanding) return;
+
+  const isDemo = typeof isDemoScreenOrGuestDemo === "function" ? isDemoScreenOrGuestDemo() : false;
+  const isAuthenticated = !!state.user;
+  const isStaff = !!state.isStaffSession;
+  const userEmailClean = (state.user && state.user.email ? state.user.email : "").trim().toLowerCase();
+  const configOwnerEmail = (state.config && state.config.ownerEmail ? state.config.ownerEmail : "").trim().toLowerCase();
+
+  const isOwner = (isAuthenticated && !isDemo && !isStaff) && (
+    (typeof isSuperAdmin === "function" && isSuperAdmin()) ||
+    (configOwnerEmail && userEmailClean === configOwnerEmail) ||
+    (Array.isArray(state.registeredShops) && state.registeredShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
+    (Array.isArray(state.ownerDirectoryShops) && state.ownerDirectoryShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
+    (Array.isArray(state.myShops) && state.myShops.some(s => (s.slug === state.config.slug || s.id === state.config.slug) && (s.ownerEmail || '').toLowerCase() === userEmailClean)) ||
+    (isAuthenticated && state.config.slug !== "main-st-barbers" && !state.config.slug.startsWith("demo-"))
+  );
+
+  if (isOwner && !state.forceShowMarketingHome) {
+    ownerHub.classList.remove("hidden");
+    ownerHub.style.display = "";
+    visitorLanding.classList.add("hidden");
+    visitorLanding.style.display = "none";
+
+    // Shop Name
+    const nameEl = document.getElementById("hub-shop-name");
+    if (nameEl) nameEl.textContent = state.config.shopName || "My Shop";
+
+    // Shop Icon
+    const iconEl = document.getElementById("hub-shop-icon");
+    if (iconEl) {
+      const indKey = typeof detectIndustryFromText === "function" ? detectIndustryFromText(state.config.shopName || state.config.slug || "") : "general";
+      const icons = { barbershop: "💈", salon: "💇", clinic: "🏥", autoshop: "🚗", petgrooming: "🐾", restaurant: "🍽️" };
+      iconEl.textContent = icons[indKey] || "🏢";
+    }
+
+    // Counts
+    const waitCount = Array.isArray(state.queue) ? state.queue.filter(q => q.status === "waiting").length : 0;
+    const servedCount = Array.isArray(state.history) ? state.history.filter(h => h.status === "served").length : 0;
+
+    const waitCountEl = document.getElementById("hub-waiting-count");
+    if (waitCountEl) waitCountEl.textContent = waitCount;
+
+    const statWaitEl = document.getElementById("hub-stat-waiting");
+    if (statWaitEl) statWaitEl.textContent = waitCount;
+
+    const statServedEl = document.getElementById("hub-stat-served");
+    if (statServedEl) statServedEl.textContent = servedCount;
+
+    const statEstEl = document.getElementById("hub-stat-estwait");
+    if (statEstEl) {
+      const baseMin = state.config.baselineMinutes || state.config.estBaseWaitMin || 20;
+      const waitMin = waitCount > 0 ? (waitCount * baseMin) : 0;
+      statEstEl.textContent = waitMin > 0 ? `~ ${waitMin}m` : "No wait";
+    }
+
+    // URL display
+    const urlEl = document.getElementById("hub-shop-url-display");
+    if (urlEl) {
+      urlEl.textContent = `waitlink.app?s=${state.config.slug || 'my-shop'}`;
+    }
+
+    // Tier badge
+    const tierTextEl = document.getElementById("hub-tier-text");
+    if (tierTextEl) {
+      const planTitle = typeof getPlanTitle === "function" ? getPlanTitle() : "Starter Plan";
+      tierTextEl.textContent = planTitle || "Starter Plan";
+    }
+
+    // Hours preview
+    const hoursEl = document.getElementById("hub-hours-preview");
+    if (hoursEl) {
+      const hrs = state.config.hours;
+      if (typeof hrs === "string" && hrs.trim()) {
+        hoursEl.textContent = hrs;
+      } else if (hrs && typeof hrs === "object") {
+        hoursEl.textContent = "Custom Daily Schedule";
+      } else {
+        hoursEl.textContent = "Hours & Service Menu";
+      }
+    }
+
+    // Status pill
+    const statusPill = document.getElementById("hub-status-pill");
+    const statusText = document.getElementById("hub-status-text");
+    const isPaused = state.config.active === false || state.config.isPaused === true;
+    if (statusPill && statusText) {
+      if (isPaused) {
+        statusPill.className = "owner-hub-status-pill paused";
+        statusText.textContent = "Paused • Walk-Ins Closed";
+      } else {
+        statusPill.className = "owner-hub-status-pill open";
+        statusText.textContent = `Open • ${waitCount} Waiting`;
+      }
+    }
+  } else {
+    ownerHub.classList.add("hidden");
+    ownerHub.style.display = "none";
+    visitorLanding.classList.remove("hidden");
+    visitorLanding.style.display = "";
+  }
+}
+
+function toggleHomeMarketingView() {
+  state.forceShowMarketingHome = !state.forceShowMarketingHome;
+  renderHomeView();
+  const btn = document.getElementById("btn-toggle-marketing-view");
+  if (btn) {
+    btn.textContent = state.forceShowMarketingHome ? "← Return to Shop Dashboard" : "View Public Homepage";
+  }
+}
+window.renderHomeView = renderHomeView;
+window.toggleHomeMarketingView = toggleHomeMarketingView;
 
 function renderPublicContactBar() {
   const container = document.getElementById("public-contact-bar");
