@@ -89,7 +89,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=5.7">
+  <link rel="stylesheet" href="style.css?v=5.8">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -443,6 +443,22 @@
               <span>⭐</span> <span id="hub-tier-text">Starter Plan</span>
             </span>
           </div>
+        </div>
+
+        <!-- Today's Performance ROI Milestone Card -->
+        <div class="owner-hub-milestone-card" id="hub-today-milestone-card">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <span style="font-size: 1.35rem;" id="hub-milestone-icon">⭐</span>
+            <div>
+              <div style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">TODAY'S ACTIVITY</div>
+              <div style="font-size: 0.92rem; font-weight: 700; color: var(--text-main);" id="hub-milestone-text">
+                <span id="hub-milestone-served">0</span> Completed Visits &bull; <span id="hub-milestone-avg">--</span> Avg Wait &bull; <span id="hub-milestone-loss">0%</span> Cancellations
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchView('owner')" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
+            View Analytics &rarr;
+          </button>
         </div>
 
         <!-- 4 Large, Clear Primary Action Tiles -->
@@ -1591,8 +1607,8 @@
             </div>
 
             <div id="ticket-active-actions" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 0.8rem;">
-              <button class="btn btn-secondary btn-sm" onclick="copyMyTicketLink()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
-                🔗 Copy My Ticket Link
+              <button class="btn btn-secondary btn-sm" onclick="shareOrCopyMyTicket()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+                📲 Share Ticket with Party
               </button>
               <button class="btn-text-sm" onclick="cancelMyTicket()" style="font-size: 0.8rem; color: var(--text-muted);">
                 Leave Line
@@ -4140,6 +4156,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=9.6"></script>
+  <script src="app.js?v=9.7"></script>
 </body>
 </html>

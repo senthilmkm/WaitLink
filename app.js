@@ -1148,6 +1148,39 @@ function toggleSoundAlerts() {
   SafeStorage.set("waitlink_sound_enabled", state.soundEnabled);
 }
 
+function playCustomerTurnAlert() {
+  try {
+    if ("vibrate" in navigator && typeof navigator.vibrate === "function") {
+      navigator.vibrate([250, 100, 250, 100, 400]);
+    }
+  } catch (e) { }
+
+  try {
+    initAudioContext();
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => { });
+    }
+    const now = audioCtx.currentTime;
+    const freqs = [523.25, 659.25, 783.99, 1046.50];
+    freqs.forEach((freq, idx) => {
+      const startTime = now + (idx * 0.11);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.35, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.45);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.45);
+    });
+  } catch (e) {
+    console.warn("Customer alert audio notice:", e);
+  }
+}
+
 function updateSoundToggleUI() {
   const btn = document.getElementById("sound-toggle-btn");
   if (!btn) return;
@@ -2616,7 +2649,21 @@ function handleCheckIn(event) {
   showToast(`Checked in ${name}${selectedServiceObj ? ' (' + selectedServiceObj.name + ')' : ''}`);
 
   if (submitBtn) setTimeout(() => { submitBtn.disabled = false; }, 800);
+  if (input && (state.activeView === "desk" || state.currentView === "desk")) {
+    setTimeout(() => { try { input.focus(); } catch (e) { } }, 60);
+  }
 }
+
+function focusDeskCustomerInput() {
+  const input = document.getElementById("customer-name-input");
+  if (input) {
+    try {
+      input.focus();
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (e) { }
+  }
+}
+window.focusDeskCustomerInput = focusDeskCustomerInput;
 
 // ==========================================
 // TWILIO SMS INTEGRATION & NOTIFICATION ENGINE
@@ -3413,6 +3460,8 @@ function renderHomeView() {
         statusText.textContent = `Open • ${waitCount} Waiting`;
       }
     }
+
+    updateOwnerHubMilestone();
   } else {
     ownerHub.classList.add("hidden");
     ownerHub.style.display = "none";
@@ -3420,6 +3469,47 @@ function renderHomeView() {
     visitorLanding.style.display = "";
   }
 }
+
+function updateOwnerHubMilestone() {
+  const servedEl = document.getElementById("hub-milestone-served");
+  const avgEl = document.getElementById("hub-milestone-avg");
+  const lossEl = document.getElementById("hub-milestone-loss");
+  const iconEl = document.getElementById("hub-milestone-icon");
+  const textEl = document.getElementById("hub-milestone-text");
+  if (!servedEl || !textEl) return;
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const todayHistory = (Array.isArray(state.history) ? state.history : []).filter(h => (h.completedAt || h.checkedInAt || 0) >= startOfDay);
+  const served = todayHistory.filter(h => h.status === "completed" || h.status === "called" || h.status === "served").length;
+  const cancelled = todayHistory.filter(h => h.status === "cancelled" || h.status === "noshow").length;
+  const total = served + cancelled;
+  const lossPct = total > 0 ? Math.round((cancelled / total) * 100) : 0;
+
+  let avgWait = "--";
+  const servedWithWait = todayHistory.filter(h => (h.status === "completed" || h.status === "called" || h.status === "served") && (h.waitDurationMin || (h.completedAt && h.checkedInAt)));
+  if (servedWithWait.length > 0) {
+    const totalMin = servedWithWait.reduce((acc, h) => {
+      const m = h.waitDurationMin || Math.max(1, Math.round(((h.completedAt || Date.now()) - h.checkedInAt) / 60000));
+      return acc + m;
+    }, 0);
+    avgWait = Math.round(totalMin / servedWithWait.length) + "m";
+  }
+
+  if (servedEl) servedEl.textContent = served;
+  if (avgEl) avgEl.textContent = avgWait;
+  if (lossEl) lossEl.textContent = lossPct + "%";
+
+  const currentWaiting = Array.isArray(state.queue) ? state.queue.length : 0;
+  if (served > 0) {
+    if (iconEl) iconEl.textContent = "🎉";
+    textEl.innerHTML = `<strong>${served}</strong> ${served === 1 ? 'Customer' : 'Customers'} Served &bull; <strong>${avgWait}</strong> Avg Wait &bull; <strong>${lossPct}%</strong> Cancel Rate`;
+  } else {
+    if (iconEl) iconEl.textContent = "⭐";
+    textEl.innerHTML = `Ready for Today's Rush &bull; <strong>${currentWaiting}</strong> waiting right now`;
+  }
+}
+window.updateOwnerHubMilestone = updateOwnerHubMilestone;
 
 function toggleHomeMarketingView() {
   state.forceShowMarketingHome = !state.forceShowMarketingHome;
@@ -4699,10 +4789,27 @@ function renderQueue() {
   if (state.queue.length === 0) {
     queueContainer.className = "queue-grid";
     queueContainer.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">${isClinical ? '🏥' : '🛋️'}</div>
-        <h3>${isClinical ? 'No patients in waiting room right now' : 'No one in line right now'}</h3>
-        <p>${isClinical ? 'Enter a patient\'s name above and tap <strong>Check In Patient</strong> to start tracking wait time.' : 'Enter a customer\'s name above and tap <strong>Check In</strong> to start tracking wait time.'}</p>
+      <div class="empty-state" style="padding: 2.25rem 1.25rem; text-align: center;">
+        <div class="empty-icon" style="font-size: 2.5rem; margin-bottom: 0.65rem;">${isClinical ? '🏥' : '🎉'}</div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">
+          ${isClinical ? 'Waiting Room is Clear' : 'Lobby is Clear! All caught up.'}
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 440px; margin: 0 auto 1.15rem auto; line-height: 1.45;">
+          ${isClinical 
+            ? 'Ready for your next patient. Enter their name above to check them in, or share your QR check-in flyer.' 
+            : 'Ready for your next walk-in. Enter their name above to check them in, or share your storefront QR flyer.'}
+        </p>
+        <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="focusDeskCustomerInput()" style="font-weight: 700; gap: 0.35rem;">
+            <span>➕</span> <span>${isClinical ? 'Check In Patient' : 'Check In Customer'}</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchView('poster')" style="gap: 0.35rem;">
+            <span>🖨️</span> <span>Window Poster</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyPublicLink('desk')" style="gap: 0.35rem;">
+            <span>🔗</span> <span>Copy Public Link</span>
+          </button>
+        </div>
       </div>
     `;
     return;
@@ -5819,11 +5926,16 @@ function updateActiveTicketTimer() {
   if (queuePos !== -1) {
     if (badgeEl) badgeEl.style.display = "block";
     if (queuePos === 0) {
+      if (!state._hasAlertedNextUp) {
+        state._hasAlertedNextUp = true;
+        playCustomerTurnAlert();
+      }
       if (badgeEl) { badgeEl.textContent = "⚡ #1 YOU ARE NEXT UP!"; badgeEl.style.color = "#06b6d4"; }
       if (posEl) { posEl.textContent = "Head to the Front Desk"; posEl.style.color = "#06b6d4"; }
       if (subEl) subEl.textContent = "Staff is about to call your name!";
       if (ticketCard) ticketCard.style.border = "2px solid #06b6d4";
     } else {
+      state._hasAlertedNextUp = false;
       if (badgeEl) { badgeEl.textContent = "✅ YOU ARE IN LINE"; badgeEl.style.color = "#10b981"; }
       if (posEl) { posEl.textContent = `Position #${queuePos + 1} in line`; posEl.style.color = "#10b981"; }
       if (subEl) subEl.textContent = `${queuePos} ${queuePos === 1 ? 'person' : 'people'} ahead of you in line.`;
@@ -12498,6 +12610,18 @@ function toggleInlineCheckInForm(show) {
     return;
   }
 
+  // Returning customer reassurance guard: if customer already in line, direct them to live ticket
+  if (show && state.myTicket && Array.isArray(state.queue) && state.queue.some(q => q.id === state.myTicket.id)) {
+    const pos = state.queue.findIndex(q => q.id === state.myTicket.id) + 1;
+    showToast(`🎟️ You are already checked in (Position #${pos})! Here is your live ticket.`);
+    restoreActiveTicket();
+    const ticketCard = document.getElementById("public-active-ticket-card");
+    if (ticketCard) {
+      ticketCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    return;
+  }
+
   const btnContainer = document.getElementById("public-join-btn-container");
   const card = document.getElementById("public-inline-checkin-card");
   const nameInput = document.getElementById("inline-customer-name");
@@ -12961,6 +13085,28 @@ function copyMyTicketLink() {
     showToast("Ticket Link: " + ticketUrl);
   });
 }
+
+function shareOrCopyMyTicket() {
+  if (!state.myTicket) return;
+  const baseUrl = getPublicUrl();
+  const ticketUrl = `${baseUrl}&ticket=${state.myTicket.id}`;
+  const shopName = state.config.shopName || "WaitLink";
+
+  if (navigator.share) {
+    navigator.share({
+      title: `My Spot in Line at ${shopName}`,
+      text: `Track my live wait time and position in line at ${shopName}:`,
+      url: ticketUrl
+    }).catch(e => {
+      if (e && e.name === 'AbortError') return;
+      copyMyTicketLink();
+    });
+  } else {
+    copyMyTicketLink();
+  }
+}
+window.copyMyTicketLink = copyMyTicketLink;
+window.shareOrCopyMyTicket = shareOrCopyMyTicket;
 
 async function cancelMyTicket() {
   let ticketId = state.myTicket ? state.myTicket.id : null;
