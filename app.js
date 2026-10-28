@@ -542,6 +542,57 @@ function detectIndustryFromText(text) {
   return "general";
 }
 
+// Smart industry icon resolver (e.g. 🏥 for clinic, 💈 for barbershop, 🚗 for auto)
+function getShopIndustryIcon(shopName = "", slug = "") {
+  const isClinical = !!(state && state.config && state.config.clinicalPrivacyEnabled);
+  const text = (String(shopName || "") + " " + String(slug || "")).toLowerCase();
+  if (isClinical || /dental|clinic|doctor|urgent|care|physio|chiro|health|medical|optom|pediatric|dentist|stomada/.test(text)) {
+    return "🏥";
+  }
+  const indKey = detectIndustryFromText(text);
+  if (indKey === "clinic") return "🏥";
+  if (indKey === "auto") return "🚗";
+  if (indKey === "pet") return "🐾";
+  if (indKey === "restaurant") return "🍽️";
+  if (indKey === "repair") return "📱";
+  if (indKey === "tattoo") return "🎨";
+  if (indKey === "salon") {
+    return /barber/i.test(text) ? "💈" : "💇";
+  }
+  return "🏢";
+}
+
+function updateHeaderShopBadge(shopName, slug) {
+  const nameToUse = shopName || (state.config && state.config.shopName) || "My Shop";
+  const slugToUse = slug || (state.config && state.config.slug) || "";
+  setElText("header-shop-name", nameToUse);
+
+  const icon = getShopIndustryIcon(nameToUse, slugToUse);
+  const iconEl = document.getElementById("header-shop-icon") || document.querySelector(".shop-chip-icon");
+  if (iconEl) iconEl.textContent = icon;
+}
+
+// Clean elapsed wait time formatter (e.g. "12m 45s", "1h 24m", "11d ago")
+function formatElapsedWaitTime(checkedInAt, now = Date.now()) {
+  if (!checkedInAt) return "--";
+  const elapsedSec = Math.max(0, Math.floor((now - checkedInAt) / 1000));
+  const elapsedMin = Math.floor(elapsedSec / 60);
+  const secs = elapsedSec % 60;
+  if (elapsedMin < 60) {
+    return `${elapsedMin}m ${secs < 10 ? '0' : ''}${secs}s`;
+  }
+  const hours = Math.floor(elapsedMin / 60);
+  const remMins = elapsedMin % 60;
+  if (hours < 24) {
+    return `${hours}h ${remMins}m`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+window.getShopIndustryIcon = getShopIndustryIcon;
+window.updateHeaderShopBadge = updateHeaderShopBadge;
+window.formatElapsedWaitTime = formatElapsedWaitTime;
+
 // Tailored cold outreach email & DM generator for Option A
 function generateDemoPitch(shopName, industryKey, demoUrl) {
   const preset = DEMO_INDUSTRY_PRESETS[industryKey] || DEMO_INDUSTRY_PRESETS.general;
@@ -2000,12 +2051,12 @@ function updateConfigUI() {
   if (state.config.slug === "main-st-barbers" && state.user && !isSuperAdmin()) {
     const myShops = Array.isArray(state.registeredShops) ? state.registeredShops.filter(s => s.slug !== "main-st-barbers") : [];
     if (myShops.length > 0) {
-      setElText("header-shop-name", myShops[0].shopName || myShops[0].name);
+      updateHeaderShopBadge(myShops[0].shopName || myShops[0].name, myShops[0].slug);
     } else {
-      setElText("header-shop-name", "My Shop");
+      updateHeaderShopBadge("My Shop", "");
     }
   } else {
-    setElText("header-shop-name", state.config.shopName);
+    updateHeaderShopBadge(state.config.shopName, state.config.slug);
   }
 
   setElText("menu-current-shop", state.config.shopName);
@@ -4669,7 +4720,7 @@ function renderQueue() {
   const cardsHtmlArray = state.queue.map((item, index) => {
     const elapsedSec = Math.floor((now - item.checkedInAt) / 1000);
     const elapsedMin = Math.floor(elapsedSec / 60);
-    const timeStr = `${elapsedMin}m ${elapsedSec % 60}s`;
+    const timeStr = formatElapsedWaitTime(item.checkedInAt, now);
     const checkInClock = formatAppDateTime(item.checkedInAt);
 
     const isNextUp = index === 0;
@@ -5936,8 +5987,10 @@ function switchView(viewName, isSilent = false) {
   const currentModeLabel = document.getElementById("current-mode-label");
   const deskRolePill = document.getElementById("desk-operator-role-pill");
   const deskLogoutBtn = document.getElementById("desk-staff-logout-btn");
+  const deskModeChip = document.getElementById("desk-mode-toggle-chip");
   if (currentModeLabel) {
     if (state.isStaffSession && state.staffUser) {
+      if (deskModeChip) deskModeChip.style.display = "inline-flex";
       currentModeLabel.innerHTML = `👤 Operator: ${escapeHtml(state.staffUser.displayName || state.staffUser.username)} ⇄`;
       if (deskRolePill) {
         deskRolePill.textContent = state.staffUser.roleTitle || "Front Desk Receptionist";
@@ -5946,14 +5999,11 @@ function switchView(viewName, isSilent = false) {
       if (deskLogoutBtn) {
         deskLogoutBtn.style.display = (viewName === "desk") ? "inline-flex" : "none";
       }
-    } else if (viewName === "desk") {
+    } else {
+      if (deskModeChip) deskModeChip.style.display = "none";
+      if (deskRolePill) deskRolePill.classList.add("hidden");
+      if (deskLogoutBtn) deskLogoutBtn.style.display = "none";
       currentModeLabel.innerHTML = "Front Desk ⇆";
-      if (deskRolePill) deskRolePill.classList.add("hidden");
-      if (deskLogoutBtn) deskLogoutBtn.style.display = "none";
-    } else if (viewName === "owner") {
-      currentModeLabel.innerHTML = "Business Owner ⇆";
-      if (deskRolePill) deskRolePill.classList.add("hidden");
-      if (deskLogoutBtn) deskLogoutBtn.style.display = "none";
     }
   }
 
@@ -6139,18 +6189,15 @@ function renderShopDropdown() {
   }
 
   // Active header chip title sync:
-  const headerChipName = document.getElementById("header-shop-name");
-  if (headerChipName) {
-    if (!isSuper && state.config.slug === "main-st-barbers") {
-      if (shopMap.size > 0) {
-        const firstEntry = shopMap.entries().next().value;
-        if (firstEntry) headerChipName.textContent = firstEntry[1];
-      } else {
-        headerChipName.textContent = "My Shop";
-      }
+  if (!isSuper && state.config.slug === "main-st-barbers") {
+    if (shopMap.size > 0) {
+      const firstEntry = shopMap.entries().next().value;
+      if (firstEntry) updateHeaderShopBadge(firstEntry[1], firstEntry[0]);
     } else {
-      headerChipName.textContent = state.config.shopName || "My Shop";
+      updateHeaderShopBadge("My Shop", "");
     }
+  } else {
+    updateHeaderShopBadge(state.config.shopName || "My Shop", state.config.slug);
   }
 
   let shopsListHtml = "";
@@ -6160,7 +6207,8 @@ function renderShopDropdown() {
     shopMap.forEach((name, slug) => {
       const isActive = (slug === currentSlug);
       const isDemo = (slug === "main-st-barbers");
-      const icon = isActive ? '✓' : (isDemo ? '🎮' : '💈');
+      const shopIcon = getShopIndustryIcon(name, slug);
+      const icon = isActive ? `✓ ${shopIcon}` : (isDemo ? '🎮' : shopIcon);
       shopsListHtml += `
         <button class="dropdown-item ${isActive ? 'active-shop-item' : ''}" onclick="${isDemo ? 'launchDemoMode()' : `inspectShop('${escapeHtml(slug)}')`}; closeAllDropdowns();">
           <span>${icon} <strong>${escapeHtml(name)}</strong></span>
@@ -7495,6 +7543,10 @@ async function handleSignOut(e) {
   if (typeof retentionConfigUnsubscribe === "function") {
     try { retentionConfigUnsubscribe(); } catch (err) { }
     retentionConfigUnsubscribe = null;
+  }
+  if (typeof securityConfigUnsubscribe === "function") {
+    try { securityConfigUnsubscribe(); } catch (err) { }
+    securityConfigUnsubscribe = null;
   }
 
   // 2. Clear state variables & in-memory sensitive data
@@ -13290,10 +13342,7 @@ function updateTickingTimers() {
   timerPills.forEach((pill, idx) => {
     const item = state.queue[idx];
     if (item && item.checkedInAt) {
-      const elapsedSec = Math.floor((now - item.checkedInAt) / 1000);
-      const elapsedMin = Math.floor(elapsedSec / 60);
-      const secs = elapsedSec % 60;
-      const timeStr = `${elapsedMin}m ${secs < 10 ? '0' : ''}${secs}s`;
+      const timeStr = formatElapsedWaitTime(item.checkedInAt, now);
       pill.innerHTML = `
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         ${timeStr}

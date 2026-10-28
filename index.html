@@ -89,7 +89,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=5.6">
+  <link rel="stylesheet" href="style.css?v=5.7">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -115,7 +115,7 @@
         <!-- Active Shop Chip & Switcher Dropdown (Only visible for authenticated owners) -->
         <div class="dropdown-wrapper shop-chip-wrapper hidden" id="shop-chip-container">
           <button class="shop-chip-btn dropdown-trigger" onclick="toggleDropdown(event, 'shop-dropdown')">
-            <span class="shop-chip-icon">💈</span>
+            <span class="shop-chip-icon" id="header-shop-icon">🏢</span>
             <span class="shop-chip-name" id="header-shop-name">My Shop</span>
             <span class="shop-chip-arrow">▾</span>
           </button>
@@ -668,10 +668,10 @@
             <div class="metric-value" id="metric-waiting-count">0</div>
             <div class="metric-label">Waiting</div>
           </div>
-          <button class="btn-text-sm" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none; font-size: 0.78rem; color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.3rem 0.65rem; border-radius: var(--radius-sm); background: rgba(6, 182, 212, 0.08); align-items: center; gap: 0.35rem;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
+          <button class="btn-text-sm hidden" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none !important;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
             📲 Install Tablet Mode
           </button>
-          <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch mode or swap operator">
+          <div class="mode-badge-toggle" id="desk-mode-toggle-chip" onclick="handleDeskModeChipClick()" title="Click to switch operator" style="display: none;">
             <span>Active Mode:</span> <strong id="current-mode-label">Front Desk ⇆</strong>
             <span id="desk-operator-role-pill" class="hidden" style="margin-left: 6px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);"></span>
           </div>
@@ -762,7 +762,7 @@
           <button class="btn-text-sm" id="sound-toggle-btn" onclick="toggleSoundAlerts()" style="font-size: 0.8rem; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.1); display: inline-flex; align-items: center; gap: 0.35rem;" title="Toggle audio chime alert on new walk-in check-in">
             🔔 Sound Alerts: ON
           </button>
-          <span class="count-pill" id="queue-badge">0 Waiting</span>
+          <span class="count-pill" id="queue-badge" style="display: none;">0 Waiting</span>
         </div>
       </div>
 
@@ -887,17 +887,17 @@
         <div class="owner-analytics-label">Business Intelligence & Analytics</div>
         <div class="metrics-grid">
           <div class="metric-card" id="card-metric-cancellations">
-            <div class="metric-label">Walk-Away Loss (Cancellations)</div>
+            <div class="metric-label">Cancelled Visits</div>
             <div class="metric-value" id="owner-cancellations" style="color: var(--accent-rose);">0 (0%)</div>
             <div class="metric-caption" id="owner-cancellations-caption">Cancelled walk-ins today</div>
           </div>
           <div class="metric-card" id="card-metric-peakhour">
-            <div class="metric-label">Peak Rush Window</div>
+            <div class="metric-label">Busiest Hour</div>
             <div class="metric-value" id="owner-peak-hour">--</div>
             <div class="metric-caption" id="owner-peakhour-caption">Highest traffic hour</div>
           </div>
           <div class="metric-card" id="card-metric-throughput">
-            <div class="metric-label">Staff Service Speed</div>
+            <div class="metric-label">Service Pace</div>
             <div class="metric-value" id="owner-throughput">--</div>
             <div class="metric-caption" id="owner-throughput-caption">Visits served per hour</div>
           </div>
@@ -4140,6 +4140,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=9.5"></script>
+  <script src="app.js?v=9.6"></script>
 </body>
 </html>
