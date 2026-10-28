@@ -40,7 +40,7 @@ service cloud.firestore {
     // Public Customer Queue Action Validator (Prevents malicious array wipes & overwrites)
     function isValidPublicShopUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      let hasValidKeys = affectedKeys.hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin']);
+      let hasValidKeys = affectedKeys.hasOnly(['queue', 'history', 'stats', 'updatedAt', 'lastActive', 'activeQueueCount', 'currentAvgWaitMin', 'monthlyCheckinCount', 'monthlyCheckinPeriod']);
 
       let prevQ = ('queue' in resource.data && resource.data.queue is list) ? resource.data.queue.size() : 0;
       let newQ = ('queue' in request.resource.data && request.resource.data.queue is list) ? request.resource.data.queue.size() : 0;
@@ -166,15 +166,8 @@ service cloud.firestore {
 
     // 1. Shops Collection (Multi-Tenant Queues & Settings)
     match /shops/{shopId} {
-      // Missing slugs can be probed without returning customer data.
-      // Existing real shops are readable only by the owner, that shop's staff, or SuperAdmin.
-      // Demo sandboxes stay readable so the public sample desk still works.
-      allow get: if resource == null;
-      allow get: if shopIsDemo(shopId);
-      allow get: if isSuperAdmin();
-      allow get: if isStaffOfShop(shopId);
-      allow get: if resource != null && isShopOwner(resource.data);
-      allow get: if resource != null && resource.data.isDemoShop == true;
+      // Anyone can read a single shop doc (public QR check-in, live wait times, and queue display)
+      allow get: if true;
 
       // A signed-in owner can list only their own shops.
       // ownerEmailLower keeps a shop visible when the saved email used different capitals.
