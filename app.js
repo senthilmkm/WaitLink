@@ -5868,7 +5868,7 @@ function renderPublicView() {
   if (readyEl) {
     if (estWait > 0) {
       const readyTimeStr = formatEstimatedReadyTime(estWait);
-      readyEl.textContent = `🕒 Ready around ~${readyTimeStr}`;
+      readyEl.textContent = `🕒 Join now → Served around ~${readyTimeStr}`;
       readyEl.style.display = "block";
     } else {
       readyEl.textContent = `⚡ Walk right in • Counter is ready`;
@@ -13510,20 +13510,18 @@ function renderPublicServiceChips() {
   container.classList.remove("hidden");
 
   let html = activeServices.map(s => {
-    const isSelected = state.selectedPublicService && state.selectedPublicService.id === s.id;
-    const border = isSelected ? "border-color: #06b6d4; background: rgba(6, 182, 212, 0.2); color: #06b6d4;" : "border-color: rgba(255,255,255,0.15); color: #fff;";
+    const isSelected = !!(state.selectedPublicService && state.selectedPublicService.id === s.id);
     return `
-      <button type="button" class="btn btn-secondary btn-sm" onclick="selectPublicService('${s.id}')" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; ${border}">
-        ${escapeHtml(s.icon || '✂️')} ${escapeHtml(s.name)} (${s.estDurationMin}m)
+      <button type="button" class="btn btn-service-chip ${isSelected ? 'selected' : ''}" onclick="selectPublicService('${s.id}')">
+        ${isSelected ? '✓ ' : ''}${escapeHtml(s.icon || '✂️')} ${escapeHtml(s.name)} (${s.estDurationMin}m)
       </button>
     `;
   }).join("");
 
   const isDefaultSelected = !state.selectedPublicService;
-  const defaultBorder = isDefaultSelected ? "border-color: #06b6d4; background: rgba(6, 182, 212, 0.2); color: #06b6d4;" : "border-color: rgba(255,255,255,0.15); color: var(--text-muted);";
   html += `
-    <button type="button" class="btn btn-secondary btn-sm" onclick="selectPublicService(null)" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; ${defaultBorder}">
-      ❓ General Walk-In
+    <button type="button" class="btn btn-service-chip ${isDefaultSelected ? 'selected' : ''}" onclick="selectPublicService(null)">
+      ${isDefaultSelected ? '✓ ' : ''}❓ General Walk-In
     </button>
   `;
 
@@ -13534,11 +13532,11 @@ function selectPublicService(id) {
   if (!id) {
     state.selectedPublicService = null;
   } else {
-    const s = (state.config.services || []).find(srv => srv.id === id);
-    if (s) {
-      state.selectedPublicService = s;
-    } else {
+    if (state.selectedPublicService && state.selectedPublicService.id === id) {
       state.selectedPublicService = null;
+    } else {
+      const s = (state.config.services || []).find(srv => srv.id === id);
+      state.selectedPublicService = s || null;
     }
   }
   renderPublicServiceChips();
