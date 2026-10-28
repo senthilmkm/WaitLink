@@ -3141,7 +3141,10 @@ async function callCustomer(id) {
       });
   }
 
-  showToast(`Called ${targetItem.customerName} (Waited ${durationMin}m)`);
+  showToast(`Called ${targetItem.customerName} (Waited ${durationMin}m)`, 6000, {
+    actionText: "↩️ Undo",
+    onAction: () => { requeueCustomer(targetItem.id, "front"); }
+  });
 }
 
 // Cancel Customer (Concurrency Protected)
@@ -3235,7 +3238,14 @@ async function cancelCustomer(id, nameFallback, cancelledBy = "desk") {
   });
 
   if (mutationResult.success) {
-    showToast(`Cancelled ${cancelledRecordName}`);
+    if (byDesk) {
+      showToast(`Cancelled ${cancelledRecordName}`, 6000, {
+        actionText: "↩️ Undo",
+        onAction: () => { requeueCustomer(id, "front"); }
+      });
+    } else {
+      showToast(`Cancelled ${cancelledRecordName}`);
+    }
   } else if (mutationResult.aborted) {
     showToast("⚠️ Visit was already cancelled or removed.");
   }
@@ -5774,6 +5784,38 @@ function exportHistoryCSV() {
   showToast(`📥 Exported ${rows.length} visit records to CSV (${planInfo.isEnterprise ? 'Enterprise 365d' : 'Pro 90d'})`);
 }
 
+function formatEstimatedReadyTime(estWaitMin) {
+  const readyDate = new Date(Date.now() + (estWaitMin * 60000));
+  const is24h = (state.config && state.config.timeFormat === "24h");
+  if (is24h) {
+    const hours = String(readyDate.getHours()).padStart(2, "0");
+    const mins = String(readyDate.getMinutes()).padStart(2, "0");
+    return `${hours}:${mins}`;
+  }
+  let hours = readyDate.getHours();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  const mins = String(readyDate.getMinutes()).padStart(2, "0");
+  return `${hours}:${mins} ${ampm}`;
+}
+
+function updateTicketStepTracker(step) {
+  const node1 = document.getElementById("step-node-1");
+  const node2 = document.getElementById("step-node-2");
+  const node3 = document.getElementById("step-node-3");
+  const conn1 = document.getElementById("step-conn-1");
+  const conn2 = document.getElementById("step-conn-2");
+  if (!node1 || !node2 || !node3) return;
+
+  node1.className = "step-node" + (step >= 1 ? " active" : "");
+  node2.className = "step-node" + (step === 2 ? " active pulse" : (step > 2 ? " active" : ""));
+  node3.className = "step-node" + (step >= 3 ? " active" : "");
+
+  if (conn1) conn1.className = "step-connector" + (step >= 2 ? " active" : "");
+  if (conn2) conn2.className = "step-connector" + (step >= 3 ? " active" : "");
+}
+window.updateTicketStepTracker = updateTicketStepTracker;
+
 // Render Public View
 function renderPublicView() {
   const estWait = calculateEstimatedWait();
@@ -5787,6 +5829,19 @@ function renderPublicView() {
     ? `${queueCount} ${queueCount === 1 ? 'patient' : 'patients'} currently waiting in clinic`
     : `${queueCount} ${queueCount === 1 ? 'person' : 'people'} currently waiting in line`
   );
+
+  const readyEl = document.getElementById("public-estimated-ready");
+  if (readyEl) {
+    if (estWait > 0) {
+      const readyTimeStr = formatEstimatedReadyTime(estWait);
+      readyEl.textContent = `🕒 Ready around ~${readyTimeStr}`;
+      readyEl.style.display = "block";
+    } else {
+      readyEl.textContent = `⚡ Walk right in • Counter is ready`;
+      readyEl.style.display = "block";
+    }
+  }
+
   setElText("public-last-updated", "Updated " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
   // Update Public Check-In Card Labels & Placeholders
@@ -5926,6 +5981,7 @@ function updateActiveTicketTimer() {
   if (queuePos !== -1) {
     if (badgeEl) badgeEl.style.display = "block";
     if (queuePos === 0) {
+      updateTicketStepTracker(2);
       if (!state._hasAlertedNextUp) {
         state._hasAlertedNextUp = true;
         playCustomerTurnAlert();
@@ -5935,6 +5991,7 @@ function updateActiveTicketTimer() {
       if (subEl) subEl.textContent = "Staff is about to call your name!";
       if (ticketCard) ticketCard.style.border = "2px solid #06b6d4";
     } else {
+      updateTicketStepTracker(1);
       state._hasAlertedNextUp = false;
       if (badgeEl) { badgeEl.textContent = "✅ YOU ARE IN LINE"; badgeEl.style.color = "#10b981"; }
       if (posEl) { posEl.textContent = `Position #${queuePos + 1} in line`; posEl.style.color = "#10b981"; }
@@ -5942,6 +5999,7 @@ function updateActiveTicketTimer() {
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
     }
   } else {
+    updateTicketStepTracker(3);
     const isCompleted = state.myTicket && (state.myTicket.status === "completed" || (state.history.some(h => h.id === state.myTicket.id && h.status === "completed")));
     if (isCompleted) {
       if (badgeEl) { badgeEl.style.display = "block"; badgeEl.textContent = "🎉 VISIT COMPLETED"; badgeEl.style.color = "#10b981"; }
@@ -7001,15 +7059,31 @@ async function saveSettings() {
 }
 
 // Toast Notifications
-function showToast(message) {
+function showToast(message, duration = 3000, options = null) {
   const container = document.getElementById("toast-container");
+  if (!container) return;
   const toast = document.createElement("div");
   toast.className = "toast";
   toast.innerHTML = `<span>⏳</span> <span>${escapeHtml(message)}</span>`;
+
+  if (options && options.actionText && typeof options.onAction === "function") {
+    const actionBtn = document.createElement("button");
+    actionBtn.type = "button";
+    actionBtn.className = "btn-toast-action";
+    actionBtn.innerHTML = escapeHtml(options.actionText);
+    actionBtn.style.cssText = "margin-left: 0.65rem; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); border-radius: 4px; padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;";
+    actionBtn.onclick = (e) => {
+      e.stopPropagation();
+      options.onAction();
+      toast.remove();
+    };
+    toast.appendChild(actionBtn);
+  }
+
   container.appendChild(toast);
   setTimeout(() => {
-    toast.remove();
-  }, 3000);
+    try { toast.remove(); } catch (e) { }
+  }, duration || 3000);
 }
 
 /* ==========================================================================
@@ -13108,6 +13182,36 @@ function shareOrCopyMyTicket() {
 window.copyMyTicketLink = copyMyTicketLink;
 window.shareOrCopyMyTicket = shareOrCopyMyTicket;
 
+function shareFrontDeskTerminalLink(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  const slug = state.config.slug || "main-st-barbers";
+  const deskUrl = `${window.location.origin}${window.location.pathname}?s=${slug}&view=desk`;
+  const shopName = state.config.shopName || "Our Shop";
+
+  if (navigator.share) {
+    navigator.share({
+      title: `${shopName} — Front Desk Terminal`,
+      text: `Front Desk terminal link for ${shopName} counter iPad / staff:`,
+      url: deskUrl
+    }).catch(err => {
+      if (err && err.name === 'AbortError') return;
+      copyDeskTerminalLink(deskUrl);
+    });
+  } else {
+    copyDeskTerminalLink(deskUrl);
+  }
+}
+
+function copyDeskTerminalLink(deskUrl) {
+  navigator.clipboard.writeText(deskUrl).then(() => {
+    showToast("📲 Front Desk terminal link copied! Open on counter iPad or send to staff.");
+  }).catch(() => {
+    showToast("Terminal Link: " + deskUrl);
+  });
+}
+window.shareFrontDeskTerminalLink = shareFrontDeskTerminalLink;
+window.copyDeskTerminalLink = copyDeskTerminalLink;
+
 async function cancelMyTicket() {
   let ticketId = state.myTicket ? state.myTicket.id : null;
   let customerName = state.myTicket ? state.myTicket.customerName : null;
@@ -13600,6 +13704,9 @@ async function requeueCustomer(id, mode = "end") {
 
     if (mode === "end") {
       item.checkedInAt = Date.now();
+    } else if (mode === "front") {
+      const earliest = serverQueue.length > 0 ? Math.min(...serverQueue.map(q => q.checkedInAt || Date.now())) : Date.now();
+      item.checkedInAt = earliest - 1000;
     }
 
     if (!serverQueue.some(q => q.id === item.id)) {

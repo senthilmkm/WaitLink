@@ -7926,3 +7926,97 @@ html[data-theme="light"] .toggle-switch input#owner-toggle-gps-proximity:checked
   background-color: #10b981 !important;
 }
 
+/* Customer Live Ticket Journey Step Progress Tracker */
+.ticket-step-tracker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0.85rem 0 0.5rem 0;
+  padding: 0.6rem 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 68px;
+  opacity: 0.45;
+  transition: all 0.3s ease;
+}
+
+.step-node.active {
+  opacity: 1;
+}
+
+.step-node.active .step-circle {
+  background: #10b981;
+  color: #fff;
+  border-color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.step-node.pulse .step-circle {
+  background: #06b6d4;
+  color: #fff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+  animation: pulse-step 1.5s infinite;
+}
+
+@keyframes pulse-step {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 0 16px rgba(6, 182, 212, 0.8); }
+  100% { transform: scale(1); }
+}
+
+.step-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.step-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.step-node.active .step-title {
+  color: var(--text-main);
+}
+
+.step-connector {
+  flex: 1;
+  max-width: 45px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  margin-bottom: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.step-connector.active {
+  background: #10b981;
+}
+
+html[data-theme="light"] .ticket-step-tracker {
+  background: rgba(241, 245, 249, 0.85);
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+
