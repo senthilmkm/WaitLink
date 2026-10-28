@@ -1643,7 +1643,7 @@ function subscribeFirestore(forceResubscribe = false) {
       updatePosterUI();
       renderAll();
 
-      if (newCheckInDetected && state.currentView === "desk") {
+      if (newCheckInDetected && (state.activeView === "desk" || state.activeView === "home" || state.currentView === "desk" || state.currentView === "home")) {
         playFrontDeskChime();
         showToast("🔔 New customer joined the queue!");
       }
@@ -2628,6 +2628,7 @@ function handleCheckIn(event) {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
     shopSlug: state.config.slug,
     customerName: name,
+    status: "waiting",
     phone: phone || null,
     checkedInAt: Date.now(),
     checkedInVia: isDeskCheckIn ? "Front Desk Terminal" : "Customer QR Code Live Card",
@@ -3446,8 +3447,12 @@ function renderHomeView() {
     }
 
     // Counts
-    const waitCount = Array.isArray(state.queue) ? state.queue.filter(q => q.status === "waiting").length : 0;
-    const servedCount = Array.isArray(state.history) ? state.history.filter(h => h.status === "served").length : 0;
+    const waitCount = Array.isArray(state.queue)
+      ? state.queue.filter(q => q && q.status !== "served" && q.status !== "called" && q.status !== "cancelled").length
+      : 0;
+    const servedCount = Array.isArray(state.history)
+      ? state.history.filter(h => h && (h.status === "served" || h.status === "called" || h.status === "completed")).length
+      : 0;
 
     const waitCountEl = document.getElementById("hub-waiting-count");
     if (waitCountEl) waitCountEl.textContent = waitCount;
@@ -6153,6 +6158,7 @@ function switchView(viewName, isSilent = false) {
   }
 
   state.activeView = viewName;
+  state.currentView = viewName;
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
   document.querySelectorAll(".mobile-drawer-nav-item").forEach(item => item.classList.remove("active"));
   document.querySelectorAll(".view-panel").forEach(panel => panel.classList.add("hidden"));
@@ -6234,6 +6240,9 @@ function switchView(viewName, isSilent = false) {
   if (viewName === "public") {
     validateCustomerSecurityAccess();
   }
+
+  // Ensure fresh live data is immediately rendered on the newly opened panel
+  renderAll();
 }
 
 // Dynamically toggle Create Shop buttons in Header, Mobile Drawer, and Switcher based on Tier limits
@@ -12893,6 +12902,7 @@ async function handlePublicInlineCheckIn(event) {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
     shopSlug: state.config.slug,
     customerName: customerName,
+    status: "waiting",
     phone: phone,
     tcpaConsent: !!(cleanPhoneDigits.length > 0 && tcpaCheck && tcpaCheck.checked),
     tcpaConsentTimestamp: cleanPhoneDigits.length > 0 ? Date.now() : null,
