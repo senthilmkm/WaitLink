@@ -685,6 +685,10 @@
           <p class="shop-subtitle" id="desk-shop-subtitle">Front Desk</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <div class="desk-connection-pill connected" id="desk-connection-pill" title="Connected to Google Cloud Firestore • Live real-time sync active">
+            <span class="desk-conn-dot" id="desk-conn-dot"></span>
+            <span id="desk-conn-label">Live Sync</span>
+          </div>
           <div class="desk-waiting-stat" title="People waiting now">
             <div class="metric-value" id="metric-waiting-count">0</div>
             <div class="metric-label">Waiting</div>
@@ -1795,16 +1799,20 @@
       <div class="printable-poster" id="printable-area">
         <div class="poster-header">
           <img id="poster-shop-logo" class="poster-logo-img hidden" alt="Shop Logo">
-          <div class="poster-icon">⏳</div>
+          <div class="poster-icon" id="poster-shop-icon">💈</div>
           <h1 id="poster-shop-name">LIVE WALK-IN QUEUE</h1>
           <div class="poster-tagline" id="poster-tagline">WALK-INS WELCOME</div>
         </div>
 
         <div class="poster-body">
-          <h2 class="poster-callout">Check Our Live Wait Time Before You Walk In!</h2>
-          <p class="poster-instruction">Scan this QR code with your phone camera to see today's live average wait time:</p>
+          <h2 class="poster-callout">Check Live Wait Time &amp; Join Queue</h2>
+          <p class="poster-instruction">Scan with your phone camera to see today's live wait time and hold your spot without standing in line:</p>
 
           <div class="qr-container">
+            <div class="qr-viewfinder-corner qr-corner-tl"></div>
+            <div class="qr-viewfinder-corner qr-corner-tr"></div>
+            <div class="qr-viewfinder-corner qr-corner-bl"></div>
+            <div class="qr-viewfinder-corner qr-corner-br"></div>
             <div id="qrcode-box" style="cursor: pointer;" title="Click to test live customer card" onclick="window.open(getPublicUrl(), '_blank')"></div>
             <!-- Dynamic Rolling QR Indicator for Kiosk / Station Display -->
             <div id="kiosk-rolling-indicator" class="kiosk-rolling-indicator hidden">
@@ -1818,14 +1826,43 @@
             </div>
           </div>
 
+          <!-- 3-Step Walk-In How It Works Grid -->
+          <div class="poster-steps-grid">
+            <div class="poster-step-card">
+              <div class="poster-step-num">1</div>
+              <div class="poster-step-content">
+                <strong>Scan with Camera</strong>
+                <span>Open camera • No app download</span>
+              </div>
+            </div>
+            <div class="poster-step-card">
+              <div class="poster-step-num">2</div>
+              <div class="poster-step-content">
+                <strong>See Live Wait Time</strong>
+                <span>View real-time wait &amp; hold spot</span>
+              </div>
+            </div>
+            <div class="poster-step-card">
+              <div class="poster-step-num">3</div>
+              <div class="poster-step-content">
+                <strong>Step Out &amp; Relax</strong>
+                <span>Automated SMS alert when ready</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="poster-storefront-meta" id="poster-storefront-meta">
+            <!-- Dynamically populated with address and hours if configured -->
+          </div>
+
           <div class="poster-url-display">
-            <span>Or visit:</span>
+            <span>Or open directly in any browser:</span>
             <strong id="poster-url-text" style="cursor: pointer;" title="Click to test live customer card" onclick="window.open(getPublicUrl(), '_blank')">waitlink.app</strong>
           </div>
         </div>
 
         <div class="poster-footer">
-          <p>Powered by <strong>WaitLink</strong> &bull; Zero App Download Required</p>
+          <p>Powered by <strong>WaitLink</strong> &bull; Cloud Real-Time Queue &bull; Zero App Download Required</p>
         </div>
       </div>
     </section>
@@ -4181,6 +4218,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=10.1"></script>
+  <script src="app.js?v=10.2"></script>
 </body>
 </html>

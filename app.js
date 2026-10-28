@@ -1074,6 +1074,7 @@ function initFirestore() {
 
 let audioCtx = null;
 let previousQueueIds = null;
+let connectionState = "connected"; // "connected" | "reconnecting" | "offline"
 
 function initAudioContext() {
   if (!audioCtx) {
@@ -1083,15 +1084,86 @@ function initAudioContext() {
     }
   }
   if (audioCtx && audioCtx.state === "suspended") {
-    audioCtx.resume().catch(() => { });
+    audioCtx.resume().then(() => {
+      updateSoundToggleUI();
+    }).catch(() => { });
+  } else if (audioCtx && audioCtx.state === "running") {
+    updateSoundToggleUI();
   }
 }
 
-// Global user interaction listener to satisfy browser autoplay security policy
-if (typeof document !== "undefined") {
-  document.addEventListener("click", () => { initAudioContext(); }, { passive: true });
-  document.addEventListener("touchstart", () => { initAudioContext(); }, { passive: true });
+// Front Desk Live Connection Status Manager
+function updateConnectionUI(status = "connected") {
+  connectionState = status;
+  const pill = document.getElementById("desk-connection-pill");
+  const dot = document.getElementById("desk-conn-dot");
+  const label = document.getElementById("desk-conn-label");
+  if (!pill || !label) return;
+
+  pill.classList.remove("connected", "reconnecting", "offline");
+  pill.classList.add(status);
+
+  if (status === "connected") {
+    label.textContent = "Live Sync";
+    pill.title = "Connected to Google Cloud Firestore • Live real-time sync active";
+  } else if (status === "reconnecting") {
+    label.textContent = "Reconnecting...";
+    pill.title = "Reconnecting to real-time cloud stream...";
+  } else {
+    label.textContent = "Offline";
+    pill.title = "Tablet is currently offline. Please check store Wi-Fi.";
+  }
 }
+
+// Tablet Audio Keepalive & Network Recovery Guards
+function setupAudioAndNetworkGuards() {
+  if (typeof window === "undefined") return;
+
+  // 1. Any user interaction arms audio context
+  ["click", "touchstart", "pointerdown", "keydown"].forEach(evtName => {
+    document.addEventListener(evtName, () => {
+      initAudioContext();
+    }, { passive: true });
+  });
+
+  // 2. Visibility change watchdog: Tablet wake, tab switch, or iPad unlock
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      initAudioContext();
+      if (navigator.onLine !== false) {
+        updateConnectionUI("connected");
+        // Re-verify snapshot stream when coming out of background sleep
+        if (db && state.config.slug) {
+          subscribeFirestore(true);
+        }
+      }
+    }
+  });
+
+  // 3. Window focus watchdog
+  window.addEventListener("focus", () => {
+    initAudioContext();
+  });
+
+  // 4. Online network recovery listener
+  window.addEventListener("online", () => {
+    updateConnectionUI("connected");
+    initAudioContext();
+    if (db && state.config.slug) {
+      subscribeFirestore(true);
+    }
+    showToast("🟢 Wi-Fi Reconnected. Live Queue Synchronized.");
+  });
+
+  // 5. Offline network drop listener
+  window.addEventListener("offline", () => {
+    updateConnectionUI("offline");
+    showToast("⚠️ Tablet Offline. Reconnecting automatically when Wi-Fi returns.");
+  });
+}
+
+// Run guard setup immediately
+setupAudioAndNetworkGuards();
 
 function playFrontDeskChime() {
   if (state.soundEnabled === false) return;
@@ -1105,24 +1177,24 @@ function playFrontDeskChime() {
 
     const now = audioCtx.currentTime;
 
-    // Tone 1: E5 (659.25 Hz) - Bell sound
+    // Tone 1: E5 (659.25 Hz) - Crisp Bell
     const osc1 = audioCtx.createOscillator();
     const gain1 = audioCtx.createGain();
     osc1.type = "sine";
     osc1.frequency.setValueAtTime(659.25, now);
-    gain1.gain.setValueAtTime(0.4, now);
+    gain1.gain.setValueAtTime(0.45, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
     osc1.connect(gain1);
     gain1.connect(audioCtx.destination);
     osc1.start(now);
     osc1.stop(now + 0.6);
 
-    // Tone 2: B5 (987.77 Hz) - Chime response
+    // Tone 2: B5 (987.77 Hz) - Bright Chime Response
     const osc2 = audioCtx.createOscillator();
     const gain2 = audioCtx.createGain();
     osc2.type = "sine";
     osc2.frequency.setValueAtTime(987.77, now + 0.15);
-    gain2.gain.setValueAtTime(0.45, now + 0.15);
+    gain2.gain.setValueAtTime(0.5, now + 0.15);
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
     osc2.connect(gain2);
     gain2.connect(audioCtx.destination);
@@ -1135,13 +1207,31 @@ function playFrontDeskChime() {
 
 function toggleSoundAlerts() {
   initAudioContext();
-  state.soundEnabled = (state.soundEnabled === false) ? true : false;
-  updateSoundToggleUI();
-
-  if (state.soundEnabled !== false) {
-    playFrontDeskChime();
+  
+  // If sound was muted, turn it on and play confirmation test chime
+  if (state.soundEnabled === false) {
+    state.soundEnabled = true;
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().then(() => {
+        playFrontDeskChime();
+        updateSoundToggleUI();
+      }).catch(() => { });
+    } else {
+      playFrontDeskChime();
+      updateSoundToggleUI();
+    }
     showToast("🔔 Front Desk Sound Alerts Enabled");
+  } else if (audioCtx && audioCtx.state === "suspended") {
+    // If enabled but browser suspended it, tapping resumes and arms it
+    audioCtx.resume().then(() => {
+      playFrontDeskChime();
+      updateSoundToggleUI();
+      showToast("🔔 Front Desk Chime Armed & Active!");
+    }).catch(() => { });
   } else {
+    // If active and running, toggle to muted
+    state.soundEnabled = false;
+    updateSoundToggleUI();
     showToast("🔕 Front Desk Sound Alerts Muted");
   }
 
@@ -1184,16 +1274,29 @@ function playCustomerTurnAlert() {
 function updateSoundToggleUI() {
   const btn = document.getElementById("sound-toggle-btn");
   if (!btn) return;
-  if (state.soundEnabled !== false) {
-    btn.innerHTML = "🔔 Sound Alerts: ON";
+
+  const isEnabled = state.soundEnabled !== false;
+  const isRunning = isEnabled && audioCtx && audioCtx.state === "running";
+  const isSuspended = isEnabled && (!audioCtx || audioCtx.state === "suspended");
+
+  if (isRunning) {
+    btn.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;margin-right:2px;"></span> 🔔 Chime: Active ✓`;
     btn.style.color = "#10b981";
-    btn.style.borderColor = "rgba(16, 185, 129, 0.3)";
-    btn.style.background = "rgba(16, 185, 129, 0.1)";
+    btn.style.borderColor = "rgba(16, 185, 129, 0.4)";
+    btn.style.background = "rgba(16, 185, 129, 0.12)";
+    btn.title = "Real-time arrival chime is active! Click to test chime or toggle.";
+  } else if (isSuspended) {
+    btn.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px #f59e0b;margin-right:2px;"></span> ⚠️ Tap to Arm Chime 🔔`;
+    btn.style.color = "#fbbf24";
+    btn.style.borderColor = "rgba(245, 158, 11, 0.5)";
+    btn.style.background = "rgba(245, 158, 11, 0.15)";
+    btn.title = "Browser suspended audio. Tap once to unlock real-time chime on tablet!";
   } else {
     btn.innerHTML = "🔕 Sound Alerts: OFF";
     btn.style.color = "var(--text-muted)";
     btn.style.borderColor = "var(--border-color)";
     btn.style.background = "transparent";
+    btn.title = "Sound alerts are muted. Tap to enable audio chime on arrivals.";
   }
 }
 
@@ -1550,6 +1653,7 @@ function subscribeFirestore(forceResubscribe = false) {
 
   const shopDoc = db.collection("shops").doc(state.config.slug);
   unsubscribeSnapshot = shopDoc.onSnapshot(doc => {
+    updateConnectionUI("connected");
     if (doc.exists) {
       const data = doc.data();
       let newCheckInDetected = false;
@@ -1723,6 +1827,7 @@ function subscribeFirestore(forceResubscribe = false) {
     }
   }, err => {
     console.error("Firestore real-time subscription error:", err);
+    updateConnectionUI("reconnecting");
   });
 }
 
@@ -2293,6 +2398,7 @@ function updateShopStatusUI() {
 // Dedicated High-Fidelity Printable Window Poster UI & QR Synchronizer
 function updatePosterUI() {
   const shopName = (state.config.shopName || "Live Walk-In Queue").trim();
+  const slug = state.config.slug || "";
   const publicUrl = getPublicUrl();
   const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
   const tagline = (state.config.tagline || (isClinical ? "Patient Care & Walk-Ins" : "Walk-Ins Welcome")).toUpperCase();
@@ -2301,6 +2407,12 @@ function updatePosterUI() {
   const taglineEl = document.getElementById("poster-tagline");
   if (taglineEl) taglineEl.textContent = tagline;
   setElText("poster-url-text", publicUrl.replace(/^https?:\/\//, ""));
+
+  // Dynamic industry icon resolver
+  const iconEl = document.getElementById("poster-shop-icon");
+  if (iconEl) {
+    iconEl.textContent = getShopIndustryIcon(shopName, slug);
+  }
 
   const logoUrl = state.config.logoUrl || "";
   const isPaid = isPaidTier();
@@ -2312,6 +2424,37 @@ function updatePosterUI() {
     } else {
       posterLogo.src = "";
       posterLogo.classList.add("hidden");
+    }
+  }
+
+  // Populate storefront address & today's hours if available
+  const metaEl = document.getElementById("poster-storefront-meta");
+  if (metaEl) {
+    const metaParts = [];
+    if (state.config.address && state.config.address.trim()) {
+      metaParts.push(`📍 ${escapeHtml(state.config.address.trim())}`);
+    }
+    if (state.config.hours) {
+      let hoursStr = "";
+      if (typeof state.config.hours === "string" && state.config.hours.trim()) {
+        hoursStr = state.config.hours.trim();
+      } else if (typeof state.config.hours === "object") {
+        const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        const todayKey = days[new Date().getDay()];
+        if (state.config.hours[todayKey]) {
+          hoursStr = `Today: ${state.config.hours[todayKey]}`;
+        }
+      }
+      if (hoursStr) {
+        metaParts.push(`🕒 ${escapeHtml(hoursStr)}`);
+      }
+    }
+    if (metaParts.length > 0) {
+      metaEl.innerHTML = metaParts.map(p => `<span>${p}</span>`).join('<span class="meta-separator">•</span>');
+      metaEl.style.display = "flex";
+    } else {
+      metaEl.innerHTML = "";
+      metaEl.style.display = "none";
     }
   }
 
