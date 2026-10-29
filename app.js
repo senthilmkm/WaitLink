@@ -8287,22 +8287,7 @@ function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  // On mobile browsers (e.g. iOS Safari), popups are blocked by default — use redirect
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    showToast("Redirecting to Google Sign-In...");
-    firebase.auth().signInWithRedirect(provider).catch(err => {
-      console.warn("Google Redirect Error:", err);
-      let errorMsg = "Google Sign-In failed. Please sign in with email and password.";
-      if (err && err.code === "auth/unauthorized-domain") {
-        errorMsg = "⚠️ Domain waitlink.app is pending authorization in Firebase Console. Please use email & password.";
-      }
-      setAuthError(errorMsg);
-      showToast(errorMsg);
-    });
-    return;
-  }
-
+  // Use signInWithPopup across both desktop and mobile to avoid Safari ITP / cross-domain cookie partitioning
   firebase.auth().signInWithPopup(provider).then(async result => {
     if (result && result.user) {
       state.user = result.user;
@@ -8326,8 +8311,14 @@ function signInWithGoogle() {
     }
   }).catch(err => {
     console.warn("Google Popup Auth Error:", err);
-    if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
-      setAuthError("⚠️ Google sign-in was closed or blocked. You can retry or sign in using your email and password below.");
+    if (err.code === "auth/popup-blocked") {
+      // In the rare event a mobile browser strictly blocks the popup, fall back to redirect
+      showToast("Popup blocked by browser. Redirecting to Google Sign-In...");
+      firebase.auth().signInWithRedirect(provider).catch(redirectErr => {
+        setAuthError("⚠️ Google sign-in was blocked by your browser. Please sign in with email and password below.");
+      });
+    } else if (err.code === "auth/popup-closed-by-user") {
+      setAuthError("Google sign-in was closed. Tap again when ready, or sign in with email and password below.");
     } else if (err.code === "auth/unauthorized-domain") {
       setAuthError("⚠️ Domain waitlink.app is pending authorization in Firebase Console. Please sign in with email and password.");
     } else {
