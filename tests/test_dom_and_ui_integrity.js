@@ -735,6 +735,33 @@ it("Customer QR Code Join Flow: Ticket persistence, URL sync, in-flight ticket p
   assert.ok(appJs.includes("window.resetMyTicketView = resetMyTicketView"), "app.js must export resetMyTicketView on window");
 });
 
+it("Demo Shop Storefront QR Code Poster Access & 1-Tap Demo Generator Link Integration", () => {
+  // 1. Front Desk overview bar contains Storefront QR Poster button
+  assert.ok(html.includes('id="desk-qr-poster-btn"'), "index.html missing #desk-qr-poster-btn in Front Desk banner");
+  assert.ok(html.includes("switchView('poster')"), "index.html missing switchView('poster') call on poster button");
+  assert.ok(css.includes("#desk-qr-poster-btn:hover"), "style.css missing hover styling for #desk-qr-poster-btn");
+
+  // 2. Demo Generator modal preview and post-launch success cards
+  assert.ok(html.includes('id="demo-poster-preview"'), "index.html missing #demo-poster-preview in generator modal");
+  assert.ok(html.includes('id="demo-generator-form-step"'), "index.html missing #demo-generator-form-step");
+  assert.ok(html.includes('id="demo-generator-success-step"'), "index.html missing #demo-generator-success-step");
+  assert.ok(html.includes('id="demo-success-poster-url"'), "index.html missing #demo-success-poster-url in success card");
+  assert.ok(html.includes('id="btn-copy-success-poster"'), "index.html missing #btn-copy-success-poster");
+  assert.ok(html.includes('id="btn-open-success-poster"'), "index.html missing #btn-open-success-poster");
+
+  // 3. app.js functions and helpers
+  assert.ok(appJs.includes("function copyDemoPosterUrlFromModal()"), "app.js missing copyDemoPosterUrlFromModal");
+  assert.ok(appJs.includes("function copySuccessDemoLink("), "app.js missing copySuccessDemoLink");
+  assert.ok(appJs.includes("function openSuccessDemoLink("), "app.js missing openSuccessDemoLink");
+  assert.ok(appJs.includes("function doneDemoShopModal()"), "app.js missing doneDemoShopModal");
+
+  // 4. SuperAdmin directory table contains poster actions for demo shops
+  assert.ok(appJs.includes("view=poster"), "app.js must contain view=poster link targets for demo shops");
+
+  // 5. Sales pitch incorporates Storefront QR Poster link
+  assert.ok(appJs.includes("Storefront QR Poster (scan with your phone)"), "generateDemoPitch must include Storefront QR Poster call-to-action");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

@@ -598,6 +598,7 @@ function generateDemoPitch(shopName, industryKey, demoUrl) {
   const preset = DEMO_INDUSTRY_PRESETS[industryKey] || DEMO_INDUSTRY_PRESETS.general;
   const name = shopName || preset.defaultShopName;
   const unit = preset.unitLabel || "chairs / stations";
+  const posterUrl = demoUrl.includes("?") ? `${demoUrl}&view=poster` : `${demoUrl}?view=poster`;
 
   return `Subject: 30-Second Live Waitlist Demo for ${name} (Stop Walk-Away Revenue Loss)
 
@@ -606,10 +607,11 @@ Hi ${name} Team,
 When customers walk into ${name}, see a crowded waiting area, and have no idea how long the wait is... up to 30% quietly turn around and walk away to a competitor.
 
 We set up a quick 30-second live demo sandbox specifically tailored for ${name}:
-👉 ${demoUrl}
+👉 Front Desk Terminal: ${demoUrl}
+👉 Storefront QR Poster (scan with your phone): ${posterUrl}
 
 Here is how WaitLink stops this invisible walk-away revenue leak:
-1. 📋 Counter & Window QR Poster: Walk-ins scan with their camera and join the queue in 2 seconds.
+1. 📋 Counter & Window QR Poster: Walk-ins scan with their camera (try it: ${posterUrl}) and join the queue in 2 seconds.
 2. 🌐 Google Maps & Website Links: Customers can join your line before leaving their home or car.
 3. 📱 Zero App Downloads: Opens instantly in their mobile browser—no downloads or passwords.
 4. ⏱️ Live Phone Tracker: Shows their real-time spot in line ("2nd in line") and live wait estimate.
@@ -2219,6 +2221,18 @@ function updateConfigUI() {
 
   setElText("menu-current-shop", state.config.shopName);
   setElText("mobile-drawer-shop-name", state.config.shopName);
+
+  const isDemo = state.isDemoMode || !!state.config.isDemoShop || (state.config.slug && state.config.slug.startsWith("demo-"));
+  const deskPosterBtn = document.getElementById("desk-qr-poster-btn");
+  if (deskPosterBtn) {
+    if (isDemo) {
+      deskPosterBtn.title = "View & Print Storefront QR Poster (Test scan with phone camera)";
+      deskPosterBtn.innerHTML = `🖨️ Storefront QR Poster <span style="font-size: 0.68rem; background: rgba(6, 182, 212, 0.25); color: #22d3ee; padding: 1px 5px; border-radius: 4px; margin-left: 2px;">Scan</span>`;
+    } else {
+      deskPosterBtn.title = "View & Print Storefront QR Code Poster";
+      deskPosterBtn.innerHTML = `🖨️ Storefront QR Poster`;
+    }
+  }
 
   // Set Owner Settings inputs
   setElValue("owner-input-address", state.config.address || "");
@@ -9118,6 +9132,13 @@ function renderSuperAdminShopsTable() {
                 title="SuperAdmin: 1-Click copy cold outreach sales pitch tailored for this demo shop">
                 Demo 📋
               </button>
+              <button type="button" 
+                data-slug="${encodeURIComponent(shopSlug)}"
+                onclick="window.open('https://waitlink.app/?s=' + decodeURIComponent(this.dataset.slug) + '&view=poster', '_blank')"
+                style="font-size: 0.68rem; background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.4); padding: 1px 7px; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" 
+                title="SuperAdmin: Open printable Storefront QR Code Poster in new tab">
+                🖨️ Poster ↗
+              </button>
             ` : ''}
           </div>
         </td>
@@ -9153,6 +9174,11 @@ function renderSuperAdminShopsTable() {
                 onclick="copyDemoPitchForShop(decodeURIComponent(this.dataset.name), decodeURIComponent(this.dataset.industry), decodeURIComponent(this.dataset.slug))"
                 style="color: #f3e8ff; border: 1.5px solid #a855f7; background: rgba(168, 85, 247, 0.25); font-weight: 800; padding: 0.32rem 0.65rem; border-radius: 6px; box-shadow: 0 0 10px rgba(168, 85, 247, 0.35); white-space: nowrap;" 
                 title="SuperAdmin: 1-Click copy cold outreach sales pitch tailored for this demo shop">📋 Pitch</button>
+              <button class="btn-text-sm" 
+                data-slug="${encodeURIComponent(shopSlug)}"
+                onclick="window.open('https://waitlink.app/?s=' + decodeURIComponent(this.dataset.slug) + '&view=poster', '_blank')"
+                style="color: #06b6d4; border: 1.5px solid rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.1); font-weight: 700; padding: 0.32rem 0.65rem; border-radius: 6px; white-space: nowrap;" 
+                title="SuperAdmin: Open printable storefront QR code poster in new tab">🖨️ Poster ↗</button>
             ` : `
               <button class="btn-text-sm" data-slug="${encodeURIComponent(shopSlug)}" onclick="inspectShop(decodeURIComponent(this.dataset.slug))" style="padding: 0.32rem 0.65rem; font-weight: 600; border-radius: 6px; white-space: nowrap;">Inspect Desk</button>
             `}
@@ -9165,6 +9191,10 @@ function renderSuperAdminShopsTable() {
                   <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); inspectShop(decodeURIComponent(this.dataset.slug));">
                     <span class="action-icon">🖥️</span>
                     <span>Inspect Desk</span>
+                  </button>
+                  <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); window.open('https://waitlink.app/?s=' + decodeURIComponent(this.dataset.slug) + '&view=poster', '_blank');">
+                    <span class="action-icon">🖨️</span>
+                    <span>Storefront QR Poster ↗</span>
                   </button>
                 ` : ''}
                 <button type="button" class="row-action-item" data-slug="${encodeURIComponent(shopSlug)}" onclick="toggleRowActionMenu(event, 'sa-menu-${escapeHtml(shopSlug).replace(/[^a-zA-Z0-9_-]/g, "_")}'); openSettingsForShop(decodeURIComponent(this.dataset.slug));">
@@ -9887,6 +9917,7 @@ async function cleanDuplicateShops() {
 // ==========================================================================
 
 let activeDemoIndustry = "auto";
+let lastCreatedDemoShop = null;
 
 function openDemoShopGeneratorModal() {
   if (!isSuperAdmin()) {
@@ -9896,6 +9927,11 @@ function openDemoShopGeneratorModal() {
 
   const modal = document.getElementById("modal-demo-shop-generator");
   if (!modal) return;
+
+  const formStep = document.getElementById("demo-generator-form-step");
+  const successStep = document.getElementById("demo-generator-success-step");
+  if (formStep) formStep.classList.remove("hidden");
+  if (successStep) successStep.classList.add("hidden");
 
   renderDemoIndustryGrid();
   selectDemoIndustry(activeDemoIndustry || "auto", true);
@@ -9986,6 +10022,32 @@ function updateDemoSlugPreview() {
   if (slugEl) {
     slugEl.textContent = `waitlink.app?s=${finalSlug}`;
   }
+  const posterEl = document.getElementById("demo-poster-preview");
+  if (posterEl) {
+    posterEl.textContent = `waitlink.app?s=${finalSlug}&view=poster`;
+  }
+}
+
+function copyDemoPosterUrlFromModal() {
+  const nameInput = document.getElementById("demo-shop-name-input");
+  const preset = DEMO_INDUSTRY_PRESETS[activeDemoIndustry] || DEMO_INDUSTRY_PRESETS.general;
+  const shopTitle = (nameInput && nameInput.value.trim()) || preset.defaultShopName;
+  const rawSlug = slugify(shopTitle);
+  const finalSlug = rawSlug.startsWith("demo-") ? rawSlug : `demo-${rawSlug}`;
+
+  const origin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://waitlink.app";
+  const path = window.location.pathname || "/";
+  const posterUrl = `${origin}${path}?s=${finalSlug}&view=poster`;
+
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(posterUrl).then(() => {
+      showToast(`📋 Storefront QR Poster link copied!`);
+    }).catch(() => {
+      prompt("Copy Storefront QR Poster Link:", posterUrl);
+    });
+  } else {
+    prompt("Copy Storefront QR Poster Link:", posterUrl);
+  }
 }
 
 function updateDemoPreviewSnapshot(preset) {
@@ -10041,6 +10103,21 @@ async function launchDemoShopFromModal() {
     const now = Date.now();
     const mockQueue = preset.generateQueue(now);
     const mockHistory = preset.generateHistory(now);
+
+    const origin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://waitlink.app";
+    const path = window.location.pathname || "/";
+    const posterUrl = `${origin}${path}?s=${finalSlug}&view=poster`;
+    const deskUrl = `${origin}${path}?s=${finalSlug}&view=desk`;
+    const publicUrl = `${origin}${path}?s=${finalSlug}&view=public`;
+
+    lastCreatedDemoShop = {
+      shopTitle,
+      finalSlug,
+      presetId: preset.id,
+      posterUrl,
+      deskUrl,
+      publicUrl
+    };
 
     if (saveToCloud && db) {
       const demoDoc = {
@@ -10099,9 +10176,23 @@ async function launchDemoShopFromModal() {
       SafeStorage.set("waitlink_registered_shops", state.registeredShops);
       renderSuperAdminShopsTable();
 
-      // Launch and inspect desk
-      inspectShop(finalSlug);
-      showToast(`🚀 1-Tap Demo Shop "${shopTitle}" created and live with SMS enabled!`);
+      // Switch to success card within modal so admin can easily copy QR poster link
+      const formStep = document.getElementById("demo-generator-form-step");
+      const successStep = document.getElementById("demo-generator-success-step");
+      if (formStep && successStep) {
+        formStep.classList.add("hidden");
+        successStep.classList.remove("hidden");
+
+        setElText("demo-success-title", `Demo Shop "${shopTitle}" Live & Ready!`);
+        setElText("demo-success-poster-url", posterUrl.replace(/^https?:\/\//, ""));
+        setElText("demo-success-desk-url", deskUrl.replace(/^https?:\/\//, ""));
+        setElText("demo-success-public-url", publicUrl.replace(/^https?:\/\//, ""));
+      } else {
+        inspectShop(finalSlug);
+        closeDemoShopGeneratorModal();
+      }
+
+      showToast(`🚀 1-Tap Demo Shop "${shopTitle}" created! Storefront QR poster ready.`);
     } else {
       // Local session demo mode
       initDemoMode(preset.id, shopTitle);
@@ -10115,11 +10206,24 @@ async function launchDemoShopFromModal() {
       saveConfig();
       renderAll();
       generateQRCode();
-      switchView("desk");
+
+      const formStep = document.getElementById("demo-generator-form-step");
+      const successStep = document.getElementById("demo-generator-success-step");
+      if (formStep && successStep) {
+        formStep.classList.add("hidden");
+        successStep.classList.remove("hidden");
+
+        setElText("demo-success-title", `Demo Sandbox "${shopTitle}" Ready!`);
+        setElText("demo-success-poster-url", posterUrl.replace(/^https?:\/\//, ""));
+        setElText("demo-success-desk-url", deskUrl.replace(/^https?:\/\//, ""));
+        setElText("demo-success-public-url", publicUrl.replace(/^https?:\/\//, ""));
+      } else {
+        switchView("desk");
+        closeDemoShopGeneratorModal();
+      }
+
       showToast(`🚀 Demo Sandbox "${shopTitle}" launched!`);
     }
-
-    closeDemoShopGeneratorModal();
   } catch (err) {
     console.error("Error launching demo shop:", err);
     showToast(`⚠️ Failed to launch demo shop: ${err.message}`);
@@ -10129,6 +10233,58 @@ async function launchDemoShopFromModal() {
       btn.innerHTML = `🚀 1-Tap Launch Demo Shop`;
     }
   }
+}
+
+function copySuccessDemoLink(type) {
+  if (!lastCreatedDemoShop) return;
+  let url = lastCreatedDemoShop.posterUrl;
+  let label = "Storefront QR Poster";
+  if (type === "desk") {
+    url = lastCreatedDemoShop.deskUrl;
+    label = "Front Desk Terminal";
+  } else if (type === "public") {
+    url = lastCreatedDemoShop.publicUrl;
+    label = "Customer Check-In";
+  }
+
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast(`📋 ${label} link copied to clipboard!`);
+    }).catch(() => {
+      prompt(`Copy ${label} Link:`, url);
+    });
+  } else {
+    prompt(`Copy ${label} Link:`, url);
+  }
+}
+
+function openSuccessDemoLink(type) {
+  if (!lastCreatedDemoShop) return;
+  let url = lastCreatedDemoShop.posterUrl;
+  if (type === "desk") url = lastCreatedDemoShop.deskUrl;
+  else if (type === "public") url = lastCreatedDemoShop.publicUrl;
+  window.open(url, "_blank");
+}
+
+function copyDemoPitchFromSuccessModal() {
+  if (!lastCreatedDemoShop) return;
+  const pitch = generateDemoPitch(lastCreatedDemoShop.shopTitle, lastCreatedDemoShop.presetId, lastCreatedDemoShop.deskUrl);
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pitch).then(() => {
+      showToast(`📋 Complete sales pitch for "${lastCreatedDemoShop.shopTitle}" copied to clipboard!`);
+    }).catch(() => {
+      prompt("Copy Demo Sales Pitch:", pitch);
+    });
+  } else {
+    prompt("Copy Demo Sales Pitch:", pitch);
+  }
+}
+
+function doneDemoShopModal() {
+  if (lastCreatedDemoShop && lastCreatedDemoShop.finalSlug) {
+    inspectShop(lastCreatedDemoShop.finalSlug);
+  }
+  closeDemoShopGeneratorModal();
 }
 
 function copyDemoPitchFromModal() {

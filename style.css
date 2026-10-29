@@ -1952,6 +1952,18 @@ select optgroup,
   border: 1px solid rgba(244, 63, 94, 0.4);
 }
 
+#desk-qr-poster-btn:hover {
+  background: rgba(6, 182, 212, 0.18) !important;
+  border-color: #22d3ee !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.25);
+}
+
+#desk-qr-poster-btn:active {
+  transform: translateY(0);
+}
+
 .desk-conn-dot {
   width: 7px;
   height: 7px;

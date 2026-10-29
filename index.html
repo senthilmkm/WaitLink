@@ -693,6 +693,9 @@
             <div class="metric-value" id="metric-waiting-count">0</div>
             <div class="metric-label">Waiting</div>
           </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="desk-qr-poster-btn" onclick="switchView('poster')" title="View & Print Storefront QR Code Poster" style="border-color: #06b6d4; color: #06b6d4; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); background: rgba(6, 182, 212, 0.08); transition: all 0.2s ease;">
+            🖨️ Storefront QR Poster
+          </button>
           <button class="btn-text-sm hidden" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none !important;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
             📲 Install Tablet Mode
           </button>
@@ -3935,65 +3938,142 @@ Dedicated Support Manager
         Select an industry or type a prospect's business name. WaitLink will instantly assemble a tailored demo shop with realistic mock queues, industry services, live phone tracking, and a tailored cold pitch.
       </p>
 
-      <!-- Step 1: Industry Preset Grid -->
-      <div style="margin-bottom: 1.25rem;">
-        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
-          1. Select Industry Preset:
-        </label>
-        <div class="demo-industry-grid" id="demo-industry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 0.6rem;">
-          <!-- Injected dynamically by app.js with fallback -->
-        </div>
-      </div>
-
-      <!-- Step 2: Custom Business Name & Slug Preview -->
-      <div style="margin-bottom: 1.25rem;">
-        <label for="demo-shop-name-input" style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em;">
-          2. Prospect / Business Name (Optional Custom Override):
-        </label>
-        <div style="position: relative;">
-          <input type="text" id="demo-shop-name-input" class="form-input" placeholder="e.g. Apex Tire & Auto" oninput="handleDemoNameInput(this.value)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1.5px solid var(--border-color); color: var(--text-main); font-size: 0.95rem; font-weight: 600;">
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.775rem; color: var(--text-muted);">
-          <span>Target URL: <code id="demo-slug-preview" style="color: #a855f7; font-weight: 700;">waitlink.app?s=demo-apex-tire</code></span>
-          <span id="demo-industry-detected-badge" style="font-size: 0.72rem; color: #34d399; font-weight: 700;"></span>
-        </div>
-      </div>
-
-      <!-- Step 3: Preset Live Preview Snapshot Box -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;" class="card-subpanel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
-          <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
-            <span id="demo-preview-icon">🛞</span> <span id="demo-preview-title">Apex Tire & Auto</span>
-          </span>
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <span id="demo-preview-queue-count" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">3 in queue</span>
-            <span id="demo-preview-units" style="font-size: 0.7rem; background: rgba(168, 85, 247, 0.18); color: #c084fc; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">Bays / Lifts</span>
+      <!-- Form View Container -->
+      <div id="demo-generator-form-step">
+        <!-- Step 1: Industry Preset Grid -->
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            1. Select Industry Preset:
+          </label>
+          <div class="demo-industry-grid" id="demo-industry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 0.6rem;">
+            <!-- Injected dynamically by app.js with fallback -->
           </div>
         </div>
-        <p id="demo-preview-tagline" style="font-size: 0.775rem; color: var(--text-muted); margin: 0 0 0.65rem 0;">Live Service Bay Queue & Vehicle Status</p>
-        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem;">Pre-Configured Services:</div>
-        <div id="demo-preview-services-chips" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
-          <!-- Service badges -->
+
+        <!-- Step 2: Custom Business Name & Slug Preview -->
+        <div style="margin-bottom: 1.25rem;">
+          <label for="demo-shop-name-input" style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            2. Prospect / Business Name (Optional Custom Override):
+          </label>
+          <div style="position: relative;">
+            <input type="text" id="demo-shop-name-input" class="form-input" placeholder="e.g. Apex Tire & Auto" oninput="handleDemoNameInput(this.value)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1.5px solid var(--border-color); color: var(--text-main); font-size: 0.95rem; font-weight: 600;">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.775rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.35rem;">
+            <span>Target URL: <code id="demo-slug-preview" style="color: #a855f7; font-weight: 700;">waitlink.app?s=demo-apex-tire</code></span>
+            <span id="demo-industry-detected-badge" style="font-size: 0.72rem; color: #34d399; font-weight: 700;"></span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.35rem;">
+            <span>🖨️ Storefront QR Poster: <code id="demo-poster-preview" style="color: #06b6d4; font-weight: 700;">waitlink.app?s=demo-apex-tire&amp;view=poster</code></span>
+            <button type="button" class="btn-text-sm" onclick="copyDemoPosterUrlFromModal()" style="color: #06b6d4; padding: 1px 6px; font-size: 0.72rem;" title="Copy poster URL">📋 Copy Link</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Preset Live Preview Snapshot Box -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;" class="card-subpanel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
+              <span id="demo-preview-icon">🛞</span> <span id="demo-preview-title">Apex Tire & Auto</span>
+            </span>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <span id="demo-preview-queue-count" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">3 in queue</span>
+              <span id="demo-preview-units" style="font-size: 0.7rem; background: rgba(168, 85, 247, 0.18); color: #c084fc; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 700;">Bays / Lifts</span>
+            </div>
+          </div>
+          <p id="demo-preview-tagline" style="font-size: 0.775rem; color: var(--text-muted); margin: 0 0 0.65rem 0;">Live Service Bay Queue & Vehicle Status</p>
+          <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem;">Pre-Configured Services:</div>
+          <div id="demo-preview-services-chips" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <!-- Service badges -->
+          </div>
+        </div>
+
+        <!-- Step 4: Storage Mode Checkbox -->
+        <div style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; margin: 0; font-size: 0.825rem; color: var(--text-main); font-weight: 600;">
+            <input type="checkbox" id="demo-save-to-firestore" checked style="width: 17px; height: 17px; accent-color: #a855f7; cursor: pointer;">
+            <span>☁️ Save to Cloud Firestore (creates persistent shareable URL for prospect)</span>
+          </label>
+        </div>
+
+        <!-- Action Footer -->
+        <div style="display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeDemoShopGeneratorModal()">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-demo-pitch" onclick="copyDemoPitchFromModal()" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); font-weight: 700;">
+            📋 Copy Sales Pitch
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-launch-demo-shop" onclick="launchDemoShopFromModal()" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; font-weight: 800; padding: 0.65rem 1.4rem; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4); border-radius: 8px;">
+            🚀 1-Tap Launch Demo Shop
+          </button>
         </div>
       </div>
 
-      <!-- Step 4: Storage Mode Checkbox -->
-      <div style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem 1rem;">
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; margin: 0; font-size: 0.825rem; color: var(--text-main); font-weight: 600;">
-          <input type="checkbox" id="demo-save-to-firestore" checked style="width: 17px; height: 17px; accent-color: #a855f7; cursor: pointer;">
-          <span>☁️ Save to Cloud Firestore (creates persistent shareable URL for prospect)</span>
-        </label>
-      </div>
+      <!-- Step 5: Post-Launch Share Links & Quick Actions Card -->
+      <div id="demo-generator-success-step" class="hidden" style="animation: fadeIn 0.25s ease;">
+        <div style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+            <span style="font-size: 1.5rem;">🎉</span>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #34d399;" id="demo-success-title">Demo Shop Live &amp; Ready!</h3>
+          </div>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+            Your tailored demo shop has been assembled in Firestore with SMS enabled (100 credits), realistic mock tickets, and pre-configured services.
+          </p>
+        </div>
 
-      <!-- Action Footer -->
-      <div style="display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeDemoShopGeneratorModal()">Cancel</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-demo-pitch" onclick="copyDemoPitchFromModal()" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); font-weight: 700;">
-          📋 Copy Sales Pitch
-        </button>
-        <button type="button" class="btn btn-primary" id="btn-launch-demo-shop" onclick="launchDemoShopFromModal()" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; font-weight: 800; padding: 0.65rem 1.4rem; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4); border-radius: 8px;">
-          🚀 1-Tap Launch Demo Shop
-        </button>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+          
+          <!-- Link 1: Storefront QR Poster -->
+          <div style="background: rgba(6, 182, 212, 0.08); border: 1.5px solid rgba(6, 182, 212, 0.35); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: #06b6d4; display: flex; align-items: center; gap: 0.35rem;">
+                <span>🖨️</span> <strong>Storefront QR Code Poster</strong> <span style="font-size: 0.7rem; background: rgba(6, 182, 212, 0.2); color: #22d3ee; padding: 1px 6px; border-radius: 4px;">Recommended for Prospect</span>
+              </span>
+              <div style="display: flex; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-success-poster" onclick="copySuccessDemoLink('poster')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: #06b6d4; border-color: rgba(6, 182, 212, 0.5);">📋 Copy</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-success-poster" onclick="openSuccessDemoLink('poster')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: #06b6d4; border-color: rgba(6, 182, 212, 0.5);">🖨️ View Poster ↗</button>
+              </div>
+            </div>
+            <code id="demo-success-poster-url" style="display: block; font-size: 0.775rem; color: #67e8f9; word-break: break-all; background: rgba(0,0,0,0.25); padding: 0.35rem 0.6rem; border-radius: 6px;">waitlink.app?s=demo-slug&amp;view=poster</code>
+          </div>
+
+          <!-- Link 2: Front Desk Operator -->
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.35rem;">
+                <span>🖥️</span> <strong>Front Desk Terminal (Staff / Reception)</strong>
+              </span>
+              <div style="display: flex; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-success-desk" onclick="copySuccessDemoLink('desk')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">📋 Copy</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-success-desk" onclick="openSuccessDemoLink('desk')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">🖥️ Open Desk ↗</button>
+              </div>
+            </div>
+            <code id="demo-success-desk-url" style="display: block; font-size: 0.775rem; color: #a855f7; word-break: break-all; background: rgba(0,0,0,0.25); padding: 0.35rem 0.6rem; border-radius: 6px;">waitlink.app?s=demo-slug&amp;view=desk</code>
+          </div>
+
+          <!-- Link 3: Customer Public View -->
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.35rem;">
+                <span>📱</span> <strong>Customer Self Check-In View</strong>
+              </span>
+              <div style="display: flex; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-success-public" onclick="copySuccessDemoLink('public')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">📋 Copy</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-success-public" onclick="openSuccessDemoLink('public')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">📱 Open Check-In ↗</button>
+              </div>
+            </div>
+            <code id="demo-success-public-url" style="display: block; font-size: 0.775rem; color: #34d399; word-break: break-all; background: rgba(0,0,0,0.25); padding: 0.35rem 0.6rem; border-radius: 6px;">waitlink.app?s=demo-slug&amp;view=public</code>
+          </div>
+        </div>
+
+        <!-- Success Footer -->
+        <div style="display: flex; gap: 0.6rem; justify-content: space-between; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-success-pitch" onclick="copyDemoPitchFromSuccessModal()" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); font-weight: 700;">
+            📋 Copy Sales Pitch Email
+          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-primary" onclick="doneDemoShopModal()" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; font-weight: 800; padding: 0.65rem 1.4rem; border-radius: 8px;">
+              ✓ Inspect Front Desk
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -4218,6 +4298,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=10.3"></script>
+  <script src="app.js?v=10.4"></script>
 </body>
 </html>
