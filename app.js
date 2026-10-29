@@ -643,6 +643,11 @@ function initDemoMode(industryKey, customName) {
   state.config.clinicalPrivacyEnabled = !!preset.clinicalPrivacyEnabled;
   state.config.enableServices = true;
   state.config.tagline = preset.tagline;
+  state.config.twilio = {
+    enabled: true,
+    fromPhone: DEFAULT_TWILIO_FROM,
+    serveNowSmsTemplate: DEFAULT_SERVE_NOW_SMS
+  };
 
   const now = Date.now();
   state.queue = preset.generateQueue(now);
@@ -1738,10 +1743,19 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.status !== undefined) state.config.status = data.status;
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
+        if (isDemo && state.config.twilio.enabled === undefined) {
+          state.config.twilio.enabled = true;
+        }
         const fromDigits = (state.config.twilio.fromPhone || "").replace(/\D/g, "");
         if (!fromDigits || fromDigits.includes("9802531359") || fromDigits.includes("8774153678")) {
           state.config.twilio.fromPhone = DEFAULT_TWILIO_FROM;
         }
+      } else if (isDemo) {
+        state.config.twilio = {
+          enabled: true,
+          fromPhone: DEFAULT_TWILIO_FROM,
+          serveNowSmsTemplate: DEFAULT_SERVE_NOW_SMS
+        };
       }
       updateConfigUI();
       updatePosterUI();
@@ -3000,7 +3014,8 @@ async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
     return { success: false, error: "Twilio SMS is disabled in Shop Settings" };
   }
 
-  if (!isPaidTier() && !metadata.isTest) {
+  const isDemo = !!(state.config && (state.config.isDemoShop || (state.config.slug && state.config.slug.startsWith("demo-")) || state.config.slug === "main-st-barbers" || state.isDemoMode));
+  if (!isPaidTier() && !isDemo && !metadata.isTest) {
     return { success: false, error: "Automated SMS alerts require Pro Business tier ($15/mo). Upgrade to send SMS." };
   }
 
@@ -4138,9 +4153,10 @@ function updateTierFeatureLockdown() {
   const twilioTemplate = document.getElementById("twilio-serve-now-template");
   const twilioResetBtn = document.getElementById("btn-reset-sms-tpl");
   const twilioTagBtns = document.querySelectorAll(".btn-sms-tag");
+  const isDemoShop = isDemo || !!(state.config && (state.config.isDemoShop || (state.config.slug && state.config.slug.startsWith("demo-")) || state.config.slug === "main-st-barbers"));
 
   if (twilioCard) {
-    if (!isPaid) {
+    if (!isPaid && !isDemoShop) {
       twilioCard.classList.add("locked");
       if (twilioBanner) {
         if (isDemo || !isAuthenticated) {
@@ -4184,7 +4200,17 @@ function updateTierFeatureLockdown() {
       }
       if (twilioBadge) {
         twilioBadge.className = "badge-pro-pill unlocked";
-        twilioBadge.textContent = "✓ UNLOCKED";
+        if (isDemoShop && !isPaid) {
+          twilioBadge.textContent = "✓ DEMO SMS ENABLED";
+          twilioBadge.style.background = "rgba(168, 85, 247, 0.18)";
+          twilioBadge.style.color = "#c084fc";
+          twilioBadge.style.borderColor = "rgba(168, 85, 247, 0.4)";
+        } else {
+          twilioBadge.textContent = "✓ UNLOCKED";
+          twilioBadge.style.background = "";
+          twilioBadge.style.color = "";
+          twilioBadge.style.borderColor = "";
+        }
       }
       if (twilioCheckbox) {
         twilioCheckbox.disabled = false;
@@ -4195,7 +4221,7 @@ function updateTierFeatureLockdown() {
       if (twilioTemplate) {
         twilioTemplate.disabled = false;
         twilioTemplate.readOnly = false;
-        twilioTemplate.placeholder = "Hi {name}! Your turn at {shop} is ready now. Please proceed to the front desk. View your ticket: {link}";
+        twilioTemplate.placeholder = DEFAULT_SERVE_NOW_SMS;
       }
       if (twilioResetBtn) twilioResetBtn.disabled = false;
       twilioTagBtns.forEach(btn => {
@@ -10034,6 +10060,11 @@ async function launchDemoShopFromModal() {
         estBaseWaitMin: preset.estBaseWaitMin,
         clinicalPrivacyEnabled: !!preset.clinicalPrivacyEnabled,
         enableServices: true,
+        twilio: {
+          enabled: true,
+          fromPhone: DEFAULT_TWILIO_FROM,
+          serveNowSmsTemplate: DEFAULT_SERVE_NOW_SMS
+        },
         queue: mockQueue,
         history: mockHistory,
         createdAt: now,
@@ -10041,6 +10072,21 @@ async function launchDemoShopFromModal() {
       };
 
       await db.collection("shops").doc(finalSlug).set(demoDoc, { merge: true });
+
+      // Automatically initialize smsUsage for demo shop with 100 demo credits (overrideable in SuperAdmin SMS & Quota Override)
+      await db.collection("shops").doc(finalSlug).collection("billing").doc("smsUsage").set({
+        monthlyAllowance: 100,
+        baseMonthlyQuota: 100,
+        customMonthlyQuota: 100,
+        monthlyUsed: 0,
+        topUpBalance: 0,
+        totalAvailable: 100,
+        billingCycleStart: now,
+        billingCycleEnd: now + (30 * 24 * 60 * 60 * 1000),
+        period: new Date().toISOString().slice(0, 7),
+        updatedAt: now,
+        updatedBy: "1-Tap Demo Generator"
+      }, { merge: true });
 
       // Add to registeredShops cache
       if (!Array.isArray(state.registeredShops)) state.registeredShops = [];
@@ -10055,11 +10101,17 @@ async function launchDemoShopFromModal() {
 
       // Launch and inspect desk
       inspectShop(finalSlug);
-      showToast(`🚀 1-Tap Demo Shop "${shopTitle}" created and live!`);
+      showToast(`🚀 1-Tap Demo Shop "${shopTitle}" created and live with SMS enabled!`);
     } else {
       // Local session demo mode
       initDemoMode(preset.id, shopTitle);
       state.config.slug = finalSlug;
+      state.config.isDemoShop = true;
+      state.config.twilio = {
+        enabled: true,
+        fromPhone: DEFAULT_TWILIO_FROM,
+        serveNowSmsTemplate: DEFAULT_SERVE_NOW_SMS
+      };
       saveConfig();
       renderAll();
       generateQRCode();

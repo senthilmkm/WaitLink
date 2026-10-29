@@ -351,9 +351,10 @@ async function getOrInitSmsUsage(slug, shopData) {
   const subscriptionStatus = String((shopData && shopData.subscriptionStatus) || "").toLowerCase();
   const isEnterprise = planPrice >= 49;
   const isPro = planPrice >= 15 || subscriptionStatus === "active" || subscriptionStatus === "trialing";
+  const isDemo = !!(shopData && (shopData.isDemoShop || (slug && slug.startsWith("demo-")) || slug === "main-st-barbers" || (shopData.planTitle && shopData.planTitle.includes("Demo Sandbox"))));
   const baseMonthlyQuota = (shopData && shopData.customMonthlyQuota !== undefined && shopData.customMonthlyQuota !== null && !isNaN(parseInt(shopData.customMonthlyQuota, 10)))
     ? parseInt(shopData.customMonthlyQuota, 10)
-    : (isEnterprise ? 2500 : (isPro ? 500 : 0));
+    : (isEnterprise ? 2500 : (isPro ? 500 : (isDemo ? 100 : 0)));
 
   let usage = snap.exists ? snap.data() : null;
 
@@ -507,13 +508,22 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
 
     const { to, body, from, slug } = req.body || {};
     const cleanSlug = String(slug || "main-st-barbers").trim().toLowerCase();
+
+    const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
+    if (!shopDoc.exists) {
+      return res.status(404).json({ success: false, error: "Shop not found." });
+    }
+    const shopData = shopDoc.data() || {};
+    const isDemo = !!(shopData.isDemoShop || cleanSlug.startsWith("demo-") || cleanSlug === "main-st-barbers" || (shopData.planTitle && shopData.planTitle.includes("Demo Sandbox")));
+
     const isStaffAuthenticated = !!(
       decodedToken
       && decodedToken.role === "staff"
       && decodedToken.shopSlug === cleanSlug
     );
 
-    if (!decodedToken) {
+    // Authentication: strictly required for production shops, permitted for verified demo sandboxes
+    if (!decodedToken && !isDemo) {
       return res.status(401).json({ success: false, error: "Authentication required to dispatch SMS. Please sign in as Owner or use active Front Desk Staff Station credentials." });
     }
 
@@ -526,17 +536,11 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
     const messageBody = body.trim();
     const neededSegments = calculateSmsSegments(messageBody);
 
-    // 2. Verify Shop Ownership / Staff Authorization and Tier
+    // 2. Verify Shop Ownership / Staff Authorization and Tier (Demo shops bypass paid tier lock)
     const callerEmail = decodedToken ? (decodedToken.email || "").toLowerCase() : "";
     const isSuper = decodedToken && (callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com");
 
-    const shopDoc = await admin.firestore().collection("shops").doc(cleanSlug).get();
-    if (!shopDoc.exists) {
-      return res.status(404).json({ success: false, error: "Shop not found." });
-    }
-    const shopData = shopDoc.data() || {};
-
-    if (!isSuper) {
+    if (!isSuper && !isDemo) {
       if (!isStaffAuthenticated) {
         const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
                         (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
@@ -562,7 +566,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
 
     // 4. Quota Enforcement & Wallet Inspection
     const { usage: usageData, ref: usageRef } = await getOrInitSmsUsage(cleanSlug, shopData);
-    const availablePlan = Math.max(0, (usageData.monthlyAllowance || 500) - (usageData.monthlyUsed || 0));
+    const availablePlan = Math.max(0, (usageData.monthlyAllowance !== undefined ? usageData.monthlyAllowance : (isDemo ? 100 : 500)) - (usageData.monthlyUsed || 0));
     const totalAvailable = availablePlan + (usageData.topUpBalance || 0);
 
     if (!isSuper && totalAvailable < neededSegments) {
@@ -571,7 +575,9 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
       return res.status(402).json({
         success: false,
         quotaExhausted: true,
-        error: "SMS Quota Exhausted: Your shop has 0 available SMS credits. Please top up your balance in Owner Settings to resume automated text alerts.",
+        error: isDemo
+          ? `Demo SMS Quota Exhausted: This demo shop has used all available demonstration SMS credits (${usageData.monthlyUsed || 0}/${usageData.monthlyAllowance || 100}). SuperAdmin can add credits in Admin Actions.`
+          : "SMS Quota Exhausted: Your shop has 0 available SMS credits. Please top up your balance in Owner Settings to resume automated text alerts.",
         totalAvailable: totalAvailable,
         neededSegments: neededSegments
       });
