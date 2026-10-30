@@ -134,11 +134,18 @@ service cloud.firestore {
       let nextPeriod = request.resource.data.get('monthlyCheckinPeriod', '');
       let prevCount = resource.data.get('monthlyCheckinCount', 0);
       let prevPeriod = resource.data.get('monthlyCheckinPeriod', '');
+      let customQuota = resource.data.get('customMonthlyQuota', 0);
+      let globalCap = exists(/databases/$(database)/documents/settings/pricing_config)
+        ? get(/databases/$(database)/documents/settings/pricing_config).data.get('starterCheckinCap', 100)
+        : 100;
+      let maxCap = (customQuota is int && customQuota > 0)
+        ? customQuota
+        : ((globalCap is int && globalCap > 0) ? globalCap : 100);
       return nextCount is int
         && nextPeriod is string
         && nextPeriod.size() > 0
         && nextCount >= 1
-        && nextCount <= 100
+        && nextCount <= maxCap
         && (
           (nextPeriod == prevPeriod && nextCount == prevCount + 1)
           || (nextPeriod != prevPeriod && nextCount == 1)

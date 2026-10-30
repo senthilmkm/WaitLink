@@ -2285,8 +2285,21 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
           const period = new Date().toISOString().slice(0, 7);
           let monthlyCount = data.monthlyCheckinPeriod === period ? (parseInt(data.monthlyCheckinCount, 10) || 0) : 0;
           const demoShop = slug === "main-st-barbers" || slug.startsWith("demo-") || data.isDemoShop === true;
-          if (!shopIsPaid(data) && !demoShop && monthlyCount >= 100) {
-            throw httpError(402, "This shop has reached its free monthly check-in limit. Please visit the front desk.");
+          let starterLimit = 100;
+          if (data.customMonthlyQuota && Number.isInteger(data.customMonthlyQuota) && data.customMonthlyQuota > 0) {
+            starterLimit = data.customMonthlyQuota;
+          } else {
+            try {
+              const pricingSnap = await tx.get(admin.firestore().collection("settings").doc("pricing_config"));
+              if (pricingSnap.exists) {
+                const pData = pricingSnap.data() || {};
+                const parsedCap = parseInt(pData.starterCheckinCap, 10);
+                if (!isNaN(parsedCap) && parsedCap > 0) starterLimit = parsedCap;
+              }
+            } catch (e) { }
+          }
+          if (!shopIsPaid(data) && !demoShop && monthlyCount >= starterLimit) {
+            throw httpError(402, `This shop has reached its free monthly check-in limit (${starterLimit} check-ins/month). Please visit the front desk.`);
           }
           const ticketSecret = crypto.randomBytes(18).toString("hex");
           const newItem = {

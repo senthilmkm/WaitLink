@@ -274,6 +274,54 @@ it("buildStripeTopUpCancelUrl: Includes view=owner and subtab=notifications to r
   assert.strictEqual(parsed.searchParams.get("topup"), "cancel");
 });
 
+// -------------------------------------------------------------------------
+// Tests: Starter Tier Dynamic Check-in Cap & Paywall Resolution
+// -------------------------------------------------------------------------
+console.log("\n--- 6. Starter Tier Dynamic Check-in Cap & SuperAdmin Governance ---");
+
+function resolveStarterCheckinCap(shopConfig = {}, globalState = {}) {
+  const customQuota = shopConfig.customMonthlyQuota ? parseInt(shopConfig.customMonthlyQuota, 10) : null;
+  if (customQuota && !isNaN(customQuota) && customQuota > 0) {
+    return customQuota;
+  }
+  if (globalState.starterCheckinCap && !isNaN(globalState.starterCheckinCap) && globalState.starterCheckinCap > 0) {
+    return globalState.starterCheckinCap;
+  }
+  return 100;
+}
+
+function evaluateMonthlyCheckinAllowed(planPrice, currentCount, cap) {
+  if (planPrice >= 15) return true; // Pro or Enterprise unlimited
+  return currentCount < cap;
+}
+
+it("resolveStarterCheckinCap: Defaults to exactly 100 when no custom or global override set", () => {
+  const cap = resolveStarterCheckinCap({}, {});
+  assert.strictEqual(cap, 100);
+});
+
+it("resolveStarterCheckinCap: Respects SuperAdmin dynamic platform cap when modified (e.g. 150)", () => {
+  const cap = resolveStarterCheckinCap({}, { starterCheckinCap: 150 });
+  assert.strictEqual(cap, 150);
+});
+
+it("resolveStarterCheckinCap: Shop customMonthlyQuota takes priority over platform global cap", () => {
+  const cap = resolveStarterCheckinCap({ customMonthlyQuota: 300 }, { starterCheckinCap: 125 });
+  assert.strictEqual(cap, 300);
+});
+
+it("evaluateMonthlyCheckinAllowed: Permits check-in below dynamic cap and blocks at or above cap", () => {
+  const cap = 100;
+  assert.strictEqual(evaluateMonthlyCheckinAllowed(0, 99, cap), true);
+  assert.strictEqual(evaluateMonthlyCheckinAllowed(0, 100, cap), false);
+  assert.strictEqual(evaluateMonthlyCheckinAllowed(0, 101, cap), false);
+});
+
+it("evaluateMonthlyCheckinAllowed: Paid plans ($15 Pro, $49 Enterprise) are unlimited regardless of check-in count", () => {
+  assert.strictEqual(evaluateMonthlyCheckinAllowed(15, 500, 100), true);
+  assert.strictEqual(evaluateMonthlyCheckinAllowed(49, 10000, 100), true);
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

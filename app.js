@@ -733,6 +733,7 @@ const state = {
     updatedAt: Date.now(),
     updatedBy: "System Default"
   },
+  starterCheckinCap: parseInt(SafeStorage.get("waitlink_starter_checkin_cap", "100"), 10) || 100,
   customerGpsVerified: false
 };
 window.state = state;
@@ -873,16 +874,32 @@ function maskHistoricalName(fullName, preserveFirstName = true) {
   return `${firstName} ${lastInitial}.`;
 }
 
+function getStarterCheckinCap() {
+  const customQuota = (state.config && state.config.customMonthlyQuota) ? parseInt(state.config.customMonthlyQuota, 10) : null;
+  if (customQuota && !isNaN(customQuota) && customQuota > 0) {
+    return customQuota;
+  }
+  if (state.starterCheckinCap && !isNaN(state.starterCheckinCap) && state.starterCheckinCap > 0) {
+    return state.starterCheckinCap;
+  }
+  const cached = parseInt(SafeStorage.get("waitlink_starter_checkin_cap", "100"), 10);
+  if (!isNaN(cached) && cached > 0) {
+    return cached;
+  }
+  return 100;
+}
+
 function checkMonthlyCheckinLimit() {
   if (isPaidTier()) return true;
+  const maxAllowed = getStarterCheckinCap();
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
   const historyThisMonth = (state.history || []).filter(h => {
     const ts = h.checkedInAt || h.calledAt;
     return ts && ts >= startOfMonth;
   }).length;
   const totalThisMonth = historyThisMonth + (state.queue ? state.queue.length : 0);
-  if (totalThisMonth >= 100) {
-    showToast("🔒 Monthly limit reached for Starter Tier (100 check-ins/month). Upgrade to Pro for unlimited walk-ins!");
+  if (totalThisMonth >= maxAllowed) {
+    showToast(`🔒 Monthly limit reached for Starter Tier (${maxAllowed} check-ins/month). Upgrade to Pro for unlimited walk-ins!`);
     openUpgradeModal();
     return false;
   }
@@ -10521,12 +10538,16 @@ function formatFeatureListForInput(features) {
 function savePricingConfig() {
   const prevTiers = state.pricingTiers || SafeStorage.getJSON("waitlink_pricing_tiers", null);
 
+  const starterCapInput = document.getElementById("pricing-t1-checkin-cap");
+  const newStarterCap = starterCapInput ? (parseInt(starterCapInput.value, 10) || 100) : (state.starterCheckinCap || 100);
+
   const t1 = {
     id: "starter",
     badge: document.getElementById("pricing-t1-badge").value.trim() || "Starter",
     title: document.getElementById("pricing-t1-title").value.trim() || "Free Forever",
     price: document.getElementById("pricing-t1-price").value.trim() || "$0",
     baseSmsQuota: parseInt(document.getElementById("pricing-t1-sms-quota")?.value || "0", 10),
+    starterCheckinCap: newStarterCap,
     desc: document.getElementById("pricing-t1-desc").value.trim(),
     features: state.adminFeatures.t1 || parseFeatureList(document.getElementById("pricing-t1-features").value)
   };
@@ -10571,6 +10592,9 @@ function savePricingConfig() {
       if (pTier.baseSmsQuota !== nTier.baseSmsQuota) {
         diffs.push(`${tName}: Monthly SMS quota changed from "${pTier.baseSmsQuota ?? 'default'}" ➔ "${nTier.baseSmsQuota} SMS"`);
       }
+      if (idx === 0 && pTier.starterCheckinCap !== nTier.starterCheckinCap) {
+        diffs.push(`${tName}: Monthly check-in cap changed from "${pTier.starterCheckinCap ?? 100}" ➔ "${nTier.starterCheckinCap} check-ins"`);
+      }
 
       // Compare feature status changes
       const pFeats = (pTier.features || []).map(f => typeof f === 'object' ? f : { text: String(f), enabled: !String(f).startsWith('[x]') });
@@ -10593,7 +10617,9 @@ function savePricingConfig() {
   }
 
   state.pricingTiers = newTiers;
+  state.starterCheckinCap = newStarterCap;
   SafeStorage.set("waitlink_pricing_tiers", newTiers);
+  SafeStorage.set("waitlink_starter_checkin_cap", newStarterCap);
   renderUpgradeModalTiers(newTiers);
 
   // Save Audit Log
@@ -10614,6 +10640,7 @@ function savePricingConfig() {
   if (db) {
     db.collection("settings").doc("pricing_config").set({
       tiers: newTiers,
+      starterCheckinCap: newStarterCap,
       updatedAt: Date.now(),
       updatedBy: auditEntry.adminEmail
     }, { merge: true }).catch(console.warn);
@@ -10664,6 +10691,7 @@ function loadPricingConfigUI() {
       setElValue("pricing-t1-title", tiers[0].title || "Free Forever");
       setElValue("pricing-t1-price", tiers[0].price || "$0");
       setElValue("pricing-t1-sms-quota", tiers[0].baseSmsQuota !== undefined ? tiers[0].baseSmsQuota : 0);
+      setElValue("pricing-t1-checkin-cap", tiers[0].starterCheckinCap !== undefined ? tiers[0].starterCheckinCap : (state.starterCheckinCap || 100));
       setElValue("pricing-t1-desc", tiers[0].desc || "");
       loadFeaturesIntoState('t1', tiers[0].features);
     }
@@ -10699,10 +10727,18 @@ function loadPricingConfigUI() {
   // Live Cloud load from Firestore
   if (db) {
     db.collection("settings").doc("pricing_config").get().then(doc => {
-      if (doc.exists && doc.data().tiers) {
-        state.pricingTiers = ensureTierSMSLimits(doc.data().tiers);
-        SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
-        applyTiersToUI(state.pricingTiers);
+      if (doc.exists) {
+        const d = doc.data() || {};
+        if (d.starterCheckinCap) {
+          state.starterCheckinCap = parseInt(d.starterCheckinCap, 10) || 100;
+          SafeStorage.set("waitlink_starter_checkin_cap", state.starterCheckinCap);
+          setElValue("pricing-t1-checkin-cap", state.starterCheckinCap);
+        }
+        if (d.tiers) {
+          state.pricingTiers = ensureTierSMSLimits(doc.data().tiers);
+          SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
+          applyTiersToUI(state.pricingTiers);
+        }
       }
     }).catch(console.warn);
   }
@@ -10847,6 +10883,15 @@ function initPricingConfigRealtimeSync() {
           state.pricingTiers = ensureTierSMSLimits(d.tiers);
           SafeStorage.set("waitlink_pricing_tiers", state.pricingTiers);
           renderUpgradeModalTiers(state.pricingTiers);
+        }
+
+        if (d.starterCheckinCap) {
+          state.starterCheckinCap = parseInt(d.starterCheckinCap, 10) || 100;
+          SafeStorage.set("waitlink_starter_checkin_cap", state.starterCheckinCap);
+          const capInput = document.getElementById("pricing-t1-checkin-cap");
+          if (capInput && document.activeElement !== capInput) {
+            capInput.value = state.starterCheckinCap;
+          }
         }
 
         if (d.rolloverPolicy) {
@@ -11762,6 +11807,11 @@ async function handlePublicSelfCheckIn(event) {
   const phone = phoneInput ? phoneInput.value.trim() : "";
 
   if (!customerName) return;
+
+  if (!checkMonthlyCheckinLimit()) {
+    closePublicCheckInModal();
+    return;
+  }
 
   const newItem = {
     id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
@@ -13999,6 +14049,13 @@ function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
           const isPaid = (data.planPrice >= 15) || (data.subscriptionStatus === "active") || (data.subscriptionStatus === "trialing");
           const isDemo = (state.config.slug === "main-st-barbers") || String(state.config.slug).startsWith("demo-") || data.isDemoShop === true;
           if (!isPaid && !isDemo) {
+            const customQuota = data.customMonthlyQuota ? parseInt(data.customMonthlyQuota, 10) : null;
+            const maxAllowed = (customQuota && !isNaN(customQuota) && customQuota > 0)
+              ? customQuota
+              : (state.starterCheckinCap || parseInt(SafeStorage.get("waitlink_starter_checkin_cap", "100"), 10) || 100);
+            if (nextCount > maxAllowed) {
+              throw new Error(`Starter Tier monthly limit reached (${maxAllowed} check-ins/month).`);
+            }
             updatePayload.monthlyCheckinPeriod = period;
             updatePayload.monthlyCheckinCount = nextCount;
           }
@@ -16391,6 +16448,8 @@ if (typeof window !== "undefined") {
   window.savePlatformSecurityConfig = savePlatformSecurityConfig;
   window.handleOwnerToggleRollingQr = handleOwnerToggleRollingQr;
   window.handleOwnerToggleGpsProximity = handleOwnerToggleGpsProximity;
+  window.getStarterCheckinCap = getStarterCheckinCap;
+  window.checkMonthlyCheckinLimit = checkMonthlyCheckinLimit;
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -16406,7 +16465,9 @@ if (typeof module !== "undefined" && module.exports) {
     isRollingTokenValid,
     calculateHaversineDistanceMeters,
     validateCustomerSecurityAccess,
-    savePlatformSecurityConfig
+    savePlatformSecurityConfig,
+    getStarterCheckinCap,
+    checkMonthlyCheckinLimit
   };
 }
 
