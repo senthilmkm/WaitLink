@@ -1034,6 +1034,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // Root URL visit without shop parameter -> Show Product Landing Overview!
     switchView("home");
   }
+
+  // Handle action parameter from landing & pricing pages (?action=create&industry=barber or ?action=upgrade&tier=pro)
+  const actionParam = params.get("action");
+  const industryParam = params.get("industry");
+  if (actionParam === "create") {
+    setTimeout(() => {
+      openCreateShopModal(industryParam);
+    }, 150);
+  } else if (actionParam === "upgrade") {
+    const tierParam = params.get("tier") || "pro";
+    setTimeout(() => {
+      openUpgradeModal(tierParam);
+    }, 150);
+  }
 });
 
 // Ensure Firebase App is initialized once and available globally
@@ -6727,8 +6741,28 @@ function launchDemoMode() {
   showToast("🎮 Entered Live Interactive Demo (Main St Barbers)");
 }
 
+// Industry key normalizer mapping synonyms to DEMO_INDUSTRY_PRESETS keys
+let pendingIndustryPreset = null;
+
+function normalizeIndustryKey(key) {
+  if (!key) return null;
+  const k = String(key).toLowerCase().trim();
+  if (k === "barber" || k === "barbershop" || k === "salon" || k === "hair") return "salon";
+  if (k === "restaurant" || k === "food" || k === "cafe" || k === "bistro") return "restaurant";
+  if (k === "auto" || k === "tires" || k === "tire" || k === "repair-auto" || k === "mechanic") return "auto";
+  if (k === "clinic" || k === "medical" || k === "urgentcare" || k === "urgent" || k === "dental" || k === "doctor") return "clinic";
+  if (k === "pet" || k === "grooming" || k === "vet") return "pet";
+  if (k === "repair" || k === "tech" || k === "phone") return "repair";
+  if (k === "tattoo" || k === "ink") return "tattoo";
+  return (typeof DEMO_INDUSTRY_PRESETS !== "undefined" && DEMO_INDUSTRY_PRESETS[k]) ? k : null;
+}
+
 // Open Shop Creation Wizard Modal
-function openCreateShopModal() {
+function openCreateShopModal(preferredIndustry = null) {
+  if (preferredIndustry) {
+    pendingIndustryPreset = normalizeIndustryKey(preferredIndustry);
+  }
+
   if (state.isStaffSession) {
     showToast("🔒 Restricted: Front Desk Staff accounts cannot create or register new shops.");
     return;
@@ -6737,7 +6771,9 @@ function openCreateShopModal() {
   // Gate unauthenticated guests: prompt them to register/sign in first!
   if (!state.user || !state.user.email) {
     pendingCreateShopAfterAuth = true;
-    showToast("👋 Please create an account or sign in to set up your shop.");
+    const indPreset = pendingIndustryPreset && typeof DEMO_INDUSTRY_PRESETS !== "undefined" && DEMO_INDUSTRY_PRESETS[pendingIndustryPreset];
+    const indLabel = indPreset ? `${indPreset.icon} ${indPreset.label}` : "Shop";
+    showToast(`👋 Please create a free account or sign in to set up your ${indLabel} waitlist.`);
     openAuthModal(true); // Open directly in "🚀 Register New Shop Account" mode
     return;
   }
@@ -6779,7 +6815,9 @@ function openCreateShopModal() {
     modal.classList.remove("hidden");
     resetSlugWizardState();
     renderOnboardIndustryGrid();
-    selectOnboardIndustry("salon", true);
+    const indToSelect = pendingIndustryPreset || activeOnboardIndustry || "salon";
+    selectOnboardIndustry(indToSelect, true);
+    pendingIndustryPreset = null;
     const nameInput = document.getElementById("onboard-shopname") || document.getElementById("new-shop-name");
     if (nameInput) {
       nameInput.value = "";
@@ -6789,8 +6827,8 @@ function openCreateShopModal() {
   }
 }
 
-function openOnboardingModal() {
-  openCreateShopModal();
+function openOnboardingModal(preferredIndustry = null) {
+  openCreateShopModal(preferredIndustry);
 }
 
 function closeCreateShopModal() {

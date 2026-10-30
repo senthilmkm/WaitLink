@@ -241,6 +241,48 @@ it("app.js protects renderAll execution in handleOnboardingSubmit to guarantee m
   assert.ok(appJs.includes("openRegistrationSuccessModal(shopName, slug, state.user.email);"), "handleOnboardingSubmit must open registration success modal");
 });
 
+console.log("\n--- 7. Industry Landing Pages & Intent Routing Engine ---");
+
+it("normalizeIndustryKey properly maps synonyms to canonical preset keys", () => {
+  assert.ok(appJs.includes("function normalizeIndustryKey(key)"), "normalizeIndustryKey must exist in app.js");
+  const match = appJs.match(/function normalizeIndustryKey\([\s\S]*?\n\}/);
+  assert.ok(match, "Could not extract normalizeIndustryKey");
+  const sandbox = { DEMO_INDUSTRY_PRESETS: presets };
+  vm.runInNewContext(`${match[0]}; fn = normalizeIndustryKey;`, sandbox);
+  const fn = sandbox.fn;
+
+  assert.strictEqual(fn("barber"), "salon");
+  assert.strictEqual(fn("barbershop"), "salon");
+  assert.strictEqual(fn("hair"), "salon");
+  assert.strictEqual(fn("restaurant"), "restaurant");
+  assert.strictEqual(fn("cafe"), "restaurant");
+  assert.strictEqual(fn("auto"), "auto");
+  assert.strictEqual(fn("mechanic"), "auto");
+  assert.strictEqual(fn("clinic"), "clinic");
+  assert.strictEqual(fn("urgentcare"), "clinic");
+  assert.strictEqual(fn("dental"), "clinic");
+  assert.strictEqual(fn("pet"), "pet");
+  assert.strictEqual(fn("unknown-random"), null);
+});
+
+it("all 4 industry landing pages contain direct intent CTAs with ?action=create&industry=...", () => {
+  const barberHtml = fs.readFileSync(path.join(__dirname, "../barbershop-waitlist.html"), "utf8");
+  const restaurantHtml = fs.readFileSync(path.join(__dirname, "../restaurant-waitlist.html"), "utf8");
+  const autoHtml = fs.readFileSync(path.join(__dirname, "../auto-repair-queue.html"), "utf8");
+  const clinicHtml = fs.readFileSync(path.join(__dirname, "../clinic-virtual-queue.html"), "utf8");
+
+  assert.ok(barberHtml.includes('href="index.html?action=create&industry=barber"'), "barbershop page must link with industry=barber");
+  assert.ok(restaurantHtml.includes('href="index.html?action=create&industry=restaurant"'), "restaurant page must link with industry=restaurant");
+  assert.ok(autoHtml.includes('href="index.html?action=create&industry=auto"'), "auto page must link with industry=auto");
+  assert.ok(clinicHtml.includes('href="index.html?action=create&industry=clinic"'), "clinic page must link with industry=clinic");
+});
+
+it("app.js parses action=create and industry parameters on DOMContentLoaded", () => {
+  assert.ok(appJs.includes('params.get("action")'), "app.js must check action param");
+  assert.ok(appJs.includes('params.get("industry")'), "app.js must check industry param");
+  assert.ok(appJs.includes('openCreateShopModal(industryParam)'), "app.js must forward industryParam to openCreateShopModal");
+});
+
 console.log(`\n======================================================================`);
 console.log(`📊 RESULTS: ${passed} PASSED, ${failed} FAILED`);
 console.log(`======================================================================\n`);
