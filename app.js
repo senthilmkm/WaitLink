@@ -6260,11 +6260,22 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
 
   const maskedBadgeHtml = isPiiMasked ? ` <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3); vertical-align: middle;" title="Patron PII auto-masked in compliance with data privacy policy">🛡️ MASKED</span>` : '';
 
+  const serviceSubtitleHtml = item.selectedServiceName ? `
+    <div style="font-size: 0.72rem; color: #06b6d4; font-weight: 500; margin-top: 2px; display: flex; align-items: center; gap: 3px;" title="Selected Service Duration: ${item.selectedServiceDurationMin || 20} mins">
+      <span>🔧</span>
+      <span>${escapeHtml(item.selectedServiceName)}</span>
+      <span style="opacity: 0.85;">(${item.selectedServiceDurationMin || 20}m)</span>
+    </div>
+  ` : '';
+
   const customerNameCell = isOwnerView ? `
-    <span class="history-customer-link" data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" title="${isPiiMasked ? 'PII auto-masked (>30 days old). Click to view lifecycle audit log.' : 'Click to view lifecycle audit log.'}">
-      ${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${maskedBadgeHtml}
-    </span>
-  ` : `<span>${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${isPiiMasked ? ' <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">🛡️</span>' : ''}</span>`;
+    <div>
+      <span class="history-customer-link" data-action="audit-log" data-id="${safeId}" onclick="openCustomerAuditModal('${safeId}')" title="${isPiiMasked ? 'PII auto-masked (>30 days old). Click to view lifecycle audit log.' : 'Click to view lifecycle audit log.'}">
+        ${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${maskedBadgeHtml}
+      </span>
+      ${serviceSubtitleHtml}
+    </div>
+  ` : `<div><span>${isClinical ? '🩺 ' : ''}<strong>${escapeHtml(displayName)}</strong>${isPiiMasked ? ' <span style="font-size: 0.68rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.1rem 0.35rem; border-radius: 4px;">🛡️</span>' : ''}</span>${serviceSubtitleHtml}</div>`;
 
   const waitDurationDisplay = isCalled ? formatWaitDuration(item.waitDurationMin) : "--";
 
