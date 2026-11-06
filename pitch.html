@@ -667,6 +667,27 @@
         padding: 1.25rem;
       }
     }
+
+    /* Landing Footer */
+    .landing-footer a,
+    .footer-links-list a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .landing-footer a:hover,
+    .footer-links-list a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    html[data-theme="light"] .landing-footer a,
+    html[data-theme="light"] .footer-links-list a {
+      color: #475569;
+    }
+    html[data-theme="light"] .landing-footer a:hover,
+    html[data-theme="light"] .footer-links-list a:hover {
+      color: #059669;
+    }
   </style>
 </head>
 <body>
@@ -679,7 +700,8 @@
       <span class="brand-badge">Merchant Sales Sheet</span>
     </a>
     <div class="header-actions">
-      <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌓</button>
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+      <a href="pricing.html" class="btn btn-secondary no-print" title="View Full Tier Comparison & Matrix">💎 Pricing</a>
       <button class="btn btn-secondary no-print" onclick="window.print()" title="Print or save as PDF for merchant pitch">🖨️ Print One-Pager</button>
       <a href="index.html?shop=main-st-barbers" class="btn btn-primary" target="_blank" title="Open live interactive demo sandbox">
         🚀 Launch Live Demo
@@ -703,6 +725,8 @@
       <div class="hero-badges">
         <span class="trust-chip">📱 Zero Customer App Downloads</span>
         <span class="trust-chip">⏱️ 10-Second Front Desk Check-in</span>
+        <span class="trust-chip">⭐ Automated 5-Star Google Reviews</span>
+        <span class="trust-chip">🛡️ Anti-Spam Rolling QR &amp; Geofence</span>
         <span class="trust-chip">🆓 $0 Free Starter Forever</span>
         <span class="trust-chip">🖥️ Runs on Any iPad, Phone, or Laptop</span>
       </div>
@@ -816,6 +840,7 @@
                 • Views live position in line (#1, #2, Next)<br>
                 • Watches dynamic wait time countdown<br>
                 • Receives turn-ready SMS and turn sound<br>
+                • 1-Tap 5-Star Rating &amp; Google Reviews boost<br>
                 • Can safely cancel if plans change
               </td>
               <td>
@@ -833,10 +858,11 @@
                 <strong>4-Digit Station PIN</strong> or 1-Click Tablet Station Link. Instant shift changes in under 2 seconds.
               </td>
               <td>
-                • 10-second walk-in intake (Name & Phone)<br>
+                • 10-second walk-in intake (Name &amp; Phone)<br>
                 • 1-Tap <strong>"SERVE NOW"</strong> / Call Next<br>
                 • Audible arrival sound chime alerts<br>
-                • Mark served, no-show, or delayed
+                • In-person Checkout QR for instant Google Reviews<br>
+                • Mark served, completed, or no-show
               </td>
               <td>
                 <strong style="color: var(--accent);">Zero training required.</strong> Calmer desk, zero repetitive wait time questions from patrons.
@@ -850,17 +876,19 @@
                 <div style="font-size: 0.78rem; color: var(--text-muted);">Full Administration</div>
               </td>
               <td>
-                <strong>Master Email & Password</strong> (Google or Email login). Complete privacy and financial isolation.
+                <strong>Master Email &amp; Password</strong> (Google or Email login). Complete privacy and financial isolation.
               </td>
               <td>
                 • Real-time multi-shop oversight from phone<br>
-                • 1-Click Printable Window QR Generator<br>
+                • 1-Click Printable Window QR &amp; Kiosk Rolling QR<br>
+                • GPS Geofence Anti-Spam protection controls<br>
+                • Google Reviews CSAT % &amp; sentiment dashboard<br>
                 • Staff PIN management and shift auditing<br>
                 • Turnaround analytics and CSV export<br>
                 • Clinical Privacy Mode (HIPAA-friendly)
               </td>
               <td>
-                <strong style="color: var(--accent);">Total control & visibility.</strong> Protects master credentials while tracking peak revenue hours.
+                <strong style="color: var(--accent);">Total control &amp; visibility.</strong> Protects master credentials while tracking peak revenue hours.
               </td>
             </tr>
           </tbody>
@@ -978,15 +1006,17 @@
             <span style="font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Starter Tier</span>
             <div class="price-num">$0 <span>/ month</span></div>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-              Free forever. Perfect for solo barbers, independent stylists, and testing digital queues.
+              Free forever. Perfect for solo barbers, independent stylists, and testing digital queues with zero risk.
             </p>
             <ul class="price-features">
               <li><span class="check-icon">✓</span> <span><strong>1 Shop Location</strong> (100 check-ins/mo)</span></li>
-              <li><span class="check-icon">✓</span> <span>Printable High-Res Window QR Poster</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>0 Carrier SMS</strong> (Web ticket &amp; bell chime)</span></li>
+              <li><span class="check-icon">✓</span> <span>Printable 8.5"x11" Window QR Poster (PDF)</span></li>
               <li><span class="check-icon">✓</span> <span>1-Tap Front Desk Queue Console</span></li>
               <li><span class="check-icon">✓</span> <span>Real-Time Wait Time Estimator</span></li>
               <li><span class="check-icon">✓</span> <span>Live Customer Phone Tracker (Web)</span></li>
-              <li><span class="check-icon">✓</span> <span>Audible Turn Chimes & Sound Alerts</span></li>
+              <li><span class="check-icon">✓</span> <span>Audible Turn Chimes &amp; Sound Alerts</span></li>
+              <li><span class="check-icon">✓</span> <span>7-Day Queue History Retention</span></li>
             </ul>
           </div>
           <a href="index.html" class="btn btn-secondary" style="width: 100%;">Start Free Today</a>
@@ -999,17 +1029,19 @@
             <span style="font-size: 0.75rem; font-weight: 800; color: #06b6d4; background: rgba(6, 182, 212, 0.2); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Pro Business</span>
             <div class="price-num" style="color: var(--accent);">$15 <span>/ month</span></div>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-              For established shops wanting zero walk-away revenue loss and automated SMS texts.
+              For established single shops wanting zero walk-away revenue loss, automated reviews, and SMS texts.
             </p>
             <ul class="price-features">
               <li><span class="check-icon">✓</span> <span><strong>Everything in Starter</strong></span></li>
               <li><span class="check-icon">✓</span> <span><strong>Unlimited Monthly Check-Ins</strong></span></li>
-              <li><span class="check-icon">✓</span> <span><strong>500 Included SMS Texts / mo</strong></span></li>
-              <li><span class="check-icon">✓</span> <span><strong>1-Month SMS Rollover Bank</strong></span></li>
-              <li><span class="check-icon">✓</span> <span>Custom Shop Logo & Accent Colors</span></li>
-              <li><span class="check-icon">✓</span> <span>Owner Analytics & Peak Rush Tracking</span></li>
-              <li><span class="check-icon">✓</span> <span>Clinical & Healthcare Privacy Mode</span></li>
-              <li><span class="check-icon">✓</span> <span>90-Day History & CSV Audit Export</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>500 Included Carrier SMS / mo</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>1-Month SMS Rollover Bank</strong> (up to 1,000 reserve)</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Automated Google Reviews &amp; Post-Service Surveys</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Dynamic Rolling QR &amp; GPS Geofence Anti-Spam</strong></span></li>
+              <li><span class="check-icon">✓</span> <span>Lifetime SMS Top-Ups ($5 for 250, $15 for 1,000)</span></li>
+              <li><span class="check-icon">✓</span> <span>Custom Shop Logo &amp; Accent Colors</span></li>
+              <li><span class="check-icon">✓</span> <span>Clinical &amp; Healthcare Privacy Mode (HIPAA-friendly)</span></li>
+              <li><span class="check-icon">✓</span> <span>90-Day Analytics &amp; CSV / Excel Audit Export</span></li>
             </ul>
           </div>
           <a href="index.html" class="btn btn-primary" style="width: 100%;">Upgrade to Pro</a>
@@ -1021,16 +1053,18 @@
             <span style="font-size: 0.75rem; font-weight: 800; color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 0.2rem 0.6rem; border-radius: 9999px; text-transform: uppercase;">Enterprise</span>
             <div class="price-num">$49 <span>/ month</span></div>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-              For multi-chair studios, franchise networks, and multi-location clinic chains.
+              For multi-location studios, franchise chains, and multi-chair healthcare clinics.
             </p>
             <ul class="price-features">
               <li><span class="check-icon">✓</span> <span><strong>Everything in Pro Business</strong></span></li>
-              <li><span class="check-icon">✓</span> <span><strong>Multi-Location Network (Unlimited)</strong></span></li>
-              <li><span class="check-icon">✓</span> <span><strong>2,500+ Included SMS Texts / mo</strong></span></li>
-              <li><span class="check-icon">✓</span> <span>Multiple Staff Logins & Custom PINs</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Up to 3 Locations Included</strong> (+ $15/mo per extra store)</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Unlimited Front Desk Staff Accounts &amp; PINs</strong></span></li>
+              <li><span class="check-icon">✓</span> <span><strong>2,500+ Included SMS Texts / mo</strong> (pooled)</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Wholesale SMS Top-Up Rates</strong> ($0.012/msg)</span></li>
+              <li><span class="check-icon">✓</span> <span><strong>Central Multi-Location Google Review Hub</strong></span></li>
               <li><span class="check-icon">✓</span> <span>Custom Domain CNAME White-Labeling</span></li>
-              <li><span class="check-icon">✓</span> <span>365-Day Extended History Retention</span></li>
-              <li><span class="check-icon">✓</span> <span>Dedicated Support Manager & 99.9% SLA</span></li>
+              <li><span class="check-icon">✓</span> <span>365-Day Retention &amp; Cross-Shop Network Analytics</span></li>
+              <li><span class="check-icon">✓</span> <span>Dedicated Support Manager &amp; 99.99% SLA</span></li>
             </ul>
           </div>
           <a href="index.html" class="btn btn-secondary" style="width: 100%;">Contact Enterprise</a>
@@ -1084,6 +1118,20 @@
             Never. Staff log in with a dedicated 4-digit Front Desk PIN. They only see queue controls (Check-In, Call, Complete). Financial reports, subscription settings, and billing portals are strictly locked behind your owner master password.
           </p>
         </div>
+
+        <div class="faq-card">
+          <div class="faq-q"><span>⚡</span> "What happens if we run out of SMS credits during a rush?"</div>
+          <p class="faq-a">
+            WaitLink operates on the <strong>Zero-Disruption Principle</strong>: your front desk calling queue, wait time calculators, and public displays never shut down. No customer is lost, and the owner can purchase lifetime non-expiring top-up packs from $5 (250 SMS) in 10 seconds right from Settings.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q"><span>⭐</span> "How does WaitLink help boost our 5-star Google Reviews?"</div>
+          <p class="faq-a">
+            WaitLink automatically prompts served customers on their phone ticket with a 1-tap star rating. Satisfied patrons (4–5 stars) are instantly routed to your Google Maps review page, turning routine walk-ins into a compounding local SEO advantage while catching private feedback on 1–3 star visits.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -1110,22 +1158,81 @@
 
   </main>
 
+  <!-- Standard Landing Footer -->
+  <footer class="landing-footer no-print" style="border-top: 1px solid var(--card-border); padding: 3rem 1.5rem 2rem 1.5rem; margin-top: 2rem;">
+    <div class="footer-container" style="max-width: 1100px; margin: 0 auto;">
+      <div class="footer-top-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+        
+        <div class="footer-col">
+          <div class="brand" style="margin-bottom: 0.75rem;">
+            <span>⏳</span>
+            <span>WaitLink</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            Zero-friction queue management SaaS built for walk-in barbershops, clinics, salons, and cafes.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4 style="font-family: var(--font-heading); font-size: 1rem; margin-bottom: 0.75rem;">Company</h4>
+          <ul class="footer-links-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.88rem;">
+            <li><a href="about.html">About Us</a></li>
+            <li><a href="contact.html">Contact Page</a></li>
+            <li><a href="pricing.html">Pricing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4 style="font-family: var(--font-heading); font-size: 1rem; margin-bottom: 0.75rem;">Legal</h4>
+          <ul class="footer-links-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.88rem;">
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+            <li><a href="cookies.html">Cookie Policy</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4 style="font-family: var(--font-heading); font-size: 1rem; margin-bottom: 0.75rem;">Resources</h4>
+          <ul class="footer-links-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.88rem;">
+            <li><a href="comparison.html">Comparison Matrix</a></li>
+            <li><a href="pitch.html">Merchant One-Pager</a></li>
+            <li><a href="help.html">Help Center</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div style="border-top: 1px solid var(--card-border); padding-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+        &copy; 2026 WaitLink Cloud Sync. Built for Walk-In Businesses. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
   <script>
-    // Simple theme toggle between dark and light
+    // Theme toggle between dark and light
     function toggleTheme() {
       const html = document.documentElement;
       const current = html.getAttribute("data-theme") || "dark";
       const next = current === "dark" ? "light" : "dark";
       html.setAttribute("data-theme", next);
-      localStorage.setItem("waitlink_pitch_theme", next);
+      localStorage.setItem("waitlink_theme", next);
+      syncThemeToggleUI(next);
+    }
+
+    function syncThemeToggleUI(theme) {
+      const btn = document.querySelector(".theme-toggle-btn");
+      if (btn) {
+        btn.innerHTML = theme === "dark" ? "🌙" : "☀️";
+        btn.title = theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode";
+      }
     }
 
     // Restore saved theme preference if any
     (function() {
-      const saved = localStorage.getItem("waitlink_pitch_theme");
-      if (saved) {
-        document.documentElement.setAttribute("data-theme", saved);
-      }
+      const saved = localStorage.getItem("waitlink_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", saved);
+      syncThemeToggleUI(saved);
     })();
   </script>
 </body>
