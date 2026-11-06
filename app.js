@@ -7147,70 +7147,88 @@ function updateActiveTicketTimer() {
       if (surveyBox) {
         surveyBox.style.display = "block";
         const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
-        if (existingRating > 0) {
-          let starHtml = "";
-          for (let i = 1; i <= 5; i++) {
-            if (i <= existingRating) {
-              starHtml += `<span style="color: #f59e0b; font-size: 2.2rem; margin: 0 4px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">★</span>`;
-            } else {
-              starHtml += `<span style="color: #475569; font-size: 2.2rem; margin: 0 4px;">☆</span>`;
+        const existingComment = (state.myTicket && state.myTicket.customerFeedbackComment) || "";
+        const renderKey = `${existingRating}_${existingComment || ""}_${reviewUrl || ""}`;
+
+        // Guard: Don't destroy and rebuild surveyBox every 1 second if state hasn't changed,
+        // or if customer has focused / started typing into the feedback textarea!
+        const feedbackTextarea = document.getElementById("customer-feedback-text");
+        const isUserFocusedOrTyping = feedbackTextarea && (
+          document.activeElement === feedbackTextarea || 
+          (feedbackTextarea.value && feedbackTextarea.value.trim().length > 0)
+        );
+
+        if (surveyBox.dataset.renderKey === renderKey && surveyBox.children.length > 0) {
+          // Already rendered accurately; keep DOM and cursor intact
+        } else if (isUserFocusedOrTyping) {
+          // Customer is actively typing or focused inside textarea; preserve input and focus
+        } else {
+          surveyBox.dataset.renderKey = renderKey;
+          if (existingRating > 0) {
+            let starHtml = "";
+            for (let i = 1; i <= 5; i++) {
+              if (i <= existingRating) {
+                starHtml += `<span style="color: #f59e0b; font-size: 2.2rem; margin: 0 4px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">★</span>`;
+              } else {
+                starHtml += `<span style="color: #475569; font-size: 2.2rem; margin: 0 4px;">☆</span>`;
+              }
             }
-          }
-          let googleBtnHtml = "";
-          if (reviewUrl && existingRating >= 4) {
-            googleBtnHtml = `
-              <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.6rem 0;">Share your positive experience with the community on Google:</p>
-                <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff;">
-                  <span>⭐</span> <span>Leave a Review on Google ↗</span>
-                </a>
+            let googleBtnHtml = "";
+            if (reviewUrl && existingRating >= 4) {
+              googleBtnHtml = `
+                <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                  <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.6rem 0;">Share your positive experience with the community on Google:</p>
+                  <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff;">
+                    <span>⭐</span> <span>Leave a Review on Google ↗</span>
+                  </a>
+                </div>
+              `;
+            } else if (existingRating > 0 && existingRating <= 3) {
+              const existingComment = (state.myTicket && state.myTicket.customerFeedbackComment) || "";
+              if (existingComment) {
+                googleBtnHtml = `
+                  <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem;">
+                      <p style="color: #10b981; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.25rem 0;">✓ Private Note Delivered to Shop Owner</p>
+                      <p style="color: #cbd5e1; font-size: 0.82rem; margin: 0; font-style: italic;">"${escapeHtml(existingComment)}"</p>
+                    </div>
+                  </div>
+                `;
+              } else {
+                googleBtnHtml = `
+                  <div id="post-rating-feedback-box" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                    <p style="color: #fca5a5; font-size: 0.84rem; font-weight: 600; margin: 0 0 0.35rem 0;">We're sorry your visit wasn't a 5-star experience.</p>
+                    <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0 0 0.5rem 0;">Tell the shop owner directly what went wrong:</p>
+                    <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
+                    <button type="button" id="btn-submit-private-feedback" onclick="submitCustomerPrivateFeedback()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff; padding: 0.65rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem;">
+                      <span>📨</span> <span>Send Private Feedback to Owner</span>
+                    </button>
+                  </div>
+                `;
+              }
+            }
+            surveyBox.innerHTML = `
+              <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
+              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">Thank you for your feedback!</h4>
+              <p style="color: #10b981; font-weight: 700; font-size: 0.88rem; margin: 0;" id="survey-feedback-prompt">✓ You rated your visit ${existingRating}/5 stars.</p>
+              ${googleBtnHtml}
+              <div style="margin-top: 0.55rem;">
+                <button type="button" onclick="editCustomerStarRating()" style="background: none; border: none; color: var(--text-muted); font-size: 0.75rem; text-decoration: underline; cursor: pointer;">Change rating</button>
               </div>
             `;
-          } else if (existingRating > 0 && existingRating <= 3) {
-            const existingComment = (state.myTicket && state.myTicket.customerFeedbackComment) || "";
-            if (existingComment) {
-              googleBtnHtml = `
-                <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
-                  <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem;">
-                    <p style="color: #10b981; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.25rem 0;">✓ Private Note Delivered to Shop Owner</p>
-                    <p style="color: #cbd5e1; font-size: 0.82rem; margin: 0; font-style: italic;">"${escapeHtml(existingComment)}"</p>
-                  </div>
-                </div>
-              `;
-            } else {
-              googleBtnHtml = `
-                <div id="post-rating-feedback-box" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
-                  <p style="color: #fca5a5; font-size: 0.84rem; font-weight: 600; margin: 0 0 0.35rem 0;">We're sorry your visit wasn't a 5-star experience.</p>
-                  <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0 0 0.5rem 0;">Tell the shop owner directly what went wrong:</p>
-                  <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
-                  <button type="button" id="btn-submit-private-feedback" onclick="submitCustomerPrivateFeedback()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff; padding: 0.65rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem;">
-                    <span>📨</span> <span>Send Private Feedback to Owner</span>
-                  </button>
-                </div>
-              `;
-            }
+          } else {
+            surveyBox.innerHTML = `
+              <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem; touch-action: manipulation;" onmouseleave="resetCustomerStarHover()">
+                <span class="star-item" data-val="1" role="button" tabindex="0" onclick="submitCustomerStarRating(1)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(1);}" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="1 Star">☆</span>
+                <span class="star-item" data-val="2" role="button" tabindex="0" onclick="submitCustomerStarRating(2)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(2);}" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="2 Stars">☆</span>
+                <span class="star-item" data-val="3" role="button" tabindex="0" onclick="submitCustomerStarRating(3)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(3);}" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="3 Stars">☆</span>
+                <span class="star-item" data-val="4" role="button" tabindex="0" onclick="submitCustomerStarRating(4)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(4);}" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="4 Stars">☆</span>
+                <span class="star-item" data-val="5" role="button" tabindex="0" onclick="submitCustomerStarRating(5)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(5);}" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="5 Stars">☆</span>
+              </div>
+              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
+              <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
+            `;
           }
-          surveyBox.innerHTML = `
-            <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
-            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">Thank you for your feedback!</h4>
-            <p style="color: #10b981; font-weight: 700; font-size: 0.88rem; margin: 0;" id="survey-feedback-prompt">✓ You rated your visit ${existingRating}/5 stars.</p>
-            ${googleBtnHtml}
-            <div style="margin-top: 0.55rem;">
-              <button type="button" onclick="editCustomerStarRating()" style="background: none; border: none; color: var(--text-muted); font-size: 0.75rem; text-decoration: underline; cursor: pointer;">Change rating</button>
-            </div>
-          `;
-        } else {
-          surveyBox.innerHTML = `
-            <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem; touch-action: manipulation;" onmouseleave="resetCustomerStarHover()">
-              <span class="star-item" data-val="1" role="button" tabindex="0" onclick="submitCustomerStarRating(1)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(1);}" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="1 Star">☆</span>
-              <span class="star-item" data-val="2" role="button" tabindex="0" onclick="submitCustomerStarRating(2)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(2);}" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="2 Stars">☆</span>
-              <span class="star-item" data-val="3" role="button" tabindex="0" onclick="submitCustomerStarRating(3)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(3);}" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="3 Stars">☆</span>
-              <span class="star-item" data-val="4" role="button" tabindex="0" onclick="submitCustomerStarRating(4)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(4);}" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="4 Stars">☆</span>
-              <span class="star-item" data-val="5" role="button" tabindex="0" onclick="submitCustomerStarRating(5)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(5);}" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="5 Stars">☆</span>
-            </div>
-            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
-            <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
-          `;
         }
       }
     } else {
@@ -7282,6 +7300,10 @@ function editCustomerStarRating() {
   if (state.myTicket) {
     state.myTicket.customerRating = 0;
   }
+  const surveyBox = document.getElementById("ticket-survey-review-box");
+  if (surveyBox) {
+    delete surveyBox.dataset.renderKey;
+  }
   renderAll();
 }
 window.editCustomerStarRating = editCustomerStarRating;
@@ -7347,6 +7369,9 @@ function submitCustomerStarRating(rating) {
       `;
       parentBox.appendChild(googleBox);
     }
+    if (parentBox) {
+      parentBox.dataset.renderKey = `${rating}__${reviewUrl || ""}`;
+    }
   } else if (rating <= 3) {
     // Feedback Firewall: If 1, 2, or 3 stars, capture private feedback to protect public Google ratings
     let googleBox = document.getElementById("post-rating-google-btn");
@@ -7375,12 +7400,15 @@ function submitCustomerStarRating(rating) {
         feedbackBox.innerHTML = `
           <p style="color: #fca5a5; font-size: 0.84rem; font-weight: 600; margin: 0 0 0.35rem 0;">We're sorry your visit wasn't a 5-star experience.</p>
           <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0 0 0.5rem 0;">Tell the shop owner directly what went wrong:</p>
-          <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
+          <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
           <button type="button" id="btn-submit-private-feedback" onclick="submitCustomerPrivateFeedback()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff; padding: 0.65rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem; transition: transform 0.15s ease;">
             <span>📨</span> <span>Send Private Feedback to Owner</span>
           </button>
         `;
       }
+    }
+    if (parentBox) {
+      parentBox.dataset.renderKey = `${rating}_${existingComment || ""}_${reviewUrl || ""}`;
     }
   }
 
@@ -7549,6 +7577,12 @@ function submitCustomerPrivateFeedback() {
 
   // Update UI to confirmation state
   const feedbackBox = document.getElementById("post-rating-feedback-box");
+  const parentBox = document.getElementById("ticket-survey-review-box");
+  const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
+  const reviewUrl = ((state.config && state.config.surveySettings) || {}).destinationUrl || "";
+  if (parentBox) {
+    parentBox.dataset.renderKey = `${existingRating}_${comment}_${reviewUrl}`;
+  }
   if (feedbackBox) {
     feedbackBox.innerHTML = `
       <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem; margin-top: 0.4rem; animation: fadeIn 0.3s ease;">

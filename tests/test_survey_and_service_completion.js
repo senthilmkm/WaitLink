@@ -561,6 +561,12 @@ it("functions/index.js publicQueueAction handles action === feedback and records
   assert.ok(functionsIndexJs.includes('held.customerFeedbackComment = comment;'), "Must store customerFeedbackComment");
 });
 
+it("app.js protects customer feedback textarea from being destroyed by 1-second timer ticks", () => {
+  assert.ok(appJs.includes('isUserFocusedOrTyping'), "Must detect when user is focused or typing in feedback textarea");
+  assert.ok(appJs.includes('surveyBox.dataset.renderKey === renderKey'), "Must use renderKey guard to avoid clobbering DOM on 1s ticks");
+  assert.ok(appJs.includes('delete surveyBox.dataset.renderKey'), "Must clear renderKey when customer changes rating");
+});
+
 // -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
