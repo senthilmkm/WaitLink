@@ -6148,7 +6148,9 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     `;
   }
 
-  if (item.surveySent) {
+  if (item.customerRating) {
+    statusTagHtml += ` <span class="badge-survey-rating" style="margin-left: 4px; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="Customer rated ${item.customerRating}/5 stars on Web Ticket">⭐ ${item.customerRating}/5</span>`;
+  } else if (item.surveySent) {
     statusTagHtml += ` <span class="badge-survey-sent" style="margin-left: 4px;" data-tooltip="Review survey link delivered">⭐ Survey Sent</span>`;
   }
 
@@ -6556,6 +6558,7 @@ function exportHistoryCSV() {
     "Wait Time (Minutes)",
     "Service Duration (Min)",
     "Status",
+    "Customer Rating (Stars)",
     "Audit Trail Log"
   ];
 
@@ -6591,6 +6594,8 @@ function exportHistoryCSV() {
       statusStr = "Served";
     }
 
+    const ratingStr = item.customerRating ? `${item.customerRating} Stars` : (item.surveySent ? "Survey Sent (Pending Rating)" : "Not Sent");
+
     // Format audit trail activities (redact phone in activity if masked)
     const activities = getItemActivities(item);
     const auditTrailText = activities.map(act => {
@@ -6614,6 +6619,7 @@ function exportHistoryCSV() {
       waitMin,
       servMin,
       `"${statusStr.replace(/"/g, '""')}"`,
+      `"${ratingStr}"`,
       `"${auditTrailText.replace(/"/g, '""')}"`
     ];
   });
