@@ -6394,6 +6394,8 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     `;
   }
 
+  const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
+
   if (item.customerRating) {
     statusTagHtml += ` <span class="badge-survey-rating" style="margin-left: 4px; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="Customer rated ${item.customerRating}/5 stars on Web Ticket">⭐ ${item.customerRating}/5</span>`;
   }
@@ -6405,7 +6407,6 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     statusTagHtml += ` <span class="badge-survey-failed" style="margin-left: 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="${escapeHtml(item.surveyError || 'SMS delivery failed')}">⚠️ SMS Failed</span>`;
   }
 
-  const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
   const rowMenuId = `row-menu-${String(item.id || item.customerName || Math.random()).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 
   let menuItemsHtml = '';
