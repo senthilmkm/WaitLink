@@ -70,7 +70,7 @@
   <link rel="stylesheet" href="style.css">
   <script>
     (function() {
-      const savedTheme = localStorage.getItem("waitlink_theme") || "dark";
+      const savedTheme = localStorage.getItem("waitlink_theme_v2") || localStorage.getItem("waitlink_theme") || "light";
       document.documentElement.setAttribute("data-theme", savedTheme);
     })();
   </script>

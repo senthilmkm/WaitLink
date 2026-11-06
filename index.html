@@ -1,6 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
+  <!-- Early Theme Mode Initializer (Default to Light Mode) -->
+  <script>
+    (function() {
+      var theme = localStorage.getItem("waitlink_theme_v2");
+      if (!theme) {
+        theme = "light";
+        try {
+          localStorage.setItem("waitlink_theme_v2", "light");
+          localStorage.setItem("waitlink_theme", "light");
+        } catch (e) {}
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18538969542"></script>
   <script>
@@ -143,8 +157,8 @@
       <div class="header-actions">
         
         <!-- Theme Toggle Button -->
-        <button id="theme-toggle-btn" class="btn btn-secondary btn-sm-header" onclick="toggleThemeMode()" title="Toggle Dark / Light Theme" style="padding: 0.35rem 0.65rem; font-size: 0.95rem;">
-          🌙
+        <button id="theme-toggle-btn" class="btn btn-secondary btn-sm-header" onclick="toggleThemeMode()" title="Switch to Dark Theme" style="padding: 0.35rem 0.65rem; font-size: 0.95rem;">
+          ☀️
         </button>
 
         <!-- PWA Install Header Button -->
@@ -190,7 +204,7 @@
 
             <div class="dropdown-section-title">🔗 SHARE & TOOLS</div>
             <button class="dropdown-item" onclick="toggleThemeMode(); closeAllDropdowns();">
-              <span id="menu-theme-label">☀️ Light Mode</span>
+              <span id="menu-theme-label">🌙 Dark Mode</span>
             </button>
             <button class="dropdown-item" id="dropdown-item-subscription" onclick="openUpgradeModal(); closeAllDropdowns();">
               <span id="dropdown-item-subscription-label">🚀 Upgrade Subscription</span>
@@ -4557,6 +4571,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=11.5"></script>
+  <script src="app.js?v=11.6"></script>
 </body>
 </html>

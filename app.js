@@ -924,8 +924,13 @@ function checkMonthlyCheckinLimit() {
   return true;
 }
 
-// Theme Mode Manager (Dark / Light)
-let currentThemeMode = SafeStorage.get("waitlink_theme", "dark");
+// Theme Mode Manager (Dark / Light) - Default to Light Mode
+let currentThemeMode = SafeStorage.get("waitlink_theme_v2", null);
+if (!currentThemeMode) {
+  currentThemeMode = "light";
+  SafeStorage.set("waitlink_theme_v2", "light");
+  SafeStorage.set("waitlink_theme", "light");
+}
 
 function initTheme() {
   setThemeMode(currentThemeMode);
@@ -933,6 +938,7 @@ function initTheme() {
 
 function setThemeMode(theme) {
   currentThemeMode = theme;
+  SafeStorage.set("waitlink_theme_v2", theme);
   SafeStorage.set("waitlink_theme", theme);
   document.documentElement.setAttribute("data-theme", theme);
   updateThemeToggleUI();
