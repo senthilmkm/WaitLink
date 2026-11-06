@@ -1025,7 +1025,7 @@
 
                 <div class="form-group">
                   <label for="owner-input-baseline">Default Service Time (Minutes)</label>
-                  <input type="number" id="owner-input-baseline" value="20" min="5" max="120">
+                  <input type="number" id="owner-input-baseline" value="20" min="1" max="180">
                 </div>
 
                 <div class="form-group">
@@ -1132,7 +1132,7 @@
                 <div style="display: flex; gap: 0.4rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
                   <input type="text" id="new-service-emoji" placeholder="Emoji (💈)" style="width: 70px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
                   <input type="text" id="new-service-name" placeholder="Service Name (e.g. Haircut & Beard)" style="flex: 1; min-width: 140px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
-                  <input type="number" id="new-service-duration" placeholder="Mins (30)" style="width: 85px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);" min="5" max="240">
+                  <input type="number" id="new-service-duration" placeholder="Mins (30)" style="width: 85px; padding: 0.45rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);" min="1" max="240">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="addNewOwnerService()" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; font-weight: 700;">+ Add</button>
                 </div>
 
@@ -1580,6 +1580,7 @@
                   </label>
                   <select id="owner-survey-buffer" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem;">
                     <option value="0">Exact Service Time (e.g. standard service duration)</option>
+                    <option value="1">+1 Minute Buffer (Fast / quick testing)</option>
                     <option value="5" selected>+5 Minutes Buffer (Recommended — allows client to exit &amp; check out)</option>
                     <option value="10">+10 Minutes Buffer</option>
                     <option value="15">+15 Minutes Buffer</option>

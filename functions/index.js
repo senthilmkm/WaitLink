@@ -2467,7 +2467,7 @@ exports.createOwnerShop = onRequest({ cors: true, maxInstances: 10 }, async (req
         services,
         unitLabel: String(body.unitLabel || "Stations / Chairs").slice(0, 60),
         clinicalPrivacyEnabled: !!body.clinicalPrivacyEnabled,
-        estBaseWaitMin: Math.min(Math.max(parseInt(body.estBaseWaitMin, 10) || 20, 5), 180),
+        estBaseWaitMin: Math.min(Math.max(parseInt(body.estBaseWaitMin, 10) || 20, 1), 180),
         hours: body.hours && typeof body.hours === "object" ? body.hours : { open: "09:00", close: "19:00", days: [1, 2, 3, 4, 5, 6, 0] },
         address: String(body.address || "").slice(0, 200),
         phone: "",

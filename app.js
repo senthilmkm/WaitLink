@@ -5322,6 +5322,19 @@ async function saveOwnerSettings() {
 
   saveConfig();
   saveData();
+
+  // Synchronize any active Mode 2 background survey timers with newly saved durations/buffers
+  if (Array.isArray(state.history)) {
+    const surv = (state.config && state.config.surveySettings) || {};
+    if (surv.enabled && surv.mode === "mode_2") {
+      state.history.forEach(item => {
+        if (item.status === "called" && !item.surveySent) {
+          scheduleSurveyAutoTimer(item);
+        }
+      });
+    }
+  }
+
   generateQRCode();
   renderAll();
 
@@ -6144,10 +6157,15 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     const delayMin = getSurveyAutoDelayMinutes(item);
     const elapsed = Math.floor((Date.now() - (item.calledAt || Date.now())) / 60000);
     const remaining = Math.max(0, delayMin - elapsed);
+    const baseDuration = (item && item.selectedServiceDurationMin && parseInt(item.selectedServiceDurationMin, 10) > 0)
+      ? parseInt(item.selectedServiceDurationMin, 10)
+      : (parseInt((state.config && state.config.estBaseWaitMin), 10) || 20);
+    const buffer = parseInt(surv.bufferMinutes, 10) || 0;
+    const tooltipText = `Auto-sending survey in ${remaining}m (${baseDuration}m service + ${buffer}m buffer)`;
     statusTagHtml = `
       <div style="display: inline-flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
         <span class="status-tag called" data-tooltip="Customer called for service">Called</span>
-        <span class="status-tag" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px;" data-tooltip="Automated survey countdown">
+        <span class="status-tag" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px;" data-tooltip="${escapeHtml(tooltipText)}">
           ⏱️ ${remaining > 0 ? 'Survey in ' + remaining + 'm' : 'Survey Ready'}
         </span>
       </div>

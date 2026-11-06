@@ -117,6 +117,20 @@ it("guarantees a minimum delay of at least 1 minute even if durations are 0", ()
   assert.ok(delay >= 1, "Delay must never be 0 or negative");
 });
 
+it("calculates exact 1-minute delay when estBaseWaitMin is 1 and buffer is 0", () => {
+  const item = { selectedServiceDurationMin: 0 };
+  const config = { estBaseWaitMin: 1, surveySettings: { bufferMinutes: 0 } };
+  const delay = getSurveyAutoDelayMinutes(item, config);
+  assert.strictEqual(delay, 1, "Should calculate 1 minute delay");
+});
+
+it("calculates 6-minute delay when estBaseWaitMin is 1 and default buffer is 5", () => {
+  const item = { selectedServiceDurationMin: 0 };
+  const config = { estBaseWaitMin: 1, surveySettings: { bufferMinutes: 5 } };
+  const delay = getSurveyAutoDelayMinutes(item, config);
+  assert.strictEqual(delay, 6, "Should calculate 1m + 5m = 6 minutes delay");
+});
+
 // -------------------------------------------------------------------------
 // 3. Mode 1: Active Chair & Complete Service Lifecycle
 // -------------------------------------------------------------------------
