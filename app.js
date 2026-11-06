@@ -792,13 +792,18 @@ function isDemoScreenOrGuestDemo() {
   const isGuest = !state.user || !state.user.email;
   const slug = (state.config && state.config.slug) ? String(state.config.slug).toLowerCase().trim() : "";
   const name = (state.config && state.config.shopName) ? String(state.config.shopName).toLowerCase().trim() : "";
-  const isDemoShop = !slug || slug === "main-st-barbers" || slug.includes("demo") || name.includes("main st") || !!state.isDemoMode;
+  const isDemoShop = !slug || slug === "main-st-barbers" || slug.startsWith("demo-") || name === "main st barbers" || !!state.isDemoMode || !!(state.config && state.config.isDemoShop);
+
+  // If user is authenticated and actively viewing a real registered/custom shop, they are strictly NOT in demo mode
+  if (!isGuest && !isDemoShop) {
+    return false;
+  }
 
   let isUrlDemo = false;
   if (typeof window !== "undefined" && window.location && window.location.search) {
     const params = new URLSearchParams(window.location.search);
     const shopP = (params.get("shop") || params.get("s") || "").toLowerCase().trim();
-    if (shopP === "main-st-barbers" || !shopP) {
+    if (shopP === "main-st-barbers" || (isGuest && !shopP)) {
       isUrlDemo = true;
     }
   }
@@ -11894,6 +11899,15 @@ function openUpgradeModal(targetTier) {
           entCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
           entCard.style.outline = "2px solid #6366f1";
           setTimeout(() => { entCard.style.outline = ""; }, 2500);
+        }, 150);
+      }
+    } else if (targetTier === "pro") {
+      const proCard = document.getElementById("tier-card-pro");
+      if (proCard) {
+        setTimeout(() => {
+          proCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          proCard.style.outline = "2px solid #10b981";
+          setTimeout(() => { proCard.style.outline = ""; }, 2500);
         }, 150);
       }
     }

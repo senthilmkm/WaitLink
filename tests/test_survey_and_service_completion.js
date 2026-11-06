@@ -325,6 +325,17 @@ it("style.css contains styles for in-service-panel and review buttons", () => {
 });
 
 // -------------------------------------------------------------------------
+// 9. Upgrade Modal & Demo Gate Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 9. Upgrade Modal & Demo Gate Invariants ---");
+
+it("isDemoScreenOrGuestDemo strictly unblocks authenticated owners on real shops like CrossLine Euro", () => {
+  assert.ok(appJs.includes("if (!isGuest && !isDemoShop) {\n    return false;\n  }"), "isDemoScreenOrGuestDemo must immediately unblock authenticated users on real shops");
+  assert.ok(appJs.includes('else if (targetTier === "pro")'), "openUpgradeModal must highlight pro card");
+  assert.ok(indexHtml.includes("openUpgradeModal('pro')"), "Survey upgrade button must target pro tier directly");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");
