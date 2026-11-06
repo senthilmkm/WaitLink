@@ -1769,7 +1769,7 @@ node scripts/prune-firebase-versions.js
           <ul style="color: #94a3b8; font-size: 0.84rem; line-height: 1.6; margin: 0; padding-left: 1.25rem;">
             <li><strong style="color: #10b981;">Starter ($0/mo):</strong> Green badge/select border. Restricts pro branding, SMS alerts, and deep analytics.</li>
             <li><strong style="color: #06b6d4;">Pro Business ($15/mo):</strong> Cyan badge/select border. Unlocks full logo uploads, custom theme colors, automated SMS chimes, and BI analytics.</li>
-            <li><strong style="color: #818cf8;">Enterprise ($49/mo):</strong> Indigo badge/select border. Unlocks multi-location network management, custom domain CNAMEs, and platform SuperAdmin views.</li>
+            <li><strong style="color: #818cf8;">Enterprise ($49/mo):</strong> Indigo badge/select border. Unlocks multi-location network management (up to 3 locations included, +$15/mo per extra store), custom domain CNAMEs, and platform SuperAdmin views.</li>
             <li><strong>Automated Platform MRR Update:</strong> Changing any shop immediately recalculates the top-level <code style="color:#fff;">$X / mo</code> platform MRR metric.</li>
             <li><strong>Atomic Firestore Sync & Audit:</strong> Updates <code style="color:#38bdf8;">/shops/{slug}</code> with <code style="color:#38bdf8;">planTitle</code> and <code style="color:#38bdf8;">planPrice</code>, simultaneously recording an entry in <code style="color:#38bdf8;">/pricing_audits</code> with admin timestamp.</li>
             <li><strong style="color: #ef4444;">Duplicate Prevention &amp; Purge Tool:</strong> The shop creation wizard strictly validates that no shop can be registered with the same name and physical business address. SuperAdmin can delete obsolete shops (<code style="color:#f43f5e;">🗑️ Delete</code>) or run the automated 1-click duplicate scanner (<code style="color:#f59e0b;">🧹 Purge Duplicates</code>) to purge ghost/test entries.</li>
@@ -1803,7 +1803,7 @@ node scripts/prune-firebase-versions.js
               <td style="padding: 0.75rem 1rem; color: #fff;">Number of Shop Locations</td>
               <td style="padding: 0.75rem 1rem; text-align: center; color: #cbd5e1; background: rgba(16, 185, 129, 0.03);">1 Location (Single Shop)</td>
               <td style="padding: 0.75rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.05);">1 Dedicated Shop</td>
-              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">Unlimited Locations</td>
+              <td style="padding: 0.75rem 1rem; text-align: center; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.03);">Up to 3 Locations (+ $15/mo per extra)</td>
             </tr>
             <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
               <td style="padding: 0.75rem 1rem; color: #fff;">Monthly Walk-in Check-in Volume</td>
@@ -2783,7 +2783,7 @@ node scripts/prune-firebase-versions.js
           <div style="font-size: 0.75rem; font-weight: 800; color: #10b981; text-transform: uppercase; margin-bottom: 0.4rem;">Layer 2: Client State &amp; Cross-Tenant Barrier</div>
           <strong style="color: #fff; font-size: 0.95rem;">Controller Paywall Checks</strong>
           <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-top: 0.4rem;">
-            <code>openCreateShopModal()</code> and <code>submitCreateShop()</code> strictly check <code>ownedShops.length &gt;= 1</code>. If a Starter or Pro user attempts to register a second shop, execution halts immediately and routes to the Enterprise upgrade modal. <code>switchView()</code> blocks unauthorized users from viewing another tenant's front desk.
+            <code>openCreateShopModal()</code> and <code>submitCreateShop()</code> strictly check <code>ownedShops.length &gt;= 1</code>. If a Starter or Pro user attempts to register a second shop, execution halts immediately and routes to the Enterprise upgrade modal. Enterprise owners enjoy 3 locations included, and are prompted with an authorization confirmation sheet for 4th+ storefronts (+ $15/mo each). <code>switchView()</code> blocks unauthorized users from viewing another tenant's front desk.
           </p>
         </div>
 

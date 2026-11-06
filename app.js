@@ -7787,6 +7787,69 @@ function normalizeIndustryKey(key) {
   return (typeof DEMO_INDUSTRY_PRESETS !== "undefined" && DEMO_INDUSTRY_PRESETS[k]) ? k : null;
 }
 
+// ---------------------------------------------------------------------------
+// Enterprise Multi-Location Capacity & Proration Billing Controller
+// ---------------------------------------------------------------------------
+function getEnterpriseLocationBillingInfo() {
+  const email = (state.user && state.user.email ? state.user.email : "").toLowerCase();
+  const owned = (state.registeredShops || state.ownerDirectoryShops || []).filter(s =>
+    s && s.slug !== "main-st-barbers" &&
+    ((s.ownerEmail || "").toLowerCase() === email || (s.ownerUid && s.ownerUid === (state.user && state.user.uid)))
+  );
+  const totalCount = Math.max(1, owned.length);
+  const baseIncluded = 3;
+  const extraLocations = Math.max(0, totalCount - baseIncluded);
+  const extraPrice = 15;
+  const basePrice = 49;
+  const monthlyTotal = basePrice + (extraLocations * extraPrice);
+
+  return {
+    totalCount,
+    baseIncluded,
+    extraLocations,
+    extraPrice,
+    basePrice,
+    monthlyTotal,
+    hasExtra: extraLocations > 0
+  };
+}
+
+let pendingExtraLocationIndustry = null;
+
+function openAddExtraLocationModal(storeNumber = 4, preferredIndustry = null) {
+  pendingExtraLocationIndustry = preferredIndustry;
+  const modal = document.getElementById("modal-add-location");
+  if (!modal) {
+    state.pendingExtraLocationConfirmed = true;
+    openCreateShopModal(preferredIndustry);
+    return;
+  }
+
+  const numEl = document.getElementById("add-loc-number");
+  const totalEl = document.getElementById("add-loc-new-total");
+  const extraCount = Math.max(1, storeNumber - 3);
+  const newMonthlyTotal = 49 + (extraCount * 15);
+
+  if (numEl) numEl.textContent = storeNumber;
+  if (totalEl) totalEl.textContent = `$${newMonthlyTotal}.00 / mo`;
+
+  modal.classList.remove("hidden");
+}
+
+function closeAddExtraLocationModal() {
+  const modal = document.getElementById("modal-add-location");
+  if (modal) modal.classList.add("hidden");
+  pendingExtraLocationIndustry = null;
+  state.pendingExtraLocationConfirmed = false;
+}
+
+function confirmAddExtraLocation() {
+  closeAddExtraLocationModal();
+  state.pendingExtraLocationConfirmed = true;
+  showToast("🏢 Extra location capacity authorized (+ $15/mo). Setting up your storefront...");
+  openCreateShopModal(pendingExtraLocationIndustry);
+}
+
 // Open Shop Creation Wizard Modal
 function openCreateShopModal(preferredIndustry = null) {
   if (preferredIndustry) {
@@ -7828,6 +7891,12 @@ function openCreateShopModal(preferredIndustry = null) {
     const tierName = planPrice === 15 || planTitle.includes("Pro") ? "Pro Business plan" : "Starter plan";
     showToast(`🔒 ${tierName} includes 1 dedicated shop location. Upgrade to Enterprise for Multi-Location management!`);
     openUpgradeModal("enterprise");
+    return;
+  }
+
+  // Enterprise Tier Capacity Enforcement: 3 locations included, +$15/mo for additional
+  if (!isSuper && isEnterprise && ownedShops.length >= 3 && !state.pendingExtraLocationConfirmed) {
+    openAddExtraLocationModal(ownedShops.length + 1, preferredIndustry);
     return;
   }
 
@@ -10829,6 +10898,21 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
       }
 
       showToast(`🗑️ Shop "${shopName || cleanSlug}" successfully deleted!`);
+      // Notify Enterprise owners if extra location capacity decreased
+      try {
+        const planInfo = getActivePlanInfo();
+        if (planInfo.isEnterprise && state.ownerDirectoryShops) {
+          const remaining = state.ownerDirectoryShops.length;
+          if (remaining >= 3) {
+            const newExtra = remaining - 3;
+            const newTotal = 49 + (newExtra * 15);
+            setTimeout(() => {
+              showToast(`💳 Subscription adjusted: -$15/mo for removed location (New total: $${newTotal}/mo).`);
+            }, 1200);
+          }
+        }
+      } catch (e) {}
+
       if (state.activeView === "owner-directory") {
         await loadOwnerDirectory(true);
       }
@@ -11458,7 +11542,8 @@ const DEFAULT_TIER_FEATURES = {
   ],
   t3: [
     { text: "Everything in Pro Business", enabled: true },
-    { text: "Unlimited Locations & Staff Accounts", enabled: true },
+    { text: "Up to 3 Locations Included (+ $15/mo per extra store)", enabled: true },
+    { text: "Unlimited Front Desk Staff Accounts", enabled: true },
     { text: "Central Headquarters Dashboard (Manage All Locations)", enabled: true },
     { text: "Custom Web Link (e.g. wait.yourbrand.com)", enabled: true },
     { text: "2,500+ Automated SMS / mo Included", enabled: true },
@@ -11888,6 +11973,10 @@ function ensureTierSMSLimits(tiers) {
       else if (lower.includes("cloud sla") || lower.includes("cloud uptime guarantee") || lower.includes("99.99%")) {
         f.text = "99.99% Guaranteed High-Reliability Uptime";
       }
+      // 10. "Unlimited Locations" ➔ "Up to 3 Locations Included (+ $15/mo per extra store)"
+      else if (lower.includes("unlimited locations")) {
+        f.text = "Up to 3 Locations Included (+ $15/mo per extra store)";
+      }
     });
 
     if (id === "starter" || idx === 0) {
@@ -11948,6 +12037,9 @@ function ensureTierSMSLimits(tiers) {
         feats.push({ text: canonicalReviewText, enabled: true });
       }
     } else if (id === "enterprise" || idx === 2) {
+      if (findFeatureIdx("3 locations") === -1 && findFeatureIdx("extra store") === -1 && findFeatureIdx("extra location") === -1) {
+        feats.splice(1, 0, { text: "Up to 3 Locations Included (+ $15/mo per extra store)", enabled: true });
+      }
       if (findFeatureIdx("2,500") === -1 && findFeatureIdx("2500") === -1) {
         feats.splice(2, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
       }
@@ -16208,6 +16300,18 @@ async function loadOwnerDirectory(forceRefresh = false) {
   if (tabShopCount) tabShopCount.textContent = ownedShops.length;
 
   const planInfo = getActivePlanInfo();
+  const captionEl = document.getElementById("owner-dir-total-shops-caption");
+  if (captionEl) {
+    if (planInfo.isEnterprise) {
+      const extra = Math.max(0, ownedShops.length - 3);
+      captionEl.textContent = extra > 0
+        ? `3 Included • ${extra} Extra (+$${extra * 15}/mo)`
+        : `${ownedShops.length} of 3 Locations Included`;
+    } else {
+      captionEl.textContent = `${ownedShops.length} of 1 Location Included`;
+    }
+  }
+
   if (planBadgeEl) {
     planBadgeEl.textContent = planInfo.isEnterprise ? "Enterprise Tier" : (planInfo.isPro ? "Pro Business Tier" : "Starter Tier");
     planBadgeEl.style.color = planInfo.isEnterprise ? "#818cf8" : (planInfo.isPro ? "#06b6d4" : "#10b981");
@@ -17661,6 +17765,10 @@ if (typeof window !== "undefined") {
   window.handleOwnerToggleGpsProximity = handleOwnerToggleGpsProximity;
   window.getStarterCheckinCap = getStarterCheckinCap;
   window.checkMonthlyCheckinLimit = checkMonthlyCheckinLimit;
+  window.openAddExtraLocationModal = openAddExtraLocationModal;
+  window.closeAddExtraLocationModal = closeAddExtraLocationModal;
+  window.confirmAddExtraLocation = confirmAddExtraLocation;
+  window.getEnterpriseLocationBillingInfo = getEnterpriseLocationBillingInfo;
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -17678,7 +17786,11 @@ if (typeof module !== "undefined" && module.exports) {
     validateCustomerSecurityAccess,
     savePlatformSecurityConfig,
     getStarterCheckinCap,
-    checkMonthlyCheckinLimit
+    checkMonthlyCheckinLimit,
+    openAddExtraLocationModal,
+    closeAddExtraLocationModal,
+    confirmAddExtraLocation,
+    getEnterpriseLocationBillingInfo
   };
 }
 

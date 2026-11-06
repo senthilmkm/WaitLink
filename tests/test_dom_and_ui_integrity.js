@@ -131,8 +131,8 @@ it("SuperAdmin Revenue Metrics & Account 360° panel contains complete KPI cards
 // -------------------------------------------------------------------------
 console.log("\n--- 2. Universal Modals & Dialog System ---");
 
-it("index.html contains all 18 modal backdrops and dialogs", () => {
-  const all18Modals = [
+it("index.html contains all 19 modal backdrops and dialogs", () => {
+  const all19Modals = [
     "pricing-audit-modal",
     "delete-shop-modal",
     "settings-modal",
@@ -150,12 +150,25 @@ it("index.html contains all 18 modal backdrops and dialogs", () => {
     "modal-carrier-segments-guide",
     "pwa-install-modal",
     "modal-demo-shop-generator",
-    "waitlink-dialog-backdrop"
+    "waitlink-dialog-backdrop",
+    "modal-add-location"
   ];
 
-  all18Modals.forEach(id => {
+  all19Modals.forEach(id => {
     assert.ok(html.includes(`id="${id}"`), `Missing required modal or dialog: #${id}`);
   });
+});
+
+it("Enterprise Multi-Location: index.html contains modal-add-location and app.js implements modal controllers", () => {
+  assert.ok(html.includes('id="modal-add-location"'), "Missing #modal-add-location in index.html");
+  assert.ok(html.includes('id="add-loc-number"'), "Missing #add-loc-number in modal-add-location");
+  assert.ok(html.includes('id="add-loc-new-total"'), "Missing #add-loc-new-total in modal-add-location");
+  assert.ok(html.includes('id="confirm-add-location-btn"'), "Missing #confirm-add-location-btn in modal-add-location");
+  assert.ok(html.includes('id="owner-dir-total-shops-caption"'), "Missing #owner-dir-total-shops-caption in index.html");
+  assert.ok(appJs.includes("function openAddExtraLocationModal"), "app.js missing openAddExtraLocationModal");
+  assert.ok(appJs.includes("function closeAddExtraLocationModal"), "app.js missing closeAddExtraLocationModal");
+  assert.ok(appJs.includes("function confirmAddExtraLocation"), "app.js missing confirmAddExtraLocation");
+  assert.ok(appJs.includes("function getEnterpriseLocationBillingInfo"), "app.js missing getEnterpriseLocationBillingInfo");
 });
 
 it("SuperAdmin Master Directory contains 1-Tap Demo Shop Generator with all 8 industry presets", () => {

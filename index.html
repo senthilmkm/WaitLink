@@ -2061,7 +2061,7 @@
         <div class="metric-card highlight">
           <div class="metric-label">Managed Shops</div>
           <div class="metric-value" id="owner-dir-total-shops">0</div>
-          <div class="metric-caption">Active business locations</div>
+          <div class="metric-caption" id="owner-dir-total-shops-caption">Active business locations</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Active Line Customers</div>
@@ -2616,7 +2616,8 @@ Automated Google Reviews & Post-Service Surveys
               </div>
               <div id="pricing-t3-feature-manager" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
               <textarea id="pricing-t3-features" class="hidden" rows="8">Everything in Pro Business
-Unlimited Locations & Staff Accounts
+Up to 3 Locations Included (+ $15/mo per extra store)
+Unlimited Front Desk Staff Accounts
 Central Headquarters Dashboard (Manage All Locations)
 Custom Web Link (e.g. wait.yourbrand.com)
 2,500+ Automated SMS / mo Included
@@ -2982,6 +2983,49 @@ Dedicated Support Manager
         <button class="btn btn-secondary" onclick="closeDeleteShopModal()">Cancel</button>
         <button class="btn" id="delete-shop-confirm-submit-btn" onclick="confirmDeleteShopFromModal()" style="background: #e11d48; color: #fff; font-weight: 700; border: none; padding: 0.65rem 1.25rem; border-radius: 8px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4); cursor: pointer;">
           🗑️ Yes, Permanently Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Extra Location Authorization Sheet (Enterprise 4th+ Store) -->
+  <div id="modal-add-location" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 520px; text-align: left; position: relative;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+          <span>🏢</span> Add Extra Location
+        </h2>
+        <button class="close-btn" onclick="closeAddExtraLocationModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 1.25rem;">
+        <p style="color: var(--text-main); font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.5;">
+          Your <strong>Enterprise Tier</strong> includes <strong>3 locations</strong> at <strong>$49/month</strong>.
+        </p>
+
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 1.15rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+            <span style="font-size: 0.9rem; color: var(--text-muted);">New Location:</span>
+            <strong style="color: #6366f1; font-size: 1rem;">Store #<span id="add-loc-number">4</span></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+            <span style="font-size: 0.9rem; color: var(--text-muted);">Additional Cost:</span>
+            <strong style="color: #10b981; font-size: 1rem;">+$15.00 / month</strong>
+          </div>
+          <div style="border-top: 1px dashed rgba(255,255,255,0.15); margin: 0.65rem 0; padding-top: 0.65rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: var(--text-main);">New Subscription Total:</span>
+            <strong id="add-loc-new-total" style="color: #6366f1; font-size: 1.15rem; font-weight: 800;">$64.00 / mo</strong>
+          </div>
+        </div>
+
+        <p style="font-size: 0.825rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 0;">
+          💡 <em>Charges are prorated automatically for the remainder of your billing cycle. If you ever close or delete this location later, your plan automatically reduces by -$15/month.</em>
+        </p>
+      </div>
+
+      <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-secondary" onclick="closeAddExtraLocationModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirm-add-location-btn" onclick="confirmAddExtraLocation()" style="background: #6366f1; border-color: #6366f1; font-weight: 700;">
+          Confirm & Add Location
         </button>
       </div>
     </div>
@@ -3552,7 +3596,8 @@ Dedicated Support Manager
               <div style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-bottom: 0.8rem;"><span id="modal-t3-price">$49</span> <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mo</span></div>
               <ul id="modal-tier-features-enterprise" style="font-size: 0.8rem; color: var(--text-muted); list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                 <li>✓ <strong>Everything in Pro Business</strong></li>
-                <li>✓ 🏢 <strong>Unlimited Locations &amp; Staff Accounts</strong></li>
+                <li>✓ 🏢 <strong>Up to 3 Locations Included</strong> (+ $15/mo per extra store)</li>
+                <li>✓ 👥 <strong>Unlimited Front Desk Staff Accounts</strong></li>
                 <li>✓ 👑 <strong>Central Headquarters Dashboard (Manage All Locations)</strong></li>
                 <li>✓ 🔗 <strong>Custom Web Link (e.g. wait.yourbrand.com)</strong></li>
                 <li>✓ 📱 <strong style="color: #6366f1;">2,500+ Automated SMS / mo Included</strong></li>

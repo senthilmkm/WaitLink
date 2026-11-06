@@ -150,7 +150,8 @@
           <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">For chains, franchise barber networks, multi-location clinics, and regional studios.</p>
           <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">
             <li><strong style="color: #fff;">✓ Everything in Pro Business</strong></li>
-            <li><strong style="color: #6366f1;">✓ 🏢 Unlimited Locations & Staff Accounts</strong></li>
+            <li><strong style="color: #6366f1;">✓ 🏢 Up to 3 Locations Included (+ $15/mo per extra store)</strong></li>
+            <li><strong style="color: #6366f1;">✓ 👥 Unlimited Front Desk Staff Accounts</strong></li>
             <li style="color: #fbbf24;"><strong style="color: #fbbf24;">✓ ⭐ Multi-Location Google Reviews &amp; Post-Service Customer Surveys</strong></li>
             <li><strong style="color: #10b981;">✓ 🛡️ 365-Day History Retention Across All Locations</strong></li>
             <li><strong style="color: #10b981;">✓ 📥 Multi-Location Enterprise Excel & Spreadsheet Export</strong></li>
@@ -196,7 +197,7 @@
               <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Number of Shop Locations</td>
               <td style="padding: 0.85rem 1rem; text-align: center; color: var(--text-muted);">1 Location</td>
               <td style="padding: 0.85rem 1rem; text-align: center; color: #fff; font-weight: 700; background: rgba(6, 182, 212, 0.04);">1 Dedicated Shop</td>
-              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">Unlimited Locations</td>
+              <td style="padding: 0.85rem 1rem; text-align: center; color: #6366f1; font-weight: 700;">Up to 3 Locations (+ $15/mo per extra)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.85rem 1rem; color: var(--text-main); font-weight: 600;">Monthly Walk-In Check-ins</td>
@@ -395,6 +396,15 @@
           </p>
         </div>
 
+        <div class="card" style="padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <h3 style="color: #fff; font-size: 1.05rem; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🏢</span> How does multi-location pricing work on the Enterprise plan?
+          </h3>
+          <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+            The Enterprise Tier ($49/month) includes <strong>up to 3 business storefront locations</strong> and unlimited front desk staff accounts right out of the box. If your business chain expands to 4 or more storefronts, additional locations are simply <strong>+$15/month each</strong>. Charges are automatically prorated with zero surprise fees, and if you ever delete or close a store, your subscription is automatically reduced by -$15/month.
+          </p>
+        </div>
+
       </div>
     </div>
 
@@ -503,6 +513,15 @@
             feats.splice(targetIdx, 0, { text: "Top-Up Packs available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true });
           }
         } else if (id === "enterprise" || idx === 2) {
+          feats.forEach(f => {
+            const t = typeof f === 'object' && f !== null ? f.text : String(f);
+            if (t.toLowerCase().includes("unlimited locations")) {
+              if (typeof f === 'object') f.text = "Up to 3 Locations Included (+ $15/mo per extra store)";
+            }
+          });
+          if (!hasText("3 locations") && !hasText("extra store") && !hasText("extra location")) {
+            feats.splice(1, 0, { text: "Up to 3 Locations Included (+ $15/mo per extra store)", enabled: true });
+          }
           if (!hasText("2,500") && !hasText("2500")) {
             const smsIdx = feats.findIndex(f => {
               const t = typeof f === 'object' && f !== null ? f.text : String(f);
