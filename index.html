@@ -1048,7 +1048,7 @@
                 <strong id="owner-shop-status-title" style="color: #34d399; font-size: 0.92rem; display: flex; align-items: center; gap: 0.45rem;">
                   <span id="owner-shop-status-icon">🟢</span> Shop Queue Status: Active (Open)
                 </strong>
-                <label id="owner-shop-status-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.4); user-select: none;">
+                <label id="owner-shop-status-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.4); user-select: none;">
                   <input type="checkbox" id="owner-shop-active-checkbox" checked onchange="handleToggleActiveShop(this.checked)" style="accent-color: #10b981; cursor: pointer;"> 
                   <span id="owner-shop-active-toggle-text">Active / Accepting Walk-ins</span>
                 </label>
@@ -1065,7 +1065,7 @@
                   <span>🏥</span> Clinical & Healthcare Privacy Mode
                   <span style="font-size: 0.68rem; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.45); padding: 0.15rem 0.45rem; border-radius: 9999px;">HIPAA / CLINIC</span>
                 </strong>
-                <label id="clinical-privacy-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; color: #fff; font-weight: 700; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(99, 102, 241, 0.4);">
+                <label id="clinical-privacy-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; font-weight: 700; background: rgba(99, 102, 241, 0.2); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(99, 102, 241, 0.4);">
                   <input type="checkbox" id="owner-clinical-privacy-checkbox" onchange="onClinicalPrivacyToggleChange()" style="accent-color: #6366f1; cursor: pointer;"> Enable Privacy Mode
                 </label>
               </div>
@@ -1194,7 +1194,7 @@
                     Control customer notifications, customize outbound text templates, and inspect carrier delivery
                   </div>
                 </div>
-                <label id="twilio-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #fff; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.35rem 0.85rem; border-radius: 9999px; border: 1.5px solid rgba(16, 185, 129, 0.45); box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);">
+                <label id="twilio-toggle-wrapper" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 0.35rem 0.85rem; border-radius: 9999px; border: 1.5px solid rgba(16, 185, 129, 0.45); box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);">
                   <input type="checkbox" id="twilio-enable-checkbox" checked onchange="onTwilioToggleChange()" style="accent-color: #10b981; cursor: pointer; width: 16px; height: 16px;"> Enable Automated SMS
                 </label>
               </div>
@@ -1359,17 +1359,17 @@
 
               <!-- 3 Stat Tiles -->
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
-                <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-sm);">
+                <div class="sms-stat-tile">
                   <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Monthly Allowance</div>
                   <div id="sms-stat-allowance" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">500 SMS</div>
                   <div id="sms-stat-rollover-note" style="font-size: 0.68rem; color: #10b981;">0 rolled over from prior month</div>
                 </div>
-                <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-sm);">
+                <div class="sms-stat-tile">
                   <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Top-Up Reserve</div>
                   <div id="sms-stat-topup" style="font-size: 1.25rem; font-weight: 800; color: #06b6d4; margin-top: 2px;">0 SMS</div>
                   <div style="font-size: 0.68rem; color: var(--text-muted);">Never expires &bull; Permanent</div>
                 </div>
-                <div style="padding: 0.75rem; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm);">
+                <div class="sms-stat-tile success">
                   <div style="font-size: 0.7rem; color: #34d399; text-transform: uppercase; font-weight: 700;">Total Available Now</div>
                   <div id="sms-stat-total" style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-top: 2px;">500 SMS</div>
                   <div style="font-size: 0.68rem; color: #a7f3d0;">Ready for outbound alerts</div>
@@ -1524,85 +1524,120 @@
               </div>
 
               <!-- Survey Settings Controls -->
-              <div id="survey-controls-container" style="display: flex; flex-direction: column; gap: 1rem;">
+              <div id="survey-controls-container" style="display: flex; flex-direction: column; gap: 0.9rem;">
                 <!-- Transparent SMS Usage & Quota Callout -->
-                <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.8rem; color: #cbd5e1; display: flex; align-items: flex-start; gap: 0.65rem;">
-                  <span style="font-size: 1.15rem; flex-shrink: 0; line-height: 1;">📱</span>
+                <div class="settings-info-callout">
+                  <span style="font-size: 1.25rem; flex-shrink: 0; line-height: 1;">📱</span>
                   <div style="line-height: 1.45;">
-                    <strong style="color: #38bdf8; display: block; margin-bottom: 2px;">SMS Usage &amp; Credits:</strong>
-                    <span>Sending an automated survey link via text message uses <strong>1 SMS credit</strong> per customer with a phone number. If a customer checks in without a phone number or rates directly on their live web ticket, <strong>zero credits are deducted</strong>.</span>
+                    <strong style="display: block; margin-bottom: 2px; font-size: 0.88rem;">SMS Usage &amp; Credits:</strong>
+                    <span>Sending an automated survey link via text message uses <strong>1 SMS credit</strong> per client with a phone number. If a customer checks in without a phone number or rates directly on their live web ticket, <strong>zero credits are deducted</strong>.</span>
                   </div>
                 </div>
 
-                <!-- Review / Survey URL -->
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="owner-survey-url" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.35rem;">
-                    <span>🔗</span> Google Review Link or Feedback URL *
-                  </label>
-                  <input type="url" id="owner-survey-url" placeholder="e.g. https://g.page/r/your-shop/review or https://forms.gle/..." style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.88rem;">
-                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
-                    💡 Tip: Paste your Google Business &quot;Ask for Reviews&quot; short link to boost your Google Maps ranking.
+                <!-- Section 1: Review Destination Link -->
+                <div class="settings-section-card">
+                  <div class="settings-section-header">
+                    <div>
+                      <h4 class="settings-section-title">
+                        <span>🔗</span> Google Review Link or Feedback Destination
+                      </h4>
+                      <p class="settings-section-desc">
+                        Direct happy customers straight to your Google Business Profile to boost your Google Maps ranking.
+                      </p>
+                    </div>
+                  </div>
+                  <input type="url" id="owner-survey-url" placeholder="e.g. https://g.page/r/your-shop/review or https://forms.gle/..." style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.88rem;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.35rem;">
+                    💡 Tip: Paste your Google Business &quot;Ask for Reviews&quot; short link. If left blank, WaitLink collects ratings internally.
                   </span>
                 </div>
 
-                <!-- Mode Selection -->
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 0.5rem;">
-                    ⚙️ Completion Workflow Mode
-                  </label>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem;">
-                    <label class="survey-mode-card" style="display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer;">
-                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-1" value="mode_1" checked style="margin-top: 0.2rem;">
+                <!-- Section 2: Completion Workflow Mode -->
+                <div class="settings-section-card">
+                  <div class="settings-section-header">
+                    <div>
+                      <h4 class="settings-section-title">
+                        <span>⚙️</span> When Should Surveys Be Sent?
+                      </h4>
+                      <p class="settings-section-desc">
+                        Choose whether your desk completes visits manually or sends surveys automatically based on service duration.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 0.65rem;">
+                    <!-- Option 1: Manual -->
+                    <label class="survey-mode-card" id="label-survey-mode-1" onclick="updateSurveyModeCardVisuals('mode_1')">
+                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-1" value="mode_1" checked onchange="updateSurveyModeCardVisuals('mode_1')">
                       <div>
-                        <strong style="color: #fff; font-size: 0.85rem; display: block;">Mode 1: Active Chair Mode (Manual Complete)</strong>
-                        <span style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.35; display: block; margin-top: 0.2rem;">
-                          Shows an <strong>&quot;IN SERVICE NOW&quot;</strong> card on desk. Desk taps &quot;Complete Service&quot; when customer finishes, tracking actual cut time and sending survey.
+                        <strong style="font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">
+                          Manual Completion (Complete at Desk)
+                        </strong>
+                        <span style="font-size: 0.78rem; line-height: 1.45; display: block;">
+                          Shows an <strong>&quot;IN SERVICE NOW&quot;</strong> card on your Front Desk screen. Staff taps <strong>&quot;Complete Service&quot;</strong> when finished, which sends the survey immediately and records actual service duration.
                         </span>
                       </div>
                     </label>
 
-                    <label class="survey-mode-card" style="display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer;">
-                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-2" value="mode_2" style="margin-top: 0.2rem;">
+                    <!-- Option 2: Automatic -->
+                    <label class="survey-mode-card" id="label-survey-mode-2" onclick="updateSurveyModeCardVisuals('mode_2')">
+                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-2" value="mode_2" onchange="updateSurveyModeCardVisuals('mode_2')">
                       <div>
-                        <strong style="color: #fff; font-size: 0.85rem; display: block;">Mode 2: Auto-Complete Mode (Smart Delay)</strong>
-                        <span style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.35; display: block; margin-top: 0.2rem;">
-                          1-tap fast flow. Survey sends automatically after shop&#39;s service duration. Includes a manual <strong>[ ✉️ Send Survey Now ]</strong> override in Visit History.
+                        <strong style="font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">
+                          Automatic Completion (Smart Delay)
+                        </strong>
+                        <span style="font-size: 0.78rem; line-height: 1.45; display: block;">
+                          1-tap fast flow. Customer moves directly to Visit History upon being served, and the survey sends automatically after their scheduled service duration. You can also tap <strong>[ ✉️ Send Survey Now ]</strong> anytime in Visit History.
                         </span>
                       </div>
                     </label>
                   </div>
                 </div>
 
-                <!-- Buffer Setting for Mode 2 -->
-                <div id="survey-buffer-container" class="form-group" style="margin-bottom: 0;">
-                  <label for="owner-survey-buffer" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 0.35rem;">
-                    ⏱️ Mode 2 Auto-Send Delay Buffer
-                  </label>
-                  <select id="owner-survey-buffer" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem;">
-                    <option value="0">Exact Service Time (e.g. standard service duration)</option>
-                    <option value="1">+1 Minute Buffer (Fast / quick testing)</option>
+                <!-- Section 3: Buffer Time Delay -->
+                <div class="settings-section-card" id="survey-buffer-container">
+                  <div class="settings-section-header">
+                    <div>
+                      <h4 class="settings-section-title">
+                        <span>⏱️</span> Buffer Time Before Sending Survey (Automatic Mode)
+                      </h4>
+                      <p class="settings-section-desc">
+                        Extra delay added after service completes before sending the SMS, giving your client time to check out, pay, and exit comfortably.
+                      </p>
+                    </div>
+                  </div>
+                  <select id="owner-survey-buffer" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; font-size: 0.88rem;">
+                    <option value="0">Exact Service Time (Send right when service ends)</option>
+                    <option value="1">+1 Minute Buffer (Fast / testing)</option>
                     <option value="5" selected>+5 Minutes Buffer (Recommended — allows client to exit &amp; check out)</option>
                     <option value="10">+10 Minutes Buffer</option>
                     <option value="15">+15 Minutes Buffer</option>
                   </select>
                 </div>
 
-                <!-- Custom SMS Template -->
-                <div class="form-group" style="margin-bottom: 0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                    <label for="owner-survey-sms-template" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
-                      💬 Custom Survey SMS Message
-                    </label>
-                    <button type="button" class="btn-text-link" onclick="resetSurveyTemplateDefault()" style="font-size: 0.72rem; color: #06b6d4; cursor: pointer;">
-                      Reset Default
+                <!-- Section 4: Custom SMS Template -->
+                <div class="settings-section-card">
+                  <div class="settings-section-header">
+                    <div>
+                      <h4 class="settings-section-title">
+                        <span>💬</span> Customer Survey SMS Message
+                      </h4>
+                      <p class="settings-section-desc">
+                        Personalize the text message sent to clients. The <code>{link}</code> tag automatically inserts their direct review link.
+                      </p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-xs" onclick="resetSurveyTemplateDefault()" style="font-size: 0.76rem; padding: 0.3rem 0.75rem; border-radius: 6px; font-weight: 700;">
+                      🔄 Reset Default
                     </button>
                   </div>
-                  <textarea id="owner-survey-sms-template" rows="2" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem; resize: vertical;" placeholder="Thanks for visiting {shop}! How was your experience today? Rate us here: {link}"></textarea>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
-                    Available tags: <code>{name}</code>, <code>{shop}</code>, <code>{link}</code>
+                  <textarea id="owner-survey-sms-template" rows="2" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.88rem; resize: vertical;" placeholder="Thanks for visiting {shop}! How was your experience today? Rate us here: {link}"></textarea>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.35rem;">
+                    Available dynamic tags: <code>{name}</code> (customer name), <code>{shop}</code> (shop name), <code>{link}</code> (review URL)
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
             </div>
           </div>
         </div>

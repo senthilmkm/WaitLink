@@ -3124,6 +3124,30 @@ function resetSurveyTemplateDefault() {
   }
 }
 
+function updateSurveyModeCardVisuals(mode) {
+  const card1 = document.getElementById("label-survey-mode-1");
+  const card2 = document.getElementById("label-survey-mode-2");
+  const radio1 = document.getElementById("owner-survey-mode-1");
+  const radio2 = document.getElementById("owner-survey-mode-2");
+  const bufferContainer = document.getElementById("survey-buffer-container");
+  const isMode2 = mode === "mode_2" || (radio2 && radio2.checked);
+
+  if (card1 && card2) {
+    if (isMode2) {
+      card1.classList.remove("selected");
+      card2.classList.add("selected");
+      if (radio2) radio2.checked = true;
+      if (bufferContainer) bufferContainer.style.display = "block";
+    } else {
+      card1.classList.add("selected");
+      card2.classList.remove("selected");
+      if (radio1) radio1.checked = true;
+      if (bufferContainer) bufferContainer.style.display = "none";
+    }
+  }
+}
+window.updateSurveyModeCardVisuals = updateSurveyModeCardVisuals;
+
 function getSurveyAutoDelayMinutes(item) {
   let baseDuration = 0;
   if (item && item.selectedServiceDurationMin && parseInt(item.selectedServiceDurationMin, 10) > 0) {
@@ -5121,8 +5145,10 @@ function populateOwnerInputs() {
   if (surveyMode1Input && surveyMode2Input) {
     if (surv.mode === "mode_2") {
       surveyMode2Input.checked = true;
+      updateSurveyModeCardVisuals("mode_2");
     } else {
       surveyMode1Input.checked = true;
+      updateSurveyModeCardVisuals("mode_1");
     }
   }
   if (surveyBufferInput && document.activeElement !== surveyBufferInput) {

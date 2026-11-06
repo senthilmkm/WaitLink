@@ -5172,16 +5172,15 @@ html[data-theme="light"] .landing-bottom-cta {
   background: rgba(15, 23, 42, 0.75);
   border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
 }
 
 .settings-subtabs-nav::-webkit-scrollbar {
-  height: 4px;
-}
-.settings-subtabs-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .settings-subtab-btn {
@@ -5232,6 +5231,138 @@ html[data-theme="light"] .landing-bottom-cta {
 @keyframes fadeInPane {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Clearly visible section cards inside settings panes */
+.settings-section-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.settings-section-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.settings-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+.settings-section-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.45;
+}
+
+/* High-Contrast Radio Mode Selection Cards */
+.survey-mode-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.6);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  user-select: none;
+}
+.survey-mode-card:hover {
+  border-color: #0284c7;
+  background: rgba(15, 23, 42, 0.8);
+  transform: translateY(-1px);
+}
+.survey-mode-card:has(input[type="radio"]:checked),
+.survey-mode-card.selected {
+  border-color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.12) !important;
+  box-shadow: 0 0 0 1px #0284c7, 0 4px 14px rgba(2, 132, 199, 0.2) !important;
+}
+
+/* Custom High-Contrast Radio Button */
+.survey-mode-card input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid #94a3b8;
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  margin: 0.15rem 0 0 0;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s ease;
+  background: #0f172a;
+}
+.survey-mode-card:hover input[type="radio"] {
+  border-color: #38bdf8;
+}
+.survey-mode-card input[type="radio"]:checked {
+  border-color: #0284c7 !important;
+  background: #ffffff !important;
+}
+.survey-mode-card input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+  background: #0284c7;
+  border-radius: 50%;
+}
+
+.survey-mode-card strong {
+  color: var(--text-main);
+  transition: color 0.2s ease;
+}
+.survey-mode-card span {
+  color: var(--text-muted);
+}
+.survey-mode-card:has(input[type="radio"]:checked) strong,
+.survey-mode-card.selected strong {
+  color: #38bdf8;
+}
+
+/* Theme Adaptive Callout */
+.settings-info-callout {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1.5px solid rgba(6, 182, 212, 0.25);
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+/* SMS Stat Tile */
+.sms-stat-tile {
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: border-color 0.2s ease;
+}
+.sms-stat-tile:hover {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -6006,6 +6137,173 @@ html[data-theme="light"] .settings-subtab-btn.active {
   font-weight: 800 !important;
   border: 1.5px solid #0891b2 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* High-Contrast Settings Cards & Panes (Light Theme) */
+html[data-theme="light"] .settings-section-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
+}
+html[data-theme="light"] .settings-section-card:hover {
+  border-color: #94a3b8 !important;
+}
+html[data-theme="light"] .settings-section-title {
+  color: #0f172a !important;
+}
+html[data-theme="light"] .settings-section-desc {
+  color: #475569 !important;
+}
+
+/* Light Theme High-Contrast Radio Mode Cards */
+html[data-theme="light"] .survey-mode-card {
+  background: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+}
+html[data-theme="light"] .survey-mode-card:hover {
+  border-color: #0284c7 !important;
+  background: #f8fafc !important;
+}
+html[data-theme="light"] .survey-mode-card:has(input[type="radio"]:checked),
+html[data-theme="light"] .survey-mode-card.selected {
+  border-color: #0284c7 !important;
+  background: #f0f9ff !important;
+  box-shadow: 0 0 0 1px #0284c7, 0 4px 12px rgba(2, 132, 199, 0.14) !important;
+}
+html[data-theme="light"] .survey-mode-card input[type="radio"] {
+  background: #ffffff !important;
+  border: 2.5px solid #64748b !important;
+}
+html[data-theme="light"] .survey-mode-card:hover input[type="radio"] {
+  border-color: #0284c7 !important;
+}
+html[data-theme="light"] .survey-mode-card input[type="radio"]:checked {
+  border-color: #0284c7 !important;
+  background: #ffffff !important;
+}
+html[data-theme="light"] .survey-mode-card input[type="radio"]:checked::after {
+  background: #0284c7 !important;
+}
+html[data-theme="light"] .survey-mode-card strong {
+  color: #0f172a !important;
+}
+html[data-theme="light"] .survey-mode-card:has(input[type="radio"]:checked) strong,
+html[data-theme="light"] .survey-mode-card.selected strong {
+  color: #0284c7 !important;
+}
+html[data-theme="light"] .survey-mode-card span {
+  color: #475569 !important;
+}
+
+/* Light Theme Settings Info Callout */
+html[data-theme="light"] .settings-info-callout {
+  background: #f0f9ff !important;
+  border: 1.5px solid #bae6fd !important;
+  color: #0369a1 !important;
+}
+html[data-theme="light"] .settings-info-callout strong {
+  color: #0c4a6e !important;
+}
+html[data-theme="light"] .settings-info-callout span {
+  color: #0369a1 !important;
+}
+
+/* Light Theme Inputs & Selects in Settings */
+html[data-theme="light"] .settings-subtab-pane input[type="text"],
+html[data-theme="light"] .settings-subtab-pane input[type="url"],
+html[data-theme="light"] .settings-subtab-pane input[type="email"],
+html[data-theme="light"] .settings-subtab-pane input[type="number"],
+html[data-theme="light"] .settings-subtab-pane input[type="date"],
+html[data-theme="light"] .settings-subtab-pane select,
+html[data-theme="light"] .settings-subtab-pane textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+html[data-theme="light"] .settings-subtab-pane input:focus,
+html[data-theme="light"] .settings-subtab-pane select:focus,
+html[data-theme="light"] .settings-subtab-pane textarea:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+  outline: none !important;
+}
+html[data-theme="light"] .settings-subtab-pane label {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+/* Tab 1: General High Contrast */
+html[data-theme="light"] #owner-shop-status-card {
+  background: #f0fdf4 !important;
+  border: 1.5px solid #86efac !important;
+}
+html[data-theme="light"] #owner-shop-status-title {
+  color: #15803d !important;
+}
+html[data-theme="light"] #owner-shop-status-toggle-wrapper {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+html[data-theme="light"] #owner-clinical-privacy-card {
+  background: #eef2ff !important;
+  border: 1.5px solid #c7d2fe !important;
+}
+html[data-theme="light"] #owner-clinical-privacy-card strong {
+  color: #4338ca !important;
+}
+html[data-theme="light"] #clinical-privacy-toggle-wrapper {
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  border-color: #a5b4fc !important;
+}
+
+/* Tab 3: Services Card */
+html[data-theme="light"] #settings-pane-services > div {
+  background: #f0f9ff !important;
+  border: 1.5px solid #bae6fd !important;
+}
+
+/* Tab 5: Twilio Card & Stat Tiles */
+html[data-theme="light"] #owner-twilio-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+html[data-theme="light"] #twilio-toggle-wrapper {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+html[data-theme="light"] .sms-stat-tile {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+html[data-theme="light"] .sms-stat-tile.success {
+  background: #ecfdf5 !important;
+  border: 1.5px solid #a7f3d0 !important;
+}
+html[data-theme="light"] #sms-stat-allowance,
+html[data-theme="light"] #sms-stat-topup,
+html[data-theme="light"] #sms-stat-total {
+  color: #0f172a !important;
+}
+
+/* Tab 6: Marketing Cards */
+html[data-theme="light"] #settings-pane-marketing > div {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+html[data-theme="light"] #settings-pane-marketing div[style*="background: var(--bg-card)"] {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Tab 7: Queue Security Panels */
+html[data-theme="light"] .security-card-subpanel {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
 }
 
 /* SuperAdmin Tabs & Navigation */
