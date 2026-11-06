@@ -1230,38 +1230,51 @@ function playFrontDeskChime() {
     initAudioContext();
     if (!audioCtx) return;
 
+    const playTones = () => {
+      try {
+        const now = audioCtx.currentTime;
+
+        // Tone 1: E5 (659.25 Hz) - Crisp Bell
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.45, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
+
+        // Tone 2: B5 (987.77 Hz) - Bright Chime Response
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(987.77, now + 0.15);
+        gain2.gain.setValueAtTime(0.5, now + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.9);
+      } catch (toneErr) {
+        console.warn("Audio chime tone synthesis notice:", toneErr);
+      }
+    };
+
     if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => { });
+      audioCtx.resume().then(() => {
+        playTones();
+      }).catch(() => { });
+    } else {
+      playTones();
     }
-
-    const now = audioCtx.currentTime;
-
-    // Tone 1: E5 (659.25 Hz) - Crisp Bell
-    const osc1 = audioCtx.createOscillator();
-    const gain1 = audioCtx.createGain();
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(659.25, now);
-    gain1.gain.setValueAtTime(0.45, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-    osc1.connect(gain1);
-    gain1.connect(audioCtx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.6);
-
-    // Tone 2: B5 (987.77 Hz) - Bright Chime Response
-    const osc2 = audioCtx.createOscillator();
-    const gain2 = audioCtx.createGain();
-    osc2.type = "sine";
-    osc2.frequency.setValueAtTime(987.77, now + 0.15);
-    gain2.gain.setValueAtTime(0.5, now + 0.15);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-    osc2.connect(gain2);
-    gain2.connect(audioCtx.destination);
-    osc2.start(now + 0.15);
-    osc2.stop(now + 0.9);
   } catch (e) {
     console.warn("Audio chime playback notice:", e);
   }
+}
+if (typeof window !== "undefined") {
+  window.playFrontDeskChime = playFrontDeskChime;
 }
 
 function toggleSoundAlerts() {
@@ -1835,9 +1848,15 @@ function subscribeFirestore(forceResubscribe = false) {
       updatePosterUI();
       renderAll();
 
-      if (newCheckInDetected && (state.activeView === "desk" || state.activeView === "home" || state.currentView === "desk" || state.currentView === "home")) {
+      const isDeskOrHome = state.activeView === "desk" || 
+                           state.activeView === "home" || 
+                           state.currentView === "desk" || 
+                           state.currentView === "home" ||
+                           (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
+
+      if (newCheckInDetected && isDeskOrHome) {
         playFrontDeskChime();
-        showToast("🔔 New customer joined the queue!");
+        showToast("🔔 New customer joined the queue via QR Code!");
       }
     } else {
       // Document not found under exact doc ID -> search by slug field in Firestore
@@ -15307,6 +15326,13 @@ function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
   if (isSelfCheckIn) {
     state.myTicket = newItem;
     SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
+
+    const isDeskActive = state.activeView === "desk" || 
+                         state.currentView === "desk" || 
+                         (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
+    if (isDeskActive) {
+      playFrontDeskChime();
+    }
 
     // Synchronize ticket into URL so page reloads or tab switches never lose ticket context
     if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {

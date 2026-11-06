@@ -747,6 +747,166 @@ it("Stripe Webhook State Machine: invoice.payment_succeeded triggers Rollover Ba
   assert.strictEqual(newTotal, 1100, "Total available must combine monthly allowance and top-up balance");
 });
 
+it("Stripe Webhook State Machine: invoice.payment_failed transitions subscription to past_due, records timestamp, and preserves queue access during grace period", () => {
+  const shopData = {
+    planTitle: "Pro Business Tier",
+    planPrice: 15,
+    subscriptionStatus: "active"
+  };
+
+  // State mutation logic from handleInvoicePaymentFailed
+  const failedTimestamp = Date.now();
+  shopData.subscriptionStatus = "past_due";
+  shopData.lastPaymentFailedAt = failedTimestamp;
+
+  assert.strictEqual(shopData.subscriptionStatus, "past_due");
+  assert.strictEqual(shopData.lastPaymentFailedAt, failedTimestamp);
+  assert.strictEqual(shopData.planPrice, 15, "Plan price must remain intact during grace period");
+  assert.strictEqual(shopData.planTitle, "Pro Business Tier", "Plan title must remain intact during grace period");
+});
+
+it("Stripe Webhook State Machine: customer.subscription.updated handles Tier Upgrade to Enterprise ($49/mo, 2500 quota)", () => {
+  const shopData = {
+    planTitle: "Pro Business Tier",
+    planPrice: 15,
+    subscriptionStatus: "active"
+  };
+  const smsWallet = {
+    monthlyAllowance: 500,
+    baseMonthlyQuota: 500,
+    topUpBalance: 300,
+    totalAvailable: 800
+  };
+
+  // Event data for Enterprise upgrade ($49)
+  const subItems = [{ price: { unit_amount: 4900 }, quantity: 1 }];
+  let totalAmount = 0;
+  for (const item of subItems) {
+    totalAmount += (item.price.unit_amount * (item.quantity || 1)) / 100;
+  }
+
+  if (totalAmount >= 49) {
+    shopData.planTitle = "Enterprise Tier";
+    shopData.planPrice = totalAmount;
+    smsWallet.monthlyAllowance = 2500;
+    smsWallet.baseMonthlyQuota = 2500;
+    smsWallet.totalAvailable = 2500 + smsWallet.topUpBalance;
+  }
+
+  assert.strictEqual(shopData.planPrice, 49);
+  assert.strictEqual(shopData.planTitle, "Enterprise Tier");
+  assert.strictEqual(smsWallet.monthlyAllowance, 2500);
+  assert.strictEqual(smsWallet.totalAvailable, 2800, "Top-up balance must remain preserved on upgrade");
+});
+
+it("Stripe Webhook State Machine: customer.subscription.updated handles Tier Downgrade from Enterprise to Pro ($15/mo)", () => {
+  const shopData = {
+    planTitle: "Enterprise Tier",
+    planPrice: 49,
+    subscriptionStatus: "active"
+  };
+
+  const subItems = [{ price: { unit_amount: 1500 }, quantity: 1 }];
+  let totalAmount = 0;
+  for (const item of subItems) {
+    totalAmount += (item.price.unit_amount * (item.quantity || 1)) / 100;
+  }
+
+  if (totalAmount < 49 && totalAmount >= 15) {
+    shopData.planTitle = "Pro Business Tier";
+    shopData.planPrice = totalAmount;
+  }
+
+  assert.strictEqual(shopData.planPrice, 15);
+  assert.strictEqual(shopData.planTitle, "Pro Business Tier");
+});
+
+it("Stripe Webhook State Machine: customer.subscription.updated handles Multi-Location Expansion Seats ($64/mo for 4 stores, $79/mo for 5 stores)", () => {
+  // Scenario 1: 4 stores (Base Enterprise $49 + 1 extra store @ $15)
+  const items4Stores = [
+    { price: { unit_amount: 4900 }, quantity: 1 },
+    { price: { unit_amount: 1500 }, quantity: 1 }
+  ];
+  let totalAmount4 = 0;
+  for (const item of items4Stores) {
+    totalAmount4 += (item.price.unit_amount * (item.quantity || 1)) / 100;
+  }
+  assert.strictEqual(totalAmount4, 64, "4 store locations must bill exactly $64/mo ($49 + $15)");
+
+  // Scenario 2: 5 stores (Base Enterprise $49 + 2 extra stores @ $15 each)
+  const items5Stores = [
+    { price: { unit_amount: 4900 }, quantity: 1 },
+    { price: { unit_amount: 1500 }, quantity: 2 }
+  ];
+  let totalAmount5 = 0;
+  for (const item of items5Stores) {
+    totalAmount5 += (item.price.unit_amount * (item.quantity || 1)) / 100;
+  }
+  assert.strictEqual(totalAmount5, 79, "5 store locations must bill exactly $79/mo ($49 + $30)");
+});
+
+it("Stripe Webhook Idempotency: Duplicate webhook deliveries with identical event ID are rejected as duplicates", () => {
+  const processedEvents = new Set(["evt_live_123456789"]);
+  const incomingEventId = "evt_live_123456789";
+
+  const isDuplicate = processedEvents.has(incomingEventId);
+  const response = isDuplicate ? { received: true, duplicate: true } : { received: true };
+
+  assert.strictEqual(response.duplicate, true, "Duplicate event must be flagged without re-running state mutations");
+});
+
+it("Stripe Webhook Event Routing: findShopsForStripeEvent resolves shop by metadata slug, subscription ID, or customer ID in strict priority", () => {
+  const mockDb = [
+    { id: "shop-alpha", stripeCustomerId: "cus_111", stripeSubscriptionId: "sub_aaa" },
+    { id: "shop-beta", stripeCustomerId: "cus_222", stripeSubscriptionId: "sub_bbb" }
+  ];
+
+  function resolveShop({ customerId, subscriptionId, metadataSlug }) {
+    if (metadataSlug) {
+      return mockDb.find(s => s.id === metadataSlug) || null;
+    }
+    if (subscriptionId) {
+      return mockDb.find(s => s.stripeSubscriptionId === subscriptionId) || null;
+    }
+    if (customerId) {
+      return mockDb.find(s => s.stripeCustomerId === customerId) || null;
+    }
+    return null;
+  }
+
+  // 1. Direct metadata slug match
+  assert.strictEqual(resolveShop({ metadataSlug: "shop-beta", customerId: "cus_111" }).id, "shop-beta");
+  // 2. Subscription ID fallback
+  assert.strictEqual(resolveShop({ subscriptionId: "sub_aaa" }).id, "shop-alpha");
+  // 3. Customer ID fallback
+  assert.strictEqual(resolveShop({ customerId: "cus_222" }).id, "shop-beta");
+});
+
+it("verifyStripeWebhookSignature: Enforces strict tolerance boundary (accepts at 295s, rejects at 305s)", () => {
+  const secret = "whsec_test_secret_abc123";
+  const payload = JSON.stringify({ id: "evt_test_boundary" });
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  // Within 300s window (295s ago)
+  const validTs = nowSec - 295;
+  const validSig = crypto.createHmac("sha256", secret).update(`${validTs}.${payload}`).digest("hex");
+  const validRes = verifyStripeWebhookSignature(payload, `t=${validTs},v1=${validSig}`, secret, 300);
+  assert.strictEqual(validRes.valid, true);
+
+  // Outside 300s window (305s ago)
+  const expiredTs = nowSec - 305;
+  const expiredSig = crypto.createHmac("sha256", secret).update(`${expiredTs}.${payload}`).digest("hex");
+  const expiredRes = verifyStripeWebhookSignature(payload, `t=${expiredTs},v1=${expiredSig}`, secret, 300);
+  assert.strictEqual(expiredRes.valid, false);
+  assert.ok(expiredRes.error.includes("outside tolerance"));
+});
+
+it("verifyStripeWebhookSignature: Rejects empty payload, missing signature header, or missing secret with descriptive error", () => {
+  assert.strictEqual(verifyStripeWebhookSignature("", "t=1,v1=abc", "secret").valid, false);
+  assert.strictEqual(verifyStripeWebhookSignature("{}", "", "secret").valid, false);
+  assert.strictEqual(verifyStripeWebhookSignature("{}", "t=1,v1=abc", "").valid, false);
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

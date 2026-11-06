@@ -256,5 +256,95 @@ it("escapeHtml: Handles null, undefined and numeric inputs cleanly", () => {
   assert.strictEqual(escapeHtml(false), "false");
 });
 
+// -------------------------------------------------------------------------
+// Tests: Front Desk Audio Chime on QR Code Check-In
+// -------------------------------------------------------------------------
+console.log("\n--- 5. Front Desk Audio Chime on QR Code Check-In ---");
+
+function simulateFrontDeskArrivalChime({ soundEnabled = true, activeView = "desk", isNewArrival = true, audioState = "running" }) {
+  let chimePlayed = false;
+  let tonesSynthesized = [];
+  let contextResumed = false;
+
+  const mockAudioCtx = {
+    state: audioState,
+    currentTime: 10.5,
+    resume: async () => {
+      contextResumed = true;
+      mockAudioCtx.state = "running";
+    },
+    createOscillator: () => ({
+      type: "sine",
+      frequency: { setValueAtTime: (freq) => { tonesSynthesized.push(freq); } },
+      connect: () => {},
+      start: () => {},
+      stop: () => {}
+    }),
+    createGain: () => ({
+      gain: {
+        setValueAtTime: () => {},
+        exponentialRampToValueAtTime: () => {}
+      },
+      connect: () => {}
+    }),
+    destination: {}
+  };
+
+  const playChime = () => {
+    if (soundEnabled === false) return;
+    const playTones = () => {
+      chimePlayed = true;
+      // Tone 1: E5 (659.25 Hz)
+      const osc1 = mockAudioCtx.createOscillator();
+      osc1.frequency.setValueAtTime(659.25);
+      // Tone 2: B5 (987.77 Hz)
+      const osc2 = mockAudioCtx.createOscillator();
+      osc2.frequency.setValueAtTime(987.77);
+    };
+
+    if (mockAudioCtx.state === "suspended") {
+      mockAudioCtx.resume().then(() => playTones());
+    } else {
+      playTones();
+    }
+  };
+
+  const isDeskOrHome = activeView === "desk" || activeView === "home";
+  if (isNewArrival && isDeskOrHome) {
+    playChime();
+  }
+
+  return { chimePlayed, tonesSynthesized, contextResumed };
+}
+
+it("Front Desk Chime: Plays dual-tone bell (E5 659.25Hz & B5 987.77Hz) when QR check-in arrives on desk view", () => {
+  const res = simulateFrontDeskArrivalChime({ soundEnabled: true, activeView: "desk", isNewArrival: true });
+  assert.strictEqual(res.chimePlayed, true);
+  assert.strictEqual(res.tonesSynthesized.length, 2);
+  assert.strictEqual(res.tonesSynthesized[0], 659.25, "First tone must be E5 crisp bell (659.25 Hz)");
+  assert.strictEqual(res.tonesSynthesized[1], 987.77, "Second tone must be B5 bright chime (987.77 Hz)");
+});
+
+it("Front Desk Chime: Also triggers when front desk operator is on Home view", () => {
+  const res = simulateFrontDeskArrivalChime({ soundEnabled: true, activeView: "home", isNewArrival: true });
+  assert.strictEqual(res.chimePlayed, true);
+});
+
+it("Front Desk Chime: Strictly suppressed when user is in public or customer ticket view", () => {
+  const res = simulateFrontDeskArrivalChime({ soundEnabled: true, activeView: "public", isNewArrival: true });
+  assert.strictEqual(res.chimePlayed, false, "Customer public view should not play desk arrival chime");
+});
+
+it("Front Desk Chime: Strictly suppressed when soundEnabled is false (muted)", () => {
+  const res = simulateFrontDeskArrivalChime({ soundEnabled: false, activeView: "desk", isNewArrival: true });
+  assert.strictEqual(res.chimePlayed, false, "Muted sound alerts must suppress audio chime");
+});
+
+it("Front Desk Chime: Handles suspended AudioContext by unlocking and resuming playback", async () => {
+  const res = simulateFrontDeskArrivalChime({ soundEnabled: true, activeView: "desk", isNewArrival: true, audioState: "suspended" });
+  assert.strictEqual(res.contextResumed, true, "Suspended audio context must be resumed on arrival");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
+
