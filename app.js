@@ -6214,63 +6214,105 @@ function isItemCancelledByDesk(item) {
 
 function getItemActivities(item) {
   if (!item) return [];
-  if (Array.isArray(item.activities) && item.activities.length > 0) {
-    return item.activities;
+
+  let list = Array.isArray(item.activities) ? [...item.activities] : [];
+
+  if (list.length === 0) {
+    if (item.checkedInAt) {
+      const checkInActor = item.checkedInBy
+        ? item.checkedInBy
+        : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : (item.checkedInVia ? `Customer (${item.checkedInVia})` : "Customer (Self Check-in)"));
+      list.push({
+        action: "check_in",
+        title: "Customer Checked In",
+        detail: item.selectedServiceName ? `Selected Service: ${item.selectedServiceName}` : (item.checkedInVia ? `Checked in via ${item.checkedInVia}` : "Customer initial check-in"),
+        timestamp: item.checkedInAt,
+        icon: "📝",
+        actor: checkInActor
+      });
+    }
+
+    if (item.lateReportedAt) {
+      list.push({
+        action: "running_late",
+        title: `Running Late (+${item.delayedMinutes || 10}m)`,
+        detail: `Customer notified front desk of +${item.delayedMinutes || 10} minutes delay from mobile ticket`,
+        timestamp: item.lateReportedAt,
+        icon: "🏃",
+        actor: "Customer (Live QR Ticket)"
+      });
+    }
+
+    if (item.calledAt) {
+      const calledActor = item.calledBy || item.completedBy || "Front Desk Staff";
+      list.push({
+        action: "called",
+        title: "Called Customer",
+        detail: `Called to front desk for service (Waited ${item.waitDurationMin || 0}m)`,
+        timestamp: item.calledAt,
+        icon: "📞",
+        actor: calledActor
+      });
+    }
+
+    if (item.completedAt || item.status === "completed") {
+      const completedActor = item.completedBy || item.calledBy || "Front Desk Staff";
+      list.push({
+        action: "completed",
+        title: "Service Completed",
+        detail: `Service marked complete (Duration: ${item.serviceDurationMin || 0}m)`,
+        timestamp: item.completedAt || item.calledAt || Date.now(),
+        icon: "✅",
+        actor: completedActor
+      });
+    }
+
+    if (item.cancelledAt || item.status === "cancelled") {
+      const ts = item.cancelledAt || item.calledAt || Date.now();
+      const byDesk = isItemCancelledByDesk(item);
+      const cancelActor = byDesk
+        ? (item.cancelledByOperator || (item.cancelledBy && item.cancelledBy !== "desk" && item.cancelledBy !== "customer" ? item.cancelledBy : null) || item.calledBy || item.completedBy || "Front Desk Staff")
+        : "Customer (Mobile Ticket)";
+      list.push({
+        action: "cancelled",
+        title: "Cancelled Visit",
+        detail: byDesk ? `Cancelled / marked No-Show by ${cancelActor}` : "Customer tapped Leave Line on phone",
+        timestamp: ts,
+        icon: "✕",
+        actor: cancelActor
+      });
+    }
+
+    if (item.surveySent) {
+      list.push({
+        action: "survey_dispatched",
+        title: "Review Survey Sent",
+        detail: `Post-service survey & review link triggered (${item.surveyTrigger || 'auto_timer'})`,
+        timestamp: item.surveySentAt || item.completedAt || Date.now(),
+        icon: "⭐",
+        actor: "WaitLink Automated Survey Engine"
+      });
+    }
   }
 
-  const list = [];
-  if (item.checkedInAt) {
-    const checkInActor = item.checkedInBy
-      ? item.checkedInBy
-      : (item.checkedInVia && item.checkedInVia.toLowerCase().includes("qr") ? "Customer (Self Check-in via QR)" : "Customer (Self Check-in)");
-    list.push({
-      action: "check_in",
-      title: "Customer Checked In",
-      detail: item.selectedServiceName ? `Selected Service: ${item.selectedServiceName}` : (item.checkedInVia ? `Checked in via ${item.checkedInVia}` : "Customer initial check-in"),
-      timestamp: item.checkedInAt,
-      icon: "📝",
-      actor: checkInActor
-    });
+  // Guarantee that customer star rating is ALWAYS present in the audit activities
+  const ratingVal = item.customerRating || (state.myTicket && (state.myTicket.id === item.id || state.myTicket.customerName === item.customerName) ? state.myTicket.customerRating : null);
+  if (ratingVal) {
+    const hasRated = list.some(a => a && a.action === "customer_rated");
+    if (!hasRated) {
+      list.push({
+        action: "customer_rated",
+        title: "Customer Star Rating",
+        detail: `Customer submitted ${ratingVal}/5 stars on Web Ticket`,
+        timestamp: item.customerRatingSubmittedAt || Date.now(),
+        icon: "⭐",
+        actor: "Customer (Self-Service)"
+      });
+    }
   }
 
-  if (item.lateReportedAt) {
-    list.push({
-      action: "running_late",
-      title: `Running Late (+${item.delayedMinutes || 10}m)`,
-      detail: `Customer notified front desk of +${item.delayedMinutes || 10} minutes delay from mobile ticket`,
-      timestamp: item.lateReportedAt,
-      icon: "🏃",
-      actor: "Customer (Live QR Ticket)"
-    });
-  }
-
-  if (item.calledAt && item.status === "called") {
-    const calledActor = item.calledBy || item.completedBy || "Front Desk Staff";
-    list.push({
-      action: "called",
-      title: "Called Customer",
-      detail: `Called to front desk for service (Waited ${item.waitDurationMin || 0}m)`,
-      timestamp: item.calledAt,
-      icon: "📞",
-      actor: calledActor
-    });
-  }
-
-  if (item.cancelledAt || item.status === "cancelled") {
-    const ts = item.cancelledAt || item.calledAt || Date.now();
-    const byDesk = isItemCancelledByDesk(item);
-    const cancelActor = byDesk
-      ? (item.cancelledByOperator || (item.cancelledBy && item.cancelledBy !== "desk" && item.cancelledBy !== "customer" ? item.cancelledBy : null) || item.calledBy || item.completedBy || "Front Desk Staff")
-      : "Customer (Mobile Ticket)";
-    list.push({
-      action: "cancelled",
-      title: "Cancelled Visit",
-      detail: byDesk ? `Cancelled / marked No-Show by ${cancelActor}` : "Customer tapped Leave Line on phone",
-      timestamp: ts,
-      icon: "✕",
-      actor: cancelActor
-    });
-  }
+  // Sort activities chronologically by timestamp
+  list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
   return list;
 }
@@ -7252,19 +7294,49 @@ function submitCustomerStarRating(rating) {
 
   const params = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
   const urlTicketId = params ? (params.get("ticket") || params.get("tid") || params.get("t")) : null;
+  const urlSlug = params ? (params.get("s") || params.get("shop")) : null;
+  const rawSlug = urlSlug || (state.config && state.config.slug) || (state.myTicket && state.myTicket.shopSlug) || "shop";
+  const cleanSlug = slugify(rawSlug);
+  const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
 
+  // 1. Immediately update in-memory active ticket & safe storage
   if (state.myTicket) {
     state.myTicket.customerRating = rating;
     state.myTicket.customerRatingSubmittedAt = Date.now();
-    SafeStorage.setJSON(`waitlink_ticket_${state.config.slug}`, state.myTicket);
+    logCustomerActivity(state.myTicket, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+    SafeStorage.setJSON(`waitlink_ticket_${cleanSlug}`, state.myTicket);
   }
 
-  const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
+  // 2. Also update local in-memory history record if present
+  if (Array.isArray(state.history)) {
+    const localTarget = state.history.find(h => h && (h.id === tid || (state.myTicket && h.customerName === state.myTicket.customerName)));
+    if (localTarget) {
+      localTarget.customerRating = rating;
+      localTarget.customerRatingSubmittedAt = Date.now();
+      logCustomerActivity(localTarget, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+    }
+  }
 
-  if (db && state.config.slug && tid) {
-    const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
+  // 3. Cloud Function backend redundancy (runs independently of client db status)
+  if (cleanSlug && tid) {
+    fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/publicQueueAction", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "rate",
+        slug: cleanSlug,
+        ticketId: tid,
+        rating: rating
+      })
+    }).then(r => r.json()).then(d => {
+      if (d && d.success) {
+        console.log("Server confirmed customer rating saved to history audit trail!");
+      }
+    }).catch(e => console.warn("publicQueueAction rate note:", e));
+  }
 
-    // 1. Direct atomic client write
+  // 4. Direct atomic client write if db is initialized
+  if (db && cleanSlug && tid) {
     mutateQueueAtomic((serverQueue, serverHistory) => {
       let target = serverHistory.find(h => h && (h.id === tid || h.id === decodeURIComponent(tid)));
       if (!target) {
@@ -7288,22 +7360,6 @@ function submitCustomerStarRating(rating) {
         renderAll();
       }
     }).catch(err => console.warn("Failed to persist rating to Firestore:", err));
-
-    // 2. Cloud Function backend redundancy (bypasses any browser cache or client security limits)
-    fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/publicQueueAction", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "rate",
-        slug: cleanSlug,
-        ticketId: tid,
-        rating: rating
-      })
-    }).then(r => r.json()).then(d => {
-      if (d && d.success) {
-        console.log("Server confirmed customer rating saved to history audit trail!");
-      }
-    }).catch(e => console.warn("publicQueueAction rate note:", e));
   }
 
   showToast(`⭐ Thank you for rating your service ${rating}/5 stars!`);
