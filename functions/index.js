@@ -1060,6 +1060,7 @@ exports.sendSubscriptionUpgradeEmail = onRequest({ cors: true, maxInstances: 10 
 });
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || localSecrets.stripe_secret_key || "";
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || localSecrets.stripe_webhook_secret || "";
 const PRO_PRICE_ID = localSecrets.pro_price_id || "price_1UMbBvHXdog2I9XKNFauNDmJ";
 const ENTERPRISE_PRICE_ID = localSecrets.enterprise_price_id || "price_1UMbCNHXdog2I9XK5sqqn8VA";
 
@@ -1829,6 +1830,387 @@ exports.createStripePortalSession = onRequest({ cors: true, maxInstances: 10 }, 
       return res.status(500).json({ success: false, error: "Server error: " + err.message });
     }
   });
+});
+
+/**
+ * Cryptographic HMAC-SHA256 Webhook Signature Verifier
+ * Complies with Stripe's signature scheme (t=timestamp,v1=signature)
+ */
+function verifyStripeWebhookSignature(rawBody, signatureHeader, secret, toleranceSec = 300) {
+  if (!rawBody || !signatureHeader || !secret) {
+    return { valid: false, error: "Missing body, signature header, or webhook secret." };
+  }
+
+  const parts = signatureHeader.split(",");
+  let timestamp = null;
+  const signatures = [];
+
+  for (const part of parts) {
+    const [key, value] = part.trim().split("=");
+    if (key === "t") timestamp = parseInt(value, 10);
+    else if (key === "v1" && value) signatures.push(value);
+  }
+
+  if (!timestamp || isNaN(timestamp) || signatures.length === 0) {
+    return { valid: false, error: "Malformed stripe-signature header." };
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - timestamp) > toleranceSec) {
+    return { valid: false, error: `Signature timestamp outside tolerance (${timestamp} vs ${nowSec}).` };
+  }
+
+  const payloadStr = typeof rawBody === "string" ? rawBody : (Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : JSON.stringify(rawBody));
+  const signedPayload = `${timestamp}.${payloadStr}`;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", secret.trim())
+    .update(signedPayload)
+    .digest("hex");
+
+  const expectedBuf = Buffer.from(expectedSignature, "hex");
+
+  let matchFound = false;
+  for (const sig of signatures) {
+    try {
+      const sigBuf = Buffer.from(sig, "hex");
+      if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+        matchFound = true;
+        break;
+      }
+    } catch (e) {}
+  }
+
+  if (!matchFound) {
+    return { valid: false, error: "Signature mismatch." };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Resolves one or more Firestore shop references associated with a Stripe event
+ */
+async function findShopsForStripeEvent({ customerId, subscriptionId, metadataSlug }) {
+  const shops = [];
+  const db = admin.firestore();
+
+  if (metadataSlug) {
+    const docSnap = await db.collection("shops").doc(String(metadataSlug).trim().toLowerCase()).get();
+    if (docSnap.exists) {
+      shops.push({ ref: docSnap.ref, data: docSnap.data(), id: docSnap.id });
+      return shops;
+    }
+  }
+
+  if (subscriptionId) {
+    const snap = await db.collection("shops").where("stripeSubscriptionId", "==", subscriptionId).get();
+    snap.forEach(d => shops.push({ ref: d.ref, data: d.data(), id: d.id }));
+    if (shops.length > 0) return shops;
+  }
+
+  if (customerId) {
+    const snap = await db.collection("shops").where("stripeCustomerId", "==", customerId).get();
+    snap.forEach(d => shops.push({ ref: d.ref, data: d.data(), id: d.id }));
+  }
+
+  return shops;
+}
+
+/**
+ * Handles customer.subscription.deleted: Downgrades shop to Starter, adjusts SMS wallet, logs audit
+ */
+async function handleSubscriptionDeleted(sub) {
+  const customerId = sub.customer;
+  const subscriptionId = sub.id;
+  const metadataSlug = sub.metadata && sub.metadata.shopSlug;
+
+  const shops = await findShopsForStripeEvent({ customerId, subscriptionId, metadataSlug });
+  if (shops.length === 0) {
+    logger.warn(`No shops found for deleted subscription: ${subscriptionId} (customer: ${customerId})`);
+    return;
+  }
+
+  for (const shop of shops) {
+    const shopRef = shop.ref;
+    const shopData = shop.data;
+
+    await shopRef.update({
+      planPrice: 0,
+      planTitle: "Starter Tier",
+      subscriptionStatus: "canceled",
+      canceledAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    const usageRef = shopRef.collection("billing").doc("smsUsage");
+    const usageSnap = await usageRef.get();
+    if (usageSnap.exists) {
+      const uData = usageSnap.data() || {};
+      const topUpRemaining = Math.max(0, uData.topUpBalance || 0);
+      await usageRef.update({
+        monthlyAllowance: 0,
+        baseMonthlyQuota: 0,
+        rolledOverFromPriorMonth: 0,
+        tierTitle: "Starter Tier",
+        tierPrice: 0,
+        totalAvailable: topUpRemaining,
+        updatedAt: Date.now()
+      });
+    }
+
+    await admin.firestore().collection("pricing_audits").add({
+      id: "audit_cancel_" + Date.now(),
+      timestamp: Date.now(),
+      adminEmail: "stripe_webhook",
+      shopSlug: shop.id,
+      changes: [
+        `Subscription canceled via Stripe Webhook (${subscriptionId})`,
+        "Reverted shop to Starter Tier ($0/mo, 0 included SMS allowance)",
+        "Retained non-expiring SMS top-up balance"
+      ]
+    });
+
+    const ownerEmail = shopData.ownerEmail || sub.customer_email;
+    if (ownerEmail) {
+      try {
+        await dispatchEmail({
+          to: ownerEmail,
+          subject: `WaitLink Subscription Canceled: ${shopData.name || shop.id}`,
+          html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 2rem; background: #0f172a; color: #f8fafc; border-radius: 12px;">
+            <h2 style="color: #38bdf8; margin-top: 0;">WaitLink Subscription Canceled</h2>
+            <p>Your subscription for <strong>${shopData.name || shop.id}</strong> has been canceled.</p>
+            <p>Your shop has been gracefully transitioned to the <strong>Free Starter Tier</strong> ($0/mo). Your digital queue, window QR posters, and walk-in check-in will continue operating uninterrupted.</p>
+            <p>Any non-expiring SMS top-up packs you previously purchased remain fully accessible in your reserve wallet.</p>
+            <p style="margin-top: 1.5rem; font-size: 0.85rem; color: #94a3b8;">You can upgrade again anytime directly from your Shop Owner dashboard.</p>
+          </div>`
+        });
+      } catch (e) {
+        logger.warn(`Failed to send cancellation email for ${shop.id}:`, e.message);
+      }
+    }
+  }
+}
+
+/**
+ * Handles invoice.payment_failed: Marks subscription past_due and alerts owner
+ */
+async function handleInvoicePaymentFailed(invoice) {
+  const customerId = invoice.customer;
+  const subscriptionId = invoice.subscription;
+  const metadataSlug = invoice.metadata && invoice.metadata.shopSlug;
+
+  const shops = await findShopsForStripeEvent({ customerId, subscriptionId, metadataSlug });
+  if (shops.length === 0) {
+    logger.warn(`No shops found for failed invoice: ${invoice.id} (customer: ${customerId})`);
+    return;
+  }
+
+  for (const shop of shops) {
+    const shopRef = shop.ref;
+    const shopData = shop.data;
+
+    await shopRef.update({
+      subscriptionStatus: "past_due",
+      lastPaymentFailedAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    const ownerEmail = shopData.ownerEmail || invoice.customer_email;
+    if (ownerEmail) {
+      try {
+        await dispatchEmail({
+          to: ownerEmail,
+          subject: `⚠️ Payment Failed: Action Required for ${shopData.name || shop.id}`,
+          html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 2rem; background: #0f172a; color: #f8fafc; border-radius: 12px;">
+            <h2 style="color: #f43f5e; margin-top: 0;">⚠️ Subscription Payment Failed</h2>
+            <p>We were unable to process your recurring subscription renewal for <strong>${shopData.name || shop.id}</strong>.</p>
+            <p>Your card may have expired or was declined by your bank.</p>
+            <p style="background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); padding: 1rem; border-radius: 8px;">
+              Please log in to your WaitLink Owner Dashboard and visit <strong>Settings &rarr; Manage Subscription</strong> to update your payment method.
+            </p>
+            <p style="margin-top: 1.5rem; font-size: 0.85rem; color: #94a3b8;">WaitLink maintains your queue operations during this grace period.</p>
+          </div>`
+        });
+      } catch (e) {
+        logger.warn(`Failed to send payment failure email for ${shop.id}:`, e.message);
+      }
+    }
+  }
+}
+
+/**
+ * Handles invoice.payment_succeeded: Executes 1-Month Rollover Bank on recurring renewal
+ */
+async function handleInvoicePaymentSucceeded(invoice) {
+  if (invoice.billing_reason !== "subscription_cycle") {
+    logger.info(`invoice.payment_succeeded skipped rollover: billing_reason is ${invoice.billing_reason}`);
+    return;
+  }
+
+  const customerId = invoice.customer;
+  const subscriptionId = invoice.subscription;
+  const metadataSlug = invoice.metadata && invoice.metadata.shopSlug;
+
+  const shops = await findShopsForStripeEvent({ customerId, subscriptionId, metadataSlug });
+  for (const shop of shops) {
+    const shopRef = shop.ref;
+    const shopData = shop.data;
+
+    await shopRef.update({
+      subscriptionStatus: "active",
+      lastBilledAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    const usageRef = shopRef.collection("billing").doc("smsUsage");
+    const usageSnap = await usageRef.get();
+    if (usageSnap.exists) {
+      const usage = usageSnap.data() || {};
+      const baseQuota = usage.baseMonthlyQuota || (shopData.planPrice >= 49 ? 2500 : 500);
+      const unusedIncluded = Math.max(0, (usage.monthlyAllowance || baseQuota) - (usage.monthlyUsed || 0));
+      const rolloverCeiling = baseQuota;
+      const rolledOver = Math.min(unusedIncluded, rolloverCeiling);
+      const newMonthlyAllowance = baseQuota + rolledOver;
+      const newTotal = newMonthlyAllowance + (usage.topUpBalance || 0);
+
+      await usageRef.update({
+        monthlyAllowance: newMonthlyAllowance,
+        baseMonthlyQuota: baseQuota,
+        rolledOverFromPriorMonth: rolledOver,
+        monthlyUsed: 0,
+        totalAvailable: newTotal,
+        billingCycleStart: Date.now(),
+        billingCycleEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now()
+      });
+      logger.info(`Rollover Bank executed for ${shop.id}: banked ${rolledOver} SMS (New total available: ${newTotal})`);
+    }
+  }
+}
+
+/**
+ * Handles customer.subscription.updated: Syncs tier, capacity, and active status
+ */
+async function handleSubscriptionUpdated(sub) {
+  const customerId = sub.customer;
+  const subscriptionId = sub.id;
+  const metadataSlug = sub.metadata && sub.metadata.shopSlug;
+
+  const shops = await findShopsForStripeEvent({ customerId, subscriptionId, metadataSlug });
+  for (const shop of shops) {
+    const shopRef = shop.ref;
+    const status = sub.status;
+
+    const updates = {
+      subscriptionStatus: status,
+      updatedAt: Date.now()
+    };
+
+    if (status === "active") {
+      const items = sub.items && sub.items.data ? sub.items.data : [];
+      let totalAmount = 0;
+      for (const item of items) {
+        const unitAmount = (item.price && item.price.unit_amount) ? item.price.unit_amount : 0;
+        const qty = item.quantity || 1;
+        totalAmount += (unitAmount * qty) / 100;
+      }
+
+      if (totalAmount >= 49) {
+        updates.planTitle = "Enterprise Tier";
+        updates.planPrice = totalAmount;
+      } else if (totalAmount >= 15) {
+        updates.planTitle = "Pro Business Tier";
+        updates.planPrice = totalAmount;
+      }
+    }
+
+    await shopRef.update(updates);
+  }
+}
+
+/**
+ * Cloud Function: stripeWebhook
+ * Cryptographically verifies and synchronizes Stripe subscription events with Cloud Firestore.
+ */
+exports.stripeWebhook = onRequest({ cors: false, maxInstances: 10 }, async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  const sigHeader = req.headers["stripe-signature"] || "";
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || localSecrets.stripe_webhook_secret || "";
+
+  if (!webhookSecret) {
+    logger.error("STRIPE_WEBHOOK_SECRET is not configured.");
+    return res.status(500).send("Webhook secret not configured");
+  }
+
+  const rawBody = req.rawBody || req.body;
+  const verifyResult = verifyStripeWebhookSignature(rawBody, sigHeader, webhookSecret);
+  if (!verifyResult.valid) {
+    logger.warn("Stripe webhook verification failed:", verifyResult.error);
+    return res.status(400).send(`Webhook Error: ${verifyResult.error}`);
+  }
+
+  let event;
+  try {
+    const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : (typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody));
+    event = JSON.parse(bodyStr);
+  } catch (err) {
+    logger.error("Failed to parse Stripe webhook JSON:", err);
+    return res.status(400).send("Invalid JSON payload");
+  }
+
+  const eventId = String(event.id || "").trim();
+  if (eventId) {
+    const eventRef = admin.firestore().collection("stripe_webhook_events").doc(eventId);
+    const eventSnap = await eventRef.get();
+    if (eventSnap.exists) {
+      logger.info(`Stripe webhook event ${eventId} already processed.`);
+      return res.status(200).json({ received: true, duplicate: true });
+    }
+    await eventRef.set({
+      id: eventId,
+      type: event.type,
+      created: event.created || Date.now(),
+      processedAt: Date.now()
+    });
+  }
+
+  logger.info(`Processing Stripe webhook event: ${event.type} (${eventId})`);
+
+  try {
+    switch (event.type) {
+      case "customer.subscription.deleted": {
+        const sub = event.data && event.data.object ? event.data.object : {};
+        await handleSubscriptionDeleted(sub);
+        break;
+      }
+      case "invoice.payment_failed": {
+        const invoice = event.data && event.data.object ? event.data.object : {};
+        await handleInvoicePaymentFailed(invoice);
+        break;
+      }
+      case "invoice.payment_succeeded": {
+        const invoice = event.data && event.data.object ? event.data.object : {};
+        await handleInvoicePaymentSucceeded(invoice);
+        break;
+      }
+      case "customer.subscription.updated": {
+        const sub = event.data && event.data.object ? event.data.object : {};
+        await handleSubscriptionUpdated(sub);
+        break;
+      }
+      default:
+        logger.info(`Unhandled Stripe event type: ${event.type}`);
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error(`Error processing Stripe webhook ${event.type}:`, err);
+    return res.status(200).json({ received: true, error: err.message });
+  }
 });
 
 const crypto = require("crypto");

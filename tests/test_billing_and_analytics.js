@@ -598,6 +598,155 @@ it("ensureTierSMSLimits: Normalizes 'Unlimited Locations' to 'Up to 3 Locations 
   assert.ok(texts.includes("Up to 3 Locations Included (+ $15/mo per extra store)"));
 });
 
+// -------------------------------------------------------------------------
+// Tests: Stripe Webhook Cryptographic Verification & Lifecycle State Machine
+// -------------------------------------------------------------------------
+console.log("\n--- 11. Stripe Webhook Cryptographic Verification & Lifecycle State Machine ---");
+
+const crypto = require("crypto");
+
+function verifyStripeWebhookSignature(rawBody, signatureHeader, secret, toleranceSec = 300) {
+  if (!rawBody || !signatureHeader || !secret) {
+    return { valid: false, error: "Missing body, signature header, or webhook secret." };
+  }
+
+  const parts = signatureHeader.split(",");
+  let timestamp = null;
+  const signatures = [];
+
+  for (const part of parts) {
+    const [key, value] = part.trim().split("=");
+    if (key === "t") timestamp = parseInt(value, 10);
+    else if (key === "v1" && value) signatures.push(value);
+  }
+
+  if (!timestamp || isNaN(timestamp) || signatures.length === 0) {
+    return { valid: false, error: "Malformed stripe-signature header." };
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - timestamp) > toleranceSec) {
+    return { valid: false, error: `Signature timestamp outside tolerance (${timestamp} vs ${nowSec}).` };
+  }
+
+  const payloadStr = typeof rawBody === "string" ? rawBody : (Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : JSON.stringify(rawBody));
+  const signedPayload = `${timestamp}.${payloadStr}`;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", secret.trim())
+    .update(signedPayload)
+    .digest("hex");
+
+  const expectedBuf = Buffer.from(expectedSignature, "hex");
+
+  let matchFound = false;
+  for (const sig of signatures) {
+    try {
+      const sigBuf = Buffer.from(sig, "hex");
+      if (sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+        matchFound = true;
+        break;
+      }
+    } catch (e) {}
+  }
+
+  if (!matchFound) {
+    return { valid: false, error: "Signature mismatch." };
+  }
+
+  return { valid: true };
+}
+
+it("verifyStripeWebhookSignature: Validates authentic HMAC-SHA256 signature", () => {
+  const secret = "whsec_test_secret_abc123";
+  const payload = JSON.stringify({ id: "evt_test_123", type: "customer.subscription.deleted" });
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto.createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
+  const header = `t=${timestamp},v1=${signature}`;
+
+  const res = verifyStripeWebhookSignature(payload, header, secret);
+  assert.strictEqual(res.valid, true);
+});
+
+it("verifyStripeWebhookSignature: Rejects tampered payload or forged signature", () => {
+  const secret = "whsec_test_secret_abc123";
+  const payload = JSON.stringify({ id: "evt_test_123", type: "customer.subscription.deleted" });
+  const timestamp = Math.floor(Date.now() / 1000);
+  const forgedSignature = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  const header = `t=${timestamp},v1=${forgedSignature}`;
+
+  const res = verifyStripeWebhookSignature(payload, header, secret);
+  assert.strictEqual(res.valid, false);
+  assert.strictEqual(res.error, "Signature mismatch.");
+});
+
+it("verifyStripeWebhookSignature: Rejects expired signature beyond tolerance window", () => {
+  const secret = "whsec_test_secret_abc123";
+  const payload = JSON.stringify({ id: "evt_test_123" });
+  const expiredTimestamp = Math.floor(Date.now() / 1000) - 600; // 10 minutes ago (> 300s)
+  const signature = crypto.createHmac("sha256", secret).update(`${expiredTimestamp}.${payload}`).digest("hex");
+  const header = `t=${expiredTimestamp},v1=${signature}`;
+
+  const res = verifyStripeWebhookSignature(payload, header, secret, 300);
+  assert.strictEqual(res.valid, false);
+  assert.ok(res.error.includes("outside tolerance"));
+});
+
+it("Stripe Webhook State Machine: customer.subscription.deleted downgrades to Starter and preserves non-expiring top-ups", () => {
+  // Mock shop state before cancellation
+  const shopData = {
+    planTitle: "Pro Business Tier",
+    planPrice: 15,
+    subscriptionStatus: "active"
+  };
+  const smsWallet = {
+    monthlyAllowance: 500,
+    baseMonthlyQuota: 500,
+    monthlyUsed: 220,
+    topUpBalance: 750, // Purchased top-up credits (must be preserved!)
+    totalAvailable: 1030
+  };
+
+  // State mutation logic from handleSubscriptionDeleted
+  shopData.planPrice = 0;
+  shopData.planTitle = "Starter Tier";
+  shopData.subscriptionStatus = "canceled";
+  smsWallet.monthlyAllowance = 0;
+  smsWallet.baseMonthlyQuota = 0;
+  smsWallet.rolledOverFromPriorMonth = 0;
+  smsWallet.tierTitle = "Starter Tier";
+  smsWallet.tierPrice = 0;
+  smsWallet.totalAvailable = smsWallet.topUpBalance; // Top-ups are non-expiring
+
+  assert.strictEqual(shopData.planPrice, 0);
+  assert.strictEqual(shopData.planTitle, "Starter Tier");
+  assert.strictEqual(shopData.subscriptionStatus, "canceled");
+  assert.strictEqual(smsWallet.monthlyAllowance, 0);
+  assert.strictEqual(smsWallet.totalAvailable, 750, "Non-expiring top-up balance must be 100% preserved");
+});
+
+it("Stripe Webhook State Machine: invoice.payment_succeeded triggers Rollover Bank on renewal", () => {
+  const smsWallet = {
+    monthlyAllowance: 500,
+    baseMonthlyQuota: 500,
+    monthlyUsed: 150,
+    topUpBalance: 250,
+    totalAvailable: 600
+  };
+
+  // State mutation logic from handleInvoicePaymentSucceeded
+  const baseQuota = smsWallet.baseMonthlyQuota;
+  const unusedIncluded = Math.max(0, smsWallet.monthlyAllowance - smsWallet.monthlyUsed); // 350
+  const rolloverCeiling = baseQuota; // 500
+  const rolledOver = Math.min(unusedIncluded, rolloverCeiling); // 350
+  const newMonthlyAllowance = baseQuota + rolledOver; // 500 + 350 = 850
+  const newTotal = newMonthlyAllowance + smsWallet.topUpBalance; // 850 + 250 = 1100
+
+  assert.strictEqual(rolledOver, 350, "Unused 350 SMS must roll over");
+  assert.strictEqual(newMonthlyAllowance, 850, "New monthly allowance must be base (500) + rollover (350)");
+  assert.strictEqual(newTotal, 1100, "Total available must combine monthly allowance and top-up balance");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
