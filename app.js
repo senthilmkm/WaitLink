@@ -7156,12 +7156,12 @@ function updateActiveTicketTimer() {
           `;
         } else {
           surveyBox.innerHTML = `
-            <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem;" onmouseleave="resetCustomerStarHover()">
-              <span class="star-item" data-val="1" onclick="submitCustomerStarRating(1)" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="1 Star">☆</span>
-              <span class="star-item" data-val="2" onclick="submitCustomerStarRating(2)" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="2 Stars">☆</span>
-              <span class="star-item" data-val="3" onclick="submitCustomerStarRating(3)" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="3 Stars">☆</span>
-              <span class="star-item" data-val="4" onclick="submitCustomerStarRating(4)" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="4 Stars">☆</span>
-              <span class="star-item" data-val="5" onclick="submitCustomerStarRating(5)" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="5 Stars">☆</span>
+            <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem; touch-action: manipulation;" onmouseleave="resetCustomerStarHover()">
+              <span class="star-item" data-val="1" role="button" tabindex="0" onclick="submitCustomerStarRating(1)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(1);}" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="1 Star">☆</span>
+              <span class="star-item" data-val="2" role="button" tabindex="0" onclick="submitCustomerStarRating(2)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(2);}" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="2 Stars">☆</span>
+              <span class="star-item" data-val="3" role="button" tabindex="0" onclick="submitCustomerStarRating(3)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(3);}" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="3 Stars">☆</span>
+              <span class="star-item" data-val="4" role="button" tabindex="0" onclick="submitCustomerStarRating(4)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(4);}" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="4 Stars">☆</span>
+              <span class="star-item" data-val="5" role="button" tabindex="0" onclick="submitCustomerStarRating(5)" onpointerdown="if(event.pointerType==='touch'){submitCustomerStarRating(5);}" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="5 Stars">☆</span>
             </div>
             <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
             <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
@@ -7193,6 +7193,10 @@ let currentCustomerRating = 0;
 window.currentCustomerRating = currentCustomerRating;
 
 function hoverCustomerStarRating(val) {
+  // If device doesn't support true hover (like mobile touchscreens), ignore hover so clicks fire immediately
+  if (typeof window !== "undefined" && window.matchMedia && !window.matchMedia("(hover: hover)").matches) {
+    return;
+  }
   if (window.currentCustomerRating > 0) return;
   const row = document.getElementById("star-rating-row");
   if (!row) return;
@@ -7238,6 +7242,11 @@ function editCustomerStarRating() {
 window.editCustomerStarRating = editCustomerStarRating;
 
 function submitCustomerStarRating(rating) {
+  if (window._lastRatingSubmitTime && (Date.now() - window._lastRatingSubmitTime < 600)) {
+    return;
+  }
+  window._lastRatingSubmitTime = Date.now();
+
   const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
   const starRow = document.getElementById("star-rating-row");
 
