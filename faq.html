@@ -76,6 +76,30 @@
           "@type": "Answer",
           "text": "The Enterprise Tier ($49/month) includes up to 3 business locations and unlimited staff accounts. Additional locations beyond 3 are $15/month each with automatic prorated calculations and transparent in-app confirmation. If an extra location is deleted, billing is automatically reduced by -$15/month."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "How do Automated Google Reviews and Post-Service Customer Surveys work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Available on Pro Business and Enterprise tiers, WaitLink delivers interactive 1-to-5 star customer satisfaction surveys directly to mobile tickets and via SMS upon visit completion. High ratings (4-5 stars) are directed with 1-tap to Google Reviews via the Google Review Booster, while constructive feedback is routed privately to the business owner."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between Mode 1 (Active Chair) and Mode 2 (Smart Delay) for customer surveys?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Mode 1 (Active Chair) transitions customer tickets to In Service and allows staff to tap Complete Service & Send Survey when finished. Mode 2 (Smart Delay) automatically derives service time from chosen services plus a custom buffer to dispatch surveys hands-free."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does prorated billing work when an Enterprise account adds a 4th or 5th storefront?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Enterprise accounts include 3 locations in the $49/mo base plan. Adding a 4th or subsequent storefront is +$15/month each, with Stripe automatically prorating charges for the remainder of the billing cycle. An authorization sheet displays your updated monthly total before confirmation."
+        }
       }
     ]
   }
@@ -180,7 +204,7 @@
       <!-- Results Toolbar & Meta -->
       <div class="faq-toolbar-meta">
         <div id="faq-results-counter" class="faq-result-count">
-          Showing all <strong>21</strong> questions
+          Showing all <strong>30</strong> questions
         </div>
         <button id="faq-toggle-all-btn" class="faq-action-link-btn" onclick="toggleExpandAll()">
           <span id="faq-toggle-all-icon">📖</span>
@@ -197,12 +221,12 @@
         We couldn't find any questions matching your search. Try checking your spelling or search a broader topic.
       </p>
       <div class="faq-empty-suggestions">
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Reviews & Surveys')">⭐ Reviews &amp; Surveys</button>
+        <button class="faq-suggestion-btn" onclick="applySuggestion('Multi-Location')">🏢 Multi-Location</button>
         <button class="faq-suggestion-btn" onclick="applySuggestion('SMS Rollover')">📱 SMS Rollover</button>
         <button class="faq-suggestion-btn" onclick="applySuggestion('Free Plan')">💳 Free Plan</button>
         <button class="faq-suggestion-btn" onclick="applySuggestion('1-Click Station')">👥 1-Click Station</button>
         <button class="faq-suggestion-btn" onclick="applySuggestion('Clinical Mode')">🩺 Clinical Mode</button>
-        <button class="faq-suggestion-btn" onclick="applySuggestion('Export CSV')">📥 Export CSV</button>
-        <button class="faq-suggestion-btn" onclick="applySuggestion('Print Poster')">🖨️ Print Poster</button>
       </div>
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
         <button class="btn btn-secondary btn-sm" onclick="clearFaqSearch()">↺ Reset Search</button>
@@ -562,6 +586,159 @@
           </ul>
         </div>
       </div>
+
+      <!-- 23. Google Reviews & Post-Service Surveys Overview -->
+      <div class="faq-item" data-category="analytics" data-keywords="reviews surveys google review booster csat feedback customer rating 5 stars active chair delay satisfaction rating">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-analytics">Analytics & Reports</span>
+            <span class="faq-question-text">How do Automated Google Reviews &amp; Post-Service Customer Surveys work?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Available on Pro Business and Enterprise tiers, <strong>Automated Google Reviews &amp; Post-Service Surveys</strong> turn everyday walk-in traffic into high-converting 5-star Google reputation assets:</p>
+          <ul>
+            <li><strong>Seamless Configuration:</strong> In <strong>Shop Settings &rarr; Reviews &amp; Surveys</strong>, enable customer feedback and paste your direct Google Business review link or custom survey URL.</li>
+            <li><strong>Automated Delivery:</strong> When a customer's service concludes, WaitLink delivers an interactive satisfaction survey directly to their mobile web ticket and dispatches an automated SMS review link.</li>
+            <li><strong>Zero App Friction:</strong> Customers rate their visit with 1 tap (1 to 5 stars) directly in their mobile browser—no login, signup, or app download required.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 24. Dual-Mode Survey Triggering: Mode 1 vs Mode 2 -->
+      <div class="faq-item" data-category="staff" data-keywords="mode 1 mode 2 active chair smart delay service completion send survey timing front desk chair duration buffer">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-staff">Staff & Stations</span>
+            <span class="faq-question-text">What is the difference between Mode 1 (Active Chair) and Mode 2 (Smart Delay) for surveys?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink accommodates different service workflows with two specialized completion modes:</p>
+          <ul>
+            <li><strong>Mode 1: Active Chair / Counter (Manual Complete):</strong> When staff call a customer with "SERVE NOW", the ticket transitions to <em>"In Service"</em>. Once the appointment finishes, staff tap <strong>"Complete Service &amp; Send Survey"</strong> right on the front desk screen. This mode provides exact turnaround time tracking and is ideal for barbershops, salons, dental offices, and medical clinics.</li>
+            <li><strong>Mode 2: Smart Delay (Hands-Free Automation):</strong> Best for high-volume retail or food service where staff move quickly. When a guest is called, WaitLink automatically derives the service time from the chosen service (e.g. 25 min Beard Trim) plus an owner-configured buffer (e.g. +5 min). An automated countdown timer dispatches the review invitation without requiring staff to touch the screen again. Staff can also manually trigger or cancel the survey at any time.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 25. Sentiment Gating & Google Review Booster -->
+      <div class="faq-item" data-category="analytics" data-keywords="sentiment gating google review booster 5 star rating positive negative feedback internal csat private reputation booster">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-analytics">Analytics & Reports</span>
+            <span class="faq-question-text">How does Sentiment Gating work with the Google Review Booster?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink's intelligent sentiment gating protects your public reputation while amplifying top customer praise:</p>
+          <ul>
+            <li><strong>Happy Customers (4 or 5 Stars):</strong> Enthusiastic customers are immediately greeted with a celebration banner and a prominent <strong>"Share on Google Reviews"</strong> button that opens your Google Business page with 1 tap.</li>
+            <li><strong>Constructive Feedback (1 to 3 Stars):</strong> If a customer has an issue, they are invited to submit private feedback directly to the business owner. This allows you to resolve grievances privately and address operational bottlenecks before negative comments hit public review platforms.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 26. SMS Credit Accounting for Surveys & Free Alternatives -->
+      <div class="faq-item" data-category="sms" data-keywords="survey sms credit 1 credit quota zero free ticket web rating in person checkout qr credits cost">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-sms">SMS & Alerts</span>
+            <span class="faq-question-text">Do customer surveys consume SMS credits, and can guests rate for free?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>WaitLink maintains transparent, zero-surprise credit accounting:</p>
+          <ul>
+            <li><strong>SMS Text Link:</strong> Sending an automated post-service survey link via SMS carrier debits exactly <strong>one (1) SMS credit</strong> from your monthly plan quota or non-expiring top-up pack.</li>
+            <li><strong>Live Mobile Web Ticket (100% Free):</strong> Customers keeping their live mobile ticket open rate directly on their screen with <strong>zero (0) SMS credits debited</strong>.</li>
+            <li><strong>Front Desk Checkout QR (100% Free):</strong> Staff can tap <strong>"Show Checkout QR"</strong> for departing patrons to scan directly at the counter. The survey loads instantly on their device without consuming any SMS credits.</li>
+            <li><strong>No Phone Numbers (100% Free):</strong> Walk-ins registered without a mobile number skip SMS dispatch automatically without error.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 27. CSAT Metrics & Owner Analytics -->
+      <div class="faq-item" data-category="analytics" data-keywords="csat average rating star rating analytics owner dashboard visit history csv export spreadsheet reporting">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-analytics">Analytics & Reports</span>
+            <span class="faq-question-text">Where do business owners track Customer Satisfaction (CSAT) and feedback trends?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Customer ratings flow directly into the <strong>Business Owner Analytics</strong> dashboard in real time:</p>
+          <ul>
+            <li><strong>Average Star Rating:</strong> Displays your shop's aggregate score (e.g. 4.9 ★) and total review volume.</li>
+            <li><strong>CSAT % Score:</strong> Measures the percentage of visits rated 4 or 5 stars, giving you a clear benchmark for staff performance.</li>
+            <li><strong>Visit History Badges:</strong> Every completed visit in your history log displays an interactive star rating badge.</li>
+            <li><strong>Data Export:</strong> Customer star ratings and feedback are fully exportable in your 90-day (Pro) or 365-day (Enterprise) Excel &amp; CSV spreadsheet downloads.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 28. Enterprise Proration & Adding 4th+ Storefronts -->
+      <div class="faq-item" data-category="pricing" data-keywords="proration prorated billing stripe invoice 4th store 15 month add location authorization sheet enterprise scale">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-pricing">Pricing & Billing</span>
+            <span class="faq-question-text">How does prorated billing work when an Enterprise account adds a 4th or 5th store?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Enterprise accounts include <strong>up to 3 storefront locations</strong> in the base $49/mo subscription. When expanding to Store #4, Store #5, and beyond:</p>
+          <ul>
+            <li><strong>Clear Confirmation Modal:</strong> Clicking "+ Register New Shop" automatically opens the <em>Add Extra Location Sheet</em> showing your store number (e.g. Store #4), additional cost (+$15.00/mo), and your new subscription total (e.g. $64.00/mo).</li>
+            <li><strong>Automated Stripe Proration:</strong> Charges are prorated to the exact day remaining in your billing cycle. You only pay for the fraction of the month your new store is active.</li>
+            <li><strong>No Hidden Setup Fees:</strong> Zero hardware requirements, zero activation charges, and zero platform lock-in.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 29. Deleting or Downsizing an Enterprise Location -->
+      <div class="faq-item" data-category="pricing" data-keywords="delete shop remove location pause store credit reduction -15 month downgrade cancellation enterprise adjustment">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-pricing">Pricing & Billing</span>
+            <span class="faq-question-text">What happens to our subscription if we close, pause, or delete an extra Enterprise store?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>If you downsize or close a branch, WaitLink guarantees fair, transparent billing without phantom charges:</p>
+          <ul>
+            <li><strong>Immediate Billing Reduction:</strong> When an extra location is deleted from the Owner Directory, your recurring subscription is automatically decremented by <strong>-$15.00/month</strong> for subsequent billing cycles.</li>
+            <li><strong>Instant In-App Toast:</strong> A confirmation alert notifies the owner immediately with their updated monthly recurring total (e.g., <em>"Subscription adjusted: -$15/mo for removed location"</em>).</li>
+            <li><strong>Pause Instead of Delete:</strong> If a storefront is undergoing renovations or seasonal closure, owners can simply toggle the store to "Paused" to freeze the live queue without losing service settings or customer history.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 30. Operational Independence for Multi-Unit Chains -->
+      <div class="faq-item" data-category="roles" data-keywords="multi location isolation independent services custom hours staff pin station url headquarters directory chains franchise">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>
+            <span class="faq-category-badge faq-badge-roles">Roles & Access</span>
+            <span class="faq-question-text">Can each storefront location have its own independent services, operating hours, and staff PINs?</span>
+          </span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. Each location under an Enterprise account operates with complete operational independence:</p>
+          <ul>
+            <li><strong>Independent Queues &amp; Web Links:</strong> Every store gets its own unique web address (e.g. <code>waitlink.app?s=uptown-clinic</code>) and custom printable window QR code.</li>
+            <li><strong>Dedicated Services &amp; Hours:</strong> Set store-specific services, prices, turnaround wait baselines, and operating schedules per branch.</li>
+            <li><strong>Isolated Staff PINs:</strong> Provision counter staff accounts and 4-digit PINs scoped strictly to that specific branch. Counter staff at Location A cannot access or interfere with queues at Location B.</li>
+            <li><strong>Central Headquarters View:</strong> As the master Shop Owner, you switch effortlessly between all branches via the top <strong>MY SHOPS</strong> dropdown or the centralized Owner Directory.</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <!-- Need More Help Banner -->
@@ -717,7 +894,15 @@
       "poster": ["flyer", "print", "window", "lobby", "qr", "storefront", "display"],
       "qr": ["code", "scan", "camera", "poster", "link"],
       "loss": ["walk-away", "walkaway", "cancellation", "abandon", "abandonment"],
-      "offline": ["wifi", "internet", "disconnect", "drop", "network", "cache", "localstorage", "safestorage"]
+      "offline": ["wifi", "internet", "disconnect", "drop", "network", "cache", "localstorage", "safestorage"],
+      "survey": ["surveys", "review", "reviews", "google", "csat", "feedback", "rating", "stars", "post-service"],
+      "surveys": ["survey", "review", "reviews", "google", "csat", "feedback", "rating", "stars", "post-service"],
+      "reviews": ["review", "survey", "surveys", "google", "csat", "feedback", "rating", "stars", "booster"],
+      "review": ["reviews", "survey", "surveys", "google", "csat", "feedback", "rating", "stars", "booster"],
+      "google": ["reviews", "review", "booster", "rating", "stars", "feedback"],
+      "csat": ["satisfaction", "rating", "stars", "feedback", "reviews", "surveys"],
+      "locations": ["location", "chains", "stores", "store", "multi-location", "enterprise", "extra", "proration"],
+      "location": ["locations", "chains", "stores", "store", "multi-location", "enterprise", "extra", "proration"]
     };
 
     function buildFaqIndex() {
