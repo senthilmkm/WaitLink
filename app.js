@@ -1025,6 +1025,10 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("beforeunload", () => {
     if (timerInterval) clearInterval(timerInterval);
     if (unsubscribeSnapshot) unsubscribeSnapshot();
+    if (state.activeSurveyTimers) {
+      state.activeSurveyTimers.forEach(t => clearTimeout(t));
+      state.activeSurveyTimers.clear();
+    }
   });
 
   if (shopParam && staffParam && keyParam) {
@@ -2779,6 +2783,8 @@ function saveData() {
         logoUrl: state.config.logoUrl || "",
         isActive: state.config.isActive !== false,
         status: state.config.isActive === false ? "paused" : (state.config.status || "active"),
+        security: state.config.security || {},
+        surveySettings: state.config.surveySettings || {},
         queue: state.queue,
         history: cappedHistory,
         updatedAt: Date.now()
@@ -9845,7 +9851,11 @@ function inspectShop(slug, isSilent = false) {
     }
   }
 
-  // Reset in-memory queue, history & ticket before switching to target shop
+  // Reset in-memory queue, history, timers & ticket before switching to target shop
+  if (state.activeSurveyTimers) {
+    state.activeSurveyTimers.forEach(t => clearTimeout(t));
+    state.activeSurveyTimers.clear();
+  }
   state.queue = [];
   state.history = [];
   state.myTicket = SafeStorage.getJSON(`waitlink_ticket_${slug}`) || null;

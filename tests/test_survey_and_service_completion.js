@@ -380,6 +380,59 @@ it("app.js generates complete public live ticket review URL with view=public and
 });
 
 // -------------------------------------------------------------------------
+// 11. Legal, Compliance, SMS Transparency & Memory Safety Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 11. Legal, Compliance, SMS Transparency & Memory Safety ---");
+
+const termsHtml = fs.readFileSync(path.join(__dirname, "..", "terms.html"), "utf8");
+const privacyHtml = fs.readFileSync(path.join(__dirname, "..", "privacy.html"), "utf8");
+const helpHtml = fs.readFileSync(path.join(__dirname, "..", "help.html"), "utf8");
+const pricingHtml = fs.readFileSync(path.join(__dirname, "..", "pricing.html"), "utf8");
+
+it("terms.html specifies Reviews & Surveys SMS terms, 1 credit quota metering, and zero-credit exceptions", () => {
+  assert.ok(termsHtml.includes("Post-Service Reviews &amp; Surveys"), "terms.html must include Post-Service Reviews section");
+  assert.ok(termsHtml.includes("debits exactly one (1) SMS credit"), "terms.html must specify 1 credit debit per texted customer");
+  assert.ok(termsHtml.includes("Zero (0) SMS credits are deducted for customers without phone numbers"), "terms.html must state zero credits for web-only or QR reviews");
+});
+
+it("privacy.html covers voluntary customer star ratings and SMS survey links under TCPA / CTIA compliance", () => {
+  assert.ok(privacyHtml.includes("voluntary customer satisfaction ratings (1-5 stars)"), "privacy.html must include star ratings in collected information");
+  assert.ok(privacyHtml.includes("optional post-service satisfaction survey link"), "privacy.html must specify survey message frequency and purpose");
+});
+
+it("help.html includes Guide 10 explaining Automated Google Reviews & Post-Service Surveys", () => {
+  assert.ok(helpHtml.includes("10. Automated Google Reviews &amp; Post-Service Surveys"), "help.html must include Guide 10");
+  assert.ok(helpHtml.includes("Mode 1 (Active Chair)"), "help.html must document Mode 1");
+  assert.ok(helpHtml.includes("Mode 2 (Smart Delay)"), "help.html must document Mode 2");
+});
+
+it("pricing.html includes Reviews & Surveys in Pro and Enterprise tiers and exclusion in Starter", () => {
+  assert.ok(pricingHtml.includes("Automated Google Reviews &amp; Post-Service Customer Surveys"), "pricing.html must feature survey booster in Pro tier");
+  assert.ok(pricingHtml.includes("Multi-Location Google Reviews &amp; Post-Service Customer Surveys"), "pricing.html must feature survey booster in Enterprise tier");
+  assert.ok(pricingHtml.includes("No Automated Post-Service Surveys or Google Review Boosters"), "pricing.html must explicitly exclude surveys in Starter tier");
+});
+
+it("index.html displays transparent SMS usage & credits notice in Reviews & Surveys tab", () => {
+  assert.ok(indexHtml.includes("SMS Usage &amp; Credits:"), "index.html must display SMS usage callout in Reviews & Surveys pane");
+  assert.ok(indexHtml.includes("1 SMS credit"), "index.html must specify 1 SMS credit per texted customer");
+  assert.ok(indexHtml.includes("zero credits are deducted"), "index.html must confirm zero credits for web ticket reviews");
+});
+
+it("app.js protects against memory leaks by clearing activeSurveyTimers in beforeunload and inspectShop", () => {
+  assert.ok(appJs.includes("state.activeSurveyTimers.forEach(t => clearTimeout(t));"), "Must clear survey timer timeouts on unload or shop switch");
+  assert.ok(appJs.includes("state.activeSurveyTimers.clear();"), "Must clear activeSurveyTimers Map");
+});
+
+it("app.js persists surveySettings into root Firestore shop document in saveData", () => {
+  assert.ok(appJs.includes("surveySettings: state.config.surveySettings || {}"), "saveData must include surveySettings in doc update");
+});
+
+it("app.js renders customerRating badge in Visit History and exports rating column in CSV", () => {
+  assert.ok(appJs.includes("badge-survey-rating"), "Must render badge-survey-rating in buildHistoryRowHtml");
+  assert.ok(appJs.includes('"Customer Rating (Stars)"'), "Must export Customer Rating (Stars) in exportHistoryCSV");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");
