@@ -511,6 +511,16 @@
             feats.splice(targetIdx, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
           }
         }
+
+        // Deduplicate features in every tier so duplicate/redundant lines never appear
+        const seenTexts = new Set();
+        tier.features = feats.filter(f => {
+          const text = typeof f === 'object' && f !== null ? f.text : String(f);
+          const normalized = text.toLowerCase().replace(/included\s*/gi, '').replace(/\s+/g, ' ').trim();
+          if (seenTexts.has(normalized)) return false;
+          seenTexts.add(normalized);
+          return true;
+        });
       });
       return tiers;
     }

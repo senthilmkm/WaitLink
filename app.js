@@ -3171,6 +3171,13 @@ function scheduleSurveyAutoTimer(item) {
   if (!surv.enabled || surv.mode !== "mode_2") return;
   if (item.surveySent) return;
 
+  // Strictly only execute automated timers on authenticated Front Desk / Shop Owner sessions
+  // Public customers viewing their ticket or public displays MUST NEVER execute backend dispatch timers
+  const urlParams = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
+  const isPublicView = urlParams && (urlParams.get("view") === "public" || urlParams.get("view") === "display" || urlParams.has("ticket") || urlParams.has("t") || urlParams.has("feedback"));
+  const isOperator = !!(state.user || state.isStaffSession || isDemoScreenOrGuestDemo());
+  if (isPublicView || !isOperator) return;
+
   state.activeSurveyTimers = state.activeSurveyTimers || new Map();
 
   const delayMin = getSurveyAutoDelayMinutes(item);
@@ -3208,6 +3215,14 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   if (!ticketId) return { success: false, error: "Missing ticket ID" };
 
   clearSurveyAutoTimer(ticketId);
+
+  // Strictly prevent unauthenticated public callers from triggering survey dispatches
+  const urlParams = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
+  const isPublicView = urlParams && (urlParams.get("view") === "public" || urlParams.get("view") === "display" || urlParams.has("ticket") || urlParams.has("t") || urlParams.has("feedback"));
+  const isOperator = !!(state.user || state.isStaffSession || isDemoScreenOrGuestDemo());
+  if (isPublicView || !isOperator) {
+    return { success: false, error: "Unauthorized: only authenticated front desk operator can trigger surveys" };
+  }
 
   const surv = (state.config && state.config.surveySettings) || {};
   const isPaid = isPaidTier() || isDemoScreenOrGuestDemo();
@@ -3301,6 +3316,12 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
           logCustomerActivity(finalItem, "sms_survey_delivered", "Survey SMS Delivered", `Delivered review link to ${finalItem.phone}`, "📲", "WaitLink Twilio Bot (Automated)");
           showToast(`⭐ Review survey sent via SMS to ${finalItem.customerName} (${finalItem.phone})`);
         } else {
+          logCustomerActivity(finalItem, "sms_survey_failed", "Survey SMS Failed", `Twilio SMS dispatch failed: ${res.error || "Carrier dispatch error"}`, "⚠️", "WaitLink Twilio Bot");
+          finalItem.surveySent = false;
+          finalItem.surveyFailed = true;
+          finalItem.surveyError = res.error || "SMS failed";
+          saveData();
+          renderAll();
           showToast(`⚠️ Could not text review survey: ${res.error || "SMS failed"}`);
         }
       });
@@ -6258,6 +6279,8 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     statusTagHtml += ` <span class="badge-survey-rating" style="margin-left: 4px; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="Customer rated ${item.customerRating}/5 stars on Web Ticket">⭐ ${item.customerRating}/5</span>`;
   } else if (item.surveySent) {
     statusTagHtml += ` <span class="badge-survey-sent" style="margin-left: 4px;" data-tooltip="Review survey link delivered">⭐ Survey Sent</span>`;
+  } else if (item.surveyFailed) {
+    statusTagHtml += ` <span class="badge-survey-failed" style="margin-left: 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="${escapeHtml(item.surveyError || 'SMS delivery failed')}">⚠️ SMS Failed</span>`;
   }
 
   const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
@@ -11701,6 +11724,16 @@ function ensureTierSMSLimits(tiers) {
         feats.splice(2, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
       }
     }
+
+    // Deduplicate features in every tier so duplicate/redundant lines never appear
+    const seenTexts = new Set();
+    tier.features = feats.filter(f => {
+      const text = typeof f === 'object' && f !== null ? f.text : String(f);
+      const normalized = text.toLowerCase().replace(/included\s*/gi, '').replace(/\s+/g, ' ').trim();
+      if (seenTexts.has(normalized)) return false;
+      seenTexts.add(normalized);
+      return true;
+    });
   });
   return tiers;
 }
