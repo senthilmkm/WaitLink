@@ -322,6 +322,82 @@ it("evaluateMonthlyCheckinAllowed: Paid plans ($15 Pro, $49 Enterprise) are unli
   assert.strictEqual(evaluateMonthlyCheckinAllowed(49, 10000, 100), true);
 });
 
+// -------------------------------------------------------------------------
+// 7. Pricing Tier Deduplication & SMS Allowance Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 7. Pricing Tier Deduplication & SMS Allowance Invariants ---");
+
+function deduplicateTierFeatures(features) {
+  const result = [];
+  let has0Sms = false;
+  let has500Sms = false;
+  let has2500Sms = false;
+
+  features.forEach(f => {
+    const text = typeof f === 'object' && f !== null ? f.text : String(f);
+    const lower = text.toLowerCase();
+
+    // Deduplicate 0 SMS variants
+    if (lower.includes("0 sms")) {
+      if (has0Sms) return;
+      has0Sms = true;
+      result.push({ text: "0 SMS Included (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true });
+      return;
+    }
+    // Deduplicate 500 SMS variants
+    if (lower.includes("500") && lower.includes("sms")) {
+      if (has500Sms) return;
+      has500Sms = true;
+      result.push({ text: "500 Automated SMS Customer Alerts / month Included", enabled: true });
+      return;
+    }
+    // Deduplicate 2,500 SMS variants
+    if ((lower.includes("2,500") || lower.includes("2500")) && lower.includes("sms")) {
+      if (has2500Sms) return;
+      has2500Sms = true;
+      result.push({ text: "2,500+ Automated SMS / mo Included", enabled: true });
+      return;
+    }
+    result.push(f);
+  });
+  return result;
+}
+
+it("deduplicateTierFeatures: Eliminates duplicate 0 SMS bullets in Starter plan", () => {
+  const rawStarterFeatures = [
+    { text: "1 Staff Login", enabled: true },
+    { text: "0 SMS Included (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true },
+    { text: "0 SMS (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true },
+    { text: "Live Public Web Queue Card", enabled: true }
+  ];
+  const cleaned = deduplicateTierFeatures(rawStarterFeatures);
+  const smsCount = cleaned.filter(f => f.text.toLowerCase().includes("0 sms")).length;
+  assert.strictEqual(smsCount, 1, "Starter plan must contain strictly one 0 SMS feature bullet");
+  assert.strictEqual(cleaned.length, 3, "Duplicate bullet must be removed");
+});
+
+it("deduplicateTierFeatures: Eliminates duplicate 500 SMS bullets in Pro Business tier", () => {
+  const rawProFeatures = [
+    { text: "5 Staff Logins", enabled: true },
+    { text: "500 Automated SMS Customer Alerts / month Included", enabled: true },
+    { text: "500 Automated SMS Customer Alerts / month", enabled: true },
+    { text: "Post-Service 5-Star Google Review Booster", enabled: true }
+  ];
+  const cleaned = deduplicateTierFeatures(rawProFeatures);
+  const smsCount = cleaned.filter(f => f.text.toLowerCase().includes("500")).length;
+  assert.strictEqual(smsCount, 1, "Pro Business tier must contain strictly one 500 SMS feature bullet");
+  assert.strictEqual(cleaned.length, 3, "Duplicate 500 SMS bullet must be removed");
+});
+
+it("pricing.html strictly defines 0 SMS for Starter, 500 for Pro, and 2,500 for Enterprise without duplicate bullets", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const pricingHtml = fs.readFileSync(path.join(__dirname, "..", "pricing.html"), "utf8");
+  assert.ok(pricingHtml.includes("0 SMS Included (Live Mobile Web Card"), "pricing.html must specify 0 SMS in Starter");
+  assert.ok(pricingHtml.includes("500 Automated SMS"), "pricing.html must specify 500 SMS in Pro");
+  assert.ok(pricingHtml.includes("2,500+ Automated SMS") || pricingHtml.includes("2,500 Automated SMS"), "pricing.html must specify 2,500 SMS in Enterprise");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

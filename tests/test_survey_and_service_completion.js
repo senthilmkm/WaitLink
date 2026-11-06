@@ -502,6 +502,47 @@ it("Cloud Function publicQueueAction in functions/index.js handles action === ra
 });
 
 // -------------------------------------------------------------------------
+// 13. Defect Regressions: 401 Prevention, Audit Modal Sizing & Checkout QR Poster
+// -------------------------------------------------------------------------
+console.log("\n--- 13. Defect Regressions: 401 Prevention, Audit Modal Sizing & Checkout QR Poster ---");
+
+it("app.js strictly prevents public and unauthenticated sessions from executing survey auto-timers or Twilio SMS (Fix for 401 Rejection)", () => {
+  assert.ok(appJs.includes("const isPublicView = urlParams && (urlParams.get(\"view\") === \"public\" || urlParams.get(\"view\") === \"display\" || urlParams.has(\"ticket\") || urlParams.has(\"t\") || urlParams.has(\"feedback\"));"), "Must detect public customer view in auto timer");
+  assert.ok(appJs.includes("if (isPublicView || !isOperator) return;"), "scheduleSurveyAutoTimer must immediately abort for public customers");
+  assert.ok(appJs.includes("Unauthorized: only authenticated front desk operator can trigger surveys"), "triggerSurveyForTicket must reject unauthorized public callers");
+});
+
+it("app.js encodes ticket review URL in openReviewQrModal and renders smart subtitle for front desk", () => {
+  assert.ok(appJs.includes("const ticketReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(item ? item.id : '')}&feedback=1`;"), "openReviewQrModal must generate ticket review URL");
+  assert.ok(appJs.includes("subtitle.textContent = (item.customerRating)"), "openReviewQrModal must check item.customerRating for subtitle");
+  assert.ok(appJs.includes("already submitted a"), "openReviewQrModal must confirm existing rating in subtitle");
+  assert.ok(appJs.includes("Open Direct Google Review Page ↗"), "openReviewQrModal must offer direct link if destinationUrl set");
+});
+
+it("index.html provides spacious 980px max-width and 520px timeline container for Complete Lifecycle Audit Log modal", () => {
+  assert.ok(indexHtml.includes('id="modal-customer-audit-trail"'), "Must contain modal-customer-audit-trail");
+  assert.ok(indexHtml.includes('max-width: 980px; width: 96%; max-height: 94vh;'), "Audit modal card must use 980px width and 94vh max-height");
+  assert.ok(indexHtml.includes('padding: 2.25rem 2.75rem;'), "Audit modal card must use 2.25rem 2.75rem padding");
+  assert.ok(indexHtml.includes('max-height: 520px; overflow-y: auto;'), "Audit timeline container must have 520px max-height scroll area");
+});
+
+it("app.js openCustomerAuditModal renders Completed (Served) in emerald green for finished visits", () => {
+  assert.ok(appJs.includes('item.status === "completed" || item.status === "called" || item.status === "served"'), "Must recognize completed status in audit modal");
+  assert.ok(appJs.includes('Completed (Served)'), "Must display Completed (Served) text");
+  assert.ok(appJs.includes('#10b981'), "Must use emerald green #10b981 for completed status");
+});
+
+it("app.js submitCustomerStarRating implements idempotency guard and update audit logging", () => {
+  assert.ok(appJs.includes("if (existingRating === rating && starRow && starRow.style.pointerEvents === \"none\")"), "Must guard against duplicate star submissions");
+  assert.ok(appJs.includes("Customer updated rating to ${rating}/5 stars on Web Ticket"), "Must log update activity when rating is changed");
+});
+
+it("app.js triggerSurveyForTicket enforces paywall gating and prevents SMS dispatch on starter tier", () => {
+  assert.ok(appJs.includes("if (!isPaid) {"), "triggerSurveyForTicket must check isPaid before sending SMS");
+  assert.ok(appJs.includes("Pro required for automated SMS"), "triggerSurveyForTicket must inform that Pro is required for SMS");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");
