@@ -11444,6 +11444,7 @@ const DEFAULT_TIER_FEATURES = {
     { text: "500 Automated SMS / mo included (+ 1-Month Rollover Bank up to 1,000 SMS)", enabled: true },
     { text: "Automated Twilio SMS \"Turn Ready\" Alerts", enabled: true },
     { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true },
+    { text: "Automated Google Reviews & Post-Service Surveys", enabled: true },
     { text: "Custom Logo Branding & Colors", enabled: true },
     { text: "Promotional Offer Banners on Public Screen", enabled: true },
     { text: "Owner Business Intelligence Dashboard", enabled: true },
@@ -11509,6 +11510,13 @@ function renderAdminFeatureManager(tierKey) {
 function toggleAdminFeatureStatus(tierKey, index) {
   if (!state.adminFeatures[tierKey] || !state.adminFeatures[tierKey][index]) return;
   state.adminFeatures[tierKey][index].enabled = !state.adminFeatures[tierKey][index].enabled;
+  // Automatically sort enabled (✓) features cleanly above disabled (✕) exclusions
+  state.adminFeatures[tierKey].sort((a, b) => {
+    const aEnabled = a.enabled !== false;
+    const bEnabled = b.enabled !== false;
+    if (aEnabled === bEnabled) return 0;
+    return aEnabled ? -1 : 1;
+  });
   renderAdminFeatureManager(tierKey);
 }
 
@@ -11520,7 +11528,14 @@ function updateAdminFeatureText(tierKey, index, newText) {
 
 function addAdminFeatureItem(tierKey) {
   if (!state.adminFeatures[tierKey]) state.adminFeatures[tierKey] = [];
-  state.adminFeatures[tierKey].push({ text: "New Feature Item", enabled: true });
+  // Find index of first disabled (exclusion) item so new features are cleanly bumped above crossed-out ✕ exclusions
+  const firstDisabledIdx = state.adminFeatures[tierKey].findIndex(f => f && f.enabled === false);
+  const newItem = { text: "New Feature Item", enabled: true };
+  if (firstDisabledIdx !== -1) {
+    state.adminFeatures[tierKey].splice(firstDisabledIdx, 0, newItem);
+  } else {
+    state.adminFeatures[tierKey].push(newItem);
+  }
   renderAdminFeatureManager(tierKey);
 }
 
@@ -11539,7 +11554,7 @@ function syncFeatureManagerToTextarea(tierKey) {
 
 function parseFeatureList(text) {
   const lines = (text || "").split("\n").map(l => l.trim()).filter(Boolean);
-  return lines.map(line => {
+  const result = lines.map(line => {
     let enabled = true;
     let cleanText = line;
     if (line.startsWith("[x]") || line.startsWith("[X]") || line.startsWith("OFF:") || line.startsWith("~")) {
@@ -11551,6 +11566,14 @@ function parseFeatureList(text) {
     }
     return { text: cleanText, enabled };
   });
+  // Stable sort: All enabled (✓) features are cleanly bumped up above crossed-out (✕) exclusions
+  result.sort((a, b) => {
+    const aEnabled = a.enabled !== false;
+    const bEnabled = b.enabled !== false;
+    if (aEnabled === bEnabled) return 0;
+    return aEnabled ? -1 : 1;
+  });
+  return result;
 }
 
 function formatFeatureListForInput(features) {
@@ -11600,9 +11623,17 @@ function savePricingConfig() {
     baseSmsQuota: parseInt(document.getElementById("pricing-t3-sms-quota")?.value || "2500", 10),
     desc: document.getElementById("pricing-t3-desc").value.trim(),
     features: state.adminFeatures.t3 || parseFeatureList(document.getElementById("pricing-t3-features").value)
-  };
-
   const newTiers = [t1, t2, t3];
+  newTiers.forEach(tier => {
+    if (Array.isArray(tier.features)) {
+      tier.features.sort((a, b) => {
+        const aEnabled = typeof a === 'object' && a !== null ? a.enabled !== false : !String(a).startsWith('[x]');
+        const bEnabled = typeof b === 'object' && b !== null ? b.enabled !== false : !String(b).startsWith('[x]');
+        if (aEnabled === bEnabled) return 0;
+        return aEnabled ? -1 : 1;
+      });
+    }
+  });
 
   // Compute detailed audit diffs
   const diffs = [];
@@ -11709,6 +11740,13 @@ function loadPricingConfigUI() {
     } else {
       list = JSON.parse(JSON.stringify(defaultList));
     }
+    // Stable sort: All enabled (✓) features are cleanly positioned above crossed-out (✕) exclusions
+    list.sort((a, b) => {
+      const aEnabled = a.enabled !== false;
+      const bEnabled = b.enabled !== false;
+      if (aEnabled === bEnabled) return 0;
+      return aEnabled ? -1 : 1;
+    });
     state.adminFeatures[tierKey] = list;
     renderAdminFeatureManager(tierKey);
   };
@@ -11834,6 +11872,24 @@ function ensureTierSMSLimits(tiers) {
       if (findFeatureIdx("top-up") === -1 && findFeatureIdx("+250") === -1) {
         feats.splice(4, 0, { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true });
       }
+
+      // 4. Automated Google Reviews & Post-Service Surveys feature
+      const reviewIdx = feats.findIndex(f => {
+        const t = typeof f === 'object' && f !== null ? f.text : String(f);
+        const low = t.toLowerCase();
+        return low.includes("customer reviews") || low.includes("enable customer reviews") || low.includes("google review") || low.includes("post-service survey");
+      });
+      const canonicalReviewText = "Automated Google Reviews & Post-Service Surveys";
+      if (reviewIdx !== -1) {
+        if (typeof feats[reviewIdx] === 'object' && feats[reviewIdx] !== null) {
+          feats[reviewIdx].text = canonicalReviewText;
+          feats[reviewIdx].enabled = true;
+        } else {
+          feats[reviewIdx] = { text: canonicalReviewText, enabled: true };
+        }
+      } else {
+        feats.push({ text: canonicalReviewText, enabled: true });
+      }
     } else if (id === "enterprise" || idx === 2) {
       if (findFeatureIdx("2,500") === -1 && findFeatureIdx("2500") === -1) {
         feats.splice(2, 0, { text: "2,500+ Automated SMS / mo Included", enabled: true });
@@ -11849,6 +11905,14 @@ function ensureTierSMSLimits(tiers) {
       seenTexts.add(normalized);
       return true;
     });
+
+    // Stable sort: All enabled (✓) features are cleanly positioned above crossed-out (✕) exclusions
+    tier.features.sort((a, b) => {
+      const aEnabled = typeof a === 'object' && a !== null ? a.enabled !== false : !String(a).startsWith('[x]');
+      const bEnabled = typeof b === 'object' && b !== null ? b.enabled !== false : !String(b).startsWith('[x]');
+      if (aEnabled === bEnabled) return 0;
+      return aEnabled ? -1 : 1;
+    });
   });
   return tiers;
 }
@@ -11863,7 +11927,14 @@ function renderUpgradeModalTiers(tiers) {
   const renderTierList = (containerId, features) => {
     const container = document.getElementById(containerId);
     if (!container || !Array.isArray(features)) return;
-    container.innerHTML = features.map(f => {
+    // Always guarantee that enabled (✓) features are cleanly grouped above crossed-out (✕) exclusions
+    const sortedFeatures = [...features].sort((a, b) => {
+      const aEnabled = typeof a === 'object' && a !== null ? a.enabled !== false : !String(a).startsWith('[x]');
+      const bEnabled = typeof b === 'object' && b !== null ? b.enabled !== false : !String(b).startsWith('[x]');
+      if (aEnabled === bEnabled) return 0;
+      return aEnabled ? -1 : 1;
+    });
+    container.innerHTML = sortedFeatures.map(f => {
       const isEnabled = typeof f === 'object' && f !== null ? f.enabled !== false : !String(f).startsWith('[x]');
       const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
       if (isEnabled) {
@@ -11872,6 +11943,8 @@ function renderUpgradeModalTiers(tiers) {
           contentHtml = `<button type="button" onclick="closeUpgradeModal(); openTopUpModal();" style="background: none; border: none; padding: 0; color: #38bdf8; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: inherit; font-family: inherit; text-align: left;" title="Click to view Top-Up Packs">${contentHtml}</button>`;
         } else if (text.includes("500 Automated SMS") || text.includes("2,500+ Automated SMS") || text.includes("0 SMS Included") || text.includes("Rollover Bank")) {
           contentHtml = `<strong style="color: #06b6d4;">${contentHtml}</strong>`;
+        } else if (text.includes("Google Reviews") || text.includes("Review Booster") || text.includes("Post-Service Surveys")) {
+          contentHtml = `<strong style="color: #fbbf24;">${contentHtml}</strong>`;
         }
         return `<li style="display: flex; align-items: flex-start; gap: 0.45rem;"><span style="color: #10b981; font-weight: 700;">✓</span> <span>${contentHtml}</span></li>`;
       } else {

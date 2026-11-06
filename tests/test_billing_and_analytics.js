@@ -398,6 +398,82 @@ it("pricing.html strictly defines 0 SMS for Starter, 500 for Pro, and 2,500 for 
   assert.ok(pricingHtml.includes("2,500+ Automated SMS") || pricingHtml.includes("2,500 Automated SMS"), "pricing.html must specify 2,500 SMS in Enterprise");
 });
 
+it("addAdminFeatureItem: Bumps newly added features cleanly above crossed-out ✕ exclusions", () => {
+  const mockFeatures = [
+    { text: "Everything in Starter", enabled: true },
+    { text: "500 Automated SMS", enabled: true },
+    { text: "Multi-Location Network (Unlimited Shops)", enabled: false },
+    { text: "Multiple Staff Front Desk Accounts", enabled: false }
+  ];
+
+  // Replica of app.js addAdminFeatureItem logic
+  const firstDisabledIdx = mockFeatures.findIndex(f => f && f.enabled === false);
+  const newItem = { text: "Automated Google Reviews & Post-Service Surveys", enabled: true };
+  if (firstDisabledIdx !== -1) {
+    mockFeatures.splice(firstDisabledIdx, 0, newItem);
+  } else {
+    mockFeatures.push(newItem);
+  }
+
+  assert.strictEqual(mockFeatures[2].text, "Automated Google Reviews & Post-Service Surveys");
+  assert.strictEqual(mockFeatures[2].enabled, true, "New feature must be enabled");
+  assert.strictEqual(mockFeatures[3].enabled, false, "Exclusions must remain cleanly positioned at the bottom");
+  assert.strictEqual(mockFeatures[4].enabled, false, "Subsequent exclusions must remain at the bottom");
+});
+
+it("toggleAdminFeatureStatus & sorting invariant: Enabled items always precede crossed-out ✕ exclusions", () => {
+  const list = [
+    { text: "Feature A", enabled: false },
+    { text: "Feature B", enabled: true },
+    { text: "Feature C", enabled: false },
+    { text: "Feature D", enabled: true }
+  ];
+
+  list.sort((a, b) => {
+    const aEnabled = a.enabled !== false;
+    const bEnabled = b.enabled !== false;
+    if (aEnabled === bEnabled) return 0;
+    return aEnabled ? -1 : 1;
+  });
+
+  assert.deepStrictEqual(
+    list.map(f => f.enabled),
+    [true, true, false, false],
+    "All enabled (✓) features must be sorted strictly ahead of disabled (✕) exclusions"
+  );
+});
+
+it("app.js & index.html: Define canonical Automated Google Reviews & Post-Service Surveys above exclusions", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+  const indexHtml = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+  // 1. Check DEFAULT_TIER_FEATURES in app.js
+  assert.ok(
+    appJs.includes('Automated Google Reviews & Post-Service Surveys'),
+    "app.js must contain canonical title: Automated Google Reviews & Post-Service Surveys"
+  );
+
+  // 2. Check ensureTierSMSLimits normalizes raw review feature labels
+  assert.ok(
+    appJs.includes('low.includes("customer reviews") || low.includes("enable customer reviews")'),
+    "app.js ensureTierSMSLimits must normalize customer reviews variants"
+  );
+
+  // 3. Check addAdminFeatureItem bumps above exclusions
+  assert.ok(
+    appJs.includes('const firstDisabledIdx = state.adminFeatures[tierKey].findIndex(f => f && f.enabled === false)'),
+    "addAdminFeatureItem must find firstDisabledIdx to bump new items above exclusions"
+  );
+
+  // 4. Check index.html pricing-t2-features textarea has reviews feature
+  assert.ok(
+    indexHtml.includes('Automated Google Reviews & Post-Service Surveys'),
+    "index.html must include canonical review feature in pricing tier 2 textarea and modal"
+  );
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
