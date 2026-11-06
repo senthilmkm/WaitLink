@@ -5044,7 +5044,11 @@ html[data-theme="light"] .landing-bottom-cta {
   transition: all 0.2s ease;
 }
 
-.pro-locked-banner.hidden {
+.pro-locked-banner.hidden,
+.pro-gated-section:not(.locked) .pro-locked-banner,
+.pro-gated-section:not(.locked) #survey-locked-banner,
+#owner-survey-card:not(.locked) #survey-locked-banner,
+#survey-locked-banner.hidden {
   display: none !important;
 }
 

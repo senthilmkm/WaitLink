@@ -335,6 +335,23 @@ it("isDemoScreenOrGuestDemo strictly unblocks authenticated owners on real shops
   assert.ok(indexHtml.includes("openUpgradeModal('pro')"), "Survey upgrade button must target pro tier directly");
 });
 
+it("PRO BUSINESS and ENTERPRISE users strictly do not see Upgrade to Unlock button in Review & Surveys", () => {
+  // 1. Verify getActivePlanInfo correctly recognizes Pro and Enterprise
+  assert.ok(appJs.includes("planPrice >= 49 || planTitle.toLowerCase().includes(\"enterprise\")"), "Must recognize Enterprise tier");
+  assert.ok(appJs.includes("planPrice >= 15 || planTitle.toLowerCase().includes(\"pro\")"), "Must recognize Pro Business tier");
+
+  // 2. Verify updateTierFeatureLockdown sets display: none !important and hides banner for isPaid
+  assert.ok(appJs.includes('surveyBanner.style.setProperty("display", "none", "important");'), "updateTierFeatureLockdown must enforce display none !important on survey banner for paid users");
+  assert.ok(appJs.includes('surveyBadge.textContent = "✓ UNLOCKED";'), "Must unlock badge for paid users");
+
+  // 3. Verify index.html initializes survey-locked-banner with pro-locked-banner hidden and display: none !important
+  assert.ok(indexHtml.includes('id="survey-locked-banner" class="pro-locked-banner hidden" style="display: none !important;'), "index.html must initialize survey-locked-banner hidden");
+
+  // 4. Verify style.css rules suppress banner for unlocked cards
+  assert.ok(styleCss.includes("#owner-survey-card:not(.locked) #survey-locked-banner"), "style.css must suppress survey-locked-banner when card is not locked");
+  assert.ok(styleCss.includes("#survey-locked-banner.hidden"), "style.css must suppress survey-locked-banner with hidden class");
+});
+
 // -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------

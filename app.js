@@ -768,11 +768,13 @@ try {
 
 // Plan Tier Identification & Paywall Enforcement Helpers
 function getActivePlanInfo() {
-  const planPrice = (state.config && state.config.planPrice !== undefined) ? state.config.planPrice : 0;
-  const planTitle = (state.config && state.config.planTitle) || "Starter Tier (Free)";
+  const planPrice = (state.config && state.config.planPrice !== undefined) ? Number(state.config.planPrice) : 0;
+  const planTitle = (state.config && state.config.planTitle) ? String(state.config.planTitle) : "Starter Tier (Free)";
+  const tierKey = (state.config && state.config.tier) ? String(state.config.tier).toLowerCase() : "";
+  const subStatus = (state.config && state.config.subscriptionStatus) ? String(state.config.subscriptionStatus).toLowerCase() : "";
   const isSuper = isSuperAdmin();
-  const isEnterprise = isSuper || planPrice === 49 || planTitle.toLowerCase().includes("enterprise");
-  const isPro = isSuper || isEnterprise || planPrice === 15 || planTitle.toLowerCase().includes("pro");
+  const isEnterprise = isSuper || planPrice >= 49 || planTitle.toLowerCase().includes("enterprise") || tierKey === "enterprise";
+  const isPro = isSuper || isEnterprise || planPrice >= 15 || planTitle.toLowerCase().includes("pro") || tierKey === "pro" || (subStatus === "active" && planPrice > 0);
   const isStarter = !isPro && !isEnterprise;
   return { planPrice, planTitle, isEnterprise, isPro, isStarter, isSuper };
 }
@@ -4574,6 +4576,7 @@ function updateTierFeatureLockdown() {
           surveyBanner.style.setProperty("display", "none", "important");
         } else {
           surveyBanner.classList.remove("hidden");
+          surveyBanner.style.removeProperty("display");
           surveyBanner.style.display = "";
         }
       }
@@ -4597,14 +4600,15 @@ function updateTierFeatureLockdown() {
       surveyCard.onclick = (e) => {
         if (e.target && e.target.closest && e.target.closest(".btn-upgrade-action")) return;
         showToast("🔒 Post-Service Customer Surveys is a Pro Business feature ($15/mo). Upgrade to unlock!");
-        openUpgradeModal();
+        openUpgradeModal('pro');
       };
       surveyCard.style.cursor = "pointer";
     } else {
+      // PRO BUSINESS & ENTERPRISE: STRICTLY HIDE UPGRADE BANNER AND UNLOCK ALL CONTROLS
       surveyCard.classList.remove("locked");
       if (surveyBanner) {
         surveyBanner.classList.add("hidden");
-        surveyBanner.style.display = "none";
+        surveyBanner.style.setProperty("display", "none", "important");
       }
       if (surveyBadge) {
         surveyBadge.className = "badge-pro-pill unlocked";
@@ -5001,6 +5005,11 @@ function switchSettingsSubTab(subTabName) {
       pane.classList.add("hidden");
     }
   });
+
+  // Re-verify paywall & feature lockdown on sub-tab navigation
+  if (typeof updateTierFeatureLockdown === "function") {
+    updateTierFeatureLockdown();
+  }
 }
 
 // Save Owner Dashboard Settings (Option 1: Modern SaaS Micro-Feedback)
