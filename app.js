@@ -693,6 +693,13 @@ const state = {
       storeLatitude: null,
       storeLongitude: null,
       adminLocked: false
+    },
+    surveySettings: {
+      enabled: true,
+      mode: "mode_1",
+      destinationUrl: "",
+      bufferMinutes: 5,
+      customSms: DEFAULT_SURVEY_SMS_TEMPLATE
     }
   },
   queue: [], // Active waiting items
@@ -1782,6 +1789,9 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
       if (data.isActive !== undefined) state.config.isActive = data.isActive;
       if (data.status !== undefined) state.config.status = data.status;
+      if (data.surveySettings !== undefined) {
+        state.config.surveySettings = { ...state.config.surveySettings, ...data.surveySettings };
+      }
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         if (isDemo && state.config.twilio.enabled === undefined) {
@@ -1852,6 +1862,9 @@ function subscribeFirestore(forceResubscribe = false) {
               if (Array.isArray(data.history)) state.history = data.history;
               if (data.tagline !== undefined) state.config.tagline = data.tagline;
               if (data.unitLabel !== undefined) state.config.unitLabel = data.unitLabel;
+              if (data.surveySettings !== undefined) {
+                state.config.surveySettings = { ...state.config.surveySettings, ...data.surveySettings };
+              }
               updateConfigUI();
               updatePosterUI();
               renderAll();
@@ -3188,10 +3201,11 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   renderAll();
 
   // If customer has phone number, dispatch SMS
-  if (finalItem.phone && surv.destinationUrl && isPaid) {
+  if (finalItem.phone) {
     const shopName = state.config.shopName || "our shop";
     const customTpl = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
-    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, surv.destinationUrl);
+    const reviewUrl = surv.destinationUrl || `${window.location.origin}${window.location.pathname}?s=${encodeURIComponent(state.config.slug || 'shop')}&feedback=1&tid=${encodeURIComponent(finalItem.id)}`;
+    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
 
     sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
       .then(res => {
@@ -3202,7 +3216,7 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
           showToast(`⚠️ Could not text review survey: ${res.error || "SMS failed"}`);
         }
       });
-  } else if (!finalItem.phone) {
+  } else {
     showToast(`⭐ Service marked complete for ${finalItem.customerName} (Review prompt active on their Web Ticket)`);
   }
 
@@ -3245,12 +3259,7 @@ async function completeService(id) {
 
   if (mutationResult.success) {
     showToast(`✅ Service completed for ${item.customerName} (${completedItem ? completedItem.serviceDurationMin : 1}m)`);
-    const surv = (state.config && state.config.surveySettings) || {};
-    if (surv.enabled && surv.destinationUrl) {
-      triggerSurveyForTicket(id, "service_complete_button");
-    } else {
-      renderAll();
-    }
+    triggerSurveyForTicket(id, "service_complete_button");
   }
 }
 
@@ -6088,21 +6097,19 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
         ✅ Complete
       </button>
     `;
-  } else if (surv.enabled) {
-    if (!item.surveySent && surv.mode === "mode_2") {
+  } else if (item.status === "completed" || item.status === "called" || item.status === "served") {
+    if (!item.surveySent) {
       surveyActionButtons += `
         <button type="button" class="btn-row-survey" onclick="manualTriggerSurvey('${safeId}')" title="Send post-service review survey now">
           ✉️ Send Survey
         </button>
       `;
     }
-    if (!item.phone && surv.destinationUrl) {
-      surveyActionButtons += `
-        <button type="button" class="btn-row-survey-qr" onclick="openReviewQrModal('${safeId}')" title="Show scannable review QR for checkout">
-          📲 Show QR
-        </button>
-      `;
-    }
+    surveyActionButtons += `
+      <button type="button" class="btn-row-survey-qr" onclick="openReviewQrModal('${safeId}')" title="Show scannable review QR for checkout">
+        📲 Show QR
+      </button>
+    `;
   }
 
   const actionCell = `
@@ -6772,29 +6779,41 @@ function updateActiveTicketTimer() {
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
       if (ticketTimerEl) ticketTimerEl.textContent = "Completed";
 
-      // Render 5-star Google Review box if survey enabled and review URL configured
+      // Render 5-star Google Review box for completed visit
       const surv = (state.config && state.config.surveySettings) || {};
       let surveyBox = document.getElementById("ticket-survey-review-box");
-      if (surv.enabled && surv.destinationUrl) {
-        if (!surveyBox && ticketCard) {
-          surveyBox = document.createElement("div");
-          surveyBox.id = "ticket-survey-review-box";
-          surveyBox.className = "ticket-survey-box";
-          ticketCard.appendChild(surveyBox);
-        }
-        if (surveyBox) {
-          surveyBox.style.display = "block";
+      const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : "";
+
+      if (!surveyBox && ticketCard) {
+        surveyBox = document.createElement("div");
+        surveyBox.id = "ticket-survey-review-box";
+        surveyBox.className = "ticket-survey-box";
+        ticketCard.appendChild(surveyBox);
+      }
+      if (surveyBox) {
+        surveyBox.style.display = "block";
+        if (reviewUrl) {
           surveyBox.innerHTML = `
             <div style="font-size: 1.35rem; margin-bottom: 0.35rem;">⭐⭐⭐⭐⭐</div>
             <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your experience today?</h4>
             <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.85rem 0;">Takes 15 seconds to share your review.</p>
-            <a href="${escapeHtml(surv.destinationUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%;">
+            <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%;">
               <span>⭐</span> <span>Leave a Review on Google</span>
             </a>
           `;
+        } else {
+          surveyBox.innerHTML = `
+            <div style="font-size: 1.6rem; margin-bottom: 0.35rem; cursor: pointer; letter-spacing: 2px;" id="star-rating-row">
+              <span onclick="submitCustomerStarRating(1)" title="1 Star">⭐</span>
+              <span onclick="submitCustomerStarRating(2)" title="2 Stars">⭐</span>
+              <span onclick="submitCustomerStarRating(3)" title="3 Stars">⭐</span>
+              <span onclick="submitCustomerStarRating(4)" title="4 Stars">⭐</span>
+              <span onclick="submitCustomerStarRating(5)" title="5 Stars">⭐</span>
+            </div>
+            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
+            <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
+          `;
         }
-      } else if (surveyBox) {
-        surveyBox.style.display = "none";
       }
     } else {
       const surveyBox = document.getElementById("ticket-survey-review-box");
@@ -6816,6 +6835,20 @@ function updateActiveTicketTimer() {
     }
   }
 }
+
+function submitCustomerStarRating(rating) {
+  const promptEl = document.getElementById("survey-feedback-prompt");
+  const starRow = document.getElementById("star-rating-row");
+  if (starRow) {
+    starRow.style.pointerEvents = "none";
+    starRow.style.opacity = "0.85";
+  }
+  if (promptEl) {
+    promptEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Thank you for rating us ${rating} stars!</span> We appreciate your feedback.`;
+  }
+  showToast(`⭐ Thank you for rating your service ${rating}/5 stars!`);
+}
+window.submitCustomerStarRating = submitCustomerStarRating;
 
 // Switch Views
 function switchView(viewName, isSilent = false) {
@@ -9596,6 +9629,9 @@ function inspectShop(slug, isSilent = false) {
       if (found.ownerEmail) state.config.ownerEmail = found.ownerEmail;
       if (found.isActive !== undefined) state.config.isActive = found.isActive;
       if (found.status !== undefined) state.config.status = found.status;
+      if (found.surveySettings !== undefined) {
+        state.config.surveySettings = { ...state.config.surveySettings, ...found.surveySettings };
+      }
     }
   }
   if (Array.isArray(state.ownerDirectoryShops)) {
@@ -9605,6 +9641,9 @@ function inspectShop(slug, isSilent = false) {
       if (foundDir.ownerEmail) state.config.ownerEmail = foundDir.ownerEmail;
       if (foundDir.isActive !== undefined) state.config.isActive = foundDir.isActive;
       if (foundDir.status !== undefined) state.config.status = foundDir.status;
+      if (foundDir.surveySettings !== undefined) {
+        state.config.surveySettings = { ...state.config.surveySettings, ...foundDir.surveySettings };
+      }
     }
   }
   if (targetName === slug && Array.isArray(state.myShops)) {
@@ -9614,6 +9653,9 @@ function inspectShop(slug, isSilent = false) {
       if (foundMy.ownerEmail) state.config.ownerEmail = foundMy.ownerEmail;
       if (foundMy.isActive !== undefined) state.config.isActive = foundMy.isActive;
       if (foundMy.status !== undefined) state.config.status = foundMy.status;
+      if (foundMy.surveySettings !== undefined) {
+        state.config.surveySettings = { ...state.config.surveySettings, ...foundMy.surveySettings };
+      }
     }
   }
 

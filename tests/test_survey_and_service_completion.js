@@ -353,6 +353,28 @@ it("PRO BUSINESS and ENTERPRISE users strictly do not see Upgrade to Unlock butt
 });
 
 // -------------------------------------------------------------------------
+// 10. Completed Visit Actions & Customer Feedback Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 10. Completed Visit Actions & Customer Feedback Invariants ---");
+
+it("app.js renders manual Send Survey and Show QR action buttons for completed visits in Mode 1 and Mode 2", () => {
+  assert.ok(appJs.includes('class="btn-row-survey" onclick="manualTriggerSurvey(\'${safeId}\')"'), "Must include Send Survey button in history row");
+  assert.ok(appJs.includes('class="btn-row-survey-qr" onclick="openReviewQrModal(\'${safeId}\')"'), "Must include Show QR button in history row");
+  assert.ok(appJs.includes('item.status === "completed" || item.status === "called" || item.status === "served"'), "Must guard survey buttons for any completed/called visit");
+});
+
+it("app.js renders ticket-survey-review-box and exports submitCustomerStarRating for customer rating", () => {
+  assert.ok(appJs.includes('ticket-survey-review-box'), "Must manage ticket-survey-review-box");
+  assert.ok(appJs.includes('function submitCustomerStarRating('), "Must implement submitCustomerStarRating");
+  assert.ok(appJs.includes('window.submitCustomerStarRating = submitCustomerStarRating;'), "Must attach submitCustomerStarRating to window");
+  assert.ok(appJs.includes('star-rating-row'), "Must render interactive 5-star rating row");
+});
+
+it("app.js generates fallback review URL when destinationUrl is unconfigured", () => {
+  assert.ok(appJs.includes("&feedback=1&tid="), "Must construct fallback review link when destinationUrl is missing");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");
