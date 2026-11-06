@@ -12,7 +12,8 @@
       "functions/**",
       "scripts/**",
       "docs/**",
-      "scratch/**"
+      "scratch/**",
+      "waitlinkarchitecture.html"
     ],
     "headers": [
       {
