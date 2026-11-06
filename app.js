@@ -11623,6 +11623,8 @@ function savePricingConfig() {
     baseSmsQuota: parseInt(document.getElementById("pricing-t3-sms-quota")?.value || "2500", 10),
     desc: document.getElementById("pricing-t3-desc").value.trim(),
     features: state.adminFeatures.t3 || parseFeatureList(document.getElementById("pricing-t3-features").value)
+  };
+
   const newTiers = [t1, t2, t3];
   newTiers.forEach(tier => {
     if (Array.isArray(tier.features)) {

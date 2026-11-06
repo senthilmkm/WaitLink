@@ -39,6 +39,12 @@ const appJs = fs.readFileSync(appJsPath, "utf8");
 // -------------------------------------------------------------------------
 console.log("--- 1. Primary Screens & Operational View Panels ---");
 
+it("app.js passes JavaScript syntax parsing with zero errors", () => {
+  const { execSync } = require("child_process");
+  const res = execSync("node --check app.js", { cwd: path.join(__dirname, ".."), encoding: "utf8" });
+  assert.strictEqual(res.trim(), "", "app.js must pass node syntax validation without errors");
+});
+
 it("index.html contains all major application view panels", () => {
   assert.ok(html.includes('id="view-desk"'), "Missing Front Desk view panel (#view-desk)");
   assert.ok(html.includes('id="view-public"'), "Missing Public Guest / Kiosk view panel (#view-public)");
