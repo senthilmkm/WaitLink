@@ -543,6 +543,25 @@ it("app.js triggerSurveyForTicket enforces paywall gating and prevents SMS dispa
 });
 
 // -------------------------------------------------------------------------
+// 14. Feedback Firewall for 1-3 Star Ratings
+// -------------------------------------------------------------------------
+console.log("\n--- 14. Feedback Firewall for 1-3 Star Ratings ---");
+
+it("app.js implements Feedback Firewall with 3-row textarea, private submission, and audit badge", () => {
+  assert.ok(appJs.includes('function submitCustomerPrivateFeedback('), "Must implement submitCustomerPrivateFeedback");
+  assert.ok(appJs.includes('window.submitCustomerPrivateFeedback = submitCustomerPrivateFeedback;'), "Must attach submitCustomerPrivateFeedback to window");
+  assert.ok(appJs.includes('id="customer-feedback-text" rows="3" maxlength="500"'), "Must render 3-row textarea with 500 char cap");
+  assert.ok(appJs.includes('badge-feedback-comment'), "Must render badge-feedback-comment in visit history");
+  assert.ok(appJs.includes('action === "customer_feedback"'), "Must recognize customer_feedback in audit activities");
+});
+
+it("functions/index.js publicQueueAction handles action === feedback and records customer note", () => {
+  const functionsIndexJs = fs.readFileSync(path.join(__dirname, "..", "functions", "index.js"), "utf8");
+  assert.ok(functionsIndexJs.includes('if (action === "feedback")'), "Must support action === feedback in publicQueueAction");
+  assert.ok(functionsIndexJs.includes('held.customerFeedbackComment = comment;'), "Must store customerFeedbackComment");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");

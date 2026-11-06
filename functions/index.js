@@ -2756,6 +2756,21 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
             existingAct.detail = `Customer updated rating to ${rating}/5 stars on Web Ticket`;
             existingAct.timestamp = Date.now();
           }
+          if (body.feedbackComment) {
+            const comment = String(body.feedbackComment).trim().slice(0, 500);
+            if (comment) {
+              held.customerFeedbackComment = comment;
+              held.customerFeedbackSubmittedAt = Date.now();
+              held.activities.push({
+                action: "customer_feedback",
+                title: "Private Customer Feedback",
+                detail: `Customer Note: "${comment}"`,
+                timestamp: Date.now(),
+                icon: "💬",
+                actor: "Customer (Private Feedback)"
+              });
+            }
+          }
           const capped = history.slice(0, 50);
           tx.update(shopRef, {
             queue,
@@ -2763,6 +2778,29 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
             updatedAt: Date.now()
           });
           return { rated: true, rating };
+        }
+
+        if (action === "feedback") {
+          const comment = String(body.comment || body.feedbackComment || "").trim().slice(0, 500);
+          if (!comment) throw httpError(400, "Comment cannot be empty.");
+          held.customerFeedbackComment = comment;
+          held.customerFeedbackSubmittedAt = Date.now();
+          if (!Array.isArray(held.activities)) held.activities = [];
+          held.activities.push({
+            action: "customer_feedback",
+            title: "Private Customer Feedback",
+            detail: `Customer Note: "${comment}"`,
+            timestamp: Date.now(),
+            icon: "💬",
+            actor: "Customer (Private Feedback)"
+          });
+          const capped = history.slice(0, 50);
+          tx.update(shopRef, {
+            queue,
+            history: capped,
+            updatedAt: Date.now()
+          });
+          return { feedbackSubmitted: true, comment };
         }
 
         if (!held.ticketSecret || held.ticketSecret !== ticketSecret) {

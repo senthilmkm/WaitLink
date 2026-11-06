@@ -6314,6 +6314,22 @@ function getItemActivities(item) {
     }
   }
 
+  // Guarantee that customer private feedback note is ALWAYS present in the audit activities
+  const feedbackComment = item.customerFeedbackComment || (state.myTicket && (state.myTicket.id === item.id || state.myTicket.customerName === item.customerName) ? state.myTicket.customerFeedbackComment : null);
+  if (feedbackComment) {
+    const hasFeedback = list.some(a => a && a.action === "customer_feedback");
+    if (!hasFeedback) {
+      list.push({
+        action: "customer_feedback",
+        title: "Private Customer Feedback",
+        detail: `Customer Note: "${feedbackComment}"`,
+        timestamp: item.customerFeedbackSubmittedAt || item.customerRatingSubmittedAt || Date.now(),
+        icon: "💬",
+        actor: "Customer (Private Feedback)"
+      });
+    }
+  }
+
   // Sort activities chronologically by timestamp
   list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
@@ -6380,9 +6396,12 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
 
   if (item.customerRating) {
     statusTagHtml += ` <span class="badge-survey-rating" style="margin-left: 4px; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="Customer rated ${item.customerRating}/5 stars on Web Ticket">⭐ ${item.customerRating}/5</span>`;
-  } else if (item.surveySent) {
+  }
+  if (item.customerFeedbackComment) {
+    statusTagHtml += ` <span class="badge-feedback-comment" style="margin-left: 4px; background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;" data-tooltip="Customer Note: &quot;${escapeHtml(item.customerFeedbackComment)}&quot;" onclick="openCustomerAuditModal('${safeId}')">💬 Feedback Note</span>`;
+  } else if (!item.customerRating && item.surveySent) {
     statusTagHtml += ` <span class="badge-survey-sent" style="margin-left: 4px;" data-tooltip="Review survey link delivered">⭐ Survey Sent</span>`;
-  } else if (item.surveyFailed) {
+  } else if (!item.customerRating && item.surveyFailed) {
     statusTagHtml += ` <span class="badge-survey-failed" style="margin-left: 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="${escapeHtml(item.surveyError || 'SMS delivery failed')}">⚠️ SMS Failed</span>`;
   }
 
@@ -7147,6 +7166,29 @@ function updateActiveTicketTimer() {
                 </a>
               </div>
             `;
+          } else if (existingRating > 0 && existingRating <= 3) {
+            const existingComment = (state.myTicket && state.myTicket.customerFeedbackComment) || "";
+            if (existingComment) {
+              googleBtnHtml = `
+                <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                  <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem;">
+                    <p style="color: #10b981; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.25rem 0;">✓ Private Note Delivered to Shop Owner</p>
+                    <p style="color: #cbd5e1; font-size: 0.82rem; margin: 0; font-style: italic;">"${escapeHtml(existingComment)}"</p>
+                  </div>
+                </div>
+              `;
+            } else {
+              googleBtnHtml = `
+                <div id="post-rating-feedback-box" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                  <p style="color: #fca5a5; font-size: 0.84rem; font-weight: 600; margin: 0 0 0.35rem 0;">We're sorry your visit wasn't a 5-star experience.</p>
+                  <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0 0 0.5rem 0;">Tell the shop owner directly what went wrong:</p>
+                  <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
+                  <button type="button" id="btn-submit-private-feedback" onclick="submitCustomerPrivateFeedback()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff; padding: 0.65rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem;">
+                    <span>📨</span> <span>Send Private Feedback to Owner</span>
+                  </button>
+                </div>
+              `;
+            }
           }
           surveyBox.innerHTML = `
             <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
@@ -7288,6 +7330,9 @@ function submitCustomerStarRating(rating) {
   const surv = (state.config && state.config.surveySettings) || {};
   const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : "";
   if (reviewUrl && rating >= 4) {
+    let feedbackBox = document.getElementById("post-rating-feedback-box");
+    if (feedbackBox) feedbackBox.remove();
+
     let googleBox = document.getElementById("post-rating-google-btn");
     const parentBox = document.getElementById("ticket-survey-review-box");
     if (!googleBox && parentBox) {
@@ -7301,6 +7346,41 @@ function submitCustomerStarRating(rating) {
         </a>
       `;
       parentBox.appendChild(googleBox);
+    }
+  } else if (rating <= 3) {
+    // Feedback Firewall: If 1, 2, or 3 stars, capture private feedback to protect public Google ratings
+    let googleBox = document.getElementById("post-rating-google-btn");
+    if (googleBox) googleBox.remove();
+
+    let feedbackBox = document.getElementById("post-rating-feedback-box");
+    const parentBox = document.getElementById("ticket-survey-review-box");
+    const existingComment = (state.myTicket && state.myTicket.customerFeedbackComment) || "";
+
+    if (!feedbackBox && parentBox) {
+      feedbackBox = document.createElement("div");
+      feedbackBox.id = "post-rating-feedback-box";
+      feedbackBox.style.cssText = "margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left; animation: fadeIn 0.3s ease;";
+      parentBox.appendChild(feedbackBox);
+    }
+
+    if (feedbackBox) {
+      if (existingComment) {
+        feedbackBox.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem; margin-top: 0.4rem;">
+            <p style="color: #10b981; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.25rem 0;">✓ Private Note Delivered to Shop Owner</p>
+            <p style="color: #cbd5e1; font-size: 0.82rem; margin: 0; font-style: italic;">"${escapeHtml(existingComment)}"</p>
+          </div>
+        `;
+      } else {
+        feedbackBox.innerHTML = `
+          <p style="color: #fca5a5; font-size: 0.84rem; font-weight: 600; margin: 0 0 0.35rem 0;">We're sorry your visit wasn't a 5-star experience.</p>
+          <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0 0 0.5rem 0;">Tell the shop owner directly what went wrong:</p>
+          <textarea id="customer-feedback-text" rows="3" maxlength="500" placeholder="Tell us how we can make things right..." style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; line-height: 1.4; resize: none; margin: 0 0 0.6rem 0; font-family: inherit; outline: none;"></textarea>
+          <button type="button" id="btn-submit-private-feedback" onclick="submitCustomerPrivateFeedback()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff; padding: 0.65rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem; transition: transform 0.15s ease;">
+            <span>📨</span> <span>Send Private Feedback to Owner</span>
+          </button>
+        `;
+      }
     }
   }
 
@@ -7385,6 +7465,102 @@ function submitCustomerStarRating(rating) {
   showToast(`⭐ Thank you for rating your service ${rating}/5 stars!`);
 }
 window.submitCustomerStarRating = submitCustomerStarRating;
+
+function submitCustomerPrivateFeedback() {
+  const inputEl = document.getElementById("customer-feedback-text");
+  if (!inputEl) return;
+  const comment = inputEl.value.trim().slice(0, 500);
+  if (!comment) {
+    showToast("⚠️ Please enter a brief note for the shop owner.");
+    inputEl.focus();
+    return;
+  }
+
+  const btn = document.getElementById("btn-submit-private-feedback");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳</span> <span>Delivering to Owner...</span>`;
+  }
+
+  const params = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
+  const urlTicketId = params ? (params.get("ticket") || params.get("tid") || params.get("t")) : null;
+  const urlSlug = params ? (params.get("s") || params.get("shop")) : null;
+  const rawSlug = urlSlug || (state.config && state.config.slug) || (state.myTicket && state.myTicket.shopSlug) || "shop";
+  const cleanSlug = slugify(rawSlug);
+  const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
+
+  // 1. Immediately update active ticket in memory & local storage
+  try {
+    if (state.myTicket) {
+      state.myTicket.customerFeedbackComment = comment;
+      state.myTicket.customerFeedbackSubmittedAt = Date.now();
+      logCustomerActivity(state.myTicket, "customer_feedback", "Private Customer Feedback", `Customer Note: "${comment}"`, "💬", "Customer (Private Feedback)");
+      SafeStorage.set(`waitlink_ticket_${cleanSlug}`, state.myTicket);
+    }
+  } catch (e) { }
+
+  // 2. Also update local history
+  try {
+    if (Array.isArray(state.history)) {
+      const localTarget = state.history.find(h => h && (h.id === tid || (state.myTicket && h.customerName === state.myTicket.customerName)));
+      if (localTarget) {
+        localTarget.customerFeedbackComment = comment;
+        localTarget.customerFeedbackSubmittedAt = Date.now();
+        logCustomerActivity(localTarget, "customer_feedback", "Private Customer Feedback", `Customer Note: "${comment}"`, "💬", "Customer (Private Feedback)");
+      }
+    }
+  } catch (e) { }
+
+  // 3. Cloud Function backend redundancy
+  if (cleanSlug && tid) {
+    fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/publicQueueAction", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "feedback",
+        slug: cleanSlug,
+        ticketId: tid,
+        comment: comment
+      })
+    }).then(r => r.json()).then(d => {
+      console.log("Server confirmed private feedback logged to audit trail!");
+    }).catch(e => console.warn("publicQueueAction feedback note:", e));
+  }
+
+  // 4. Direct atomic client write if db is initialized
+  if (db && cleanSlug && tid) {
+    mutateQueueAtomic((serverQueue, serverHistory) => {
+      let target = serverHistory.find(h => h && (h.id === tid || h.id === decodeURIComponent(tid)));
+      if (!target) {
+        target = serverQueue.find(q => q && (q.id === tid || q.id === decodeURIComponent(tid)));
+      }
+      if (!target && state.myTicket && state.myTicket.customerName) {
+        target = serverHistory.find(h => h && h.customerName === state.myTicket.customerName);
+      }
+      if (target) {
+        target.customerFeedbackComment = comment;
+        target.customerFeedbackSubmittedAt = Date.now();
+        logCustomerActivity(target, "customer_feedback", "Private Customer Feedback", `Customer Note: "${comment}"`, "💬", "Customer (Private Feedback)");
+        return { queue: serverQueue, history: serverHistory, affectedItem: target };
+      }
+      return null;
+    }).catch(err => console.warn("mutateQueueAtomic feedback error:", err));
+  }
+
+  // Update UI to confirmation state
+  const feedbackBox = document.getElementById("post-rating-feedback-box");
+  if (feedbackBox) {
+    feedbackBox.innerHTML = `
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 0.9rem; margin-top: 0.4rem; animation: fadeIn 0.3s ease;">
+        <p style="color: #10b981; font-size: 0.85rem; font-weight: 700; margin: 0 0 0.25rem 0;">✓ Private Note Delivered to Shop Owner</p>
+        <p style="color: #cbd5e1; font-size: 0.82rem; margin: 0; font-style: italic;">"${escapeHtml(comment)}"</p>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.45rem 0 0 0;">Thank you for helping us improve our service.</p>
+      </div>
+    `;
+  }
+  showToast("📨 Your private note has been delivered to the shop owner.");
+}
+window.submitCustomerPrivateFeedback = submitCustomerPrivateFeedback;
 
 // Switch Views
 function switchView(viewName, isSilent = false) {
