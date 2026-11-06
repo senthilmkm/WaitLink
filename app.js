@@ -1720,8 +1720,10 @@ function subscribeFirestore(forceResubscribe = false) {
           if (isRecentlyCreated && isNotInHistory) {
             mergedQueue.push(state.myTicket);
           } else if (!isNotInHistory) {
-            state.myTicket = null;
-            SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+            const histItem = (data.history || []).find(h => h.id === state.myTicket.id);
+            if (histItem) {
+              state.myTicket = histItem;
+            }
           }
         }
         const currentIds = new Set(mergedQueue.map(q => q.id));
@@ -1853,8 +1855,10 @@ function subscribeFirestore(forceResubscribe = false) {
                   if (isRecentlyCreated && isNotInHistory) {
                     mergedFallbackQueue.push(state.myTicket);
                   } else if (!isNotInHistory) {
-                    state.myTicket = null;
-                    SafeStorage.remove(`waitlink_ticket_${state.config.slug}`);
+                    const histItem = (data.history || []).find(h => h.id === state.myTicket.id);
+                    if (histItem) {
+                      state.myTicket = histItem;
+                    }
                   }
                 }
                 state.queue = mergedFallbackQueue;
@@ -3158,9 +3162,29 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   const operatorLabel = getCurrentOperatorLabel();
 
   let targetItem = null;
+  const localRecord = findCustomerRecord(ticketId);
+  const targetId = localRecord ? localRecord.id : decodeURIComponent(String(ticketId || ''));
 
   const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
-    const item = serverHistory.find(h => h.id === ticketId);
+    let item = serverHistory.find(h => 
+      h.id === ticketId || 
+      h.id === targetId || 
+      (localRecord && h.id === localRecord.id) ||
+      (localRecord && localRecord.customerName && h.customerName === localRecord.customerName && Math.abs((h.checkedInAt || 0) - (localRecord.checkedInAt || 0)) < 120000)
+    );
+
+    if (!item) {
+      const qIdx = serverQueue.findIndex(q => 
+        q.id === ticketId || 
+        q.id === targetId || 
+        (localRecord && q.id === localRecord.id)
+      );
+      if (qIdx !== -1) {
+        item = serverQueue.splice(qIdx, 1)[0];
+        serverHistory.unshift(item);
+      }
+    }
+
     if (!item) return null;
 
     // Deduplication check: prevent duplicate dispatch
@@ -3173,9 +3197,8 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
     if (!item.completedAt) {
       item.completedAt = Date.now();
       item.completedBy = operatorName;
-      if (item.calledAt) {
-        item.serviceDurationMin = Math.max(1, Math.round((item.completedAt - item.calledAt) / 60000));
-      }
+      const calledTime = item.calledAt || item.serviceStartedAt || item.checkedInAt || item.completedAt;
+      item.serviceDurationMin = Math.max(1, Math.round((item.completedAt - calledTime) / 60000));
     }
 
     logCustomerActivity(item, "survey_dispatched", "Review Survey Sent", `Post-service survey & review link triggered (${triggerSource})`, "⭐", operatorLabel);
@@ -3204,7 +3227,10 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   if (finalItem.phone) {
     const shopName = state.config.shopName || "our shop";
     const customTpl = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
-    const reviewUrl = surv.destinationUrl || `${window.location.origin}${window.location.pathname}?s=${encodeURIComponent(state.config.slug || 'shop')}&feedback=1&tid=${encodeURIComponent(finalItem.id)}`;
+    const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
+    const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
+    const fallbackReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
+    const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackReviewUrl;
     const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
 
     sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
@@ -3229,7 +3255,8 @@ function manualTriggerSurvey(id) {
 
 async function completeService(id) {
   const item = findCustomerRecord(id);
-  if (!item) return;
+  const targetId = item ? item.id : decodeURIComponent(String(id || ''));
+  clearSurveyAutoTimer(targetId);
 
   const now = Date.now();
   const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
@@ -3238,16 +3265,41 @@ async function completeService(id) {
   let completedItem = null;
 
   const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
-    const target = serverHistory.find(h => h.id === id);
+    let target = serverHistory.find(h => 
+      h.id === targetId || 
+      h.id === id || 
+      (item && h.id === item.id) ||
+      (item && item.customerName && h.customerName === item.customerName && Math.abs((h.checkedInAt || 0) - (item.checkedInAt || 0)) < 120000)
+    );
+
+    if (!target) {
+      const qIdx = serverQueue.findIndex(q => 
+        q.id === targetId || 
+        q.id === id || 
+        (item && q.id === item.id) ||
+        (item && item.customerName && q.customerName === item.customerName)
+      );
+      if (qIdx !== -1) {
+        target = serverQueue.splice(qIdx, 1)[0];
+        serverHistory.unshift(target);
+      }
+    }
+
     if (!target) return null;
 
     target.status = "completed";
     target.completedAt = now;
     target.completedBy = operatorName;
-    const calledTime = target.calledAt || target.serviceStartedAt || now;
+    const calledTime = target.calledAt || target.serviceStartedAt || target.checkedInAt || now;
     target.serviceDurationMin = Math.max(1, Math.round((now - calledTime) / 60000));
 
+    // Mark survey dispatched atomically in the SAME transaction
+    target.surveySent = true;
+    target.surveySentAt = now;
+    target.surveyTrigger = "service_complete_button";
+
     logCustomerActivity(target, "completed", "Service Completed", `Finished service with ${operatorName} (${target.serviceDurationMin}m in service)`, "✅", operatorLabel);
+    logCustomerActivity(target, "survey_dispatched", "Review Survey Sent", `Post-service survey & review link triggered (service_complete_button)`, "⭐", operatorLabel);
 
     completedItem = target;
     return {
@@ -3257,9 +3309,40 @@ async function completeService(id) {
     };
   });
 
-  if (mutationResult.success) {
-    showToast(`✅ Service completed for ${item.customerName} (${completedItem ? completedItem.serviceDurationMin : 1}m)`);
-    triggerSurveyForTicket(id, "service_complete_button");
+  const finalItem = completedItem || item;
+  if (!finalItem) {
+    showToast("⚠️ Customer record not found for completion.");
+    return;
+  }
+
+  if (state.myTicket && (state.myTicket.id === finalItem.id || state.myTicket.id === targetId)) {
+    state.myTicket.status = "completed";
+    state.myTicket.surveySent = true;
+  }
+  renderAll();
+
+  // Send Twilio SMS if customer provided phone number
+  const surv = (state.config && state.config.surveySettings) || {};
+  if (finalItem.phone) {
+    const shopName = state.config.shopName || "our shop";
+    const customTpl = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
+    const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
+    const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
+    const fallbackReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
+    const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackReviewUrl;
+    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
+
+    sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
+      .then(res => {
+        if (res.success) {
+          logCustomerActivity(finalItem, "sms_survey_delivered", "Survey SMS Delivered", `Delivered review link to ${finalItem.phone}`, "📲", "WaitLink Twilio Bot (Automated)");
+          showToast(`✅ Service complete & review SMS sent to ${finalItem.customerName} (${finalItem.phone})`);
+        } else {
+          showToast(`✅ Service completed. ⚠️ SMS: ${res.error || "SMS failed"}`);
+        }
+      });
+  } else {
+    showToast(`✅ Service completed for ${finalItem.customerName} (Review prompt active on their Web Ticket)`);
   }
 }
 
@@ -3271,7 +3354,10 @@ function openReviewQrModal(id) {
   if (!modal || !canvas) return;
 
   const surv = (state.config && state.config.surveySettings) || {};
-  const reviewUrl = surv.destinationUrl || (getPublicUrl() + "&mode=public");
+  const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
+  const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
+  const fallbackUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(item ? item.id : '')}&feedback=1`;
+  const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackUrl;
 
   if (subtitle && item) {
     subtitle.textContent = `Have ${item.customerName} scan this code to leave a Google Review at checkout`;
@@ -6802,17 +6888,34 @@ function updateActiveTicketTimer() {
             </a>
           `;
         } else {
-          surveyBox.innerHTML = `
-            <div style="font-size: 1.6rem; margin-bottom: 0.35rem; cursor: pointer; letter-spacing: 2px;" id="star-rating-row">
-              <span onclick="submitCustomerStarRating(1)" title="1 Star">⭐</span>
-              <span onclick="submitCustomerStarRating(2)" title="2 Stars">⭐</span>
-              <span onclick="submitCustomerStarRating(3)" title="3 Stars">⭐</span>
-              <span onclick="submitCustomerStarRating(4)" title="4 Stars">⭐</span>
-              <span onclick="submitCustomerStarRating(5)" title="5 Stars">⭐</span>
-            </div>
-            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
-            <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
-          `;
+          const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
+          if (existingRating > 0) {
+            let starHtml = "";
+            for (let i = 1; i <= 5; i++) {
+              if (i <= existingRating) {
+                starHtml += `<span style="color: #f59e0b; font-size: 2.2rem; margin: 0 4px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">★</span>`;
+              } else {
+                starHtml += `<span style="color: #475569; font-size: 2.2rem; margin: 0 4px;">☆</span>`;
+              }
+            }
+            surveyBox.innerHTML = `
+              <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
+              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">Thank you for your feedback!</h4>
+              <p style="color: #10b981; font-weight: 700; font-size: 0.88rem; margin: 0;" id="survey-feedback-prompt">✓ You rated your visit ${existingRating}/5 stars.</p>
+            `;
+          } else {
+            surveyBox.innerHTML = `
+              <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem;" onmouseleave="resetCustomerStarHover()">
+                <span class="star-item" data-val="1" onclick="submitCustomerStarRating(1)" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="1 Star">☆</span>
+                <span class="star-item" data-val="2" onclick="submitCustomerStarRating(2)" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="2 Stars">☆</span>
+                <span class="star-item" data-val="3" onclick="submitCustomerStarRating(3)" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="3 Stars">☆</span>
+                <span class="star-item" data-val="4" onclick="submitCustomerStarRating(4)" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="4 Stars">☆</span>
+                <span class="star-item" data-val="5" onclick="submitCustomerStarRating(5)" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="5 Stars">☆</span>
+              </div>
+              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
+              <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
+            `;
+          }
         }
       }
     } else {
@@ -6836,16 +6939,93 @@ function updateActiveTicketTimer() {
   }
 }
 
+let currentCustomerRating = 0;
+window.currentCustomerRating = currentCustomerRating;
+
+function hoverCustomerStarRating(val) {
+  if (window.currentCustomerRating > 0) return;
+  const row = document.getElementById("star-rating-row");
+  if (!row) return;
+  const stars = row.querySelectorAll(".star-item");
+  stars.forEach((star, idx) => {
+    const starVal = idx + 1;
+    if (starVal <= val) {
+      star.textContent = "★";
+      star.style.color = "#f59e0b";
+      star.style.transform = "scale(1.2)";
+      star.style.textShadow = "0 0 10px rgba(245, 158, 11, 0.5)";
+    } else {
+      star.textContent = "☆";
+      star.style.color = "#f59e0b";
+      star.style.transform = "scale(1)";
+      star.style.textShadow = "none";
+    }
+  });
+}
+window.hoverCustomerStarRating = hoverCustomerStarRating;
+
+function resetCustomerStarHover() {
+  if (window.currentCustomerRating > 0) return;
+  const row = document.getElementById("star-rating-row");
+  if (!row) return;
+  const stars = row.querySelectorAll(".star-item");
+  stars.forEach(star => {
+    star.textContent = "☆";
+    star.style.color = "#f59e0b";
+    star.style.transform = "scale(1)";
+    star.style.textShadow = "none";
+  });
+}
+window.resetCustomerStarHover = resetCustomerStarHover;
+
 function submitCustomerStarRating(rating) {
+  window.currentCustomerRating = rating;
   const promptEl = document.getElementById("survey-feedback-prompt");
   const starRow = document.getElementById("star-rating-row");
+
   if (starRow) {
     starRow.style.pointerEvents = "none";
-    starRow.style.opacity = "0.85";
+    const stars = starRow.querySelectorAll(".star-item");
+    stars.forEach((star, idx) => {
+      const starVal = idx + 1;
+      if (starVal <= rating) {
+        star.textContent = "★";
+        star.style.color = "#f59e0b";
+        star.style.transform = "scale(1.15)";
+        star.style.textShadow = "0 0 12px rgba(245, 158, 11, 0.5)";
+      } else {
+        star.textContent = "☆";
+        star.style.color = "#475569";
+        star.style.transform = "scale(1)";
+        star.style.textShadow = "none";
+      }
+    });
   }
+
   if (promptEl) {
     promptEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Thank you for rating us ${rating} stars!</span> We appreciate your feedback.`;
   }
+
+  if (state.myTicket) {
+    state.myTicket.customerRating = rating;
+    state.myTicket.customerRatingSubmittedAt = Date.now();
+    SafeStorage.setJSON(`waitlink_ticket_${state.config.slug}`, state.myTicket);
+  }
+
+  if (db && state.config.slug && state.myTicket && state.myTicket.id) {
+    const tid = state.myTicket.id;
+    mutateQueueAtomic((serverQueue, serverHistory) => {
+      const target = serverHistory.find(h => h.id === tid);
+      if (target) {
+        target.customerRating = rating;
+        target.customerRatingSubmittedAt = Date.now();
+        logCustomerActivity(target, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+        return { queue: serverQueue, history: serverHistory, affectedItem: target };
+      }
+      return null;
+    }).catch(err => console.warn("Failed to persist rating to Firestore:", err));
+  }
+
   showToast(`⭐ Thank you for rating your service ${rating}/5 stars!`);
 }
 window.submitCustomerStarRating = submitCustomerStarRating;
@@ -13960,32 +14140,26 @@ function restoreActiveTicket() {
   if (state.myTicket && state.myTicket.shopSlug && state.myTicket.shopSlug !== state.config.slug) {
     state.myTicket = null;
   }
-  if (!state.myTicket) {
-    // Check URL ticket parameter first
-    const params = new URLSearchParams(window.location.search);
-    const urlTicketId = params.get("ticket") || params.get("t");
+  const params = new URLSearchParams(window.location.search);
+  const urlTicketId = params.get("ticket") || params.get("tid") || params.get("t");
+  const isFeedbackFlow = params.get("feedback") === "1";
 
-    let ticketToFind = urlTicketId;
-    let savedParsed = null;
-    if (!ticketToFind) {
-      savedParsed = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
-      if (savedParsed && savedParsed.id) {
-        ticketToFind = savedParsed.id;
-      }
+  if (urlTicketId && (!state.myTicket || state.myTicket.id !== urlTicketId)) {
+    let match = state.queue.find(q => q.id === urlTicketId || q.id === decodeURIComponent(urlTicketId));
+    if (!match) {
+      match = state.history.find(h => h.id === urlTicketId || h.id === decodeURIComponent(urlTicketId));
     }
-
-    if (ticketToFind) {
-      let match = state.queue.find(q => q.id === ticketToFind);
-      if (!match) {
-        match = state.history.find(h => h.id === ticketToFind);
-      }
-      if (match) {
-        state.myTicket = match;
-      } else if (savedParsed) {
-        state.myTicket = savedParsed;
-      } else if (urlTicketId) {
-        state.myTicket = { id: urlTicketId, customerName: "You", checkedInAt: Date.now() };
-      }
+    if (match) {
+      state.myTicket = match;
+      SafeStorage.setJSON(`waitlink_ticket_${state.config.slug}`, match);
+    } else {
+      state.myTicket = { id: urlTicketId, customerName: "You", status: isFeedbackFlow ? "completed" : "called", checkedInAt: Date.now() };
+    }
+  } else if (!state.myTicket) {
+    const savedParsed = SafeStorage.getJSON(`waitlink_ticket_${state.config.slug}`);
+    if (savedParsed && savedParsed.id) {
+      const match = state.queue.find(q => q.id === savedParsed.id) || state.history.find(h => h.id === savedParsed.id);
+      state.myTicket = match || savedParsed;
     }
   }
 
@@ -14139,8 +14313,8 @@ function restoreActiveTicket() {
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
       if (infoBox) infoBox.classList.add("hidden");
-    } else if (historyItem && historyItem.status === "completed") {
-      state.myTicket = historyItem;
+    } else if ((historyItem && historyItem.status === "completed") || (state.myTicket && (state.myTicket.status === "completed" || state.myTicket.surveySent))) {
+      if (historyItem) state.myTicket = historyItem;
       if (timerBox) timerBox.classList.add("hidden");
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
@@ -14163,6 +14337,7 @@ function restoreActiveTicket() {
       }
       if (activeActions) activeActions.style.display = "none";
       if (completedActions) { completedActions.classList.remove("hidden"); completedActions.style.display = "block"; }
+      updateActiveTicketTimer();
     } else {
       // Check if ticket was created recently (< 90 seconds ago) and is still propagating to server snapshot
       const isRecentlyCreated = state.myTicket && (Date.now() - (state.myTicket.checkedInAt || 0)) < 90000;

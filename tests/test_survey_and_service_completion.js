@@ -367,11 +367,16 @@ it("app.js renders ticket-survey-review-box and exports submitCustomerStarRating
   assert.ok(appJs.includes('ticket-survey-review-box'), "Must manage ticket-survey-review-box");
   assert.ok(appJs.includes('function submitCustomerStarRating('), "Must implement submitCustomerStarRating");
   assert.ok(appJs.includes('window.submitCustomerStarRating = submitCustomerStarRating;'), "Must attach submitCustomerStarRating to window");
+  assert.ok(appJs.includes('window.hoverCustomerStarRating = hoverCustomerStarRating;'), "Must attach hoverCustomerStarRating to window");
+  assert.ok(appJs.includes('window.resetCustomerStarHover = resetCustomerStarHover;'), "Must attach resetCustomerStarHover to window");
   assert.ok(appJs.includes('star-rating-row'), "Must render interactive 5-star rating row");
+  assert.ok(appJs.includes('☆'), "Must render hollow stars initially");
+  assert.ok(appJs.includes('★'), "Must render solid stars on hover and tap");
 });
 
-it("app.js generates fallback review URL when destinationUrl is unconfigured", () => {
-  assert.ok(appJs.includes("&feedback=1&tid="), "Must construct fallback review link when destinationUrl is missing");
+it("app.js generates complete public live ticket review URL with view=public and ticket ID", () => {
+  assert.ok(appJs.includes("&view=public&ticket="), "Must construct public review link with view=public and ticket parameter");
+  assert.ok(appJs.includes("&feedback=1"), "Must include feedback parameter in review URL");
 });
 
 // -------------------------------------------------------------------------
