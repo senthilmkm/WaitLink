@@ -16,3 +16,6 @@ scratch/
 .DS_Store
 .firebase/
 tests/*.png
+
+# Internal Architecture & Developer Docs
+waitlinkarchitecture.html
