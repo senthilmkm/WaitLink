@@ -2354,6 +2354,35 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
         const historyIndex = index < 0 ? history.findIndex((item) => item && item.id === ticketId) : -1;
         const held = index >= 0 ? queue[index] : (historyIndex >= 0 ? history[historyIndex] : null);
         if (!ticketId || !held) throw httpError(404, "That ticket is not in this shop's line.");
+
+        if (action === "rate") {
+          const rating = Math.min(5, Math.max(1, parseInt(body.rating, 10) || 5));
+          held.customerRating = rating;
+          held.customerRatingSubmittedAt = Date.now();
+          if (!Array.isArray(held.activities)) held.activities = [];
+          const existingAct = held.activities.find(a => a && a.action === "customer_rated");
+          if (!existingAct) {
+            held.activities.push({
+              action: "customer_rated",
+              title: "Customer Star Rating",
+              detail: `Customer submitted ${rating}/5 stars on Web Ticket`,
+              timestamp: Date.now(),
+              icon: "⭐",
+              actor: "Customer (Self-Service)"
+            });
+          } else {
+            existingAct.detail = `Customer updated rating to ${rating}/5 stars on Web Ticket`;
+            existingAct.timestamp = Date.now();
+          }
+          const capped = history.slice(0, 50);
+          tx.update(shopRef, {
+            queue,
+            history: capped,
+            updatedAt: Date.now()
+          });
+          return { rated: true, rating };
+        }
+
         if (!held.ticketSecret || held.ticketSecret !== ticketSecret) {
           throw httpError(403, "This ticket cannot be changed from this device.");
         }

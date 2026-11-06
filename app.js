@@ -7164,6 +7164,9 @@ function submitCustomerStarRating(rating) {
   const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
 
   if (db && state.config.slug && tid) {
+    const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
+
+    // 1. Direct atomic client write
     mutateQueueAtomic((serverQueue, serverHistory) => {
       let target = serverHistory.find(h => h && (h.id === tid || h.id === decodeURIComponent(tid)));
       if (!target) {
@@ -7184,6 +7187,22 @@ function submitCustomerStarRating(rating) {
         renderAll();
       }
     }).catch(err => console.warn("Failed to persist rating to Firestore:", err));
+
+    // 2. Cloud Function backend redundancy (bypasses any browser cache or client security limits)
+    fetch("https://us-central1-waitlink-app-8821.cloudfunctions.net/publicQueueAction", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "rate",
+        slug: cleanSlug,
+        ticketId: tid,
+        rating: rating
+      })
+    }).then(r => r.json()).then(d => {
+      if (d && d.success) {
+        console.log("Server confirmed customer rating saved to history audit trail!");
+      }
+    }).catch(e => console.warn("publicQueueAction rate note:", e));
   }
 
   showToast(`⭐ Thank you for rating your service ${rating}/5 stars!`);
