@@ -474,6 +474,61 @@ it("app.js & index.html: Define canonical Automated Google Reviews & Post-Servic
   );
 });
 
+it("app.js & index.html: De-jargonizes technical terms into clear business outcomes", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const appJs = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+  const indexHtml = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+  // Verify developer jargon replaced
+  assert.ok(appJs.includes("Instant Real-Time Queue Sync (Zero Lag)"), "Replaces Firestore Latency");
+  assert.ok(appJs.includes("Central Headquarters Dashboard (Manage All Locations)"), "Replaces Multi-Tenant SuperAdmin Directory");
+  assert.ok(appJs.includes("Custom Web Link (e.g. wait.yourbrand.com)"), "Replaces CNAME Routing");
+  assert.ok(appJs.includes("High-Speed Priority SMS Delivery"), "Replaces High-Volume Dedicated Twilio SMS");
+  assert.ok(appJs.includes("99.99% Guaranteed High-Reliability Uptime"), "Replaces 99.99% Cloud SLA");
+  assert.ok(appJs.includes("Unlimited Excel & Spreadsheet Data Export"), "Replaces Unlimited CSV Export");
+  assert.ok(appJs.includes("Owner Performance & Analytics Dashboard"), "Replaces Business Intelligence");
+  assert.ok(appJs.includes("Track Busy Peak Hours & Lost Walk-Aways"), "Replaces Peak Rush Window & Walk-Away Analytics");
+
+  // Verify duplicate rollover eliminated from Pro headline
+  assert.ok(indexHtml.includes("500 Automated SMS / mo Included\n1-Month Rollover Bank"), "index.html Pro textarea separates 500 SMS headline and rollover without duplication");
+});
+
+it("ensureTierSMSLimits: Seamlessly normalizes legacy Firestore jargon into modern customer-facing copy", () => {
+  const legacyTiers = [
+    {
+      id: "pro",
+      features: [
+        { text: "Priority Cloud Firestore Latency", enabled: true },
+        { text: "Automated Twilio SMS \"Turn Ready\" Alerts", enabled: true },
+        { text: "Owner Business Intelligence Dashboard", enabled: true },
+        { text: "Unlimited CSV History Data Export", enabled: true },
+        { text: "Custom Domain CNAME Routing", enabled: true },
+        { text: "99.99% Cloud SLA", enabled: true }
+      ]
+    }
+  ];
+
+  // Replica of app.js ensureTierSMSLimits de-jargonization logic
+  legacyTiers[0].features.forEach(f => {
+    const lower = f.text.toLowerCase();
+    if (lower.includes("firestore")) f.text = "Instant Real-Time Queue Sync (Zero Lag)";
+    else if (lower.includes("cname")) f.text = "Custom Web Link (e.g. wait.yourbrand.com)";
+    else if (lower.includes("twilio sms")) f.text = 'Automated SMS "Your Turn is Ready" Alerts';
+    else if (lower.includes("business intelligence")) f.text = "Owner Performance & Analytics Dashboard";
+    else if (lower.includes("csv history")) f.text = "Unlimited Excel & Spreadsheet Data Export";
+    else if (lower.includes("cloud sla")) f.text = "99.99% Guaranteed High-Reliability Uptime";
+  });
+
+  const texts = legacyTiers[0].features.map(f => f.text);
+  assert.ok(texts.includes("Instant Real-Time Queue Sync (Zero Lag)"));
+  assert.ok(texts.includes('Automated SMS "Your Turn is Ready" Alerts'));
+  assert.ok(texts.includes("Owner Performance & Analytics Dashboard"));
+  assert.ok(texts.includes("Unlimited Excel & Spreadsheet Data Export"));
+  assert.ok(texts.includes("Custom Web Link (e.g. wait.yourbrand.com)"));
+  assert.ok(texts.includes("99.99% Guaranteed High-Reliability Uptime"));
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

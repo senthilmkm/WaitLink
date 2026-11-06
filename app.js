@@ -11434,36 +11434,37 @@ const DEFAULT_TIER_FEATURES = {
     { text: "Anonymous Public Wait Page", enabled: true },
     { text: "Audible Turn Chimes & Sound Alerts", enabled: true },
     { text: "0 SMS (Live Mobile Web Card & Lobby Screen Calling only)", enabled: true },
-    { text: "Automated Twilio SMS Notifications", enabled: false },
+    { text: "Automated SMS Customer Text Alerts", enabled: false },
     { text: "Custom Shop Logo Branding", enabled: false },
-    { text: "Business Analytics & CSV History Export", enabled: false }
+    { text: "Business Performance & Excel Export", enabled: false }
   ],
   t2: [
     { text: "Everything in Starter", enabled: true },
     { text: "1 Dedicated Shop with Unlimited Check-ins", enabled: true },
-    { text: "500 Automated SMS / mo included (+ 1-Month Rollover Bank up to 1,000 SMS)", enabled: true },
-    { text: "Automated Twilio SMS \"Turn Ready\" Alerts", enabled: true },
+    { text: "500 Automated SMS / mo Included", enabled: true },
+    { text: "1-Month Rollover Bank (Up to 1,000 SMS reserve)", enabled: true },
     { text: "Top-Up SMS Packs Available from $5 (+250 / +1,000 / +2,500 Never Expire)", enabled: true },
-    { text: "Automated Google Reviews & Post-Service Surveys", enabled: true },
+    { text: "Automated SMS \"Your Turn is Ready\" Alerts", enabled: true },
     { text: "Custom Logo Branding & Colors", enabled: true },
     { text: "Promotional Offer Banners on Public Screen", enabled: true },
-    { text: "Owner Business Intelligence Dashboard", enabled: true },
-    { text: "Peak Rush Window & Walk-Away Analytics", enabled: true },
-    { text: "Unlimited CSV History Data Export", enabled: true },
+    { text: "Owner Performance & Analytics Dashboard", enabled: true },
+    { text: "Track Busy Peak Hours & Lost Walk-Aways", enabled: true },
+    { text: "Unlimited Excel & Spreadsheet Data Export", enabled: true },
     { text: "Multi-Device Front Desk Sync", enabled: true },
-    { text: "Priority Cloud Firestore Latency", enabled: true },
+    { text: "Instant Real-Time Queue Sync (Zero Lag)", enabled: true },
+    { text: "Automated Google Reviews & Post-Service Surveys", enabled: true },
     { text: "Multi-Location Network (Unlimited Shops)", enabled: false },
     { text: "Multiple Staff Front Desk Accounts", enabled: false }
   ],
   t3: [
     { text: "Everything in Pro Business", enabled: true },
-    { text: "2,500+ Automated SMS / mo Included", enabled: true },
     { text: "Unlimited Locations & Staff Accounts", enabled: true },
-    { text: "Multi-Tenant Platform SuperAdmin Directory", enabled: true },
-    { text: "Custom Domain CNAME Routing", enabled: true },
-    { text: "High-Volume Dedicated Twilio SMS", enabled: true },
+    { text: "Central Headquarters Dashboard (Manage All Locations)", enabled: true },
+    { text: "Custom Web Link (e.g. wait.yourbrand.com)", enabled: true },
+    { text: "2,500+ Automated SMS / mo Included", enabled: true },
+    { text: "High-Speed Priority SMS Delivery", enabled: true },
     { text: "Dedicated Support Manager", enabled: true },
-    { text: "99.99% Cloud SLA", enabled: true }
+    { text: "99.99% Guaranteed High-Reliability Uptime", enabled: true }
   ]
 };
 
@@ -11819,7 +11820,7 @@ function ensureTierSMSLimits(tiers) {
 
   const headlineText = isOptA
     ? "500 Automated SMS / mo Included (Standard Monthly Reset)"
-    : "500 Automated SMS / mo Included (+ 1-Month Rollover Bank up to 1,000 SMS)";
+    : "500 Automated SMS / mo Included";
 
   const rolloverText = isOptA
     ? "Monthly Reset (Unused monthly quota refreshes at cycle boundary)"
@@ -11833,6 +11834,60 @@ function ensureTierSMSLimits(tiers) {
     const findFeatureIdx = (query) => feats.findIndex(f => {
       const t = typeof f === 'object' && f !== null ? f.text : String(f);
       return t.toLowerCase().includes(query.toLowerCase());
+    });
+
+    // -----------------------------------------------------------------
+    // De-jargonization Normalization for Small Business Clarity
+    // -----------------------------------------------------------------
+    feats.forEach(f => {
+      if (typeof f !== 'object' || f === null) return;
+      const t = (f.text || "").trim();
+      const lower = t.toLowerCase();
+
+      // 1. "Priority Cloud Firestore Latency" ➔ "Instant Real-Time Queue Sync (Zero Lag)"
+      if (lower.includes("firestore") || lower.includes("cloud latency") || lower.includes("priority cloud")) {
+        f.text = "Instant Real-Time Queue Sync (Zero Lag)";
+      }
+      // 2. "Custom Domain CNAME Routing" ➔ "Custom Web Link (e.g. wait.yourbrand.com)"
+      else if (lower.includes("cname") || lower.includes("domain routing") || (lower.includes("custom") && lower.includes("website address"))) {
+        f.text = "Custom Web Link (e.g. wait.yourbrand.com)";
+      }
+      // 3. "Multi-Tenant Platform SuperAdmin Directory" ➔ "Central Headquarters Dashboard (Manage All Locations)"
+      else if (lower.includes("superadmin directory") || lower.includes("multi-tenant platform") || lower.includes("central control directory") || lower.includes("platform superadmin")) {
+        f.text = "Central Headquarters Dashboard (Manage All Locations)";
+      }
+      // 4. "High-Volume Dedicated Twilio SMS" ➔ "High-Speed Priority SMS Delivery"
+      else if (lower.includes("dedicated twilio") || lower.includes("high-volume dedicated")) {
+        f.text = "High-Speed Priority SMS Delivery";
+      }
+      // 5. "Automated Twilio SMS" ➔ "Automated SMS \"Your Turn is Ready\" Alerts" (or for starter "Automated SMS Customer Text Alerts")
+      else if (lower.includes("twilio sms") || lower.includes("turn ready")) {
+        if (id === "starter" || idx === 0) {
+          f.text = "Automated SMS Customer Text Alerts";
+        } else {
+          f.text = 'Automated SMS "Your Turn is Ready" Alerts';
+        }
+      }
+      // 6. "Owner Business Intelligence Dashboard" ➔ "Owner Performance & Analytics Dashboard"
+      else if (lower.includes("business intelligence")) {
+        f.text = "Owner Performance & Analytics Dashboard";
+      }
+      // 7. "Peak Rush Window & Walk-Away Analytics" ➔ "Track Busy Peak Hours & Lost Walk-Aways"
+      else if (lower.includes("peak rush window") || lower.includes("walk-away analytics") || lower.includes("walk-away loss tracking")) {
+        f.text = "Track Busy Peak Hours & Lost Walk-Aways";
+      }
+      // 8. "Unlimited CSV History Data Export" or "Business Analytics & CSV History Export"
+      else if (lower.includes("csv history") || lower.includes("csv data export") || lower.includes("csv history export")) {
+        if (id === "starter" || idx === 0) {
+          f.text = "Business Performance & Excel Export";
+        } else {
+          f.text = "Unlimited Excel & Spreadsheet Data Export";
+        }
+      }
+      // 9. "99.99% Cloud SLA" ➔ "99.99% Guaranteed High-Reliability Uptime"
+      else if (lower.includes("cloud sla") || lower.includes("cloud uptime guarantee") || lower.includes("99.99%")) {
+        f.text = "99.99% Guaranteed High-Reliability Uptime";
+      }
     });
 
     if (id === "starter" || idx === 0) {
