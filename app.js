@@ -1031,10 +1031,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  const hasPublicCustomerParams = params.has("ticket") || params.has("t") || params.has("feedback") || modeParam === "public" || modeParam === "customer" || modeParam === "kiosk";
+
   if (shopParam && staffParam && keyParam) {
     switchView("desk", true);
     checkStaffAutoLogin(shopParam, staffParam, keyParam);
-  } else if (restoreStaffSessionIfPresent()) {
+  } else if (!hasPublicCustomerParams && restoreStaffSessionIfPresent()) {
     // Staff session restored from active tablet session storage
   } else if (shopParam) {
     if (modeParam === "public" || modeParam === "customer" || modeParam === "kiosk") {
@@ -1753,7 +1755,10 @@ function subscribeFirestore(forceResubscribe = false) {
         new URLSearchParams(window.location.search).get("view") === "kiosk" ||
         new URLSearchParams(window.location.search).get("mode") === "public" ||
         new URLSearchParams(window.location.search).get("mode") === "customer" ||
-        new URLSearchParams(window.location.search).get("mode") === "kiosk";
+        new URLSearchParams(window.location.search).get("mode") === "kiosk" ||
+        new URLSearchParams(window.location.search).has("ticket") ||
+        new URLSearchParams(window.location.search).has("t") ||
+        new URLSearchParams(window.location.search).has("feedback");
       if (!urlHasExplicitPublic && state.user && state.user.email && state.pendingInitialView) {
         const uEmail = state.user.email.toLowerCase().trim();
         const oEmail = (state.config.ownerEmail || "").toLowerCase().trim();
@@ -3254,7 +3259,16 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
     const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
     const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
     const fallbackReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
-    const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackReviewUrl;
+    const isRootOrSelfUrl = surv.destinationUrl && (
+      surv.destinationUrl.trim() === origin ||
+      surv.destinationUrl.trim() === `${origin}/` ||
+      surv.destinationUrl.trim() === WAITLINK_PRODUCTION_DOMAIN ||
+      surv.destinationUrl.trim() === `${WAITLINK_PRODUCTION_DOMAIN}/` ||
+      surv.destinationUrl.trim() === "https://waitlink.app" ||
+      surv.destinationUrl.trim() === "https://waitlink.app/" ||
+      (surv.destinationUrl.trim().startsWith(`${origin}/?s=`) && !surv.destinationUrl.includes("ticket="))
+    );
+    const reviewUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : fallbackReviewUrl;
     const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
 
     sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
@@ -3353,7 +3367,16 @@ async function completeService(id) {
     const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
     const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
     const fallbackReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
-    const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackReviewUrl;
+    const isRootOrSelfUrl = surv.destinationUrl && (
+      surv.destinationUrl.trim() === origin ||
+      surv.destinationUrl.trim() === `${origin}/` ||
+      surv.destinationUrl.trim() === WAITLINK_PRODUCTION_DOMAIN ||
+      surv.destinationUrl.trim() === `${WAITLINK_PRODUCTION_DOMAIN}/` ||
+      surv.destinationUrl.trim() === "https://waitlink.app" ||
+      surv.destinationUrl.trim() === "https://waitlink.app/" ||
+      (surv.destinationUrl.trim().startsWith(`${origin}/?s=`) && !surv.destinationUrl.includes("ticket="))
+    );
+    const reviewUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : fallbackReviewUrl;
     const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
 
     sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
@@ -3381,7 +3404,16 @@ function openReviewQrModal(id) {
   const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
   const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
   const fallbackUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(item ? item.id : '')}&feedback=1`;
-  const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : fallbackUrl;
+  const isRootOrSelfUrl = surv.destinationUrl && (
+    surv.destinationUrl.trim() === origin ||
+    surv.destinationUrl.trim() === `${origin}/` ||
+    surv.destinationUrl.trim() === WAITLINK_PRODUCTION_DOMAIN ||
+    surv.destinationUrl.trim() === `${WAITLINK_PRODUCTION_DOMAIN}/` ||
+    surv.destinationUrl.trim() === "https://waitlink.app" ||
+    surv.destinationUrl.trim() === "https://waitlink.app/" ||
+    (surv.destinationUrl.trim().startsWith(`${origin}/?s=`) && !surv.destinationUrl.includes("ticket="))
+  );
+  const reviewUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : fallbackUrl;
 
   if (subtitle && item) {
     subtitle.textContent = `Have ${item.customerName} scan this code to leave a Google Review at checkout`;
@@ -8372,7 +8404,10 @@ function syncUserShopSelection(fetchedShops, isSuper) {
         new URLSearchParams(window.location.search).get("view") === "kiosk" ||
         new URLSearchParams(window.location.search).get("mode") === "public" ||
         new URLSearchParams(window.location.search).get("mode") === "customer" ||
-        new URLSearchParams(window.location.search).get("mode") === "kiosk";
+        new URLSearchParams(window.location.search).get("mode") === "kiosk" ||
+        new URLSearchParams(window.location.search).has("ticket") ||
+        new URLSearchParams(window.location.search).has("t") ||
+        new URLSearchParams(window.location.search).has("feedback");
       if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
@@ -8398,7 +8433,7 @@ function syncUserShopSelection(fetchedShops, isSuper) {
     const localShop = (state.myShops || []).find(s => s && s.slug && s.slug !== "main-st-barbers");
     if (localShop && (state.config.slug === "main-st-barbers" || !state.config.slug)) {
       inspectShop(localShop.slug, true);
-      if (state.activeView === "public" || state.activeView === "home" || state.pendingInitialView) {
+      if (!urlHasExplicitPublic && (state.activeView === "home" || state.pendingInitialView)) {
         const targetView = state.pendingInitialView || "desk";
         state.pendingInitialView = null;
         switchView(targetView);
@@ -14323,7 +14358,7 @@ function restoreActiveTicket() {
           if (lateGated) lateGated.classList.remove("hidden");
         }
       }
-    } else if (historyItem && historyItem.status === "called") {
+    } else if (historyItem && historyItem.status === "called" && !isFeedbackFlow) {
       state.myTicket = historyItem;
       if (activeActions) activeActions.style.display = "flex";
       if (completedActions) { completedActions.classList.add("hidden"); completedActions.style.display = "none"; }
@@ -14382,8 +14417,11 @@ function restoreActiveTicket() {
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
       if (infoBox) infoBox.classList.add("hidden");
-    } else if ((historyItem && historyItem.status === "completed") || (state.myTicket && (state.myTicket.status === "completed" || state.myTicket.surveySent))) {
-      if (historyItem) state.myTicket = historyItem;
+    } else if (isFeedbackFlow || (historyItem && historyItem.status === "completed") || (state.myTicket && (state.myTicket.status === "completed" || state.myTicket.surveySent))) {
+      if (historyItem) {
+        state.myTicket = historyItem;
+        if (isFeedbackFlow) state.myTicket.status = "completed";
+      }
       if (timerBox) timerBox.classList.add("hidden");
       if (btnContainer) btnContainer.classList.add("hidden");
       if (inlineCard) inlineCard.classList.add("hidden");
@@ -14428,6 +14466,34 @@ function restoreActiveTicket() {
           setElText("ticket-subtitle-display", "Spot secured! Syncing with live queue...");
           updateActiveTicketTimer();
         }
+        return;
+      }
+
+      // If customer is navigating back to their feedback review, preserve review state
+      if (isFeedbackFlow && urlTicketId) {
+        if (timerBox) timerBox.classList.add("hidden");
+        if (btnContainer) btnContainer.classList.add("hidden");
+        if (inlineCard) inlineCard.classList.add("hidden");
+        if (infoBox) infoBox.classList.add("hidden");
+        if (activeActions) activeActions.style.display = "none";
+        if (completedActions) { completedActions.classList.remove("hidden"); completedActions.style.display = "block"; }
+        if (ticketCard) {
+          ticketCard.classList.remove("hidden");
+          ticketCard.style.border = "2px solid #10b981";
+          setElText("ticket-badge-display", "🎉 VISIT COMPLETED");
+          const badgeEl = document.getElementById("ticket-badge-display");
+          if (badgeEl) { badgeEl.style.display = "block"; badgeEl.style.color = "#10b981"; }
+          setElText("ticket-customer-name", (state.myTicket && state.myTicket.customerName) || "You");
+          setElText("ticket-position-display", "Service Finished ✓");
+          const posEl = document.getElementById("ticket-position-display");
+          if (posEl) posEl.style.color = "#10b981";
+          setElText("ticket-subtitle-display", `Thank you for visiting ${state.config.shopName || 'WaitLink Shop'}! Have a wonderful day.`);
+          const timerEl = document.getElementById("ticket-timer-display");
+          if (timerEl) timerEl.textContent = "Completed";
+          const lateContainer = document.getElementById("ticket-running-late-container");
+          if (lateContainer) lateContainer.classList.add("hidden");
+        }
+        updateActiveTicketTimer();
         return;
       }
 
@@ -15315,6 +15381,11 @@ function hasStaffPermission(permKey) {
 
 // Restore staff session from sessionStorage on page load/reload
 function restoreStaffSessionIfPresent() {
+  const urlParams = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
+  const isPublicTicketRequest = urlParams && (urlParams.get("view") === "public" || urlParams.has("ticket") || urlParams.has("t") || urlParams.has("feedback"));
+  if (isPublicTicketRequest) {
+    return false;
+  }
   const parsed = SafeSessionStorage.getJSON("waitlink_staff_session");
   if (parsed && parsed.username && parsed.assignedShop) {
     state.isStaffSession = true;
