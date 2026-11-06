@@ -4754,11 +4754,50 @@ html[data-theme="light"] .landing-bottom-cta {
   gap: 0.6rem;
 }
 
+.landing-footer a,
 .footer-links-list a {
   color: var(--text-muted);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.landing-footer a:hover,
+.footer-links-list a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Light Theme overrides for Footer */
+html[data-theme="light"] .landing-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+html[data-theme="light"] .landing-footer .footer-col h4 {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .landing-footer a,
+html[data-theme="light"] .footer-links-list a {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] .landing-footer a:hover,
+html[data-theme="light"] .footer-links-list a:hover {
+  color: #0284c7 !important;
+  text-decoration: underline;
+}
+
+html[data-theme="light"] .landing-footer .footer-tagline,
+html[data-theme="light"] .landing-footer .footer-bottom-bar,
+html[data-theme="light"] .landing-footer .footer-copyright,
+html[data-theme="light"] .landing-footer span[style*="color: var(--text-muted)"] {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] .landing-footer .footer-brand-title,
+html[data-theme="light"] .landing-footer span[style*="color: #fff"] {
+  color: #0f172a !important;
 }
 
 .info-tooltip-badge {
