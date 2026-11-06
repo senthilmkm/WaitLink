@@ -3210,6 +3210,14 @@ function clearSurveyAutoTimer(ticketId) {
   }
 }
 
+function clearAllSurveyTimers() {
+  if (state.activeSurveyTimers) {
+    state.activeSurveyTimers.forEach(t => clearTimeout(t));
+    state.activeSurveyTimers.clear();
+  }
+}
+window.clearAllSurveyTimers = clearAllSurveyTimers;
+
 async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk") {
   const ticketId = typeof ticketOrId === "object" ? ticketOrId.id : ticketOrId;
   if (!ticketId) return { success: false, error: "Missing ticket ID" };
@@ -3293,22 +3301,17 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
 
   // If customer has phone number, dispatch SMS
   if (finalItem.phone) {
+    if (!isPaid) {
+      showToast(`⭐ Service completed for ${finalItem.customerName} (Review prompt active on Web Ticket • Pro required for automated SMS)`);
+      return { success: true, item: finalItem };
+    }
+
     const shopName = state.config.shopName || "our shop";
     const customTpl = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
     const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
     const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
-    const fallbackReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
-    const isRootOrSelfUrl = surv.destinationUrl && (
-      surv.destinationUrl.trim() === origin ||
-      surv.destinationUrl.trim() === `${origin}/` ||
-      surv.destinationUrl.trim() === WAITLINK_PRODUCTION_DOMAIN ||
-      surv.destinationUrl.trim() === `${WAITLINK_PRODUCTION_DOMAIN}/` ||
-      surv.destinationUrl.trim() === "https://waitlink.app" ||
-      surv.destinationUrl.trim() === "https://waitlink.app/" ||
-      (surv.destinationUrl.trim().startsWith(`${origin}/?s=`) && !surv.destinationUrl.includes("ticket="))
-    );
-    const reviewUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : fallbackReviewUrl;
-    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, reviewUrl);
+    const ticketReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(finalItem.id)}&feedback=1`;
+    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, ticketReviewUrl);
 
     sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
       .then(res => {
@@ -3448,7 +3451,8 @@ function openReviewQrModal(id) {
   const surv = (state.config && state.config.surveySettings) || {};
   const origin = (typeof window !== "undefined" && window.location.origin && window.location.origin !== "null") ? window.location.origin : WAITLINK_PRODUCTION_DOMAIN;
   const cleanSlug = slugify(state.config.slug || state.config.shopName || "shop");
-  const fallbackUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(item ? item.id : '')}&feedback=1`;
+  const ticketReviewUrl = `${origin}/?s=${encodeURIComponent(cleanSlug)}&view=public&ticket=${encodeURIComponent(item ? item.id : '')}&feedback=1`;
+
   const isRootOrSelfUrl = surv.destinationUrl && (
     surv.destinationUrl.trim() === origin ||
     surv.destinationUrl.trim() === `${origin}/` ||
@@ -3458,16 +3462,18 @@ function openReviewQrModal(id) {
     surv.destinationUrl.trim() === "https://waitlink.app/" ||
     (surv.destinationUrl.trim().startsWith(`${origin}/?s=`) && !surv.destinationUrl.includes("ticket="))
   );
-  const reviewUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : fallbackUrl;
+  const directGoogleUrl = (surv.enabled !== false && surv.destinationUrl && !isRootOrSelfUrl) ? surv.destinationUrl : "";
 
   if (subtitle && item) {
-    subtitle.textContent = `Have ${item.customerName} scan this code to leave a Google Review at checkout`;
+    subtitle.textContent = (item.customerRating)
+      ? `✓ ${item.customerName} already submitted a ${item.customerRating}/5 star rating. Scanning verifies their confirmed review.`
+      : `Have ${item.customerName} scan this QR code to rate their service and leave a review at checkout`;
   }
 
   canvas.innerHTML = "";
   if (typeof QRCode !== "undefined") {
     new QRCode(canvas, {
-      text: reviewUrl,
+      text: ticketReviewUrl,
       width: 180,
       height: 180,
       colorDark: "#090d16",
@@ -3475,7 +3481,14 @@ function openReviewQrModal(id) {
       correctLevel: (typeof QRCode.CorrectLevel !== "undefined") ? QRCode.CorrectLevel.M : 0
     });
   } else {
-    canvas.innerHTML = `<a href="${escapeHtml(reviewUrl)}" target="_blank" style="color: #0284c7; font-weight: 700; word-break: break-all;">${escapeHtml(reviewUrl)}</a>`;
+    canvas.innerHTML = `<a href="${escapeHtml(ticketReviewUrl)}" target="_blank" style="color: #0284c7; font-weight: 700; word-break: break-all;">${escapeHtml(ticketReviewUrl)}</a>`;
+  }
+
+  if (directGoogleUrl) {
+    const directLinkContainer = document.createElement("div");
+    directLinkContainer.style.cssText = "margin-top: 0.65rem; font-size: 0.75rem;";
+    directLinkContainer.innerHTML = `<a href="${escapeHtml(directGoogleUrl)}" target="_blank" rel="noopener noreferrer" style="color: #06b6d4; text-decoration: underline; font-weight: 600;">Open Direct Google Review Page ↗</a>`;
+    canvas.appendChild(directLinkContainer);
   }
 
   modal.classList.remove("hidden");
@@ -5004,6 +5017,32 @@ function renderOwnerMetrics() {
       ownerThroughputEl.textContent = `${throughput} / hr`;
     } else {
       ownerThroughputEl.textContent = "--";
+    }
+  }
+
+  // Calculate Customer Star Rating & CSAT Metric Card (Business Intelligence & Analytics)
+  const cardReviews = document.getElementById("card-metric-reviews");
+  const ownerAvgRatingVal = document.getElementById("owner-avg-rating-val");
+  const ownerRatingCaption = document.getElementById("owner-rating-caption");
+
+  if (cardReviews) { cardReviews.onclick = null; cardReviews.style.cursor = "default"; cardReviews.title = ""; }
+
+  if (ownerAvgRatingVal) {
+    const ratedVisits = (state.history || []).filter(h => typeof h.customerRating === "number" && h.customerRating >= 1 && h.customerRating <= 5);
+    if (ratedVisits.length > 0) {
+      const sum = ratedVisits.reduce((acc, h) => acc + h.customerRating, 0);
+      const avg = (sum / ratedVisits.length).toFixed(1);
+      const positiveCount = ratedVisits.filter(h => h.customerRating >= 4).length;
+      const csatPct = Math.round((positiveCount / ratedVisits.length) * 100);
+      ownerAvgRatingVal.textContent = `${avg} / 5.0`;
+      if (ownerRatingCaption) {
+        ownerRatingCaption.textContent = `${ratedVisits.length} review${ratedVisits.length === 1 ? '' : 's'} (${csatPct}% positive)`;
+      }
+    } else {
+      ownerAvgRatingVal.textContent = "--";
+      if (ownerRatingCaption) {
+        ownerRatingCaption.textContent = "No customer reviews yet";
+      }
     }
   }
 
@@ -7024,44 +7063,48 @@ function updateActiveTicketTimer() {
       }
       if (surveyBox) {
         surveyBox.style.display = "block";
-        if (reviewUrl) {
-          surveyBox.innerHTML = `
-            <div style="font-size: 1.35rem; margin-bottom: 0.35rem;">⭐⭐⭐⭐⭐</div>
-            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your experience today?</h4>
-            <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.85rem 0;">Takes 15 seconds to share your review.</p>
-            <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%;">
-              <span>⭐</span> <span>Leave a Review on Google</span>
-            </a>
-          `;
-        } else {
-          const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
-          if (existingRating > 0) {
-            let starHtml = "";
-            for (let i = 1; i <= 5; i++) {
-              if (i <= existingRating) {
-                starHtml += `<span style="color: #f59e0b; font-size: 2.2rem; margin: 0 4px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">★</span>`;
-              } else {
-                starHtml += `<span style="color: #475569; font-size: 2.2rem; margin: 0 4px;">☆</span>`;
-              }
+        const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
+        if (existingRating > 0) {
+          let starHtml = "";
+          for (let i = 1; i <= 5; i++) {
+            if (i <= existingRating) {
+              starHtml += `<span style="color: #f59e0b; font-size: 2.2rem; margin: 0 4px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">★</span>`;
+            } else {
+              starHtml += `<span style="color: #475569; font-size: 2.2rem; margin: 0 4px;">☆</span>`;
             }
-            surveyBox.innerHTML = `
-              <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
-              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">Thank you for your feedback!</h4>
-              <p style="color: #10b981; font-weight: 700; font-size: 0.88rem; margin: 0;" id="survey-feedback-prompt">✓ You rated your visit ${existingRating}/5 stars.</p>
-            `;
-          } else {
-            surveyBox.innerHTML = `
-              <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem;" onmouseleave="resetCustomerStarHover()">
-                <span class="star-item" data-val="1" onclick="submitCustomerStarRating(1)" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="1 Star">☆</span>
-                <span class="star-item" data-val="2" onclick="submitCustomerStarRating(2)" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="2 Stars">☆</span>
-                <span class="star-item" data-val="3" onclick="submitCustomerStarRating(3)" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="3 Stars">☆</span>
-                <span class="star-item" data-val="4" onclick="submitCustomerStarRating(4)" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="4 Stars">☆</span>
-                <span class="star-item" data-val="5" onclick="submitCustomerStarRating(5)" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="5 Stars">☆</span>
+          }
+          let googleBtnHtml = "";
+          if (reviewUrl && existingRating >= 4) {
+            googleBtnHtml = `
+              <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.6rem 0;">Share your positive experience with the community on Google:</p>
+                <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff;">
+                  <span>⭐</span> <span>Leave a Review on Google ↗</span>
+                </a>
               </div>
-              <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
-              <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
             `;
           }
+          surveyBox.innerHTML = `
+            <div style="margin-bottom: 0.5rem;" id="star-rating-row">${starHtml}</div>
+            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">Thank you for your feedback!</h4>
+            <p style="color: #10b981; font-weight: 700; font-size: 0.88rem; margin: 0;" id="survey-feedback-prompt">✓ You rated your visit ${existingRating}/5 stars.</p>
+            ${googleBtnHtml}
+            <div style="margin-top: 0.55rem;">
+              <button type="button" onclick="editCustomerStarRating()" style="background: none; border: none; color: var(--text-muted); font-size: 0.75rem; text-decoration: underline; cursor: pointer;">Change rating</button>
+            </div>
+          `;
+        } else {
+          surveyBox.innerHTML = `
+            <div class="star-rating-row" id="star-rating-row" style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 2.3rem; cursor: pointer; user-select: none; margin-bottom: 0.45rem;" onmouseleave="resetCustomerStarHover()">
+              <span class="star-item" data-val="1" onclick="submitCustomerStarRating(1)" onmouseenter="hoverCustomerStarRating(1)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="1 Star">☆</span>
+              <span class="star-item" data-val="2" onclick="submitCustomerStarRating(2)" onmouseenter="hoverCustomerStarRating(2)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="2 Stars">☆</span>
+              <span class="star-item" data-val="3" onclick="submitCustomerStarRating(3)" onmouseenter="hoverCustomerStarRating(3)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="3 Stars">☆</span>
+              <span class="star-item" data-val="4" onclick="submitCustomerStarRating(4)" onmouseenter="hoverCustomerStarRating(4)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="4 Stars">☆</span>
+              <span class="star-item" data-val="5" onclick="submitCustomerStarRating(5)" onmouseenter="hoverCustomerStarRating(5)" style="color: #f59e0b; transition: transform 0.15s ease; display: inline-block;" title="5 Stars">☆</span>
+            </div>
+            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your service today?</h4>
+            <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem 0;" id="survey-feedback-prompt">Tap the stars above to rate your visit.</p>
+          `;
         }
       }
     } else {
@@ -7124,10 +7167,26 @@ function resetCustomerStarHover() {
 }
 window.resetCustomerStarHover = resetCustomerStarHover;
 
+function editCustomerStarRating() {
+  window.currentCustomerRating = 0;
+  if (state.myTicket) {
+    state.myTicket.customerRating = 0;
+  }
+  renderAll();
+}
+window.editCustomerStarRating = editCustomerStarRating;
+
 function submitCustomerStarRating(rating) {
+  const existingRating = (state.myTicket && state.myTicket.customerRating) || window.currentCustomerRating || 0;
+  const starRow = document.getElementById("star-rating-row");
+
+  if (existingRating === rating && starRow && starRow.style.pointerEvents === "none") {
+    showToast(`⭐ You have already submitted a ${rating}-star rating. Thank you!`);
+    return;
+  }
+
   window.currentCustomerRating = rating;
   const promptEl = document.getElementById("survey-feedback-prompt");
-  const starRow = document.getElementById("star-rating-row");
 
   if (starRow) {
     starRow.style.pointerEvents = "none";
@@ -7150,6 +7209,26 @@ function submitCustomerStarRating(rating) {
 
   if (promptEl) {
     promptEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Thank you for rating us ${rating} stars!</span> We appreciate your feedback.`;
+  }
+
+  // Sentiment Boost: If 4 or 5 stars and Google Review URL configured, reveal 1-tap Google Review booster
+  const surv = (state.config && state.config.surveySettings) || {};
+  const reviewUrl = (surv.enabled !== false && surv.destinationUrl) ? surv.destinationUrl : "";
+  if (reviewUrl && rating >= 4) {
+    let googleBox = document.getElementById("post-rating-google-btn");
+    const parentBox = document.getElementById("ticket-survey-review-box");
+    if (!googleBox && parentBox) {
+      googleBox = document.createElement("div");
+      googleBox.id = "post-rating-google-btn";
+      googleBox.style.cssText = "margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); animation: fadeIn 0.3s ease;";
+      googleBox.innerHTML = `
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.6rem 0;">Share your positive experience with the community on Google:</p>
+        <a href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #fff;">
+          <span>⭐</span> <span>Leave a Review on Google ↗</span>
+        </a>
+      `;
+      parentBox.appendChild(googleBox);
+    }
   }
 
   const params = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
@@ -7176,9 +7255,12 @@ function submitCustomerStarRating(rating) {
         target = serverHistory.find(h => h && h.customerName === state.myTicket.customerName);
       }
       if (target) {
+        const isUpdate = !!target.customerRating;
         target.customerRating = rating;
         target.customerRatingSubmittedAt = Date.now();
-        logCustomerActivity(target, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+        const actionTitle = isUpdate ? "Customer Updated Rating" : "Customer Star Rating";
+        const actionDetail = isUpdate ? `Customer updated rating to ${rating}/5 stars on Web Ticket` : `Customer submitted ${rating}/5 stars on Web Ticket`;
+        logCustomerActivity(target, "customer_rated", actionTitle, actionDetail, "⭐", "Customer Self-Service");
         return { queue: serverQueue, history: serverHistory, affectedItem: target };
       }
       return null;

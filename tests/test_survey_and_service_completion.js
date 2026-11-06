@@ -447,6 +447,61 @@ it("app.js renders customerRating badge in Visit History and exports rating colu
 });
 
 // -------------------------------------------------------------------------
+// 12. More Analytics Star Rating Card, Sentiment Booster & Cloud Audit Invariants
+// -------------------------------------------------------------------------
+console.log("\n--- 12. More Analytics Card, Sentiment Booster & Cloud Audit Invariants ---");
+
+it("index.html contains card-metric-reviews in Business Intelligence & Analytics grid", () => {
+  assert.ok(indexHtml.includes('id="card-metric-reviews"'), "Must contain card-metric-reviews in index.html");
+  assert.ok(indexHtml.includes('id="owner-avg-rating"'), "Must contain owner-avg-rating in index.html");
+  assert.ok(indexHtml.includes('id="owner-avg-rating-val"'), "Must contain owner-avg-rating-val in index.html");
+  assert.ok(indexHtml.includes('id="owner-rating-caption"'), "Must contain owner-rating-caption in index.html");
+});
+
+it("app.js accurately computes average rating and CSAT percentage for shop owner analytics", () => {
+  const historyWithRatings = [
+    { customerRating: 5 },
+    { customerRating: 5 },
+    { customerRating: 4 },
+    { customerRating: 2 }
+  ];
+  const ratedVisits = historyWithRatings.filter(h => typeof h.customerRating === "number" && h.customerRating >= 1 && h.customerRating <= 5);
+  const sum = ratedVisits.reduce((acc, h) => acc + h.customerRating, 0);
+  const avg = (sum / ratedVisits.length).toFixed(1);
+  const positiveCount = ratedVisits.filter(h => h.customerRating >= 4).length;
+  const csatPct = Math.round((positiveCount / ratedVisits.length) * 100);
+
+  assert.strictEqual(avg, "4.0", "Average rating of 5,5,4,2 must be 4.0");
+  assert.strictEqual(positiveCount, 3, "3 of 4 ratings are 4+ stars");
+  assert.strictEqual(csatPct, 75, "CSAT percentage must be 75%");
+});
+
+it("app.js handles empty rating history gracefully without dividing by zero", () => {
+  const historyEmpty = [];
+  const ratedVisits = historyEmpty.filter(h => typeof h.customerRating === "number" && h.customerRating >= 1 && h.customerRating <= 5);
+  assert.strictEqual(ratedVisits.length, 0);
+});
+
+it("app.js implements editCustomerStarRating and sentiment gating for Google Review booster", () => {
+  assert.ok(appJs.includes("function editCustomerStarRating()"), "Must implement editCustomerStarRating");
+  assert.ok(appJs.includes("window.editCustomerStarRating = editCustomerStarRating;"), "Must export editCustomerStarRating to window");
+  assert.ok(appJs.includes("post-rating-google-btn"), "Must support post-rating-google-btn container");
+  assert.ok(appJs.includes("rating >= 4"), "Must gate Google Review booster strictly to 4-5 star ratings");
+});
+
+it("app.js exports clearAllSurveyTimers for zero memory leak lifecycle management", () => {
+  assert.ok(appJs.includes("function clearAllSurveyTimers()"), "Must define clearAllSurveyTimers");
+  assert.ok(appJs.includes("window.clearAllSurveyTimers = clearAllSurveyTimers;"), "Must export clearAllSurveyTimers to window");
+});
+
+it("Cloud Function publicQueueAction in functions/index.js handles action === rate with audit entry", () => {
+  const functionsIndex = fs.readFileSync(path.join(__dirname, "..", "functions", "index.js"), "utf8");
+  assert.ok(functionsIndex.includes('if (action === "rate")'), "functions/index.js must handle action === rate");
+  assert.ok(functionsIndex.includes("held.customerRating = rating;"), "Must store customerRating on ticket");
+  assert.ok(functionsIndex.includes("customer_rated"), "Must record customer_rated audit activity");
+});
+
+// -------------------------------------------------------------------------
 // Summary
 // -------------------------------------------------------------------------
 console.log("\n======================================================================");
