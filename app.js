@@ -12102,7 +12102,8 @@ function renderUpgradeModalTiers(tiers) {
       if (aEnabled === bEnabled) return 0;
       return aEnabled ? -1 : 1;
     });
-    container.innerHTML = sortedFeatures.map(f => {
+
+    const renderItemHtml = (f) => {
       const isEnabled = typeof f === 'object' && f !== null ? f.enabled !== false : !String(f).startsWith('[x]');
       const text = typeof f === 'object' && f !== null ? f.text : String(f).replace(/^(\[x\]\s*|\[X\]\s*|OFF:\s*|~\s*|\[v\]\s*|✓\s*)/, '');
       if (isEnabled) {
@@ -12118,8 +12119,65 @@ function renderUpgradeModalTiers(tiers) {
       } else {
         return `<li style="display: flex; align-items: flex-start; gap: 0.45rem; color: var(--text-subtle); opacity: 0.65; text-decoration: line-through;"><span style="color: #ef4444; font-weight: 700; text-decoration: none;">✕</span> <span>${escapeHtml(text)}</span></li>`;
       }
-    }).join('');
+    };
+
+    if (containerId === "modal-tier-features-pro" && sortedFeatures.length > 7) {
+      const primaryCount = 7;
+      const primaryFeatures = sortedFeatures.slice(0, primaryCount);
+      const moreFeatures = sortedFeatures.slice(primaryCount);
+
+      const primaryHtml = primaryFeatures.map(renderItemHtml).join('');
+      const moreHtml = moreFeatures.map(renderItemHtml).join('');
+
+      container.innerHTML = `
+        ${primaryHtml}
+        <div id="modal-pro-more-items" class="hidden" style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.35rem; padding-top: 0.45rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+          ${moreHtml}
+        </div>
+        <li style="list-style: none; margin-top: 0.35rem;">
+          <button type="button" id="modal-pro-toggle-btn" onclick="toggleModalProFeatures()" style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 6px; padding: 0.28rem 0.6rem; color: #38bdf8; font-weight: 700; font-size: 0.775rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; width: 100%; justify-content: center; transition: all 0.2s ease;">
+            <span id="modal-pro-toggle-text">+ ${moreFeatures.length} more features</span> <span id="modal-pro-toggle-arrow">▾</span>
+          </button>
+        </li>
+      `;
+      return;
+    }
+
+    container.innerHTML = sortedFeatures.map(renderItemHtml).join('');
   };
+
+  function toggleModalProFeatures() {
+    const moreEl = document.getElementById("modal-pro-more-items");
+    const textEl = document.getElementById("modal-pro-toggle-text");
+    const arrowEl = document.getElementById("modal-pro-toggle-arrow");
+    const btn = document.getElementById("modal-pro-toggle-btn");
+    if (!moreEl) return;
+
+    const isHidden = moreEl.classList.contains("hidden");
+    if (isHidden) {
+      moreEl.classList.remove("hidden");
+      if (textEl) textEl.textContent = "− Show fewer features";
+      if (arrowEl) arrowEl.textContent = "▴";
+      if (btn) {
+        btn.style.background = "rgba(255, 255, 255, 0.05)";
+        btn.style.borderColor = "rgba(255, 255, 255, 0.15)";
+        btn.style.color = "var(--text-muted)";
+      }
+    } else {
+      moreEl.classList.add("hidden");
+      const count = moreEl.querySelectorAll("li, div").length || 7;
+      if (textEl) textEl.textContent = `+ ${count} more features`;
+      if (arrowEl) arrowEl.textContent = "▾";
+      if (btn) {
+        btn.style.background = "rgba(6, 182, 212, 0.08)";
+        btn.style.borderColor = "rgba(6, 182, 212, 0.25)";
+        btn.style.color = "#38bdf8";
+      }
+    }
+  }
+  if (typeof window !== "undefined") {
+    window.toggleModalProFeatures = toggleModalProFeatures;
+  }
 
   if (t1) {
     const badgeEl = document.getElementById("modal-t1-badge");
