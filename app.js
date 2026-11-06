@@ -1798,6 +1798,18 @@ function subscribeFirestore(forceResubscribe = false) {
       if (data.surveySettings !== undefined) {
         state.config.surveySettings = { ...state.config.surveySettings, ...data.surveySettings };
       }
+
+      // Re-hydrate any active Mode 2 background survey timers from history
+      if (Array.isArray(state.history)) {
+        const surv = (state.config && state.config.surveySettings) || {};
+        if (surv.enabled && surv.mode === "mode_2") {
+          state.history.forEach(item => {
+            if (item.status === "called" && !item.surveySent) {
+              scheduleSurveyAutoTimer(item);
+            }
+          });
+        }
+      }
       if (data.twilio) {
         state.config.twilio = { ...state.config.twilio, ...data.twilio };
         if (isDemo && state.config.twilio.enabled === undefined) {
@@ -3127,18 +3139,24 @@ if (typeof state !== "undefined") {
 function scheduleSurveyAutoTimer(item) {
   if (!item || !item.id) return;
   const surv = (state.config && state.config.surveySettings) || {};
-  if (!surv.enabled || surv.mode !== "mode_2" || !surv.destinationUrl) return;
+  if (!surv.enabled || surv.mode !== "mode_2") return;
   if (item.surveySent) return;
 
   state.activeSurveyTimers = state.activeSurveyTimers || new Map();
 
   const delayMin = getSurveyAutoDelayMinutes(item);
   const targetTs = (item.calledAt || Date.now()) + (delayMin * 60 * 1000);
-  const remainingMs = Math.max(0, targetTs - Date.now());
+  const remainingMs = targetTs - Date.now();
 
   if (state.activeSurveyTimers.has(item.id)) {
     clearTimeout(state.activeSurveyTimers.get(item.id));
     state.activeSurveyTimers.delete(item.id);
+  }
+
+  // If time has already elapsed, trigger the survey immediately
+  if (remainingMs <= 0) {
+    triggerSurveyForTicket(item.id, "auto_timer");
+    return;
   }
 
   const timerId = setTimeout(() => {
@@ -3707,7 +3725,7 @@ async function callCustomer(id) {
 
   // If Mode 2 is active, schedule auto-timer
   const surv = (state.config && state.config.surveySettings) || {};
-  if (surv.enabled && surv.mode === "mode_2" && surv.destinationUrl) {
+  if (surv.enabled && surv.mode === "mode_2") {
     scheduleSurveyAutoTimer(targetItem);
   }
 
@@ -6157,6 +6175,12 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     const delayMin = getSurveyAutoDelayMinutes(item);
     const elapsed = Math.floor((Date.now() - (item.calledAt || Date.now())) / 60000);
     const remaining = Math.max(0, delayMin - elapsed);
+
+    // If survey countdown reached 0 (Survey Ready) and has not yet been triggered, auto-trigger it immediately!
+    if (remaining <= 0 && (!state.activeSurveyTimers || !state.activeSurveyTimers.has(item.id))) {
+      setTimeout(() => scheduleSurveyAutoTimer(item), 50);
+    }
+
     const baseDuration = (item && item.selectedServiceDurationMin && parseInt(item.selectedServiceDurationMin, 10) > 0)
       ? parseInt(item.selectedServiceDurationMin, 10)
       : (parseInt((state.config && state.config.estBaseWaitMin), 10) || 20);
