@@ -3188,16 +3188,17 @@ if (typeof state !== "undefined") {
 }
 
 function scheduleSurveyAutoTimer(item) {
-  if (!item || !item.id) return;
+  if (!item || !item.id || String(item.id).startsWith("h")) return;
   const surv = (state.config && state.config.surveySettings) || {};
   if (!surv.enabled || surv.mode !== "mode_2") return;
   if (item.surveySent) return;
 
   // Strictly only execute automated timers on authenticated Front Desk / Shop Owner sessions
-  // Public customers viewing their ticket or public displays MUST NEVER execute backend dispatch timers
+  // Public customers viewing their ticket or public displays or unauthenticated demo sessions MUST NEVER execute backend dispatch timers
   const urlParams = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
   const isPublicView = urlParams && (urlParams.get("view") === "public" || urlParams.get("view") === "display" || urlParams.has("ticket") || urlParams.has("t") || urlParams.has("feedback"));
-  const isOperator = !!(state.user || state.isStaffSession || isDemoScreenOrGuestDemo());
+  const isOperator = !!(state.user || state.isStaffSession);
+  if (state.isDemoMode) return;
   if (isPublicView || !isOperator) return;
 
   state.activeSurveyTimers = state.activeSurveyTimers || new Map();
@@ -3211,8 +3212,12 @@ function scheduleSurveyAutoTimer(item) {
     state.activeSurveyTimers.delete(item.id);
   }
 
-  // If time has already elapsed, trigger the survey immediately
+  // If time has already elapsed, only trigger if within recent active window (not stale history)
   if (remainingMs <= 0) {
+    if (Date.now() - (item.calledAt || 0) > 2 * 60 * 60 * 1000) {
+      item.surveySent = true;
+      return;
+    }
     triggerSurveyForTicket(item.id, "auto_timer");
     return;
   }
@@ -6404,11 +6409,6 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
     const elapsed = Math.floor((Date.now() - (item.calledAt || Date.now())) / 60000);
     const remaining = Math.max(0, delayMin - elapsed);
 
-    // If survey countdown reached 0 (Survey Ready) and has not yet been triggered, auto-trigger it immediately!
-    if (remaining <= 0 && (!state.activeSurveyTimers || !state.activeSurveyTimers.has(item.id))) {
-      setTimeout(() => scheduleSurveyAutoTimer(item), 50);
-    }
-
     const baseDuration = (item && item.selectedServiceDurationMin && parseInt(item.selectedServiceDurationMin, 10) > 0)
       ? parseInt(item.selectedServiceDurationMin, 10)
       : (parseInt((state.config && state.config.estBaseWaitMin), 10) || 20);
@@ -8063,13 +8063,13 @@ function launchDemoMode() {
     { id: "q3", customerName: "deeena", checkedInAt: now - 0.08 * 60 * 1000 }
   ];
   state.history = [
-    { id: "h1", customerName: "James P.", status: "called", checkedInAt: now - 45 * 60 * 1000, calledAt: now - 25 * 60 * 1000, waitDurationMin: 20 },
-    { id: "h2", customerName: "Chris K.", status: "called", checkedInAt: now - 35 * 60 * 1000, calledAt: now - 17 * 60 * 1000, waitDurationMin: 18 },
+    { id: "h1", customerName: "James P.", status: "completed", surveySent: true, checkedInAt: now - 45 * 60 * 1000, calledAt: now - 25 * 60 * 1000, completedAt: now - 5 * 60 * 1000, waitDurationMin: 20 },
+    { id: "h2", customerName: "Chris K.", status: "completed", surveySent: true, checkedInAt: now - 35 * 60 * 1000, calledAt: now - 17 * 60 * 1000, completedAt: now - 2 * 60 * 1000, waitDurationMin: 18 },
     { id: "h7", customerName: "Alex W.", status: "cancelled", cancelledBy: "desk", checkedInAt: now - 50 * 60 * 1000, cancelledAt: now - 40 * 60 * 1000, waitDurationMin: 0 },
-    { id: "h3", customerName: "Sarah M.", status: "called", checkedInAt: now - oneDay - 120 * 60 * 1000, calledAt: now - oneDay - 105 * 60 * 1000, waitDurationMin: 15 },
-    { id: "h4", customerName: "David L.", status: "called", checkedInAt: now - oneDay - 180 * 60 * 1000, calledAt: now - oneDay - 160 * 60 * 1000, waitDurationMin: 20 },
+    { id: "h3", customerName: "Sarah M.", status: "completed", surveySent: true, checkedInAt: now - oneDay - 120 * 60 * 1000, calledAt: now - oneDay - 105 * 60 * 1000, completedAt: now - oneDay - 85 * 60 * 1000, waitDurationMin: 15 },
+    { id: "h4", customerName: "David L.", status: "completed", surveySent: true, checkedInAt: now - oneDay - 180 * 60 * 1000, calledAt: now - oneDay - 160 * 60 * 1000, completedAt: now - oneDay - 140 * 60 * 1000, waitDurationMin: 20 },
     { id: "h5", customerName: "Elena R.", status: "cancelled", cancelledBy: "customer", checkedInAt: now - oneDay - 240 * 60 * 1000, cancelledAt: now - oneDay - 235 * 60 * 1000, waitDurationMin: 0 },
-    { id: "h6", customerName: "Michael B.", status: "called", checkedInAt: now - 2 * oneDay - 300 * 60 * 1000, calledAt: now - 2 * oneDay - 280 * 60 * 1000, waitDurationMin: 20 }
+    { id: "h6", customerName: "Michael B.", status: "completed", surveySent: true, checkedInAt: now - 2 * oneDay - 300 * 60 * 1000, calledAt: now - 2 * oneDay - 280 * 60 * 1000, completedAt: now - 2 * oneDay - 260 * 60 * 1000, waitDurationMin: 20 }
   ];
 
   // Save demo state locally
@@ -9447,6 +9447,13 @@ async function handleSignOut(e) {
     try { securityConfigUnsubscribe(); } catch (err) { }
     securityConfigUnsubscribe = null;
   }
+
+  // Clear any pending survey dispatch timers and wipe visible toast messages on logout
+  clearAllSurveyTimers();
+  try {
+    const toastContainer = document.getElementById("toast-container");
+    if (toastContainer) toastContainer.innerHTML = "";
+  } catch (e) { }
 
   // 2. Clear state variables & in-memory sensitive data
   state.user = null;
