@@ -7152,16 +7152,26 @@ function submitCustomerStarRating(rating) {
     promptEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Thank you for rating us ${rating} stars!</span> We appreciate your feedback.`;
   }
 
+  const params = (typeof window !== "undefined" && window.location) ? new URLSearchParams(window.location.search) : null;
+  const urlTicketId = params ? (params.get("ticket") || params.get("tid") || params.get("t")) : null;
+
   if (state.myTicket) {
     state.myTicket.customerRating = rating;
     state.myTicket.customerRatingSubmittedAt = Date.now();
     SafeStorage.setJSON(`waitlink_ticket_${state.config.slug}`, state.myTicket);
   }
 
-  if (db && state.config.slug && state.myTicket && state.myTicket.id) {
-    const tid = state.myTicket.id;
+  const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
+
+  if (db && state.config.slug && tid) {
     mutateQueueAtomic((serverQueue, serverHistory) => {
-      const target = serverHistory.find(h => h.id === tid);
+      let target = serverHistory.find(h => h && (h.id === tid || h.id === decodeURIComponent(tid)));
+      if (!target) {
+        target = serverQueue.find(q => q && (q.id === tid || q.id === decodeURIComponent(tid)));
+      }
+      if (!target && state.myTicket && state.myTicket.customerName) {
+        target = serverHistory.find(h => h && h.customerName === state.myTicket.customerName);
+      }
       if (target) {
         target.customerRating = rating;
         target.customerRatingSubmittedAt = Date.now();
@@ -7169,6 +7179,10 @@ function submitCustomerStarRating(rating) {
         return { queue: serverQueue, history: serverHistory, affectedItem: target };
       }
       return null;
+    }).then(res => {
+      if (res && res.success) {
+        renderAll();
+      }
     }).catch(err => console.warn("Failed to persist rating to Firestore:", err));
   }
 
@@ -15220,8 +15234,9 @@ function openCustomerAuditModal(id) {
   setElText("audit-modal-subtitle", `Complete Lifecycle Activity Audit Log • ${state.config.shopName || 'Shop'}`);
 
   const isDeskCanc = isItemCancelledByDesk(item);
-  const statusTag = item.status === "called" ? "Called (Completed)" : (item.status === "cancelled" ? (isDeskCanc ? "Desk Cancelled" : "Left Line (Customer)") : "In Active Queue");
-  const statusColor = item.status === "called" ? "#10b981" : (item.status === "cancelled" ? (isDeskCanc ? "#f59e0b" : "#f43f5e") : "#06b6d4");
+  const isCompleted = item.status === "completed" || item.status === "called" || item.status === "served";
+  const statusTag = isCompleted ? "Completed (Served)" : (item.status === "cancelled" ? (isDeskCanc ? "Desk Cancelled" : "Left Line (Customer)") : (item.status === "in_service" ? "In Service" : "In Active Queue"));
+  const statusColor = isCompleted ? "#10b981" : (item.status === "cancelled" ? (isDeskCanc ? "#f59e0b" : "#f43f5e") : (item.status === "in_service" ? "#8b5cf6" : "#06b6d4"));
 
   const statusEl = document.getElementById("audit-modal-status");
   if (statusEl) {
