@@ -6192,6 +6192,19 @@ function logCustomerActivity(item, action, title, detail, icon = "📌", actor =
     }
   }
 
+  const existingIdx = item.activities.findIndex(a => a && a.action === action);
+  if (existingIdx !== -1 && (action === "customer_feedback" || action === "customer_rated")) {
+    item.activities[existingIdx] = {
+      action,
+      title,
+      detail,
+      timestamp: Date.now(),
+      icon,
+      actor: resolvedActor
+    };
+    return;
+  }
+
   item.activities.push({
     action,
     title,
@@ -6333,6 +6346,23 @@ function getItemActivities(item) {
   // Sort activities chronologically by timestamp
   list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
+  // Deduplicate any duplicate activities (e.g. parallel client + Cloud Function audit entries)
+  const seenFeedbackNotes = new Set();
+  const seenRatingValues = new Set();
+  list = list.filter(act => {
+    if (!act) return false;
+    if (act.action === "customer_feedback") {
+      const key = String(act.detail || "feedback").trim();
+      if (seenFeedbackNotes.has(key)) return false;
+      seenFeedbackNotes.add(key);
+    } else if (act.action === "customer_rated") {
+      const key = String(act.detail || "rated").trim();
+      if (seenRatingValues.has(key)) return false;
+      seenRatingValues.add(key);
+    }
+    return true;
+  });
+
   return list;
 }
 
@@ -6396,11 +6426,22 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
 
   const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
 
+  const resolvedFeedbackComment = item.customerFeedbackComment || (() => {
+    if (Array.isArray(item.activities)) {
+      const fb = item.activities.find(a => a && a.action === "customer_feedback");
+      if (fb && fb.detail) {
+        const m = fb.detail.match(/Customer Note:\s*"([^"]+)"/);
+        return m ? m[1] : fb.detail;
+      }
+    }
+    return null;
+  })();
+
   if (item.customerRating) {
     statusTagHtml += ` <span class="badge-survey-rating" style="margin-left: 4px; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" data-tooltip="Customer rated ${item.customerRating}/5 stars on Web Ticket">⭐ ${item.customerRating}/5</span>`;
   }
-  if (item.customerFeedbackComment) {
-    statusTagHtml += ` <span class="badge-feedback-comment" style="margin-left: 4px; background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;" data-tooltip="Customer Note: &quot;${escapeHtml(item.customerFeedbackComment)}&quot;" onclick="openCustomerAuditModal('${safeId}')">💬 Feedback Note</span>`;
+  if (resolvedFeedbackComment) {
+    statusTagHtml += ` <span class="badge-feedback-comment" style="margin-left: 4px; background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;" data-tooltip="Customer Note: &quot;${escapeHtml(resolvedFeedbackComment)}&quot;" onclick="openCustomerAuditModal('${safeId}')">💬 Feedback Note</span>`;
   } else if (!item.customerRating && item.surveySent) {
     statusTagHtml += ` <span class="badge-survey-sent" style="margin-left: 4px;" data-tooltip="Review survey link delivered">⭐ Survey Sent</span>`;
   } else if (!item.customerRating && item.surveyFailed) {

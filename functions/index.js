@@ -2761,14 +2761,21 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
             if (comment) {
               held.customerFeedbackComment = comment;
               held.customerFeedbackSubmittedAt = Date.now();
-              held.activities.push({
-                action: "customer_feedback",
-                title: "Private Customer Feedback",
-                detail: `Customer Note: "${comment}"`,
-                timestamp: Date.now(),
-                icon: "💬",
-                actor: "Customer (Private Feedback)"
-              });
+              if (!Array.isArray(held.activities)) held.activities = [];
+              const existingFb = held.activities.find(a => a && a.action === "customer_feedback");
+              if (!existingFb) {
+                held.activities.push({
+                  action: "customer_feedback",
+                  title: "Private Customer Feedback",
+                  detail: `Customer Note: "${comment}"`,
+                  timestamp: Date.now(),
+                  icon: "💬",
+                  actor: "Customer (Private Feedback)"
+                });
+              } else {
+                existingFb.detail = `Customer Note: "${comment}"`;
+                existingFb.timestamp = Date.now();
+              }
             }
           }
           const capped = history.slice(0, 50);
@@ -2786,14 +2793,20 @@ exports.publicQueueAction = onRequest({ cors: true, maxInstances: 20 }, async (r
           held.customerFeedbackComment = comment;
           held.customerFeedbackSubmittedAt = Date.now();
           if (!Array.isArray(held.activities)) held.activities = [];
-          held.activities.push({
-            action: "customer_feedback",
-            title: "Private Customer Feedback",
-            detail: `Customer Note: "${comment}"`,
-            timestamp: Date.now(),
-            icon: "💬",
-            actor: "Customer (Private Feedback)"
-          });
+          const existingFb = held.activities.find(a => a && a.action === "customer_feedback");
+          if (!existingFb) {
+            held.activities.push({
+              action: "customer_feedback",
+              title: "Private Customer Feedback",
+              detail: `Customer Note: "${comment}"`,
+              timestamp: Date.now(),
+              icon: "💬",
+              actor: "Customer (Private Feedback)"
+            });
+          } else {
+            existingFb.detail = `Customer Note: "${comment}"`;
+            existingFb.timestamp = Date.now();
+          }
           const capped = history.slice(0, 50);
           tx.update(shopRef, {
             queue,
