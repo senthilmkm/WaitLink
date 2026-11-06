@@ -385,6 +385,8 @@ it("waitlinkarchitecture.html documents all 12 Cloud Functions & SMS Volume Quot
   assert.ok(archHtml.includes("verifyStripeTopUpSession"), "Missing verifyStripeTopUpSession in architecture doc");
   assert.ok(archHtml.includes("adjustShopSmsCredits"), "Missing adjustShopSmsCredits in architecture doc");
   assert.ok(archHtml.includes("createStripePortalSession"), "Missing createStripePortalSession in architecture doc");
+  assert.ok(archHtml.includes("stripeWebhook"), "Missing stripeWebhook in architecture doc");
+  assert.ok(archHtml.includes("Stripe Webhook Synchronization"), "Missing Stripe Webhook Synchronization in architecture doc");
   assert.ok(archHtml.includes("SMS Outbound Volume Quotas, Metering") && archHtml.includes("Top-Up Engine"), "Missing SMS Quota architecture section");
 });
 
