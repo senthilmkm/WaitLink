@@ -1820,8 +1820,10 @@ function subscribeFirestore(forceResubscribe = false) {
         state.config.surveySettings = { ...state.config.surveySettings, ...data.surveySettings };
       }
 
-      // Re-hydrate any active Mode 2 background survey timers from history
-      if (Array.isArray(state.history)) {
+      // Re-hydrate any active Mode 2 background survey timers from history (strictly for authenticated operators on non-demo shops)
+      const isOperatorSession = !!(state.user || state.isStaffSession);
+      const isDemoShop = state.isDemoMode || state.config.slug === "main-st-barbers" || (state.config.slug || '').includes("demo");
+      if (!isDemoShop && isOperatorSession && Array.isArray(state.history)) {
         const surv = (state.config && state.config.surveySettings) || {};
         if (surv.enabled && surv.mode === "mode_2") {
           state.history.forEach(item => {
@@ -3329,7 +3331,9 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   // If customer has phone number, dispatch SMS
   if (finalItem.phone) {
     if (!isPaid) {
-      showToast(`⭐ Service completed for ${finalItem.customerName} (Review prompt active on Web Ticket • Pro required for automated SMS)`);
+      if (triggerSource !== "auto_timer") {
+        showToast(`⭐ Service completed for ${finalItem.customerName} (Review prompt active on Web Ticket • Pro required for automated SMS)`);
+      }
       return { success: true, item: finalItem };
     }
 
@@ -3344,7 +3348,9 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
       .then(res => {
         if (res.success) {
           logCustomerActivity(finalItem, "sms_survey_delivered", "Survey SMS Delivered", `Delivered review link to ${finalItem.phone}`, "📲", "WaitLink Twilio Bot (Automated)");
-          showToast(`⭐ Review survey sent via SMS to ${finalItem.customerName} (${finalItem.phone})`);
+          if (triggerSource !== "auto_timer") {
+            showToast(`⭐ Review survey sent via SMS to ${finalItem.customerName} (${finalItem.phone})`);
+          }
         } else {
           logCustomerActivity(finalItem, "sms_survey_failed", "Survey SMS Failed", `Twilio SMS dispatch failed: ${res.error || "Carrier dispatch error"}`, "⚠️", "WaitLink Twilio Bot");
           finalItem.surveySent = false;
@@ -3352,11 +3358,15 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
           finalItem.surveyError = res.error || "SMS failed";
           saveData();
           renderAll();
-          showToast(`⚠️ Could not text review survey: ${res.error || "SMS failed"}`);
+          if (triggerSource !== "auto_timer") {
+            showToast(`⚠️ Could not text review survey: ${res.error || "SMS failed"}`);
+          }
         }
       });
   } else {
-    showToast(`⭐ Service marked complete for ${finalItem.customerName} (Review prompt active on their Web Ticket)`);
+    if (triggerSource !== "auto_timer") {
+      showToast(`⭐ Service marked complete for ${finalItem.customerName} (Review prompt active on their Web Ticket)`);
+    }
   }
 
   return { success: true, item: finalItem };
@@ -5486,8 +5496,10 @@ async function saveOwnerSettings() {
   saveConfig();
   saveData();
 
-  // Synchronize any active Mode 2 background survey timers with newly saved durations/buffers
-  if (Array.isArray(state.history)) {
+  // Synchronize any active Mode 2 background survey timers with newly saved durations/buffers (strictly for authenticated operators on non-demo shops)
+  const isOperatorSession = !!(state.user || state.isStaffSession);
+  const isDemoShop = state.isDemoMode || state.config.slug === "main-st-barbers" || (state.config.slug || '').includes("demo");
+  if (!isDemoShop && isOperatorSession && Array.isArray(state.history)) {
     const surv = (state.config && state.config.surveySettings) || {};
     if (surv.enabled && surv.mode === "mode_2") {
       state.history.forEach(item => {
