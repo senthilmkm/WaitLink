@@ -20,6 +20,7 @@ const SECRETS = (typeof window !== "undefined" && window.WAITLINK_SECRETS) ? win
 // Centralized Twilio SMS Gateway Sender Number
 const DEFAULT_TWILIO_FROM = SECRETS.TWILIO_FROM_PHONE || "+18039027464";
 const DEFAULT_SERVE_NOW_SMS = "Hi {name}! Your turn at {shop} is ready now. Your ticket: {link}";
+const DEFAULT_SURVEY_SMS_TEMPLATE = "Thanks for visiting {shop}! How was your experience today? Rate us here: {link}";
 
 // =========================================================================
 // RUNTIME ERROR BOUNDARIES & RESILIENCE GUARDS
@@ -3047,6 +3048,241 @@ function resetServeNowTemplateDefault() {
   }
 }
 
+// =========================================================================
+// POST-SERVICE SURVEY & REVIEW BOOSTER ENGINE
+// =========================================================================
+
+function formatSurveySms(template, customerName, shopName, destinationUrl) {
+  const defaultTpl = DEFAULT_SURVEY_SMS_TEMPLATE;
+  const tpl = (template && template.trim()) ? template.trim() : defaultTpl;
+  let formatted = tpl
+    .replace(/\{name\}|\{customerName\}/gi, customerName || "Customer")
+    .replace(/\{shop\}|\{shopName\}/gi, shopName || "our shop");
+
+  const effectiveLink = destinationUrl || "https://waitlink.app";
+  const hasLinkTag = /\{link\}|\{surveyUrl\}|\{url\}/i.test(formatted);
+  if (hasLinkTag) {
+    formatted = formatted.replace(/\{link\}|\{surveyUrl\}|\{url\}/gi, effectiveLink);
+  } else if (destinationUrl) {
+    formatted += ` Rate us: ${destinationUrl}`;
+  }
+  return formatted.trim();
+}
+
+function resetSurveyTemplateDefault() {
+  const input = document.getElementById("owner-survey-sms-template");
+  if (input) {
+    input.value = DEFAULT_SURVEY_SMS_TEMPLATE;
+    showToast("Survey template reset to default");
+  }
+}
+
+function getSurveyAutoDelayMinutes(item) {
+  let baseDuration = 0;
+  if (item && item.selectedServiceDurationMin && parseInt(item.selectedServiceDurationMin, 10) > 0) {
+    baseDuration = parseInt(item.selectedServiceDurationMin, 10);
+  } else {
+    baseDuration = parseInt((state.config && state.config.estBaseWaitMin), 10) || 20;
+  }
+  const surv = (state.config && state.config.surveySettings) || {};
+  const buffer = parseInt(surv.bufferMinutes, 10) || 0;
+  return Math.max(1, baseDuration + buffer);
+}
+
+// Map for active survey timers to prevent memory leaks
+if (typeof state !== "undefined") {
+  state.activeSurveyTimers = state.activeSurveyTimers || new Map();
+}
+
+function scheduleSurveyAutoTimer(item) {
+  if (!item || !item.id) return;
+  const surv = (state.config && state.config.surveySettings) || {};
+  if (!surv.enabled || surv.mode !== "mode_2" || !surv.destinationUrl) return;
+  if (item.surveySent) return;
+
+  state.activeSurveyTimers = state.activeSurveyTimers || new Map();
+
+  const delayMin = getSurveyAutoDelayMinutes(item);
+  const targetTs = (item.calledAt || Date.now()) + (delayMin * 60 * 1000);
+  const remainingMs = Math.max(0, targetTs - Date.now());
+
+  if (state.activeSurveyTimers.has(item.id)) {
+    clearTimeout(state.activeSurveyTimers.get(item.id));
+    state.activeSurveyTimers.delete(item.id);
+  }
+
+  const timerId = setTimeout(() => {
+    if (state.activeSurveyTimers) state.activeSurveyTimers.delete(item.id);
+    triggerSurveyForTicket(item.id, "auto_timer");
+  }, remainingMs);
+
+  state.activeSurveyTimers.set(item.id, timerId);
+}
+
+function clearSurveyAutoTimer(ticketId) {
+  if (state.activeSurveyTimers && state.activeSurveyTimers.has(ticketId)) {
+    clearTimeout(state.activeSurveyTimers.get(ticketId));
+    state.activeSurveyTimers.delete(ticketId);
+  }
+}
+
+async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk") {
+  const ticketId = typeof ticketOrId === "object" ? ticketOrId.id : ticketOrId;
+  if (!ticketId) return { success: false, error: "Missing ticket ID" };
+
+  clearSurveyAutoTimer(ticketId);
+
+  const surv = (state.config && state.config.surveySettings) || {};
+  const isPaid = isPaidTier() || isDemoScreenOrGuestDemo();
+  const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
+  const operatorLabel = getCurrentOperatorLabel();
+
+  let targetItem = null;
+
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const item = serverHistory.find(h => h.id === ticketId);
+    if (!item) return null;
+
+    // Deduplication check: prevent duplicate dispatch
+    if (item.surveySent) return null;
+
+    item.surveySent = true;
+    item.surveySentAt = Date.now();
+    item.surveyTrigger = triggerSource;
+    item.status = "completed";
+    if (!item.completedAt) {
+      item.completedAt = Date.now();
+      item.completedBy = operatorName;
+      if (item.calledAt) {
+        item.serviceDurationMin = Math.max(1, Math.round((item.completedAt - item.calledAt) / 60000));
+      }
+    }
+
+    logCustomerActivity(item, "survey_dispatched", "Review Survey Sent", `Post-service survey & review link triggered (${triggerSource})`, "⭐", operatorLabel);
+
+    targetItem = item;
+    return {
+      queue: serverQueue,
+      history: serverHistory,
+      affectedItem: item
+    };
+  });
+
+  if (!mutationResult.success && !targetItem) {
+    const local = findCustomerRecord(ticketId);
+    if (local && local.surveySent) {
+      return { success: false, error: "Survey was already sent to this customer." };
+    }
+  }
+
+  const finalItem = targetItem || findCustomerRecord(ticketId);
+  if (!finalItem) return { success: false, error: "Customer record not found" };
+
+  renderAll();
+
+  // If customer has phone number, dispatch SMS
+  if (finalItem.phone && surv.destinationUrl && isPaid) {
+    const shopName = state.config.shopName || "our shop";
+    const customTpl = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
+    const smsMsg = formatSurveySms(customTpl, finalItem.customerName, shopName, surv.destinationUrl);
+
+    sendTwilioSms(finalItem.phone, smsMsg, { ticketId: finalItem.id, triggerType: "SURVEY_REVIEW" })
+      .then(res => {
+        if (res.success) {
+          logCustomerActivity(finalItem, "sms_survey_delivered", "Survey SMS Delivered", `Delivered review link to ${finalItem.phone}`, "📲", "WaitLink Twilio Bot (Automated)");
+          showToast(`⭐ Review survey sent via SMS to ${finalItem.customerName} (${finalItem.phone})`);
+        } else {
+          showToast(`⚠️ Could not text review survey: ${res.error || "SMS failed"}`);
+        }
+      });
+  } else if (!finalItem.phone) {
+    showToast(`⭐ Service marked complete for ${finalItem.customerName} (Review prompt active on their Web Ticket)`);
+  }
+
+  return { success: true, item: finalItem };
+}
+
+function manualTriggerSurvey(id) {
+  triggerSurveyForTicket(id, "manual_override");
+}
+
+async function completeService(id) {
+  const item = findCustomerRecord(id);
+  if (!item) return;
+
+  const now = Date.now();
+  const operatorName = state.isStaffSession ? (state.staffUser.displayName || state.staffUser.username) : ((state.user && state.user.displayName) ? state.user.displayName : ((state.user && state.user.email) ? state.user.email : "Front Desk"));
+  const operatorLabel = getCurrentOperatorLabel();
+
+  let completedItem = null;
+
+  const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
+    const target = serverHistory.find(h => h.id === id);
+    if (!target) return null;
+
+    target.status = "completed";
+    target.completedAt = now;
+    target.completedBy = operatorName;
+    const calledTime = target.calledAt || target.serviceStartedAt || now;
+    target.serviceDurationMin = Math.max(1, Math.round((now - calledTime) / 60000));
+
+    logCustomerActivity(target, "completed", "Service Completed", `Finished service with ${operatorName} (${target.serviceDurationMin}m in service)`, "✅", operatorLabel);
+
+    completedItem = target;
+    return {
+      queue: serverQueue,
+      history: serverHistory,
+      affectedItem: target
+    };
+  });
+
+  if (mutationResult.success) {
+    showToast(`✅ Service completed for ${item.customerName} (${completedItem ? completedItem.serviceDurationMin : 1}m)`);
+    const surv = (state.config && state.config.surveySettings) || {};
+    if (surv.enabled && surv.destinationUrl) {
+      triggerSurveyForTicket(id, "service_complete_button");
+    } else {
+      renderAll();
+    }
+  }
+}
+
+function openReviewQrModal(id) {
+  const item = findCustomerRecord(id);
+  const modal = document.getElementById("review-qr-modal");
+  const subtitle = document.getElementById("review-qr-subtitle");
+  const canvas = document.getElementById("review-qr-canvas");
+  if (!modal || !canvas) return;
+
+  const surv = (state.config && state.config.surveySettings) || {};
+  const reviewUrl = surv.destinationUrl || (getPublicUrl() + "&mode=public");
+
+  if (subtitle && item) {
+    subtitle.textContent = `Have ${item.customerName} scan this code to leave a Google Review at checkout`;
+  }
+
+  canvas.innerHTML = "";
+  if (typeof QRCode !== "undefined") {
+    new QRCode(canvas, {
+      text: reviewUrl,
+      width: 180,
+      height: 180,
+      colorDark: "#090d16",
+      colorLight: "#ffffff",
+      correctLevel: (typeof QRCode.CorrectLevel !== "undefined") ? QRCode.CorrectLevel.M : 0
+    });
+  } else {
+    canvas.innerHTML = `<a href="${escapeHtml(reviewUrl)}" target="_blank" style="color: #0284c7; font-weight: 700; word-break: break-all;">${escapeHtml(reviewUrl)}</a>`;
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function closeReviewQrModal() {
+  const modal = document.getElementById("review-qr-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
 async function sendTwilioSms(toPhone, messageBody, metadata = {}) {
   const e164Phone = formatPhoneE164(toPhone);
   if (!e164Phone) {
@@ -3305,17 +3541,31 @@ async function callCustomer(id) {
 
     const item = serverQueue[idx];
     const durationMin = Math.max(1, Math.round((now - (item.checkedInAt || now)) / (1000 * 60)));
+    const surv = (state.config && state.config.surveySettings) || {};
+    const isMode1 = !!(surv.enabled && surv.mode === "mode_1");
+    const itemStatus = isMode1 ? "in_service" : "called";
+
     const historyItem = {
       ...item,
-      status: "called",
+      status: itemStatus,
       calledAt: now,
-      completedAt: now,
+      serviceStartedAt: now,
+      completedAt: isMode1 ? null : now,
       calledBy: operatorName,
-      completedBy: operatorName,
-      waitDurationMin: durationMin
+      completedBy: isMode1 ? null : operatorName,
+      waitDurationMin: durationMin,
+      serviceDurationMin: 0,
+      surveySent: false
     };
 
-    logCustomerActivity(historyItem, "called", "Called Customer", `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`, "📞", operatorLabel);
+    logCustomerActivity(
+      historyItem,
+      isMode1 ? "in_service" : "called",
+      isMode1 ? "Started Service" : "Called Customer",
+      isMode1 ? `Seated in chair/bay for service by ${operatorName} (Waited ${durationMin}m)` : `Called to front desk for service by ${operatorName} (Waited ${durationMin}m)`,
+      isMode1 ? "💈" : "📞",
+      operatorLabel
+    );
 
     serverQueue.splice(idx, 1);
     serverHistory.unshift(historyItem);
@@ -3347,6 +3597,12 @@ async function callCustomer(id) {
   const targetItem = dispatchedHistoryItem || localItem;
   const durationMin = targetItem.waitDurationMin || Math.max(1, Math.round((now - (targetItem.checkedInAt || now)) / (1000 * 60)));
 
+  // If Mode 2 is active, schedule auto-timer
+  const surv = (state.config && state.config.surveySettings) || {};
+  if (surv.enabled && surv.mode === "mode_2" && surv.destinationUrl) {
+    scheduleSurveyAutoTimer(targetItem);
+  }
+
   // Trigger Twilio SMS notification if customer provided cell phone number
   if (targetItem.phone) {
     const shopName = state.config.shopName || "our shop";
@@ -3371,7 +3627,8 @@ async function callCustomer(id) {
       });
   }
 
-  showToast(`Called ${targetItem.customerName} (Waited ${durationMin}m)`, 6000, {
+  const actionMsg = isMode1 ? `Started service for ${targetItem.customerName}` : `Called ${targetItem.customerName} (Waited ${durationMin}m)`;
+  showToast(actionMsg, 6000, {
     actionText: "↩️ Undo",
     onAction: () => { requeueCustomer(targetItem.id, "front"); }
   });
@@ -3520,7 +3777,7 @@ function getStartOfTodayTimestamp() {
 function getTodayCalledVisits() {
   const startOfToday = getStartOfTodayTimestamp();
   return state.history.filter(item => {
-    if (item.status !== "called") return false;
+    if (item.status !== "called" && item.status !== "in_service" && item.status !== "completed") return false;
     const targetTs = item.calledAt || item.checkedInAt;
     return targetTs && targetTs >= startOfToday;
   });
@@ -4291,6 +4548,80 @@ function updateTierFeatureLockdown() {
       rollingBadge.title = "Dynamic Rolling QR Codes are enabled with your Pro plan";
     }
   }
+
+  // 5. Post-Service Survey & Review Booster Lockdown (Pro Feature)
+  const surveyCard = document.getElementById("owner-survey-card");
+  const surveyBanner = document.getElementById("survey-locked-banner");
+  const surveyBadge = document.getElementById("survey-badge-pill");
+  const surveyEnabled = document.getElementById("owner-survey-enabled");
+  const surveyUrl = document.getElementById("owner-survey-url");
+  const surveyMode1 = document.getElementById("owner-survey-mode-1");
+  const surveyMode2 = document.getElementById("owner-survey-mode-2");
+  const surveyBuffer = document.getElementById("owner-survey-buffer");
+  const surveySms = document.getElementById("owner-survey-sms-template");
+
+  if (surveyCard) {
+    if (!isPaid) {
+      surveyCard.classList.add("locked");
+      if (surveyBanner) {
+        if (isDemo || !isAuthenticated) {
+          surveyBanner.classList.add("hidden");
+          surveyBanner.style.setProperty("display", "none", "important");
+        } else {
+          surveyBanner.classList.remove("hidden");
+          surveyBanner.style.display = "";
+        }
+      }
+      if (surveyBadge) {
+        surveyBadge.className = "badge-pro-pill locked";
+        surveyBadge.textContent = "🔒 PRO";
+      }
+      if (surveyEnabled) surveyEnabled.disabled = true;
+      if (surveyUrl) {
+        surveyUrl.disabled = true;
+        surveyUrl.readOnly = true;
+        surveyUrl.placeholder = "🔒 Locked: Upgrade to Pro Business ($15/mo) to enable review booster";
+      }
+      if (surveyMode1) surveyMode1.disabled = true;
+      if (surveyMode2) surveyMode2.disabled = true;
+      if (surveyBuffer) surveyBuffer.disabled = true;
+      if (surveySms) {
+        surveySms.disabled = true;
+        surveySms.readOnly = true;
+      }
+      surveyCard.onclick = (e) => {
+        if (e.target && e.target.closest && e.target.closest(".btn-upgrade-action")) return;
+        showToast("🔒 Post-Service Customer Surveys is a Pro Business feature ($15/mo). Upgrade to unlock!");
+        openUpgradeModal();
+      };
+      surveyCard.style.cursor = "pointer";
+    } else {
+      surveyCard.classList.remove("locked");
+      if (surveyBanner) {
+        surveyBanner.classList.add("hidden");
+        surveyBanner.style.display = "none";
+      }
+      if (surveyBadge) {
+        surveyBadge.className = "badge-pro-pill unlocked";
+        surveyBadge.textContent = "✓ UNLOCKED";
+      }
+      if (surveyEnabled) surveyEnabled.disabled = false;
+      if (surveyUrl) {
+        surveyUrl.disabled = false;
+        surveyUrl.readOnly = false;
+        surveyUrl.placeholder = "e.g. https://g.page/r/your-shop/review or https://forms.gle/...";
+      }
+      if (surveyMode1) surveyMode1.disabled = false;
+      if (surveyMode2) surveyMode2.disabled = false;
+      if (surveyBuffer) surveyBuffer.disabled = false;
+      if (surveySms) {
+        surveySms.disabled = false;
+        surveySms.readOnly = false;
+      }
+      surveyCard.onclick = null;
+      surveyCard.style.cursor = "default";
+    }
+  }
 }
 
 // Onboarding Modal Plan Selection Handler
@@ -4612,6 +4943,35 @@ function populateOwnerInputs() {
     secTabBtn.style.display = (!platformRollingActive && !platformGpsActive) ? "none" : "inline-flex";
   }
 
+  // Populate Survey & Review Booster Inputs
+  const surv = (state.config && state.config.surveySettings) || {};
+  const surveyEnabledInput = document.getElementById("owner-survey-enabled");
+  const surveyUrlInput = document.getElementById("owner-survey-url");
+  const surveyMode1Input = document.getElementById("owner-survey-mode-1");
+  const surveyMode2Input = document.getElementById("owner-survey-mode-2");
+  const surveyBufferInput = document.getElementById("owner-survey-buffer");
+  const surveySmsInput = document.getElementById("owner-survey-sms-template");
+
+  if (surveyEnabledInput && document.activeElement !== surveyEnabledInput) {
+    surveyEnabledInput.checked = !!surv.enabled;
+  }
+  if (surveyUrlInput && document.activeElement !== surveyUrlInput) {
+    surveyUrlInput.value = surv.destinationUrl || "";
+  }
+  if (surveyMode1Input && surveyMode2Input) {
+    if (surv.mode === "mode_2") {
+      surveyMode2Input.checked = true;
+    } else {
+      surveyMode1Input.checked = true;
+    }
+  }
+  if (surveyBufferInput && document.activeElement !== surveyBufferInput) {
+    surveyBufferInput.value = String(surv.bufferMinutes !== undefined ? surv.bufferMinutes : 5);
+  }
+  if (surveySmsInput && document.activeElement !== surveySmsInput) {
+    surveySmsInput.value = surv.customSms || DEFAULT_SURVEY_SMS_TEMPLATE;
+  }
+
   // Enforce tier lockdown on inputs immediately after populating
   updateTierFeatureLockdown();
 }
@@ -4756,6 +5116,33 @@ async function saveOwnerSettings() {
     return;
   }
 
+  // Survey Booster Settings
+  const surveyEnabledCheck = document.getElementById("owner-survey-enabled");
+  const surveyUrlInputVal = document.getElementById("owner-survey-url");
+  const surveyMode2Check = document.getElementById("owner-survey-mode-2");
+  const surveyBufferSelect = document.getElementById("owner-survey-buffer");
+  const surveySmsInputVal = document.getElementById("owner-survey-sms-template");
+
+  const surveyEnabled = surveyEnabledCheck ? surveyEnabledCheck.checked : false;
+  const surveyUrl = surveyUrlInputVal ? surveyUrlInputVal.value.trim() : "";
+  const surveyMode = (surveyMode2Check && surveyMode2Check.checked) ? "mode_2" : "mode_1";
+  const surveyBuffer = surveyBufferSelect ? (parseInt(surveyBufferSelect.value, 10) || 0) : 5;
+  const surveySms = surveySmsInputVal ? surveySmsInputVal.value.trim() : DEFAULT_SURVEY_SMS_TEMPLATE;
+
+  // Paywall Gate: Post-Service Surveys (Pro / Enterprise feature)
+  if (surveyEnabled && !isPaid) {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (saveIcon) saveIcon.textContent = "💾";
+      if (saveText) saveText.textContent = "Save Shop Profile & Branding";
+      saveBtn.style.opacity = "1";
+    }
+    if (saveStatus) saveStatus.style.display = "none";
+    showToast("🔒 Post-Service Customer Surveys & Review Booster is a Pro Business feature ($15/mo). Upgrade to unlock!");
+    openUpgradeModal();
+    return;
+  }
+
   // Preserve existing security settings if adminLocked
   const existingSec = state.config.security || {};
   let finalSec = { ...existingSec };
@@ -4800,6 +5187,13 @@ async function saveOwnerSettings() {
     isActive,
     status: isActive ? "active" : "paused",
     security: finalSec,
+    surveySettings: {
+      enabled: surveyEnabled,
+      mode: surveyMode,
+      destinationUrl: surveyUrl,
+      bufferMinutes: surveyBuffer,
+      customSms: surveySms || DEFAULT_SURVEY_SMS_TEMPLATE
+    },
     twilio: {
       enabled: twilioEnable,
       accountSid: twilioAccountSid,
@@ -5048,6 +5442,56 @@ function renderQueue() {
 
   updateViewModeToggleUI();
   const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+
+  // Render In-Service Panel (Mode 1: Active Chair Mode)
+  const inServiceContainer = document.getElementById("in-service-container");
+  const surv = (state.config && state.config.surveySettings) || {};
+  const isMode1 = !!(surv.enabled && surv.mode === "mode_1");
+  const inServiceItems = (state.history || []).filter(h => h.status === "in_service");
+
+  if (inServiceContainer) {
+    if (isMode1 && inServiceItems.length > 0) {
+      inServiceContainer.classList.remove("hidden");
+      inServiceContainer.innerHTML = `
+        <div class="in-service-panel">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div style="font-weight: 800; color: #10b981; font-size: 0.95rem; display: flex; align-items: center; gap: 0.45rem;">
+              <span class="pulse-dot" style="background: #10b981;"></span>
+              <span>💈 IN SERVICE NOW (${inServiceItems.length})</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Active in Chair / Bay</span>
+          </div>
+          <div class="in-service-grid">
+            ${inServiceItems.map(item => {
+              const startTs = item.serviceStartedAt || item.calledAt || Date.now();
+              const elapsedMin = Math.max(1, Math.round((Date.now() - startTs) / 60000));
+              const serviceName = item.selectedServiceName ? ` — ${escapeHtml(item.selectedServiceName)}` : "";
+              const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
+              return `
+                <div class="in-service-card">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem;">
+                      <strong style="color: #fff; font-size: 1.05rem;">${escapeHtml(item.customerName)}</strong>
+                      <span style="font-size: 0.75rem; color: #10b981; font-weight: 700;">⏱️ ${elapsedMin}m in service</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                      ${item.phone ? '📞 ' + escapeHtml(item.phone) : 'In-Person (No phone)'} ${serviceName}
+                    </div>
+                  </div>
+                  <button type="button" class="btn-complete-service" onclick="completeService('${safeId}')">
+                    <span>✅</span> <span>Complete Service &amp; Send Survey</span>
+                  </button>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    } else {
+      inServiceContainer.classList.add("hidden");
+      inServiceContainer.innerHTML = "";
+    }
+  }
 
   if (state.queue.length === 0) {
     queueContainer.className = "queue-grid";
@@ -5352,6 +5796,7 @@ async function markCalledAsNoShow(id) {
   });
 
   if (confirmed) {
+    clearSurveyAutoTimer(item.id);
     item.status = "cancelled";
     item.cancelledBy = "desk";
     item.completedAt = Date.now();
@@ -5549,15 +5994,21 @@ function getItemActivities(item) {
 
 function buildHistoryRowHtml(item, isOwnerView = false) {
   const checkInFormatted = item.checkedInAt ? formatHistoryDateTime(item.checkedInAt) : "--";
-  const isCalled = item.status === "called";
+  const isCalled = item.status === "called" || item.status === "in_service" || item.status === "completed";
   const outcomeFormatted = isCalled
     ? (item.calledAt ? `<span style="color: #10b981; font-weight: 600;">📞 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--")
     : (item.cancelledAt
       ? `<span style="color: #f43f5e; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.cancelledAt)}</span><span class="history-time-compact">${formatTime(item.cancelledAt)}</span></span>`
       : (item.calledAt ? `<span style="color: #f59e0b; font-weight: 500;">🚫 <span class="history-time-full">${formatHistoryDateTime(item.calledAt)}</span><span class="history-time-compact">${formatTime(item.calledAt)}</span></span>` : "--"));
 
+  const surv = (state.config && state.config.surveySettings) || {};
   let statusTagHtml = `<span class="status-tag called" data-tooltip="Customer called for service">Called</span>`;
-  if (!isCalled) {
+
+  if (item.status === "in_service") {
+    statusTagHtml = `<span class="status-tag called" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1.5px solid #10b981;" data-tooltip="Customer currently in chair/bay for service"><span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span> 💈 In Service</span>`;
+  } else if (item.status === "completed") {
+    statusTagHtml = `<span class="status-tag" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);" data-tooltip="Service completed"><span class="tag-full">✅ Completed</span><span class="tag-compact">✅ Done</span></span>`;
+  } else if (!isCalled) {
     const byDesk = isItemCancelledByDesk(item);
     if (!byDesk) {
       statusTagHtml = `<span class="status-tag cancelled" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);" data-tooltip="Customer tapped Leave Line on their phone"><span class="tag-full">📱 Left Line</span><span class="tag-compact">📱 Left</span></span>`;
@@ -5574,6 +6025,22 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
         </span>
       </div>
     `;
+  } else if (item.status === "called" && !item.surveySent && surv.enabled && surv.mode === "mode_2") {
+    const delayMin = getSurveyAutoDelayMinutes(item);
+    const elapsed = Math.floor((Date.now() - (item.calledAt || Date.now())) / 60000);
+    const remaining = Math.max(0, delayMin - elapsed);
+    statusTagHtml = `
+      <div style="display: inline-flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
+        <span class="status-tag called" data-tooltip="Customer called for service">Called</span>
+        <span class="status-tag" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px;" data-tooltip="Automated survey countdown">
+          ⏱️ ${remaining > 0 ? 'Survey in ' + remaining + 'm' : 'Survey Ready'}
+        </span>
+      </div>
+    `;
+  }
+
+  if (item.surveySent) {
+    statusTagHtml += ` <span class="badge-survey-sent" style="margin-left: 4px;" data-tooltip="Review survey link delivered">⭐ Survey Sent</span>`;
   }
 
   const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
@@ -5588,7 +6055,7 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
       </button>
     `;
   }
-  if (isCalled) {
+  if (isCalled && item.status !== "completed") {
     menuItemsHtml += `
       <button type="button" class="row-action-item noshow-item" onclick="toggleRowActionMenu(event, '${rowMenuId}'); markCalledAsNoShow('${safeId}');" title="Mark customer as No-Show">
         <span class="action-icon">✕</span>
@@ -5599,8 +6066,34 @@ function buildHistoryRowHtml(item, isOwnerView = false) {
 
   const hasMenu = !!menuItemsHtml;
 
+  // Survey action buttons
+  let surveyActionButtons = '';
+  if (item.status === "in_service") {
+    surveyActionButtons = `
+      <button type="button" class="btn-complete-service" onclick="completeService('${safeId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+        ✅ Complete
+      </button>
+    `;
+  } else if (surv.enabled) {
+    if (!item.surveySent && surv.mode === "mode_2") {
+      surveyActionButtons += `
+        <button type="button" class="btn-row-survey" onclick="manualTriggerSurvey('${safeId}')" title="Send post-service review survey now">
+          ✉️ Send Survey
+        </button>
+      `;
+    }
+    if (!item.phone && surv.destinationUrl) {
+      surveyActionButtons += `
+        <button type="button" class="btn-row-survey-qr" onclick="openReviewQrModal('${safeId}')" title="Show scannable review QR for checkout">
+          📲 Show QR
+        </button>
+      `;
+    }
+  }
+
   const actionCell = `
     <div class="row-actions-group">
+      ${surveyActionButtons}
       <button type="button" class="btn-row-primary" onclick="promptRequeueCustomer('${safeId}')" title="${isCalled ? 'Put customer back in active queue' : 'Reinstate customer to queue'}">
         ↩️ ${isCalled ? 'Re-Queue' : 'Reinstate'}
       </button>
@@ -6253,14 +6746,46 @@ function updateActiveTicketTimer() {
     }
   } else {
     updateTicketStepTracker(3);
-    const isCompleted = state.myTicket && (state.myTicket.status === "completed" || (state.history.some(h => h.id === state.myTicket.id && h.status === "completed")));
+    const isCompleted = state.myTicket && (
+      state.myTicket.status === "completed" || 
+      state.myTicket.surveySent ||
+      (state.history.some(h => h.id === state.myTicket.id && (h.status === "completed" || h.surveySent)))
+    );
     if (isCompleted) {
       if (badgeEl) { badgeEl.style.display = "block"; badgeEl.textContent = "🎉 VISIT COMPLETED"; badgeEl.style.color = "#10b981"; }
       if (posEl) { posEl.textContent = "Service Finished ✓"; posEl.style.color = "#10b981"; }
       if (subEl) subEl.textContent = `Thank you for visiting ${state.config.shopName || 'WaitLink Shop'}! Have a wonderful day.`;
       if (ticketCard) ticketCard.style.border = "2px solid #10b981";
       if (ticketTimerEl) ticketTimerEl.textContent = "Completed";
+
+      // Render 5-star Google Review box if survey enabled and review URL configured
+      const surv = (state.config && state.config.surveySettings) || {};
+      let surveyBox = document.getElementById("ticket-survey-review-box");
+      if (surv.enabled && surv.destinationUrl) {
+        if (!surveyBox && ticketCard) {
+          surveyBox = document.createElement("div");
+          surveyBox.id = "ticket-survey-review-box";
+          surveyBox.className = "ticket-survey-box";
+          ticketCard.appendChild(surveyBox);
+        }
+        if (surveyBox) {
+          surveyBox.style.display = "block";
+          surveyBox.innerHTML = `
+            <div style="font-size: 1.35rem; margin-bottom: 0.35rem;">⭐⭐⭐⭐⭐</div>
+            <h4 style="color: #fff; margin: 0 0 0.35rem 0; font-size: 1.05rem;">How was your experience today?</h4>
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 0.85rem 0;">Takes 15 seconds to share your review.</p>
+            <a href="${escapeHtml(surv.destinationUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; text-decoration: none; font-weight: 700; width: 100%;">
+              <span>⭐</span> <span>Leave a Review on Google</span>
+            </a>
+          `;
+        }
+      } else if (surveyBox) {
+        surveyBox.style.display = "none";
+      }
     } else {
+      const surveyBox = document.getElementById("ticket-survey-review-box");
+      if (surveyBox) surveyBox.style.display = "none";
+
       // Visit / Consultation In Progress: Hide redundant top badge so only bolded status below name shows
       if (badgeEl) badgeEl.style.display = "none";
       const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
@@ -14174,6 +14699,7 @@ async function requeueActiveCustomerToEnd(id) {
 }
 
 async function requeueCustomer(id, mode = "end") {
+  clearSurveyAutoTimer(id);
   const operatorLabel = getCurrentOperatorLabel();
   let custName = "Customer";
 

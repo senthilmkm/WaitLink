@@ -794,6 +794,9 @@
         </div>
       </div>
 
+      <!-- In Service Now Section (Rendered dynamically in Mode 1) -->
+      <div id="in-service-container" class="in-service-container hidden" style="margin-bottom: 1.25rem;"></div>
+
       <div id="queue-list" class="queue-grid">
         <!-- Empty state default -->
         <div class="empty-state">
@@ -971,6 +974,9 @@
           </button>
           <button type="button" class="settings-subtab-btn" data-subtab="marketing" onclick="switchSettingsSubTab('marketing')">
             <span>📣</span> <span>Marketing</span>
+          </button>
+          <button type="button" class="settings-subtab-btn" data-subtab="surveys" onclick="switchSettingsSubTab('surveys')">
+            <span>⭐</span> <span>Reviews &amp; Surveys</span>
           </button>
           <button type="button" class="settings-subtab-btn" id="settings-subtab-btn-security" data-subtab="security" onclick="switchSettingsSubTab('security')">
             <span>🛡️</span> <span>Queue Security</span>
@@ -1474,6 +1480,117 @@
                     </button>
                     <span id="owner-gps-coords-display" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">Not Set</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. REVIEWS & SURVEYS TAB PANE -->
+          <div class="settings-subtab-pane hidden" id="settings-pane-surveys">
+            <div class="card pro-gated-section" id="owner-survey-card" style="padding: 1.25rem; border-radius: var(--radius-md);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--border-color);">
+                <div>
+                  <strong style="color: #10b981; font-size: 1.05rem; display: flex; align-items: center; gap: 0.45rem;">
+                    <span>⭐</span> Post-Service Survey &amp; Review Booster
+                  </strong>
+                  <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                    Automatically capture 5-star Google Reviews or client feedback right after their service is completed.
+                  </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <span id="survey-badge-pill" class="badge-pro-pill locked">🔒 PRO</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="owner-survey-enabled">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Locked Banner for Free Starter Accounts -->
+              <div id="survey-locked-banner" class="locked-feature-banner" style="margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                  <div>
+                    <strong style="color: #f59e0b; display: flex; align-items: center; gap: 0.35rem; font-size: 0.88rem;">
+                      <span>🔒</span> Pro Business Feature ($15/mo)
+                    </strong>
+                    <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.15rem 0 0 0;">
+                      Upgrade to automatically text survey links to walk-in clients and display 5-star review prompts on their tickets.
+                    </p>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-accent btn-upgrade-action" onclick="openUpgradeModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.35rem 0.9rem;">
+                    ⚡ Upgrade to Unlock
+                  </button>
+                </div>
+              </div>
+
+              <!-- Survey Settings Controls -->
+              <div id="survey-controls-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                <!-- Review / Survey URL -->
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="owner-survey-url" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.35rem;">
+                    <span>🔗</span> Google Review Link or Feedback URL *
+                  </label>
+                  <input type="url" id="owner-survey-url" placeholder="e.g. https://g.page/r/your-shop/review or https://forms.gle/..." style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.88rem;">
+                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    💡 Tip: Paste your Google Business &quot;Ask for Reviews&quot; short link to boost your Google Maps ranking.
+                  </span>
+                </div>
+
+                <!-- Mode Selection -->
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 0.5rem;">
+                    ⚙️ Completion Workflow Mode
+                  </label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem;">
+                    <label class="survey-mode-card" style="display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer;">
+                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-1" value="mode_1" checked style="margin-top: 0.2rem;">
+                      <div>
+                        <strong style="color: #fff; font-size: 0.85rem; display: block;">Mode 1: Active Chair Mode (Manual Complete)</strong>
+                        <span style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.35; display: block; margin-top: 0.2rem;">
+                          Shows an <strong>&quot;IN SERVICE NOW&quot;</strong> card on desk. Desk taps &quot;Complete Service&quot; when customer finishes, tracking actual cut time and sending survey.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label class="survey-mode-card" style="display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.85rem; background: rgba(15, 23, 42, 0.4); border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer;">
+                      <input type="radio" name="owner-survey-mode" id="owner-survey-mode-2" value="mode_2" style="margin-top: 0.2rem;">
+                      <div>
+                        <strong style="color: #fff; font-size: 0.85rem; display: block;">Mode 2: Auto-Complete Mode (Smart Delay)</strong>
+                        <span style="color: var(--text-muted); font-size: 0.75rem; line-height: 1.35; display: block; margin-top: 0.2rem;">
+                          1-tap fast flow. Survey sends automatically after shop&#39;s service duration. Includes a manual <strong>[ ✉️ Send Survey Now ]</strong> override in Visit History.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Buffer Setting for Mode 2 -->
+                <div id="survey-buffer-container" class="form-group" style="margin-bottom: 0;">
+                  <label for="owner-survey-buffer" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 0.35rem;">
+                    ⏱️ Mode 2 Auto-Send Delay Buffer
+                  </label>
+                  <select id="owner-survey-buffer" style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem;">
+                    <option value="0">Exact Service Time (e.g. standard service duration)</option>
+                    <option value="5" selected>+5 Minutes Buffer (Recommended — allows client to exit &amp; check out)</option>
+                    <option value="10">+10 Minutes Buffer</option>
+                    <option value="15">+15 Minutes Buffer</option>
+                  </select>
+                </div>
+
+                <!-- Custom SMS Template -->
+                <div class="form-group" style="margin-bottom: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="owner-survey-sms-template" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
+                      💬 Custom Survey SMS Message
+                    </label>
+                    <button type="button" class="btn-text-link" onclick="resetSurveyTemplateDefault()" style="font-size: 0.72rem; color: #06b6d4; cursor: pointer;">
+                      Reset Default
+                    </button>
+                  </div>
+                  <textarea id="owner-survey-sms-template" rows="2" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem; resize: vertical;" placeholder="Thanks for visiting {shop}! How was your experience today? Rate us here: {link}"></textarea>
+                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Available tags: <code>{name}</code>, <code>{shop}</code>, <code>{link}</code>
+                  </span>
                 </div>
               </div>
             </div>
@@ -2758,6 +2875,24 @@ Dedicated Support Manager
       <div class="modal-footer" style="justify-content: space-between;">
         <button class="btn btn-secondary btn-sm" onclick="clearPricingAuditLogs()">Clear Audit History</button>
         <button class="btn btn-primary btn-sm" onclick="closePricingAuditModal()">Close Audit Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-Person Review QR Code Modal for Checkout -->
+  <div id="review-qr-modal" class="modal-backdrop hidden" onclick="if(event.target === this) closeReviewQrModal()">
+    <div class="modal-card" style="max-width: 380px; text-align: center; padding: 1.75rem; border-radius: var(--radius-md);">
+      <button type="button" class="modal-close" onclick="closeReviewQrModal()" aria-label="Close modal">✕</button>
+      <div style="font-size: 2.25rem; margin-bottom: 0.35rem;">⭐</div>
+      <h3 style="margin: 0 0 0.35rem 0; font-size: 1.25rem; color: #fff;">Customer Review QR</h3>
+      <p id="review-qr-subtitle" style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.25rem 0;">
+        Have customer scan this QR code on their phone to leave a Google Review at checkout
+      </p>
+      <div id="review-qr-canvas-box" style="background: #ffffff; padding: 1rem; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; min-width: 200px; min-height: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
+        <div id="review-qr-canvas"></div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; justify-content: center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeReviewQrModal()" style="font-weight: 700; padding: 0.45rem 1.25rem;">Done / Close</button>
       </div>
     </div>
   </div>
