@@ -85,6 +85,9 @@ const SafeStorage = {
     }
     return fallback;
   },
+  setJSON(key, value) {
+    return this.set(key, value);
+  },
   set(key, value) {
     const valStr = typeof value === "string" ? value : JSON.stringify(value);
     _inMemoryLocalStore.set(String(key), valStr);
@@ -7309,21 +7312,29 @@ function submitCustomerStarRating(rating) {
   const tid = (state.myTicket && state.myTicket.id) ? state.myTicket.id : urlTicketId;
 
   // 1. Immediately update in-memory active ticket & safe storage
-  if (state.myTicket) {
-    state.myTicket.customerRating = rating;
-    state.myTicket.customerRatingSubmittedAt = Date.now();
-    logCustomerActivity(state.myTicket, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
-    SafeStorage.setJSON(`waitlink_ticket_${cleanSlug}`, state.myTicket);
+  try {
+    if (state.myTicket) {
+      state.myTicket.customerRating = rating;
+      state.myTicket.customerRatingSubmittedAt = Date.now();
+      logCustomerActivity(state.myTicket, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+      SafeStorage.set(`waitlink_ticket_${cleanSlug}`, state.myTicket);
+    }
+  } catch (storeErr) {
+    console.warn("SafeStorage ticket rating update note:", storeErr);
   }
 
   // 2. Also update local in-memory history record if present
-  if (Array.isArray(state.history)) {
-    const localTarget = state.history.find(h => h && (h.id === tid || (state.myTicket && h.customerName === state.myTicket.customerName)));
-    if (localTarget) {
-      localTarget.customerRating = rating;
-      localTarget.customerRatingSubmittedAt = Date.now();
-      logCustomerActivity(localTarget, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+  try {
+    if (Array.isArray(state.history)) {
+      const localTarget = state.history.find(h => h && (h.id === tid || (state.myTicket && h.customerName === state.myTicket.customerName)));
+      if (localTarget) {
+        localTarget.customerRating = rating;
+        localTarget.customerRatingSubmittedAt = Date.now();
+        logCustomerActivity(localTarget, "customer_rated", "Customer Star Rating", `Customer submitted ${rating}/5 stars on Web Ticket`, "⭐", "Customer Self-Service");
+      }
     }
+  } catch (histErr) {
+    console.warn("Local history rating update note:", histErr);
   }
 
   // 3. Cloud Function backend redundancy (runs independently of client db status)
