@@ -781,6 +781,176 @@ it("Demo Shop Storefront QR Code Poster Access & 1-Tap Demo Generator Link Integ
   assert.ok(appJs.includes("Storefront QR Poster (scan with your phone)"), "generateDemoPitch must include Storefront QR Poster call-to-action");
 });
 
+it("Viral Referral Badge & 1-Tap Social Story Card Generator: DOM, CSS Theme Resilience & 100% Controller Coverage", () => {
+  // 1. Verify DOM elements in index.html
+  assert.ok(html.includes('id="public-viral-referral-badge"'), "index.html missing #public-viral-referral-badge in Public View");
+  assert.ok(html.includes('onclick="handleViralBadgeClick()"'), "index.html missing handleViralBadgeClick on viral badge");
+  assert.ok(html.includes('id="desk-social-story-btn"'), "index.html missing #desk-social-story-btn on Front Desk");
+  assert.ok(html.includes('id="marketing-card-social-story"'), "index.html missing #marketing-card-social-story in Marketing tab");
+  assert.ok(html.includes('id="btn-marketing-social-story"'), "index.html missing #btn-marketing-social-story");
+  assert.ok(html.includes('id="modal-social-story-card"'), "index.html missing #modal-social-story-card modal");
+  assert.ok(html.includes('id="social-story-preview-card"'), "index.html missing #social-story-preview-card");
+  assert.ok(html.includes('id="story-card-icon"'), "index.html missing #story-card-icon");
+  assert.ok(html.includes('id="story-card-shop-name"'), "index.html missing #story-card-shop-name");
+  assert.ok(html.includes('id="story-card-status-badge"'), "index.html missing #story-card-status-badge");
+  assert.ok(html.includes('id="story-card-wait-display"'), "index.html missing #story-card-wait-display");
+  assert.ok(html.includes('id="story-card-queue-summary"'), "index.html missing #story-card-queue-summary");
+  assert.ok(html.includes('id="story-card-qr-box"'), "index.html missing #story-card-qr-box");
+  assert.ok(html.includes('id="story-card-url"'), "index.html missing #story-card-url");
+  assert.ok(html.includes('id="social-story-canvas"'), "index.html missing #social-story-canvas");
+  assert.ok(html.includes('id="story-caption-preview"'), "index.html missing #story-caption-preview");
+  assert.ok(html.includes('id="btn-download-story-png"'), "index.html missing #btn-download-story-png");
+  assert.ok(html.includes('id="btn-share-story-native"'), "index.html missing #btn-share-story-native");
+  assert.ok(html.includes('id="btn-copy-story-caption"'), "index.html missing #btn-copy-story-caption");
+
+  // 2. Verify CSS rules for Dark Mode, Light Mode, and Responsive Mobile
+  assert.ok(css.includes(".viral-referral-badge"), "style.css missing .viral-referral-badge");
+  assert.ok(css.includes(".social-story-modal-card"), "style.css missing .social-story-modal-card");
+  assert.ok(css.includes(".social-story-preview-card"), "style.css missing .social-story-preview-card");
+  assert.ok(css.includes('html[data-theme="light"] .viral-referral-badge'), "style.css missing light mode rule for .viral-referral-badge");
+  assert.ok(css.includes('html[data-theme="light"] #modal-social-story-card .modal-card'), "style.css missing light mode rule for #modal-social-story-card");
+  assert.ok(css.includes('html[data-theme="light"] #desk-social-story-btn'), "style.css missing light mode rule for #desk-social-story-btn");
+
+  // 3. Verify app.js function definitions and exports
+  assert.ok(appJs.includes("function handleViralBadgeClick()"), "app.js missing handleViralBadgeClick");
+  assert.ok(appJs.includes("function buildSocialStoryPayload()"), "app.js missing buildSocialStoryPayload");
+  assert.ok(appJs.includes("function renderSocialStoryCanvas("), "app.js missing renderSocialStoryCanvas");
+  assert.ok(appJs.includes("function openSocialStoryModal()"), "app.js missing openSocialStoryModal");
+  assert.ok(appJs.includes("function closeSocialStoryModal()"), "app.js missing closeSocialStoryModal");
+  assert.ok(appJs.includes("function copySocialStoryCaption()"), "app.js missing copySocialStoryCaption");
+  assert.ok(appJs.includes("function downloadSocialStoryImage()"), "app.js missing downloadSocialStoryImage");
+  assert.ok(appJs.includes("function shareSocialStoryStatus()"), "app.js missing shareSocialStoryStatus");
+
+  // 4. Execute sandboxed functional tests for 100% branch coverage of viral & story functions
+  const vm = require("vm");
+  const startMarker = "function handleViralBadgeClick()";
+  const endMarker = "window.handleViralBadgeClick = handleViralBadgeClick;";
+  const startIdx = appJs.indexOf(startMarker);
+  const endIdx = appJs.indexOf(endMarker);
+  assert.ok(startIdx !== -1 && endIdx > startIdx, "Must locate viral & social story block in app.js");
+  const blockCode = appJs.slice(startIdx, endIdx);
+
+  const mockEls = {};
+  const getMockEl = (id) => {
+    if (!mockEls[id]) {
+      mockEls[id] = {
+        id,
+        textContent: "",
+        innerHTML: "",
+        width: 0,
+        height: 0,
+        classList: {
+          _set: new Set(["hidden"]),
+          add(c) { this._set.add(c); },
+          remove(c) { this._set.delete(c); },
+          contains(c) { return this._set.has(c); }
+        },
+        querySelector: () => null,
+        getContext: () => ({
+          createLinearGradient: () => ({ addColorStop: () => {} }),
+          fillRect: () => {},
+          strokeRect: () => {},
+          fillText: () => {},
+          drawImage: () => {}
+        }),
+        toDataURL: () => "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+      };
+    }
+    return mockEls[id];
+  };
+
+  let lastSwitchedView = null;
+  let createShopOpened = false;
+  let lastToast = "";
+  let clipboardCopied = "";
+
+  const sandbox = {
+    state: {
+      config: {
+        shopName: "Apex Barber Studio",
+        slug: "apex-barber",
+        industry: "salon",
+        clinicalPrivacyEnabled: false,
+        isActive: true
+      },
+      queue: []
+    },
+    calculateEstimatedWait: () => (sandbox.state.queue.length * 20),
+    detectIndustryFromText: () => "salon",
+    switchView: (v) => { lastSwitchedView = v; },
+    renderHomeView: () => {},
+    openCreateShopModal: () => { createShopOpened = true; },
+    showToast: (msg) => { lastToast = msg; },
+    setElText: (id, val) => { getMockEl(id).textContent = val; },
+    encodeURIComponent,
+    document: {
+      getElementById: (id) => getMockEl(id),
+      createElement: () => ({ click: () => {} }),
+      body: { appendChild: () => {}, removeChild: () => {} }
+    },
+    window: {
+      scrollTo: () => {},
+      addEventListener: () => {}
+    },
+    navigator: {
+      clipboard: {
+        writeText: (txt) => {
+          clipboardCopied = txt;
+          return Promise.resolve();
+        }
+      }
+    }
+  };
+
+  vm.runInNewContext(blockCode, sandbox);
+
+  // Case A: handleViralBadgeClick switches to home and triggers onboarding
+  sandbox.handleViralBadgeClick();
+  assert.strictEqual(lastSwitchedView, "home", "handleViralBadgeClick must switch to home view");
+  assert.strictEqual(createShopOpened, true, "handleViralBadgeClick must trigger openCreateShopModal");
+  assert.strictEqual(sandbox.state.forceShowMarketingHome, true, "handleViralBadgeClick must set forceShowMarketingHome");
+
+  // Case B: Empty queue (NO WAIT) payload
+  const emptyPayload = sandbox.buildSocialStoryPayload();
+  assert.strictEqual(emptyPayload.waitDisplay, "NO WAIT ⚡");
+  assert.strictEqual(emptyPayload.queueCount, 0);
+  assert.strictEqual(emptyPayload.icon, "💈");
+  assert.ok(emptyPayload.caption.includes("https://waitlink.app?s=apex-barber&view=public"));
+
+  // Case C: Busy queue (2 waiting -> ~ 40 MINS) + open/close modal + canvas + download + copy + share
+  sandbox.state.queue = [{ id: "1" }, { id: "2" }];
+  sandbox.openSocialStoryModal();
+  assert.strictEqual(getMockEl("modal-social-story-card").classList.contains("hidden"), false, "Modal must open");
+  assert.strictEqual(getMockEl("story-card-wait-display").textContent, "~ 40 MINS");
+  assert.strictEqual(getMockEl("story-card-queue-summary").textContent, "2 people currently in line");
+  assert.strictEqual(getMockEl("social-story-canvas").width, 1080);
+  assert.strictEqual(getMockEl("social-story-canvas").height, 1920);
+
+  const dlRes = sandbox.downloadSocialStoryImage();
+  assert.strictEqual(dlRes, true, "downloadSocialStoryImage must succeed with valid canvas");
+
+  const copiedText = sandbox.copySocialStoryCaption();
+  assert.strictEqual(copiedText, clipboardCopied, "copySocialStoryCaption must write caption to clipboard");
+
+  const shareFallbackRes = sandbox.shareSocialStoryStatus();
+  assert.strictEqual(shareFallbackRes, false, "shareSocialStoryStatus must fall back to clipboard when navigator.share is absent");
+
+  // Case D: Clinical mode & Paused shop state
+  sandbox.state.config.clinicalPrivacyEnabled = true;
+  sandbox.state.queue = [{ id: "1" }];
+  const clinicalPayload = sandbox.buildSocialStoryPayload();
+  assert.strictEqual(clinicalPayload.icon, "🏥");
+  assert.strictEqual(clinicalPayload.queueSummary, "1 patient currently in line");
+
+  sandbox.state.config.isActive = false;
+  const pausedPayload = sandbox.buildSocialStoryPayload();
+  assert.strictEqual(pausedPayload.isPaused, true);
+  assert.strictEqual(pausedPayload.statusText, "PAUSED • WALK-INS CLOSED");
+
+  sandbox.closeSocialStoryModal();
+  assert.strictEqual(getMockEl("modal-social-story-card").classList.contains("hidden"), true, "closeSocialStoryModal must hide modal");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 

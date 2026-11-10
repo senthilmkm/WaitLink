@@ -103,7 +103,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <!-- Style -->
-  <link rel="stylesheet" href="style.css?v=6.1">
+  <link rel="stylesheet" href="style.css?v=6.2">
   <!-- QRCode.js (Local Bundle) -->
   <script src="qrcode.min.js"></script>
   <!-- Firebase SDKs (Local Bundled Scripts - 100% Tracking Protection Immune) -->
@@ -709,6 +709,9 @@
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="desk-qr-poster-btn" onclick="switchView('poster')" title="View & Print Storefront QR Code Poster" style="border-color: #06b6d4; color: #06b6d4; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); background: rgba(6, 182, 212, 0.08); transition: all 0.2s ease;">
             🖨️ Storefront QR Poster
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="desk-social-story-btn" onclick="openSocialStoryModal()" title="Generate 1-Tap Instagram &amp; Social Story Status Card" style="border-color: rgba(168, 85, 247, 0.5); color: #c084fc; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); background: rgba(168, 85, 247, 0.08); transition: all 0.2s ease;">
+            📸 Share Live Story
           </button>
           <button class="btn-text-sm hidden" id="desk-pwa-install-btn" onclick="triggerPwaInstall()" style="display: none !important;" title="Install WaitLink as full-screen iPad/Tablet Terminal">
             📲 Install Tablet Mode
@@ -1437,6 +1440,19 @@
                   </div>
                   <button type="button" class="btn btn-primary btn-sm" onclick="switchView('poster')" style="width: 100%; font-weight: 700;">🖨️ Open Printable QR Poster</button>
                 </div>
+
+                <!-- Link 3: 1-Tap Social Story Status Card -->
+                <div id="marketing-card-social-story" style="background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-size: 0.75rem; color: #c084fc; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 0.45rem;">
+                      <span>📸</span> 1-Tap Social Story Status Card
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); margin: 0.45rem 0 1rem 0; line-height: 1.45;">
+                      Generate a vertical 9:16 status card with your live wait time and scannable QR code to post on Instagram Stories, Facebook, or WhatsApp Status.
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-marketing-social-story" onclick="openSocialStoryModal()" style="width: 100%; font-weight: 700; border-color: rgba(168, 85, 247, 0.45); color: #c084fc;">📸 Create Live Wait Story Card</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1940,6 +1956,18 @@
             <span id="public-last-updated">Updated just now</span>
             <button class="btn-text-sm" onclick="renderAll()">↻ Refresh</button>
           </div>
+        </div>
+
+        <!-- Viral Referral Badge (Powered by WaitLink) -->
+        <div id="public-viral-referral-badge" class="viral-referral-badge" role="button" tabindex="0" onclick="handleViralBadgeClick()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleViralBadgeClick();}" title="Launch a free live walk-in waitlist for your business in 15 seconds">
+          <div class="viral-badge-left">
+            <span class="viral-badge-icon">⚡</span>
+            <div class="viral-badge-copy">
+              <span class="viral-badge-title">Powered by <strong>WaitLink</strong> Live Queue</span>
+              <span class="viral-badge-sub" id="viral-badge-cta-text">Own a walk-in business? Launch your free waitlist in 15s</span>
+            </div>
+          </div>
+          <span class="viral-badge-arrow">Get Yours Free &rarr;</span>
         </div>
 
         <!-- Official Public Footer & Legal Trust Seal -->
@@ -4477,6 +4505,78 @@ Dedicated Support Manager
     </div>
   </div>
 
+  <!-- Modal: 1-Tap Instagram & Social Story Card Generator -->
+  <div id="modal-social-story-card" class="modal-backdrop hidden" onclick="if(event.target === this) closeSocialStoryModal()">
+    <div class="modal-card social-story-modal-card" role="dialog" aria-modal="true" aria-labelledby="social-story-modal-title">
+      <button type="button" class="close-btn" onclick="closeSocialStoryModal()" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.25rem;" title="Close Modal (Esc)" aria-label="Close Social Story Modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+        <span style="font-size: 1.75rem; background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 0.35rem 0.65rem;">📸</span>
+        <div>
+          <div style="font-size: 0.72rem; font-weight: 800; color: #c084fc; text-transform: uppercase; letter-spacing: 0.06em;">1-Tap Social Promotion</div>
+          <h3 id="social-story-modal-title" style="font-size: 1.25rem; color: var(--text-main); margin: 0; font-weight: 800;">Share Live Wait Story Card</h3>
+        </div>
+      </div>
+
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 1rem 0; line-height: 1.45;">
+        Post this live status card to your Instagram Story, Facebook, or WhatsApp Status so followers can see your wait time and join the line before arriving.
+      </p>
+
+      <!-- 9:16 Vertical Story Card Visual Preview -->
+      <div class="social-story-preview-wrapper">
+        <div id="social-story-preview-card" class="social-story-preview-card">
+          <div class="story-card-top">
+            <div class="story-card-icon" id="story-card-icon">💈</div>
+            <div class="story-card-shop-name" id="story-card-shop-name">MAIN ST BARBERS</div>
+            <div class="story-card-status-badge" id="story-card-status-badge">
+              <span class="pulse-dot"></span> <span id="story-card-status-text">OPEN • WALK-INS WELCOME</span>
+            </div>
+          </div>
+
+          <div class="story-card-center">
+            <div class="story-card-wait-label">CURRENT ESTIMATED WAIT</div>
+            <div class="story-card-wait-display" id="story-card-wait-display">~ 20 MINS</div>
+            <div class="story-card-queue-summary" id="story-card-queue-summary">0 people currently in line</div>
+          </div>
+
+          <div class="story-card-qr-section">
+            <div id="story-card-qr-box" class="story-card-qr-box"></div>
+            <div class="story-card-scan-hint">Scan QR or tap link in bio to check in online</div>
+            <div class="story-card-url" id="story-card-url">waitlink.app?s=main-st-barbers</div>
+          </div>
+
+          <div class="story-card-footer">
+            <span>⏳ Live Queue by <strong>WaitLink.app</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden High-Resolution 1080x1920 Canvas for Crisp PNG Download -->
+      <canvas id="social-story-canvas" width="1080" height="1920" class="hidden" style="display: none;"></canvas>
+
+      <!-- Ready-to-Paste Caption Box -->
+      <div class="social-story-caption-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+          <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em;">Ready-to-Paste Social Caption:</span>
+          <button type="button" class="btn-text-sm" id="btn-copy-story-caption" onclick="copySocialStoryCaption()" style="color: #38bdf8; font-weight: 700; font-size: 0.75rem;">📋 Copy Caption &amp; Link</button>
+        </div>
+        <div id="story-caption-preview" class="story-caption-preview-text">
+          💈 Walk-ins welcome at Main St Barbers! Current wait is ~ 20 MINS. Check live wait time or join the line before arriving: https://waitlink.app?s=main-st-barbers
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="social-story-actions-row">
+        <button type="button" class="btn btn-primary" id="btn-download-story-png" onclick="downloadSocialStoryImage()" style="flex: 1.2; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1rem;">
+          <span>📥</span> <span>Download Story Image</span>
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-share-story-native" onclick="shareSocialStoryStatus()" style="flex: 1; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1rem; border-color: rgba(168, 85, 247, 0.45); color: #c084fc;">
+          <span>📲</span> <span>Share Status</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Account 360° Deep-Dive Slide-Out Drawer & Backdrop -->
   <div id="account-360-backdrop" class="drawer-backdrop hidden" onclick="closeAccount360Drawer()"></div>
   <div id="account-360-drawer" class="drawer-panel hidden">
@@ -4571,6 +4671,6 @@ Dedicated Support Manager
     }
   </script>
   <!-- Main JS -->
-  <script src="app.js?v=11.6"></script>
+  <script src="app.js?v=11.7"></script>
 </body>
 </html>

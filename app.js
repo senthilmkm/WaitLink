@@ -18087,6 +18087,327 @@ function closePwaInstallModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+/* ==========================================================================
+   VIRAL REFERRAL BADGE & 1-TAP SOCIAL STORY CARD GENERATOR
+   ========================================================================== */
+
+function handleViralBadgeClick() {
+  state.forceShowMarketingHome = true;
+  switchView("home");
+  if (typeof renderHomeView === "function") {
+    renderHomeView();
+  }
+  if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      window.scrollTo(0, 0);
+    }
+  }
+  if (typeof openCreateShopModal === "function") {
+    openCreateShopModal();
+  }
+  showToast("⚡ Launch your walk-in waitlist in 15 seconds — Free Forever!");
+}
+
+function buildSocialStoryPayload() {
+  const isClinical = !!(state.config && state.config.clinicalPrivacyEnabled);
+  const shopName = (state.config && state.config.shopName) ? state.config.shopName.trim() : (isClinical ? "Healthcare Clinic" : "Main St Barbers");
+  const slug = (state.config && state.config.slug) ? state.config.slug.trim() : "main-st-barbers";
+  const estWait = typeof calculateEstimatedWait === "function" ? calculateEstimatedWait() : 0;
+  const waitDisplay = estWait > 0 ? `~ ${estWait} MINS` : "NO WAIT ⚡";
+  const queueCount = Array.isArray(state.queue) ? state.queue.length : 0;
+  const isPaused = !!(state.config && (state.config.isActive === false || state.config.status === "paused" || state.config.status === "inactive"));
+  const statusText = isPaused
+    ? "PAUSED • WALK-INS CLOSED"
+    : (isClinical ? "OPEN • PATIENT RECEPTION ACTIVE" : "OPEN • WALK-INS WELCOME");
+
+  let queueSummary = "";
+  if (isPaused) {
+    queueSummary = "Walk-in arrivals temporarily paused";
+  } else if (queueCount === 0) {
+    queueSummary = isClinical ? "Zero wait • Walk right in!" : "Chairs & stations open right now!";
+  } else {
+    const noun = queueCount === 1 ? (isClinical ? "patient" : "person") : (isClinical ? "patients" : "people");
+    queueSummary = `${queueCount} ${noun} currently in line`;
+  }
+
+  const publicUrl = `https://waitlink.app?s=${encodeURIComponent(slug)}&view=public`;
+  const shortUrl = `waitlink.app?s=${slug}`;
+
+  const industryIcons = {
+    salon: "💈",
+    barbershop: "💈",
+    auto: "🚗",
+    autoshop: "🚗",
+    clinic: "🏥",
+    pet: "🐾",
+    petgrooming: "🐾",
+    restaurant: "🍽️",
+    repair: "📱",
+    tattoo: "🖋️",
+    general: "🏢"
+  };
+  const indKey = (state.config && state.config.industry) || (typeof detectIndustryFromText === "function" ? detectIndustryFromText(shopName) : "salon");
+  const icon = isClinical ? "🏥" : (industryIcons[indKey] || "💈");
+
+  const captionWaitPhrase = estWait > 0 ? `Current estimated wait is ${waitDisplay}` : "Zero wait right now — walk right in";
+  const caption = `${icon} Walk-ins welcome at ${shopName}! ${captionWaitPhrase} (${queueCount === 0 ? "No line" : queueCount + " in line"}). Check live wait time or join the line before arriving: ${publicUrl} — Powered by WaitLink.app`;
+
+  return {
+    icon,
+    shopName,
+    slug,
+    estWait,
+    waitDisplay,
+    queueCount,
+    isClinical,
+    isPaused,
+    statusText,
+    queueSummary,
+    publicUrl,
+    shortUrl,
+    caption
+  };
+}
+
+function renderSocialStoryCanvas(payload) {
+  const data = payload || buildSocialStoryPayload();
+  const canvas = document.getElementById("social-story-canvas");
+  if (!canvas || typeof canvas.getContext !== "function") return null;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const W = 1080;
+  const H = 1920;
+  canvas.width = W;
+  canvas.height = H;
+
+  // 1. Deep High-Contrast Story Background Gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, "#0f172a");
+  bgGrad.addColorStop(0.55, "#1e1b4b");
+  bgGrad.addColorStop(1, "#090d16");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Outer card frame
+  ctx.strokeStyle = "rgba(168, 85, 247, 0.45)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(48, 48, W - 96, H - 96);
+
+  // 2. Shop Icon & Name Header
+  ctx.textAlign = "center";
+  ctx.font = "110px sans-serif";
+  ctx.fillText(data.icon, W / 2, 230);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 64px sans-serif";
+  const cleanTitle = String(data.shopName || "MAIN ST BARBERS").toUpperCase().slice(0, 28);
+  ctx.fillText(cleanTitle, W / 2, 340);
+
+  // 3. Status Badge Pill
+  ctx.fillStyle = data.isPaused ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)";
+  ctx.fillRect(W / 2 - 310, 390, 620, 74);
+  ctx.strokeStyle = data.isPaused ? "#fbbf24" : "#34d399";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(W / 2 - 310, 390, 620, 74);
+
+  ctx.fillStyle = data.isPaused ? "#fbbf24" : "#34d399";
+  ctx.font = "bold 30px sans-serif";
+  ctx.fillText(data.statusText, W / 2, 438);
+
+  // 4. Center Wait Time Spotlight Box
+  ctx.fillStyle = "rgba(6, 182, 212, 0.16)";
+  ctx.fillRect(110, 540, W - 220, 430);
+  ctx.strokeStyle = "#06b6d4";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(110, 540, W - 220, 430);
+
+  ctx.fillStyle = "#67e8f9";
+  ctx.font = "bold 32px sans-serif";
+  ctx.fillText("CURRENT ESTIMATED WAIT", W / 2, 625);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 130px sans-serif";
+  ctx.fillText(data.waitDisplay, W / 2, 790);
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "600 40px sans-serif";
+  ctx.fillText(data.queueSummary, W / 2, 895);
+
+  // 5. White QR Code Box (or Draw Existing QR Canvas/Image if Ready)
+  const qrBoxSize = 380;
+  const qrX = (W - qrBoxSize) / 2;
+  const qrY = 1050;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(qrX, qrY, qrBoxSize, qrBoxSize);
+
+  const qrContainer = document.getElementById("story-card-qr-box");
+  if (qrContainer) {
+    const qrCanvas = qrContainer.querySelector("canvas");
+    const qrImg = qrContainer.querySelector("img");
+    try {
+      if (qrCanvas) {
+        ctx.drawImage(qrCanvas, qrX + 24, qrY + 24, qrBoxSize - 48, qrBoxSize - 48);
+      } else if (qrImg && qrImg.complete && qrImg.naturalWidth > 0) {
+        ctx.drawImage(qrImg, qrX + 24, qrY + 24, qrBoxSize - 48, qrBoxSize - 48);
+      }
+    } catch (drawErr) {
+      // Cross-origin or headless canvas fallback safe
+    }
+  }
+
+  // 6. Scan Instructions & Direct URL Pill
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "500 34px sans-serif";
+  ctx.fillText("Scan QR or tap link in bio to check in online", W / 2, 1505);
+
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.fillRect(140, 1545, W - 280, 84);
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(140, 1545, W - 280, 84);
+
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 38px monospace";
+  ctx.fillText(data.shortUrl, W / 2, 1600);
+
+  // 7. Powered by WaitLink.app Viral Watermark Footer
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "bold 34px sans-serif";
+  ctx.fillText("⏳ Live Queue Powered by WaitLink.app", W / 2, 1775);
+
+  return canvas;
+}
+
+function openSocialStoryModal() {
+  const modal = document.getElementById("modal-social-story-card");
+  if (!modal) return;
+
+  const payload = buildSocialStoryPayload();
+
+  setElText("story-card-icon", payload.icon);
+  setElText("story-card-shop-name", payload.shopName.toUpperCase());
+  setElText("story-card-status-text", payload.statusText);
+  setElText("story-card-wait-display", payload.waitDisplay);
+  setElText("story-card-queue-summary", payload.queueSummary);
+  setElText("story-card-url", payload.shortUrl);
+  setElText("story-caption-preview", payload.caption);
+
+  const qrBox = document.getElementById("story-card-qr-box");
+  if (qrBox) {
+    qrBox.innerHTML = "";
+    if (typeof QRCode !== "undefined") {
+      try {
+        new QRCode(qrBox, {
+          text: payload.publicUrl,
+          width: 88,
+          height: 88,
+          colorDark: "#090d16",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : 0
+        });
+      } catch (qrErr) {
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(payload.publicUrl)}&margin=1`;
+        qrBox.innerHTML = `<img src="${qrApiUrl}" alt="Live Waitlist QR Code" width="88" height="88">`;
+      }
+    } else {
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(payload.publicUrl)}&margin=1`;
+      qrBox.innerHTML = `<img src="${qrApiUrl}" alt="Live Waitlist QR Code" width="88" height="88">`;
+    }
+  }
+
+  renderSocialStoryCanvas(payload);
+  modal.classList.remove("hidden");
+}
+
+function closeSocialStoryModal() {
+  const modal = document.getElementById("modal-social-story-card");
+  if (modal) modal.classList.add("hidden");
+}
+
+function copySocialStoryCaption() {
+  const payload = buildSocialStoryPayload();
+  if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    navigator.clipboard.writeText(payload.caption).then(() => {
+      showToast("📋 Social story caption & live waitlist link copied!");
+    }).catch(() => {
+      showToast("📋 Caption & link ready to paste!");
+    });
+  } else {
+    showToast("📋 Social story caption & live waitlist link copied!");
+  }
+  return payload.caption;
+}
+
+function downloadSocialStoryImage() {
+  const payload = buildSocialStoryPayload();
+  const canvas = renderSocialStoryCanvas(payload);
+  if (!canvas || typeof canvas.toDataURL !== "function") {
+    copySocialStoryCaption();
+    return false;
+  }
+
+  try {
+    const dataUrl = canvas.toDataURL("image/png");
+    if (typeof document !== "undefined" && typeof document.createElement === "function") {
+      const link = document.createElement("a");
+      link.download = `WaitLink-Story-${payload.slug || "shop"}.png`;
+      link.href = dataUrl;
+      if (document.body && typeof document.body.appendChild === "function") {
+        document.body.appendChild(link);
+        if (typeof link.click === "function") link.click();
+        document.body.removeChild(link);
+      }
+    }
+    showToast("📥 Story Card PNG downloaded! Ready to post on Instagram or Facebook Stories.");
+    return true;
+  } catch (err) {
+    copySocialStoryCaption();
+    return false;
+  }
+}
+
+function shareSocialStoryStatus() {
+  const payload = buildSocialStoryPayload();
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    navigator.share({
+      title: `${payload.shopName} — Live Walk-In Wait Time`,
+      text: payload.caption,
+      url: payload.publicUrl
+    }).then(() => {
+      showToast("📲 Shared live wait status!");
+    }).catch(() => {
+      copySocialStoryCaption();
+    });
+    return true;
+  }
+  copySocialStoryCaption();
+  return false;
+}
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("keydown", e => {
+    if (e && e.key === "Escape") {
+      const storyModal = document.getElementById("modal-social-story-card");
+      if (storyModal && !storyModal.classList.contains("hidden")) {
+        closeSocialStoryModal();
+      }
+    }
+  });
+}
+
+window.handleViralBadgeClick = handleViralBadgeClick;
+window.buildSocialStoryPayload = buildSocialStoryPayload;
+window.renderSocialStoryCanvas = renderSocialStoryCanvas;
+window.openSocialStoryModal = openSocialStoryModal;
+window.closeSocialStoryModal = closeSocialStoryModal;
+window.copySocialStoryCaption = copySocialStoryCaption;
+window.downloadSocialStoryImage = downloadSocialStoryImage;
+window.shareSocialStoryStatus = shareSocialStoryStatus;
+
 window.isPwaStandalone = isPwaStandalone;
 window.isIosOrIpad = isIosOrIpad;
 window.initPwaSupport = initPwaSupport;
@@ -18227,7 +18548,15 @@ if (typeof module !== "undefined" && module.exports) {
     openAddExtraLocationModal,
     closeAddExtraLocationModal,
     confirmAddExtraLocation,
-    getEnterpriseLocationBillingInfo
+    getEnterpriseLocationBillingInfo,
+    handleViralBadgeClick,
+    buildSocialStoryPayload,
+    renderSocialStoryCanvas,
+    openSocialStoryModal,
+    closeSocialStoryModal,
+    copySocialStoryCaption,
+    downloadSocialStoryImage,
+    shareSocialStoryStatus
   };
 }
 
