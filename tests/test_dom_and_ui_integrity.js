@@ -797,6 +797,7 @@ it("Viral Referral Badge & 1-Tap Social Story Card Generator: DOM, CSS Theme Res
   assert.ok(html.includes('id="story-card-queue-summary"'), "index.html missing #story-card-queue-summary");
   assert.ok(html.includes('id="story-card-qr-box"'), "index.html missing #story-card-qr-box");
   assert.ok(html.includes('id="story-card-url"'), "index.html missing #story-card-url");
+  assert.ok(html.includes('id="story-card-brand-domain"'), "index.html missing #story-card-brand-domain");
   assert.ok(html.includes('id="social-story-canvas"'), "index.html missing #social-story-canvas");
   assert.ok(html.includes('id="story-caption-preview"'), "index.html missing #story-caption-preview");
   assert.ok(html.includes('id="btn-download-story-png"'), "index.html missing #btn-download-story-png");
@@ -810,6 +811,8 @@ it("Viral Referral Badge & 1-Tap Social Story Card Generator: DOM, CSS Theme Res
   assert.ok(css.includes('html[data-theme="light"] .viral-referral-badge'), "style.css missing light mode rule for .viral-referral-badge");
   assert.ok(css.includes('html[data-theme="light"] #modal-social-story-card .modal-card'), "style.css missing light mode rule for #modal-social-story-card");
   assert.ok(css.includes('html[data-theme="light"] #desk-social-story-btn'), "style.css missing light mode rule for #desk-social-story-btn");
+  assert.ok(css.includes('html[data-theme="light"] #social-story-preview-card .story-card-footer strong'), "style.css missing high-specificity light mode override for WaitLink.app brand domain on dark story card");
+  assert.ok(css.includes('html[data-theme="light"] #social-story-preview-card #story-card-brand-domain'), "style.css missing light mode ID override for #story-card-brand-domain");
 
   // 3. Verify app.js function definitions and exports
   assert.ok(appJs.includes("function handleViralBadgeClick()"), "app.js missing handleViralBadgeClick");

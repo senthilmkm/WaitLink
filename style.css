@@ -8978,6 +8978,26 @@ html[data-theme="light"] .btn-service-chip.selected {
   overflow-y: auto;
 }
 
+.social-story-header-icon {
+  font-size: 1.65rem;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  border-radius: 12px;
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.social-story-header-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .social-story-preview-wrapper {
   display: flex;
   justify-content: center;
@@ -8985,8 +9005,8 @@ html[data-theme="light"] .btn-service-chip.selected {
 }
 
 .social-story-preview-card {
-  width: 260px;
-  min-height: 440px;
+  width: 286px;
+  min-height: 450px;
   background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 55%, #090d16 100%) !important;
   border: 2px solid rgba(168, 85, 247, 0.45) !important;
   border-radius: 22px;
@@ -9111,27 +9131,80 @@ html[data-theme="light"] .btn-service-chip.selected {
 }
 
 .story-card-url {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: #38bdf8 !important;
   background: rgba(15, 23, 42, 0.7) !important;
   border: 1px solid rgba(56, 189, 248, 0.35) !important;
-  padding: 0.2rem 0.55rem;
+  padding: 0.22rem 0.55rem;
   border-radius: 6px;
-  word-break: break-all;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .story-card-footer {
   width: 100%;
   padding-top: 0.45rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.68rem;
-  color: #94a3b8 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.72rem;
+  color: #e2e8f0 !important;
 }
 
-.story-card-footer span,
-.story-card-footer strong {
+.story-card-footer span {
   color: #e2e8f0 !important;
+}
+
+.story-card-footer strong,
+#story-card-brand-domain {
+  color: #38bdf8 !important;
+  font-weight: 800 !important;
+}
+
+/* Preserve dark-card high contrast inside #social-story-preview-card even when page is in Light Mode */
+html[data-theme="light"] #social-story-preview-card {
+  background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 55%, #090d16 100%) !important;
+  border: 2px solid rgba(168, 85, 247, 0.55) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-shop-name,
+html[data-theme="light"] #social-story-preview-card .story-card-wait-display {
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-wait-label {
+  color: #67e8f9 !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-queue-summary,
+html[data-theme="light"] #social-story-preview-card .story-card-scan-hint {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-url {
+  background: rgba(15, 23, 42, 0.85) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-footer,
+html[data-theme="light"] #social-story-preview-card .story-card-footer span {
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="light"] #social-story-preview-card .story-card-footer strong,
+html[data-theme="light"] #social-story-preview-card #story-card-brand-domain {
+  color: #38bdf8 !important;
+  font-weight: 800 !important;
+}
+
+html[data-theme="light"] .social-story-header-icon {
+  background: #f3e8ff !important;
+  border-color: #d8b4fe !important;
+}
+
+html[data-theme="light"] .social-story-header-tag {
+  color: #7e22ce !important;
 }
 
 .social-story-caption-box {
