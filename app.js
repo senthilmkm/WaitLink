@@ -10301,6 +10301,27 @@ async function handleOnboardingSubmit(event) {
   switchView("desk");
   showToast(`🎉 Live Waitlist for "${shopName}" Launched!`);
   openRegistrationSuccessModal(shopName, slug, state.user.email);
+
+  // Fire Google Ads / GTM Conversion Event for New Shop Registration
+  try {
+    if (typeof window !== "undefined") {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: "shop_registered",
+        shop_slug: slug,
+        industry: industryKey
+      });
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "sign_up", {
+          method: "shop_onboarding",
+          shop_slug: slug,
+          industry: industryKey
+        });
+      }
+    }
+  } catch (gtagErr) {
+    // Non-blocking analytics call
+  }
 }
 
 let lastRegisteredEmailPayload = null;

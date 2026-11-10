@@ -954,6 +954,26 @@ it("Viral Referral Badge & 1-Tap Social Story Card Generator: DOM, CSS Theme Res
   assert.strictEqual(getMockEl("modal-social-story-card").classList.contains("hidden"), true, "closeSocialStoryModal must hide modal");
 });
 
+it("Google Ads & GTM Container (GTM-WPXCMHG5 & AW-18538969542) installed in index.html and sitelinks", () => {
+  assert.ok(html.includes("https://www.googletagmanager.com/gtm.js?id=GTM-WPXCMHG5"), "index.html must include GTM-WPXCMHG5 script");
+  assert.ok(html.includes("https://www.googletagmanager.com/gtag/js?id=AW-18538969542"), "index.html must include AW-18538969542 script");
+  const sitelinkPages = [
+    "pricing.html",
+    "barbershop-waitlist.html",
+    "clinic-virtual-queue.html",
+    "auto-repair-queue.html",
+    "restaurant-waitlist.html",
+    "comparison.html",
+    "help.html",
+    "faq.html"
+  ];
+  for (const page of sitelinkPages) {
+    const pageContent = fs.readFileSync(path.join(__dirname, "..", page), "utf8");
+    assert.ok(pageContent.includes("GTM-WPXCMHG5"), `${page} must include GTM-WPXCMHG5`);
+    assert.ok(pageContent.includes("AW-18538969542"), `${page} must include AW-18538969542`);
+  }
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
