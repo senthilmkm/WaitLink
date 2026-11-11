@@ -954,23 +954,33 @@ it("Viral Referral Badge & 1-Tap Social Story Card Generator: DOM, CSS Theme Res
   assert.strictEqual(getMockEl("modal-social-story-card").classList.contains("hidden"), true, "closeSocialStoryModal must hide modal");
 });
 
-it("Google Ads & GTM Container (GTM-WPXCMHG5 & AW-18538969542) installed in index.html and sitelinks", () => {
+it("Google Ads, GTM Container (GTM-WPXCMHG5 & AW-18538969542), Sitemap & SEO Industry Pages Integrity", () => {
   assert.ok(html.includes("https://www.googletagmanager.com/gtm.js?id=GTM-WPXCMHG5"), "index.html must include GTM-WPXCMHG5 script");
   assert.ok(html.includes("https://www.googletagmanager.com/gtag/js?id=AW-18538969542"), "index.html must include AW-18538969542 script");
-  const sitelinkPages = [
+  const sitemapXml = fs.readFileSync(path.join(__dirname, "..", "sitemap.xml"), "utf8");
+  const seoAndSitelinkPages = [
     "pricing.html",
     "barbershop-waitlist.html",
+    "salon-spa-waitlist.html",
     "clinic-virtual-queue.html",
+    "vet-pet-grooming-queue.html",
     "auto-repair-queue.html",
+    "retail-pharmacy-queue.html",
+    "tattoo-piercing-waitlist.html",
     "restaurant-waitlist.html",
+    "qr-code-check-in-system.html",
+    "tablesready-yelp-alternative.html",
     "comparison.html",
     "help.html",
     "faq.html"
   ];
-  for (const page of sitelinkPages) {
+  for (const page of seoAndSitelinkPages) {
     const pageContent = fs.readFileSync(path.join(__dirname, "..", page), "utf8");
     assert.ok(pageContent.includes("GTM-WPXCMHG5"), `${page} must include GTM-WPXCMHG5`);
     assert.ok(pageContent.includes("AW-18538969542"), `${page} must include AW-18538969542`);
+    assert.ok(pageContent.includes(`https://waitlink.app/${page}`), `${page} must have canonical URL`);
+    assert.ok(sitemapXml.includes(`https://waitlink.app/${page}`), `sitemap.xml must include ${page}`);
+    assert.ok(html.includes(page), `index.html footer must link to ${page}`);
   }
 });
 
