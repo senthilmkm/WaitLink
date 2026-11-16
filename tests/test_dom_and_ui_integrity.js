@@ -1034,6 +1034,12 @@ it("Hero Create Free Waitlist button preserves high-contrast background and whit
   );
 });
 
+it("Front Desk Staff Login iPad tip box has high-contrast Light Mode override", () => {
+  assert.ok(html.includes('id="staff-ipad-tip-box"'), "index.html missing #staff-ipad-tip-box");
+  assert.ok(css.includes('html[data-theme="light"] .staff-ipad-tip-box'), "style.css missing Light Mode override for .staff-ipad-tip-box");
+  assert.ok(css.includes('html[data-theme="light"] [style*="color: #bae6fd"]'), "style.css missing Light Mode override for #bae6fd inline text");
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
