@@ -984,6 +984,45 @@ it("Google Ads, GTM Container (GTM-WPXCMHG5 & AW-18538969542), Sitemap & SEO Ind
   }
 });
 
+it("All public HTML pages (including About, Privacy, Terms, Cookies, Reset Password) default to Light Theme", () => {
+  const allPublicHtmlPages = [
+    "index.html",
+    "about.html",
+    "privacy.html",
+    "terms.html",
+    "cookies.html",
+    "reset-password.html",
+    "contact.html",
+    "pricing.html",
+    "comparison.html",
+    "pitch.html",
+    "help.html",
+    "faq.html",
+    "barbershop-waitlist.html",
+    "salon-spa-waitlist.html",
+    "restaurant-waitlist.html",
+    "auto-repair-queue.html",
+    "clinic-virtual-queue.html",
+    "vet-pet-grooming-queue.html",
+    "retail-pharmacy-queue.html",
+    "tattoo-piercing-waitlist.html",
+    "qr-code-check-in-system.html",
+    "tablesready-yelp-alternative.html"
+  ];
+  for (const page of allPublicHtmlPages) {
+    const pageContent = fs.readFileSync(path.join(__dirname, "..", page), "utf8");
+    const hasLightDefault =
+      pageContent.includes('data-theme="light"') ||
+      pageContent.includes('|| "light"') ||
+      pageContent.includes("|| 'light'");
+    assert.ok(hasLightDefault, `${page} must default to Light Theme`);
+    assert.ok(
+      pageContent.includes('document.documentElement.setAttribute("data-theme"'),
+      `${page} must initialize data-theme early in <head>`
+    );
+  }
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
