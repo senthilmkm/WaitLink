@@ -1023,6 +1023,17 @@ it("All public HTML pages (including About, Privacy, Terms, Cookies, Reset Passw
   }
 });
 
+it("Hero Create Free Waitlist button preserves high-contrast background and white text on hover", () => {
+  assert.ok(
+    css.includes(".btn.btn-primary.btn-hero-primary:hover"),
+    "style.css must define explicit high-contrast hover state for .btn-hero-primary"
+  );
+  assert.ok(
+    !css.includes("\n.hero-card-create:hover {"),
+    "style.css must scope .hero-card-create:hover to .hero-card.hero-card-create:hover so it never turns button background white on hover"
+  );
+});
+
 console.log(`\n📊 RESULTS: ${passed} PASSED, ${failed} FAILED\n`);
 if (failed > 0) process.exit(1);
 
