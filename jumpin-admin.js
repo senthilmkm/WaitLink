@@ -17,16 +17,50 @@
     node.textContent = value == null ? "" : String(value);
   }
 
-  function row(doc, label, onClick) {
-    const button = doc.createElement("button");
+  function el(doc, tag, className, value) {
+    const node = doc.createElement(tag);
+    if (className) node.className = className;
+    if (value != null) node.textContent = String(value);
+    return node;
+  }
+
+  function pillBtn(doc, label, tone, onClick) {
+    const button = el(doc, "button", "admin-btn" + (tone ? " " + tone : ""), label);
     button.type = "button";
-    button.className = "textish";
-    button.textContent = label;
     button.addEventListener("click", onClick);
     return button;
   }
 
-  function fill(doc, node, rows, make) {
+  function seatsLabel(count, suffix) {
+    return count + (count === 1 ? " seat" : " seats") + (suffix ? " " + suffix : "");
+  }
+
+  function formatWhen(departAt) {
+    if (!departAt) return "";
+    return new Date(departAt).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+
+  function buildRideCard(doc, ride, badgeText, metaLines, actions) {
+    const card = el(doc, "div", "admin-card");
+    const top = el(doc, "div", "admin-card-top");
+    const route = ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId;
+    top.appendChild(el(doc, "div", "admin-route", route));
+    if (badgeText) top.appendChild(el(doc, "span", "admin-badge", badgeText));
+    card.appendChild(top);
+    metaLines.forEach(function (line) {
+      if (line.text) card.appendChild(el(doc, "div", line.cls, line.text));
+    });
+    if (ride.note) card.appendChild(el(doc, "div", "admin-note", ride.note));
+    if (actions && actions.length) {
+      const bar = el(doc, "div", "admin-actions");
+      actions.forEach(function (act) { bar.appendChild(pillBtn(doc, act.label, act.tone, act.onClick)); });
+      card.appendChild(bar);
+    }
+    return card;
+  }
+
+  function fill(doc, node, countNode, rows, make) {
+    if (countNode) countNode.textContent = rows.length ? String(rows.length) : "";
     if (!node) return;
     node.textContent = "";
     if (!rows.length) {
@@ -45,46 +79,33 @@
     const pending = doc.getElementById("jumpin-pending");
     const upcoming = doc.getElementById("jumpin-upcoming");
     const blocked = doc.getElementById("jumpin-blocked");
-    fill(doc, pending, (lists && lists.pending) || [], function (ride) {
-      const wrap = doc.createElement("div");
-      const waiting = [
-        ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId,
-        ride.driverName || "",
-        ride.seatsLeft == null ? "" : ride.seatsLeft + " seats",
-        ride.note || ""
-      ].filter(Boolean).join(" · ");
-      wrap.appendChild(row(doc, waiting, function () {}));
-      if (cloud) {
-        wrap.appendChild(row(doc, "Approve", function () { cloud.review(ride.rideId, "approve").then(cloud.refresh); }));
-        wrap.appendChild(row(doc, "Decline", function () { cloud.review(ride.rideId, "decline").then(cloud.refresh); }));
-        wrap.appendChild(row(doc, "Cancel trip", function () { cloud.adminCancel(ride.rideId).then(cloud.refresh); }));
-      }
-      return wrap;
+    fill(doc, pending, doc.getElementById("jumpin-pending-count"), (lists && lists.pending) || [], function (ride) {
+      const badge = ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft, "");
+      const meta = [{ cls: "admin-meta muted", text: ride.driverName || "" }];
+      const actions = cloud ? [
+        { label: "Approve", tone: "primary", onClick: function () { cloud.review(ride.rideId, "approve").then(cloud.refresh); } },
+        { label: "Decline", tone: "warn", onClick: function () { cloud.review(ride.rideId, "decline").then(cloud.refresh); } },
+        { label: "Cancel", tone: "danger", onClick: function () { cloud.adminCancel(ride.rideId).then(cloud.refresh); } }
+      ] : [];
+      return buildRideCard(doc, ride, badge, meta, actions);
     });
-    fill(doc, upcoming, (lists && lists.upcoming) || [], function (ride) {
-      const wrap = doc.createElement("div");
-      const when = ride.departAt ? new Date(ride.departAt).toLocaleString() : "";
-      const detail = [
-        ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId,
-        when,
-        ride.driverName || "",
-        ride.seatsLeft == null ? "" : ride.seatsLeft + " seats left",
-        ride.phoneLast4 ? "····" + ride.phoneLast4 : "",
-        ride.note || ""
-      ].filter(Boolean).join(" · ");
-      wrap.appendChild(row(doc, detail, function () {}));
-      if (cloud) {
-        wrap.appendChild(row(doc, "Cancel trip", function () { cloud.adminCancel(ride.rideId).then(cloud.refresh); }));
-        wrap.appendChild(row(doc, "Block posting", function () { cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh); }));
-        wrap.appendChild(row(doc, "Text this trip", function () { cloud.chooseTrip(ride.rideId); }));
-      }
-      return wrap;
+    fill(doc, upcoming, doc.getElementById("jumpin-upcoming-count"), (lists && lists.upcoming) || [], function (ride) {
+      const badge = ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft, "left");
+      const who = [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
+      const meta = [
+        { cls: "admin-meta", text: formatWhen(ride.departAt) },
+        { cls: "admin-meta muted", text: who }
+      ];
+      const actions = cloud ? [
+        { label: "Text trip", tone: "primary", onClick: function () { cloud.chooseTrip(ride); } },
+        { label: "Block", tone: "warn", onClick: function () { cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh); } },
+        { label: "Cancel", tone: "danger", onClick: function () { cloud.adminCancel(ride.rideId).then(cloud.refresh); } }
+      ] : [];
+      return buildRideCard(doc, ride, badge, meta, actions);
     });
-    fill(doc, blocked, (lists && lists.blocked) || [], function (entry) {
-      const button = doc.createElement("button");
+    fill(doc, blocked, doc.getElementById("jumpin-blocked-count"), (lists && lists.blocked) || [], function (entry) {
+      const button = el(doc, "button", "admin-blocked-btn", (entry.driverName || "Driver") + " ····" + entry.phoneLast4 + " — Unblock");
       button.type = "button";
-      button.className = "textish";
-      button.textContent = (entry.driverName || "Driver") + " ····" + entry.phoneLast4;
       if (cloud) button.addEventListener("click", function () { cloud.setPosting({ phoneHash: entry.phoneHash, blocked: false }).then(cloud.refresh); });
       return button;
     });
@@ -125,11 +146,52 @@
       }
       const api = globalThis.JumpInCloud ? globalThis.JumpInCloud.attach(owner) : null;
       let chosenRide = "";
+      function setScopeHighlight(scope) {
+        const map = { trip: "jumpin-preview-trip", upcoming: "jumpin-preview-upcoming", all: "jumpin-preview-all" };
+        Object.keys(map).forEach(function (key) {
+          const btn = page.getElementById(map[key]);
+          if (btn) btn.className = "admin-btn" + (key === scope ? " primary" : "");
+        });
+      }
+      function showSelectedTrip(ride, keepOpen) {
+        const picked = ride && ride.rideId ? ride : null;
+        chosenRide = picked ? picked.rideId : "";
+        const label = picked ? (picked.from && picked.to ? picked.from + " → " + picked.to : picked.rideId) + (picked.departAt ? " (" + formatWhen(picked.departAt) + ")" : "") : "";
+        const note = page.getElementById("jumpin-selected-trip");
+        const tripBtn = page.getElementById("jumpin-preview-trip");
+        const upcomingBtn = page.getElementById("jumpin-preview-upcoming");
+        const allBtn = page.getElementById("jumpin-preview-all");
+        const section = page.getElementById("jumpin-text-section");
+        if (section) section.hidden = !label && !keepOpen;
+        if (note) {
+          note.textContent = label ? "Selected trip: " + label : "";
+          note.hidden = !label;
+        }
+        if (tripBtn) tripBtn.hidden = !label;
+        if (upcomingBtn) upcomingBtn.hidden = !keepOpen;
+        if (allBtn) allBtn.hidden = !keepOpen;
+        if (!label) setScopeHighlight("");
+      }
+      function focusBox() {
+        const box = page.getElementById("jumpin-announce");
+        if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (box && box.focus) box.focus();
+      }
       cloud = api ? {
         review: api.review,
         adminCancel: api.adminCancel,
         setPosting: api.setPosting,
-        chooseTrip: function (rideId) { chosenRide = rideId; preview("trip"); },
+        chooseTrip: function (ride) {
+          showSelectedTrip(ride, false);
+          setScopeHighlight("trip");
+          const box = page.getElementById("jumpin-announce");
+          if (box && box.value && box.value.trim()) preview("trip");
+          else {
+            state = admin.reduce(state, { type: "clear" });
+            paint();
+          }
+          focusBox();
+        },
         refresh: refresh
       } : null;
       function refresh() {
@@ -147,6 +209,9 @@
         });
       }
       function preview(scope) {
+        setScopeHighlight(scope);
+        const note = page.getElementById("jumpin-selected-trip");
+        if (note) note.hidden = scope !== "trip" || !note.textContent;
         const textValue = page.getElementById("jumpin-announce").value;
         api.broadcast({ scope: scope, text: textValue, confirm: false, rideId: chosenRide }).then(function (result) {
           if (!result || result.ok === false) state = admin.reduce(state, { type: "fail", error: result && result.error });
@@ -160,6 +225,19 @@
       });
       const signOut = page.getElementById("jumpin-signout");
       if (signOut) signOut.addEventListener("click", function () { firebase.auth().signOut(); });
+      const openBroadcast = page.getElementById("jumpin-open-broadcast");
+      if (openBroadcast) openBroadcast.addEventListener("click", function () {
+        showSelectedTrip(null, true);
+        state = admin.reduce(state, { type: "clear" });
+        paint();
+        focusBox();
+      });
+      const textClose = page.getElementById("jumpin-text-close");
+      if (textClose) textClose.addEventListener("click", function () {
+        showSelectedTrip(null, false);
+        state = admin.reduce(state, { type: "clear" });
+        paint();
+      });
       firebase.auth().onAuthStateChanged(function (user) {
         const button = page.getElementById("jumpin-signin");
         if (button) button.hidden = !!user;
@@ -167,6 +245,7 @@
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with the JumpIn admin account.");
         if (user) refresh();
         else {
+          showSelectedTrip(null);
           lists = {};
           state = admin.reduce(state, { type: "clear" });
           paint();

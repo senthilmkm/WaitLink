@@ -5,6 +5,7 @@
  */
 const { onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const handlers = require("./jumpin/handlers");
 
@@ -26,22 +27,34 @@ function twilioConfig() {
 
 async function sendText(message) {
   const cfg = twilioConfig();
-  if (!cfg.sid || !cfg.token || !message || !message.to || !message.body) return { ok: false };
+  if (!cfg.sid || !cfg.token || !message || !message.to || !message.body) {
+    logger.warn("carpool sendText skipped", { hasSid: !!cfg.sid, hasToken: !!cfg.token, hasTo: !!(message && message.to) });
+    return { ok: false };
+  }
   const body = new URLSearchParams();
   body.append("To", message.to);
   body.append("From", cfg.from);
   body.append("Body", message.body);
-  const res = await fetch("https://api.twilio.com/2010-04-01/Accounts/" + cfg.sid + "/Messages.json", {
-    method: "POST",
-    headers: {
-      Authorization: "Basic " + Buffer.from(cfg.sid + ":" + cfg.token).toString("base64"),
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: body.toString()
-  });
-  const data = await res.json().catch(function () { return {}; });
-  if (res.ok && data.sid) return { ok: true };
-  return { ok: false, code: data.code };
+  try {
+    const res = await fetch("https://api.twilio.com/2010-04-01/Accounts/" + cfg.sid + "/Messages.json", {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + Buffer.from(cfg.sid + ":" + cfg.token).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: body.toString()
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (res.ok && data.sid) {
+      logger.info("carpool sendText sent", { sid: data.sid, toLast4: String(message.to).slice(-4) });
+      return { ok: true };
+    }
+    logger.warn("carpool sendText Twilio error", { status: res.status, code: data.code, message: data.message, toLast4: String(message.to).slice(-4) });
+    return { ok: false, code: data.code };
+  } catch (err) {
+    logger.error("carpool sendText fetch error", { message: err && err.message });
+    return { ok: false };
+  }
 }
 
 async function deliver(db, result) {
@@ -70,6 +83,12 @@ function guestCall(name) {
   return onCall(guest, async function (req) {
     const db = database();
     const result = await handlers.call(db, name, req.data, req.auth, Date.now());
+    logger.info("carpool guestCall", {
+      name: name,
+      ok: !!(result && result.ok),
+      error: (result && result.error) || "",
+      outbox: result && Array.isArray(result.outbox) ? result.outbox.length : 0
+    });
     await deliver(db, result);
     return handlers.forClient(result);
   });

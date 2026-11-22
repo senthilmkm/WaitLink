@@ -146,7 +146,7 @@
         const kept = state.rides || [];
         if (!ride) {
           state = Object.assign(ui.reduce(state, { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { rides: kept, ride: null });
-        } else if (ride.status === "open" && (state.reserveOpen || state.recovery || state.sheet || state.busy)) {
+        } else if (ride.status === "open" && (state.reserveOpen || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
           state = Object.assign({}, state, {
             rides: kept,
             ride: ride,
@@ -422,6 +422,15 @@
         }
         mid.appendChild(card);
         if (state.sheet) mid.appendChild(confirmSheet(doc));
+      } else if (state.mode === "reserved") {
+        const card = el(doc, "section", "confirm");
+        card.appendChild(el(doc, "h1", "", state.notice || "You have a seat."));
+        card.appendChild(el(doc, "p", "route", state.route || ""));
+        if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
+        if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
+        if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
+        else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : "We texted you a link to manage your seat."));
+        mid.appendChild(card);
       } else if (state.ride) {
         mid.appendChild(rideCard(doc, state));
         if (state.sheet) mid.appendChild(confirmSheet(doc));
@@ -429,7 +438,7 @@
         mid.appendChild(el(doc, "p", "route", rideLine(state)));
         if (state.sheet) mid.appendChild(confirmSheet(doc));
       }
-      let label = ui.buttonLabel(state);
+      let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
@@ -495,11 +504,14 @@
                     riders: (state.ride.riders || []).concat([{ reservationId: result.reservationId, name: values.name, status: "active" }])
                   });
                   state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: wasDriver ? "driver" : "rider" }), {
+                    mode: "reserved",
                     ride: ride,
                     rides: state.rides || [],
                     route: (ride.from || "") + " → " + (ride.to || ""),
                     when: state.when,
+                    seatsText: seatsLabel(ride.seatsLeft),
                     link: state.link,
+                    smsNote: result.textSent === false ? (result.error || "Seat saved on this browser. Text could not be sent right now.") : "",
                     notice: wasDriver ? "Passenger added." : "You have a seat."
                   });
                 }
@@ -519,6 +531,14 @@
               draw();
             });
             return;
+          } else if (label === "View trip" && state.ride) {
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: state.ride, role: state.role }), {
+              ride: state.ride,
+              rides: state.rides || [],
+              route: state.route,
+              when: state.when,
+              link: state.link
+            });
           } else if (label === "Send") {
             const box = mid.querySelector("input[name=message]");
             sendMessage(box ? box.value : "");
