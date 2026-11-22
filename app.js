@@ -982,6 +982,37 @@ let timerInterval = null;
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
+  const jumpParams = new URLSearchParams(window.location.search);
+  const jumpSlug = (jumpParams.get("s") || jumpParams.get("shop") || "").toLowerCase().trim();
+  if (jumpSlug === "jumpin") {
+    document.body.classList.add("jumpin-on");
+    const hide = document.createElement("style");
+    hide.textContent = "body.jumpin-on{display:block !important;background:#f1f5f9;color:#090d16}body.jumpin-on > *:not(#jumpin-root){display:none !important}#jumpin-root{display:flex !important;flex-direction:column;min-height:100%;background:#f1f5f9;color:#090d16}";
+    document.head.appendChild(hide);
+    const root = document.createElement("div");
+    root.id = "jumpin-root";
+    document.body.appendChild(root);
+    const script = document.createElement("script");
+    const jumpV = "20261122q";
+    script.src = "/jumpin/core.js?v=" + jumpV;
+    script.onload = function () {
+      const uiScript = document.createElement("script");
+      uiScript.src = "/jumpin/ui-state.js?v=" + jumpV;
+      uiScript.onload = function () {
+        const cloudScript = document.createElement("script");
+        cloudScript.src = "/jumpin/cloud.js?v=" + jumpV;
+        cloudScript.onload = function () {
+          const appScript = document.createElement("script");
+          appScript.src = "/jumpin/app.js?v=" + jumpV;
+          document.body.appendChild(appScript);
+        };
+        document.body.appendChild(cloudScript);
+      };
+      document.body.appendChild(uiScript);
+    };
+    document.body.appendChild(script);
+    return;
+  }
   // 1. Smart URL parameter routing logic parsed FIRST to guarantee shop isolation
   const params = new URLSearchParams(window.location.search);
   const rawShopParam = params.get("shop") || params.get("s");

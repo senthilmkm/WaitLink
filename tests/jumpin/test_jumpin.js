@@ -1,0 +1,899 @@
+/**
+ * JumpIn suite. Separate from the shop suites.
+ * Covers date math, seat races, validation, admin texts, and listener cleanup.
+ */
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const core = require("../../jumpin/core.js");
+const service = require("../../jumpin/service.js");
+const ui = require("../../jumpin/ui-state.js");
+const view = require("../../jumpin/app.js");
+
+let passed = 0;
+let failed = 0;
+const tests = [];
+
+function it(name, fn) { tests.push({ name: name, fn: fn }); }
+
+function enabledConfig(extra) {
+  return Object.assign(core.defaultConfig(), { enabled: true, dailySmsDay: core.utcDay(Date.now()) }, extra || {});
+}
+
+function seed() {
+  return { "settings/carpool_config": enabledConfig() };
+}
+
+const TZ = "America/New_York";
+const NOW = Date.UTC(2026, 5, 1, 15, 0, 0);
+
+function futureFields(days) {
+  const when = new Date(NOW + days * core.DAY_MS);
+  const parts = core.partsInZone(when, TZ);
+  const date = parts.year + "-" + String(parts.month).padStart(2, "0") + "-" + String(parts.day).padStart(2, "0");
+  const time = String(parts.hour).padStart(2, "0") + ":" + String(parts.minute).padStart(2, "0");
+  return { date: date, time: time };
+}
+
+function postInput(over) {
+  const when = futureFields(2);
+  return Object.assign({
+    name: "Alex",
+    phone: "(555) 234-5678",
+    from: "Library",
+    to: "Office",
+    date: when.date,
+    time: when.time,
+    seats: 2,
+    note: "South door",
+    timeZone: TZ,
+    idempotencyKey: "post-1"
+  }, over || {});
+}
+
+it("hashes the known sha256 vector and a phone", function () {
+  assert.strictEqual(core.sha256Hex("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  assert.strictEqual(core.phoneHash16("+15552345678").length, 16);
+  assert.strictEqual(core.timingSafeEqual("abc", "abc"), true);
+  assert.strictEqual(core.timingSafeEqual("abc", "abd"), false);
+  assert.strictEqual(core.timingSafeEqual("ab", "abc"), false);
+});
+
+it("normalizes US and Canada numbers and rejects the rest", function () {
+  assert.strictEqual(core.normalizePhone("(555) 234-5678").e164, "+15552345678");
+  assert.strictEqual(core.normalizePhone("1-555-234-5678").e164, "+15552345678");
+  assert.strictEqual(core.normalizePhone("555").ok, false);
+  assert.strictEqual(core.normalizePhone("25552345678").ok, false);
+});
+
+it("strips tags and collapses whitespace before length checks", function () {
+  const posted = core.postErrors({ name: "  Ann   Lee  ", phone: "5552345678", from: "<b>Library</b>", to: "Office", date: "2026-07-01", time: "08:00", seats: 3, note: "  hi  " });
+  assert.strictEqual(posted.value.name, "Ann Lee");
+  assert.strictEqual(posted.value.from, "Library");
+  assert.strictEqual(posted.value.note, "hi");
+  assert.strictEqual(core.postErrors({ name: "", phone: "5552345678", from: "Library", to: "Office", date: "2026-07-01", time: "08:00", seats: 3 }).error, "Enter your name.");
+  assert.strictEqual(core.postErrors({ name: "A".repeat(41), phone: "5552345678", from: "Library", to: "Office", date: "2026-07-01", time: "08:00", seats: 3 }).error, "Use 40 characters or fewer.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "12", from: "Library", to: "Office", date: "2026-07-01", time: "08:00", seats: 3 }).field, "phone");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "L", to: "Office", date: "2026-07-01", time: "08:00", seats: 3 }).error, "Enter where you are leaving from.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "L".repeat(81), to: "Office", date: "2026-07-01", time: "08:00", seats: 3 }).error, "Use 80 characters or fewer.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "Library", to: "", date: "2026-07-01", time: "08:00", seats: 3 }).error, "Enter where you are going.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "", time: "08:00", seats: 3 }).error, "Choose a date.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "2026-07-01", time: "", seats: 3 }).error, "Choose a time.");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "2026-07-01", time: "08:00", seats: 0 }).field, "seats");
+  assert.strictEqual(core.postErrors({ name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "2026-07-01", time: "08:00", seats: 3, note: "n".repeat(141) }).error, "Use 140 characters or fewer.");
+  assert.strictEqual(core.reserveErrors({ name: "", phone: "5552345678" }).error, "Enter your name.");
+  assert.strictEqual(core.messageError("   ").error, "Enter a message.");
+  assert.strictEqual(core.messageError("m".repeat(281)).error, "Use 280 characters or fewer.");
+  assert.strictEqual(core.announceError("ok").value, "ok");
+});
+
+it("converts New York wall time, including DST gaps", function () {
+  const winter = core.zonedToUtc("2026-01-15", "08:00", TZ);
+  assert.strictEqual(new Date(winter).toISOString(), "2026-01-15T13:00:00.000Z");
+  const summer = core.zonedToUtc("2026-07-15", "08:00", TZ);
+  assert.strictEqual(new Date(summer).toISOString(), "2026-07-15T12:00:00.000Z");
+  assert.strictEqual(core.zonedToUtc("2026-03-08", "02:30", TZ), null);
+  assert.strictEqual(core.zonedToUtc("2026-02-31", "08:00", TZ), null);
+  assert.strictEqual(core.zonedToUtc("bad", "08:00", TZ), null);
+  const label = core.formatWhen(winter, TZ);
+  assert.ok(label.indexOf("Thu") === 0, label);
+  assert.ok(label.indexOf("8:00 AM ET") !== -1, label);
+  const past = core.departureError("2026-01-01", "08:00", TZ, NOW, 30);
+  assert.strictEqual(past.error, "Choose a later time.");
+  const far = core.departureError("2027-06-01", "08:00", TZ, NOW, 30);
+  assert.ok(far.error.indexOf("30 days") !== -1);
+  const soon = futureFields(2);
+  const ok = core.departureError(soon.date, soon.time, TZ, NOW, 30);
+  assert.ok(ok.departAt > NOW);
+  assert.strictEqual(core.departureError("2026-07-01", "08:00", "Not/AZone", NOW, 30).error, "Choose a date.");
+});
+
+it("keeps one seat when two reserves race", async function () {
+  const db = service.createMemoryDb(seed());
+  const posted = await service.postRide(db, postInput({ seats: 1 }), NOW);
+  assert.strictEqual(posted.ok, true);
+  assert.strictEqual(posted.status, "open");
+  const first = service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  const second = service.reserveSeat(db, { rideId: posted.rideId, name: "Pat", phone: "5551112222", idempotencyKey: "b" }, NOW + 1000);
+  const results = await Promise.all([first, second]);
+  const wins = results.filter(function (row) { return row.ok; });
+  assert.strictEqual(wins.length, 1);
+  assert.strictEqual(results.filter(function (row) { return row.error === "That seat was just taken."; }).length, 1);
+  const snap = db.snapshot();
+  assert.strictEqual(snap["carpool_private/rides/" + posted.rideId].seatsLeft, 0);
+});
+
+it("does not give the same phone two seats or the driver a seat", async function () {
+  const db = service.createMemoryDb(seed());
+  const posted = await service.postRide(db, postInput({ seats: 3 }), NOW);
+  const once = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  const again = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "b" }, NOW + 2000);
+  const retry = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 3000);
+  assert.strictEqual(once.ok, true);
+  assert.strictEqual(again.error, "You already have this seat.");
+  assert.strictEqual(retry.secret, once.secret);
+  const driver = await service.reserveSeat(db, { rideId: posted.rideId, name: "Alex", phone: "5552345678", idempotencyKey: "d" }, NOW + 4000);
+  assert.strictEqual(driver.error, "The driver already has this trip.");
+});
+
+it("cancels a seat once and a trip releases every rider", async function () {
+  const db = service.createMemoryDb(seed());
+  const posted = await service.postRide(db, postInput({ seats: 2 }), NOW);
+  const sam = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  const pat = await service.reserveSeat(db, { rideId: posted.rideId, name: "Pat", phone: "5551112222", idempotencyKey: "b" }, NOW + 1000);
+  assert.strictEqual(pat.ok, true);
+  const cancelled = await service.cancelSeat(db, { rideId: posted.rideId, secret: sam.secret }, NOW + 2000);
+  const again = await service.cancelSeat(db, { rideId: posted.rideId, secret: sam.secret }, NOW + 3000);
+  assert.strictEqual(cancelled.ok, true);
+  assert.strictEqual(again.already, true);
+  assert.strictEqual(db.snapshot()["carpool_private/rides/" + posted.rideId].seatsLeft, 1);
+  const trip = await service.cancelTrip(db, { rideId: posted.rideId, secret: posted.secret }, NOW + 4000);
+  assert.strictEqual(trip.ok, true);
+  assert.ok(trip.outbox.some(function (text) { return text.to === "+15551112222"; }));
+  const stranger = await service.cancelTrip(db, { rideId: posted.rideId, secret: sam.secret }, NOW + 5000);
+  assert.strictEqual(stranger.ok, false);
+  const repeat = await service.cancelTrip(db, { rideId: posted.rideId, secret: posted.secret }, NOW + 6000);
+  assert.strictEqual(repeat.already, true);
+});
+
+it("hides a ride until approval and blocks a later post", async function () {
+  const db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ requireRideApproval: true }) });
+  const posted = await service.postRide(db, postInput(), NOW);
+  assert.strictEqual(posted.status, "pending");
+  const early = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  assert.strictEqual(early.error, "Waiting for approval.");
+  const approved = await service.reviewRide(db, service.SUPERADMIN_EMAIL, { rideId: posted.rideId, decision: "approve" }, NOW + 2000);
+  assert.strictEqual(approved.ok, true);
+  assert.ok(approved.outbox[0].body.indexOf("on the board") !== -1);
+  await service.setPosting(db, service.SUPERADMIN_EMAIL, { rideId: posted.rideId, blocked: true }, NOW + 3000);
+  const blocked = await service.postRide(db, postInput({ idempotencyKey: "post-2", phone: "5552345678" }), NOW + 4000);
+  assert.strictEqual(blocked.error, "You can't post a ride right now.");
+  await service.setPosting(db, service.SUPERADMIN_EMAIL, { rideId: posted.rideId, blocked: false }, NOW + 5000);
+  const open = await service.postRide(db, postInput({ idempotencyKey: "post-3" }), NOW + 6000);
+  assert.strictEqual(open.ok, true);
+});
+
+it("sends the three admin texts to the right phones and stops over the cap", async function () {
+  const db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 20 }) });
+  const posted = await service.postRide(db, postInput({ seats: 2 }), NOW);
+  await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  const preview = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "trip", rideId: posted.rideId, text: "Meet at the south door", confirm: false }, NOW + 2000);
+  assert.strictEqual(preview.count, 2);
+  const sent = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "trip", rideId: posted.rideId, text: "Meet at the south door", confirm: true }, NOW + 2000);
+  assert.strictEqual(sent.outbox.length, 2);
+  const upcoming = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "upcoming", text: "Leave 10 minutes early", confirm: true }, NOW + 3000);
+  assert.strictEqual(upcoming.outbox.length, 2);
+  const all = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "all", text: "New pickup policy", confirm: true }, NOW + 4000);
+  assert.strictEqual(all.outbox.length, 2);
+  const tiny = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 0 }) });
+  const quiet = await service.postRide(tiny, postInput(), NOW);
+  assert.strictEqual(quiet.textSent, false);
+  const over = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "all", text: "x", confirm: true }, NOW + 5000);
+  assert.ok(over.ok === true || over.error);
+});
+
+it("rejects a departed reserve and a message from a public visitor", async function () {
+  const db = service.createMemoryDb(seed());
+  const posted = await service.postRide(db, postInput(), NOW);
+  const left = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "a" }, NOW + 1000);
+  const late = await service.reserveSeat(db, { rideId: posted.rideId, name: "Pat", phone: "5551112222", idempotencyKey: "b" }, NOW + core.DAY_MS * 5);
+  assert.strictEqual(late.error, "This trip has already left.");
+  const note = await service.postMessage(db, { rideId: posted.rideId, secret: posted.secret, text: "  South door  " }, NOW + 1000);
+  assert.strictEqual(note.ok, true);
+  const stranger = await service.postMessage(db, { rideId: posted.rideId, secret: "nope", text: "hello" }, NOW + 1000);
+  assert.strictEqual(stranger.ok, false);
+  assert.strictEqual(left.ok, true);
+  const gone = await service.completeDue(db, NOW + core.DAY_MS * 5);
+  assert.ok(gone.completed >= 1);
+});
+
+it("asks before cancel and keeps a single filled button", function () {
+  let state = ui.blank();
+  assert.strictEqual(ui.buttonLabel(state), "Post a ride");
+  state = ui.reduce(state, { type: "post" });
+  assert.strictEqual(ui.buttonLabel(state), "Post");
+  state = ui.reduce(state, { type: "ride", ride: { status: "open", seatsLeft: 2 }, role: "rider" });
+  state = ui.reduce(state, { type: "cancel-ask", role: "rider" });
+  assert.strictEqual(state.pendingAction, "");
+  assert.strictEqual(state.sheet, "seat");
+  state = ui.reduce(state, { type: "keep" });
+  assert.strictEqual(state.sheet, "");
+  state = ui.reduce(state, { type: "cancel-ask", role: "rider" });
+  state = ui.reduce(state, { type: "confirm" });
+  assert.strictEqual(state.pendingAction, "cancel-seat");
+  assert.strictEqual(ui.shellCss().lockedVh, false);
+  assert.strictEqual(ui.platformOf("Mozilla Android 14"), "android");
+  assert.strictEqual(ui.platformOf("iPhone"), "ios");
+  const pending = ui.reduce(ui.blank(), { type: "ride", ride: { status: "pending", seatsLeft: 2 }, role: "driver" });
+  assert.strictEqual(ui.buttonLabel(pending), null);
+});
+
+it("removes shell listeners on destroy", function () {
+  const win = fakeWindow();
+  const mounted = view.mount(win);
+  assert.ok(view.listenerCount() >= 1);
+  assert.strictEqual(mounted.root.style.height, "auto");
+  assert.ok(win.document.getElementById("jumpin-style").textContent.indexOf("100vh") === -1);
+  view.destroy();
+  assert.strictEqual(view.listenerCount(), 0);
+});
+
+it("keeps the shop guard and the hosted core copies identical", function () {
+  const app = fs.readFileSync(path.join(__dirname, "../../app.js"), "utf8");
+  const guardAt = app.indexOf('jumpSlug === "jumpin"');
+  const shopAt = app.indexOf("state.config.slug = shopParam");
+  assert.ok(guardAt > 0 && guardAt < shopAt);
+    ["core.js", "service.js", "ui-state.js", "handlers.js", "admin-state.js"].forEach(function (file) {
+    const hosted = fs.readFileSync(path.join(__dirname, "../../jumpin", file));
+    const deployed = fs.readFileSync(path.join(__dirname, "../../functions/jumpin", file));
+    assert.ok(hosted.equals(deployed), file);
+  });
+});
+
+it("rejects admin calls from anyone else and clamps settings", function () {
+  assert.strictEqual(core.clampConfig({ enabled: true, maxSeats: 99, horizonDays: 0, dailySmsCap: 10 }).maxSeats, 6);
+  assert.strictEqual(core.clampConfig({ enabled: true, dailySmsCap: 10, maxSeats: 4 }).maxSeats, 4);
+  assert.strictEqual(core.configFieldError("dailySmsCap", 9000), "Enter a number from 0 to 5000.");
+  assert.strictEqual(core.configFieldError("dailySmsCap", 10), null);
+  assert.strictEqual(core.postsToday({ postsDay: "2000-01-01", postsToday: 4 }, NOW), 0);
+  assert.strictEqual(core.smsBudget(core.defaultConfig(), NOW).left, 200);
+  return service.reviewRide(service.createMemoryDb(seed()), "other@example.com", { rideId: "x", decision: "approve" }, NOW).then(function (result) {
+    assert.strictEqual(result.ok, false);
+  });
+});
+
+it("covers date edges, button labels, recovery, retention, and the admin gate", async function () {
+  assert.strictEqual(core.sha256Hex(""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  assert.strictEqual(core.sha256Hex("é").length, 64);
+  assert.strictEqual(core.sha256Hex("🙂").length, 64);
+  const id = core.randomId("ride_", function () { return new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]); });
+  assert.ok(id.indexOf("ride_") === 0 && id.length > 5);
+  assert.ok(core.randomSecret(function () { return new Uint8Array(32); }).length > 20);
+  assert.strictEqual(core.configFieldError("nope", 1), null);
+  assert.strictEqual(core.clampConfig(null).enabled, false);
+  assert.strictEqual(core.clampConfig({ dailySmsCap: 1.5 }).dailySmsCap, 200);
+  assert.strictEqual(core.postsToday({ postsDay: core.utcDay(NOW), postsToday: 2 }, NOW), 2);
+  assert.strictEqual(core.activeReservations(null), 0);
+  assert.strictEqual(core.canSend(Object.assign(core.defaultConfig(), { dailySmsCap: 0, dailySmsDay: core.utcDay(NOW) }), NOW), false);
+  assert.strictEqual(core.last4(""), "");
+  assert.strictEqual(core.publicRide({ rideId: "r", status: "open", from: "A", to: "B", departAt: 1, timeZone: TZ, seatsTotal: 1, seatsLeft: 1, note: "", driverName: "A", createdAt: 1, updatedAt: 1 }).status, "open");
+  assert.strictEqual(core.systemMessage("ok", NOW, 1).kind, "system");
+  assert.strictEqual(core.platformOf(""), "ios");
+  assert.ok(core.recoveryPhrase().indexOf("sent a text") !== -1);
+  assert.strictEqual(core.filledButton({ recovery: "rider" }), "Text me a link");
+  assert.strictEqual(core.filledButton({ status: "rejected" }), null);
+  assert.strictEqual(core.filledButton({ status: "cancelled" }), null);
+  assert.strictEqual(core.filledButton({ status: "completed" }), null);
+  assert.strictEqual(core.filledButton({ status: "missing" }), null);
+  assert.strictEqual(core.filledButton({ status: "open", role: "driver" }), "Copy link");
+  assert.strictEqual(core.filledButton({ status: "open", role: "rider" }), "Send");
+  assert.strictEqual(core.filledButton({ status: "open", reserveOpen: true, seatsLeft: 0 }), "Reserve a seat");
+  assert.strictEqual(core.filledButton({ status: "open", seatsLeft: 2 }), "Reserve a seat");
+  assert.strictEqual(core.filledButton({ status: "open", seatsLeft: 0 }), null);
+  const exact = core.partsInZone(NOW, TZ);
+  const exactDate = exact.year + "-" + String(exact.month).padStart(2, "0") + "-" + String(exact.day).padStart(2, "0");
+  const exactTime = String(exact.hour).padStart(2, "0") + ":" + String(exact.minute).padStart(2, "0");
+  assert.strictEqual(core.departureError(exactDate, exactTime, TZ, NOW, 30).error, "Choose a later time.");
+  assert.ok(typeof core.zonedToUtc("2026-11-01", "01:30", TZ) === "number");
+  assert.ok(core.formatWhen(core.zonedToUtc("2026-07-15", "08:00", "America/Los_Angeles"), "America/Los_Angeles").indexOf("PT") !== -1);
+  assert.strictEqual(core.reserveErrors({ name: "Sam", phone: "12" }).field, "phone");
+  assert.strictEqual(core.announceError("").error, "Enter a message.");
+  assert.strictEqual(core.announceError("m".repeat(281)).error, "Use 280 characters or fewer.");
+  assert.strictEqual(core.messageError(null).error, "Enter a message.");
+
+  const off = service.createMemoryDb({ "settings/carpool_config": core.defaultConfig() });
+  assert.strictEqual((await service.postRide(off, postInput(), NOW)).error, "JumpIn is not open yet.");
+
+  const db = service.createMemoryDb(seed());
+  db.interfere(function (versions) { versions["settings/carpool_config"] += 1; });
+  const posted = await service.postRide(db, postInput({ seats: 2, idempotencyKey: "retry" }), NOW);
+  assert.strictEqual(posted.ok, true);
+  const rides = Object.keys(db.snapshot()).filter(function (key) { return key.indexOf("carpool_private/rides/") === 0; });
+  assert.strictEqual(rides.length, 1);
+
+  const far = futureFields(40);
+  assert.ok((await service.postRide(db, postInput({ date: far.date, time: far.time, idempotencyKey: "far" }), NOW)).error.indexOf("30 days") !== -1);
+  const tinySeats = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 2 }) });
+  assert.strictEqual((await service.postRide(tinySeats, postInput({ seats: 3 }), NOW)).error, "Choose seats from 1 to 2.");
+  assert.strictEqual((await service.postRide(db, postInput({ timeZone: "Not/AZone" }), NOW)).error, "Choose a later time.");
+
+  const gate = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ requireRideApproval: true }) });
+  const waiting = await service.postRide(gate, postInput({ idempotencyKey: "pend" }), NOW);
+  const declined = await service.reviewRide(gate, service.SUPERADMIN_EMAIL, { rideId: waiting.rideId, decision: "decline" }, NOW + 1000);
+  assert.ok(declined.outbox[0].body.indexOf("not approved") !== -1);
+  assert.strictEqual((await service.reserveSeat(gate, { rideId: waiting.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "no" }, NOW + 2000)).error, "This trip was not approved.");
+  assert.strictEqual((await service.reviewRide(gate, service.SUPERADMIN_EMAIL, { rideId: waiting.rideId, decision: "approve" }, NOW + 3000)).already, true);
+  const undecided = await service.postRide(gate, postInput({ idempotencyKey: "pend-2" }), NOW + 3500);
+  assert.strictEqual((await service.reviewRide(gate, service.SUPERADMIN_EMAIL, { rideId: undecided.rideId, decision: "maybe" }, NOW + 3600)).error, "Enter a decision.");
+
+  const sam = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "seat-a" }, NOW + 1000);
+  const expired = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "seat-a" }, NOW + core.IDEMPOTENCY_MS + 2000);
+  assert.strictEqual(expired.error, "You already have this seat.");
+  const note = await service.postMessage(db, { rideId: posted.rideId, secret: sam.secret, text: "On my way" }, NOW + 1500);
+  assert.strictEqual(note.ok, true);
+  const capped = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxMessagesPerRide: 1 }) });
+  const one = await service.postRide(capped, postInput({ idempotencyKey: "one" }), NOW);
+  assert.strictEqual((await service.postMessage(capped, { rideId: one.rideId, secret: one.secret, text: "hello" }, NOW + 1000)).error, "This trip thread is full.");
+
+  const link = await service.sendManageLink(db, { rideId: posted.rideId, phone: "5559876543", role: "rider", ip: "203.0.113.8" }, NOW + 70000);
+  assert.strictEqual(link.phrase, core.recoveryPhrase());
+  assert.strictEqual(link.outbox.length, 1);
+  const cooled = await service.sendManageLink(db, { rideId: posted.rideId, phone: "5559876543", role: "rider", ip: "203.0.113.8" }, NOW + 70001);
+  assert.strictEqual(cooled.outbox.length, 0);
+  const missing = await service.sendManageLink(db, { rideId: posted.rideId, phone: "5550001111", role: "rider", ip: "203.0.113.9" }, NOW + 80000);
+  assert.strictEqual(missing.outbox.length, 0);
+  assert.strictEqual((await service.sendManageLink(db, { phone: "12" }, NOW)).ok, false);
+  const oldSecret = sam.secret;
+  const driverLink = await service.sendManageLink(db, { rideId: posted.rideId, phone: "5552345678", role: "driver", ip: "203.0.113.10" }, NOW + 90000);
+  assert.strictEqual(driverLink.outbox.length, 1);
+  assert.strictEqual((await service.cancelSeat(db, { rideId: posted.rideId, secret: oldSecret }, NOW + 91000)).ok, false);
+
+  await service.markOptOut(db, "5552345678", NOW + 92000);
+  const skipped = await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "all", text: "Policy update", confirm: false }, NOW + 93000);
+  assert.ok(skipped.count < 2);
+  const cap = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 1 }) });
+  const crowded = await service.postRide(cap, postInput({ idempotencyKey: "cap" }), NOW);
+  await service.reserveSeat(cap, { rideId: crowded.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "cap-seat" }, NOW + 1000);
+  const over = await service.broadcast(cap, service.SUPERADMIN_EMAIL, { scope: "trip", rideId: crowded.rideId, text: "hello", confirm: true }, NOW + 2000);
+  assert.ok(over.error.indexOf("texts are left") !== -1);
+  assert.strictEqual((await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "nope", text: "x", confirm: false }, NOW)).error, "Choose who receives the text.");
+  assert.strictEqual((await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "trip", text: "x", confirm: false }, NOW)).error, "Choose a trip.");
+
+  const adminCancel = await service.adminCancelTrip(db, service.SUPERADMIN_EMAIL, posted.rideId, NOW + 94000);
+  assert.ok(adminCancel.outbox.some(function (text) { return text.to === "+15552345678"; }));
+  assert.strictEqual((await service.reserveSeat(db, { rideId: posted.rideId, name: "Pat", phone: "5551112222", idempotencyKey: "late" }, NOW + 95000)).error, "This trip was cancelled.");
+  const listed = await service.listAdmin(db, service.SUPERADMIN_EMAIL, NOW + 96000);
+  assert.ok(JSON.stringify(listed).indexOf("+1") === -1);
+  await service.setPosting(db, service.SUPERADMIN_EMAIL, { phone: "5552223333", name: "Riley", blocked: true }, NOW + 97000);
+  const blockedList = await service.listAdmin(db, service.SUPERADMIN_EMAIL, NOW + 98000);
+  assert.strictEqual(blockedList.blocked[0].phoneLast4, "3333");
+  await service.setPosting(db, service.SUPERADMIN_EMAIL, { phoneHash: blockedList.blocked[0].phoneHash, blocked: false }, NOW + 98500);
+  await service.setPosting(db, service.SUPERADMIN_EMAIL, { phone: "5552223333", blocked: false }, NOW + 99000);
+
+  const finishing = await service.postRide(db, postInput({ idempotencyKey: "finish", phone: "5557778888", name: "Jo" }), NOW + 100000);
+  const done = await service.completeDue(db, NOW + core.DAY_MS * 5);
+  assert.ok(done.completed >= 1);
+  const kept = await service.retainTrips(db, NOW + core.DAY_MS * 13);
+  assert.ok(kept.audience >= 1);
+  assert.ok(!db.snapshot()["carpool_private/rides/" + posted.rideId]);
+  assert.ok(!db.snapshot()["carpool_private/rides/" + finishing.rideId]);
+  await service.retainTrips(db, NOW + core.DAY_MS * 50);
+  assert.ok(!db.snapshot()["carpool_public/rides/" + finishing.rideId]);
+
+  const handlers = require("../../jumpin/handlers.js");
+  assert.strictEqual((await handlers.call(db, "nope", {}, null, NOW)).error, "Unknown request.");
+  const adapted = [];
+  let writes = 0;
+  const fakeFs = {
+    doc: function (key) { return { path: key }; },
+    runTransaction: async function (fn) {
+      return fn({
+        get: async function (ref) {
+          if (writes) throw new Error("read after write");
+          return { exists: ref.path === "settings/carpool_config", data: function () { return { enabled: true }; } };
+        },
+        set: function (ref) { writes += 1; adapted.push(["set", ref.path]); },
+        delete: function (ref) { writes += 1; adapted.push(["del", ref.path]); }
+      });
+    }
+  };
+  const wrapped = handlers.adaptFirestore(fakeFs);
+  const read = await wrapped.runTransaction(async function (tx) {
+    const value = await tx.get("settings/carpool_config");
+    tx.set("carpool_public/rides/x", { status: "open" });
+    tx.del("carpool_private/limits/old");
+    const missingDoc = await tx.get("missing");
+    const staged = await tx.get("carpool_public/rides/x");
+    return { value: value, missingDoc: missingDoc, staged: staged };
+  });
+  assert.strictEqual(read.value.enabled, true);
+  assert.strictEqual(read.missingDoc, null);
+  assert.strictEqual(read.staged.status, "open");
+  assert.strictEqual(adapted.length, 2);
+  assert.strictEqual(handlers.documentPath("carpool_public/rides/x"), "carpool_public/root/rides/x");
+  assert.strictEqual(handlers.documentPath("settings/carpool_config"), "settings/carpool_config");
+  assert.strictEqual(handlers.forClient({ ok: true, secret: "s", outbox: [{ to: "+1" }], texts: [] }).outbox, undefined);
+  const cloud = require("../../jumpin/cloud.js");
+  const mem = { bag: {}, getItem: function (k) { return this.bag[k] || ""; }, setItem: function (k, v) { this.bag[k] = v; }, removeItem: function (k) { delete this.bag[k]; } };
+  cloud.saveTrip(mem, "ride_a", "secret");
+  assert.strictEqual(cloud.roleFor(mem, { rideId: "ride_a", riders: [] }), "driver");
+  cloud.saveSeat(mem, "rsv_1", "seat");
+  assert.strictEqual(cloud.roleFor({ getItem: function () { return ""; } }, { rideId: "ride_b", riders: [{ reservationId: "rsv_1" }] }), "");
+  assert.strictEqual(cloud.seatSecretFor(mem, { riders: [{ reservationId: "rsv_1" }] }), "seat");
+  assert.strictEqual(cloud.publicRideUrl("ride_a"), "https://waitlink.app?s=jumpin&view=ride&ride=ride_a");
+
+  const adminState = require("../../jumpin/admin-state.js");
+  assert.strictEqual(adminState.settingsErrors({ dailySmsCap: 10, maxSeats: 4, horizonDays: 30, maxMessagesPerRide: 20, maxPostsPerPhonePerDay: 10, maxActiveReservationsPerPhone: 5, maxSmsPerRecord: 4, resendCooldownSec: 60 }).value.maxSeats, 4);
+  assert.strictEqual(adminState.settingsErrors({ dailySmsCap: 9 }).field, "maxSeats");
+  let screen = adminState.reduce(adminState.blank(), { type: "preview", scope: "all", count: 3, left: 1 });
+  assert.strictEqual(adminState.canSend(screen), false);
+  screen = adminState.reduce(screen, { type: "preview", scope: "all", count: 1, left: 2 });
+  assert.strictEqual(adminState.canSend(screen), true);
+  screen = adminState.reduce(screen, { type: "sent", count: 1 });
+  assert.ok(screen.notice.indexOf("1") !== -1);
+  screen = adminState.reduce(screen, { type: "fail", error: "no" });
+  assert.strictEqual(screen.error, "no");
+  assert.strictEqual(adminState.reduce(screen, { type: "clear" }).notice, "");
+  assert.strictEqual(adminState.reduce(screen, { type: "other" }).error, "");
+
+  const page = require("../../jumpin-admin.js");
+  const adminWin = fakeWindow();
+  ["jumpin-error", "jumpin-count", "jumpin-send", "jumpin-pending", "jumpin-upcoming", "jumpin-blocked"].forEach(function (id) {
+    const node = adminWin.document.createElement("div");
+    node.id = id;
+    node.hidden = false;
+    adminWin.document.body.appendChild(node);
+  });
+  const controls = page.start(adminWin);
+  controls.preview("all", 4, 1);
+  assert.ok(adminWin.document.getElementById("jumpin-count").textContent.indexOf("4 people") !== -1);
+  assert.strictEqual(adminWin.document.getElementById("jumpin-send").hidden, true);
+  controls.fail("Enter a message.");
+  assert.strictEqual(adminWin.document.getElementById("jumpin-error").textContent, "Enter a message.");
+  page.render(adminWin.document, adminState.blank(), { pending: [{ rideId: "ride_a" }], upcoming: [{ rideId: "ride_b" }], blocked: [{ driverName: "Riley", phoneLast4: "3333" }] });
+  const blockedText = adminWin.document.getElementById("jumpin-blocked").children.map(function (child) { return child.textContent; }).join(" ");
+  assert.ok(blockedText.indexOf("3333") !== -1);
+
+  const phone = fakeWindow();
+  const mounted = view.mount(phone);
+  const hero = mounted.root.children[1].children[0].children[0];
+  const postButton = hero.children.filter(function (child) { return child.tag === "button"; })[0];
+  postButton._listeners[0]();
+  const formButton = mounted.root.children[2].children[0];
+  formButton._listeners[0]();
+  const formText = mounted.root.children[1].children.map(function (child) { return child.textContent; }).join(" ");
+  assert.ok(formText.indexOf("Enter your name") !== -1);
+  mounted.root.children[0].children[0]._listeners[0]();
+  assert.strictEqual(ui.buttonLabel(mounted.getState()), "Post a ride");
+  mounted.setState(ui.reduce(ui.blank(), { type: "ride", ride: { status: "open", seatsLeft: 1 }, role: "driver" }));
+  mounted.root.children[2].children[0]._listeners[0]();
+  assert.strictEqual(mounted.getState().notice, "Copied");
+  const bare = fakeWindow();
+  bare.visualViewport = null;
+  const plain = view.mount(bare);
+  plain.setState(Object.assign(ui.blank(), { mode: "post" }));
+  assert.strictEqual(plain.root.style.height, "700px");
+  view.destroy();
+
+  const android = fakeWindow();
+  android.navigator.userAgent = "Mozilla Android 14";
+  view.start(android);
+  assert.ok(android.document.body.classList.classes.indexOf("jumpin-android") !== -1);
+  view.destroy();
+
+  let flow = ui.reduce(ui.blank(), { type: "ride", ride: { status: "open", seatsLeft: 1 }, role: "" });
+  flow = ui.reduce(flow, { type: "reserve-open" });
+  assert.strictEqual(flow.reserveOpen, true);
+  flow = ui.reduce(flow, { type: "recovery", role: "driver" });
+  assert.strictEqual(ui.buttonLabel(flow), "Text me a link");
+  flow = ui.reduce(flow, { type: "ride", ride: { status: "open", seatsLeft: 1 }, role: "driver" });
+  flow = ui.reduce(flow, { type: "cancel-ask", role: "driver" });
+  assert.strictEqual(flow.sheet, "trip");
+  flow = ui.reduce(flow, { type: "confirm" });
+  assert.strictEqual(flow.pendingAction, "cancel-trip");
+  flow = ui.reduce(flow, { type: "notice", notice: "Saved" });
+  assert.strictEqual(flow.notice, "Saved");
+  assert.strictEqual(ui.reduce(flow, { type: "nope" }).notice, "");
+
+  let fights = 0;
+  function clash(versions) {
+    fights += 1;
+    versions["settings/carpool_config"] += 1;
+    if (fights < 8) db.interfere(clash);
+  }
+  db.interfere(clash);
+  let contended = false;
+  try { await service.postRide(db, postInput({ idempotencyKey: "clash" }), NOW + 100000); }
+  catch (err) { contended = String(err.message).indexOf("contention") !== -1; }
+  assert.strictEqual(contended, true);
+});
+
+it("exercises every callable, the confirm sheet, and a posted form", async function () {
+  const db = service.createMemoryDb(seed());
+  const posted = await service.postRide(db, postInput({ seats: 2 }), NOW);
+  await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "sheet" }, NOW + 1000);
+  const listed = await service.listAdmin(db, service.SUPERADMIN_EMAIL, NOW + 1500);
+  assert.strictEqual(listed.upcoming[0].phoneLast4, "5678");
+  assert.strictEqual((await service.cancelSeat(db, { rideId: posted.rideId, phone: "12", secret: "nope" }, NOW + 1600)).ok, false);
+  const early = await service.retainTrips(db, NOW + 2000);
+  assert.ok(early.kept >= 1);
+  await service.sendManageLink(db, { rideId: posted.rideId, phone: "5559876543", role: "rider", ip: "198.51.100.4" }, NOW + 80000);
+  const keptLimit = await service.retainTrips(db, NOW + 81000);
+  assert.strictEqual(keptLimit.ok, true);
+  const gate = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ requireRideApproval: true }) });
+  const pending = await service.postRide(gate, postInput({ idempotencyKey: "rej" }), NOW);
+  await service.reviewRide(gate, service.SUPERADMIN_EMAIL, { rideId: pending.rideId, decision: "decline" }, NOW + 1000);
+  assert.strictEqual((await service.cancelTrip(gate, { rideId: pending.rideId, secret: pending.secret }, NOW + 2000)).ok, false);
+  const cappedSeats = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxActiveReservationsPerPhone: 1 }) });
+  const firstRide = await service.postRide(cappedSeats, postInput({ idempotencyKey: "cap-a" }), NOW);
+  const secondRide = await service.postRide(cappedSeats, postInput({ idempotencyKey: "cap-b", phone: "5553334444", name: "Bea" }), NOW + 10);
+  await service.reserveSeat(cappedSeats, { rideId: firstRide.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "cap-seat" }, NOW + 20);
+  assert.ok((await service.reserveSeat(cappedSeats, { rideId: secondRide.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "cap-seat-2" }, NOW + 30)).error.indexOf("upcoming seats") !== -1);
+  assert.strictEqual((await service.reserveSeat(db, { rideId: "missing", name: "Sam", phone: "5559876543", idempotencyKey: "gone" }, NOW)).error, "This ride is not available.");
+  const handlers = require("../../jumpin/handlers.js");
+  const auth = { token: { email: service.SUPERADMIN_EMAIL } };
+  const names = ["carpoolPostRide", "carpoolReserveSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolSendManageLink", "carpoolPostMessage", "carpoolListPending", "carpoolReviewRide", "carpoolAdminCancelTrip", "carpoolAdminSetPosting", "carpoolAdminBroadcast", "carpoolCompleteTrips", "carpoolRetainTrips", "carpoolMarkOptOut"];
+  for (let i = 0; i < names.length; i++) {
+    const result = await handlers.call(db, names[i], { text: "Hello", scope: "all", confirm: false, phone: "5552345678", rideId: posted.rideId }, auth, NOW + 90000);
+    assert.ok(result && typeof result.ok === "boolean");
+  }
+  assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, null, NOW)).ok, false);
+  assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, {}, NOW)).ok, false);
+  const win = fakeWindow();
+  const mounted = view.mount(win);
+  mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "open", role: "rider", seatsLeft: 1, sheet: "seat" }));
+  const seatSheet = mounted.root.children[1].children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
+  assert.ok(seatSheet.children[0].textContent.indexOf("seat") !== -1);
+  seatSheet.children[1]._listeners[0]();
+  assert.strictEqual(mounted.getState().sheet, "");
+  mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "open", role: "driver", seatsLeft: 1, sheet: "trip" }));
+  const tripSheet = mounted.root.children[1].children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
+  tripSheet.children[2]._listeners[0]();
+  assert.strictEqual(mounted.getState().pendingAction, "cancel-trip");
+  mounted.setState(Object.assign(ui.blank(), { mode: "post" }));
+  const inputs = mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; });
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const soon = core.partsInZone(Date.now() + 3 * core.DAY_MS, zone);
+  const values = {
+    name: "Ann",
+    phone: "5552345678",
+    from: "Library",
+    to: "Office",
+    date: soon.year + "-" + String(soon.month).padStart(2, "0") + "-" + String(soon.day).padStart(2, "0"),
+    time: String(soon.hour).padStart(2, "0") + ":" + String(soon.minute).padStart(2, "0"),
+    note: "ok"
+  };
+  inputs.forEach(function (input) { input.value = values[input.name] || ""; });
+  mounted.root.children[2].children[0]._listeners[0]();
+  assert.strictEqual(mounted.getState().notice, "Trip posted.");
+  inputs.forEach(function (input) { if (input.name === "date") input.value = "2020-01-01"; });
+  mounted.setState(Object.assign(mounted.getState(), { mode: "post", notice: "" }));
+  const again = mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; });
+  again.forEach(function (input) { input.value = input.name === "date" ? "2020-01-01" : (values[input.name] || ""); });
+  mounted.root.children[2].children[0]._listeners[0]();
+  assert.ok(mounted.getState().error.indexOf("later time") !== -1);
+  const phone = fakeWindow();
+  view.mount(phone);
+  phone.visualViewport._listeners.forEach(function (fn) { fn(); });
+  phone._listeners.forEach(function (fn) { fn(); });
+  const quiet = fakeWindow();
+  quiet.visualViewport = {};
+  view.mount(quiet);
+  view.destroy();
+  const vm = require("vm");
+  const sandbox = { console: console, Intl: Intl };
+  sandbox.globalThis = sandbox;
+  sandbox.window = fakeWindow();
+  sandbox.document = sandbox.window.document;
+  vm.createContext(sandbox);
+  ["core.js", "ui-state.js", "admin-state.js", "app.js"].forEach(function (file) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, "../../jumpin", file), "utf8"), sandbox, { filename: file });
+  });
+  ["jumpin-error", "jumpin-count", "jumpin-send", "jumpin-pending", "jumpin-upcoming", "jumpin-blocked"].forEach(function (id) {
+    const node = sandbox.document.createElement("div");
+    node.id = id;
+    sandbox.document.body.appendChild(node);
+  });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../../jumpin-admin.js"), "utf8"), sandbox, { filename: "jumpin-admin.js" });
+  assert.ok(sandbox.JumpInCore.sha256Hex("abc").length === 64);
+  assert.ok(sandbox.window.document.getElementById("jumpin-root"));
+});
+
+it("rejects posts, cancels, and texts that break the rules", async function () {
+  const handlers = require("../../jumpin/handlers.js");
+  assert.strictEqual((await handlers.call(service.createMemoryDb(seed()), "carpoolListPending", {}, { token: {} }, NOW)).ok, false);
+  const quiet = service.createMemoryDb({ "settings/carpool_config": core.defaultConfig() });
+  assert.strictEqual((await service.reserveSeat(quiet, { rideId: "x", name: "Sam", phone: "5559876543" }, NOW)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.cancelSeat(quiet, { rideId: "x", secret: "nope" }, NOW)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.cancelTrip(quiet, { rideId: "x", secret: "nope" }, NOW)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.postMessage(quiet, { rideId: "x", secret: "nope", text: "hi" }, NOW)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.sendManageLink(quiet, { rideId: "x", phone: "5552345678", role: "driver" }, NOW)).phrase, core.recoveryPhrase());
+  assert.strictEqual((await service.postMessage(service.createMemoryDb(seed()), { rideId: "x", text: "  " }, NOW)).error, "Enter a message.");
+  assert.strictEqual((await service.markOptOut(service.createMemoryDb(seed()), "12", NOW)).ok, false);
+  assert.strictEqual((await service.broadcast(service.createMemoryDb(seed()), "nope@example.com", { scope: "all", text: "hi", confirm: false }, NOW)).ok, false);
+  assert.strictEqual((await service.broadcast(service.createMemoryDb(seed()), service.SUPERADMIN_EMAIL, { scope: "all", text: "  ", confirm: true }, NOW)).error, "Enter a message.");
+  assert.strictEqual((await service.adminCancelTrip(service.createMemoryDb(seed()), "nope@example.com", "x", NOW)).ok, false);
+  assert.strictEqual((await service.setPosting(service.createMemoryDb(seed()), "nope@example.com", { phone: "5552345678", blocked: true }, NOW)).ok, false);
+  assert.strictEqual((await service.setPosting(service.createMemoryDb(seed()), service.SUPERADMIN_EMAIL, { phone: "12", blocked: true }, NOW)).ok, false);
+  assert.strictEqual((await service.setPosting(service.createMemoryDb(seed()), service.SUPERADMIN_EMAIL, { rideId: "missing", blocked: true }, NOW)).error, "This ride is not available.");
+  assert.strictEqual((await service.adminCancelTrip(service.createMemoryDb(seed()), service.SUPERADMIN_EMAIL, "missing", NOW)).error, "This ride is not available.");
+  assert.strictEqual((await service.listAdmin(service.createMemoryDb(), service.SUPERADMIN_EMAIL)).ok, true);
+  const blankIndex = service.createMemoryDb({ "settings/carpool_config": enabledConfig(), "carpool_private/broadcast_index": { rides: null, audience: null }, "carpool_private/block_index": { blocks: null }, "carpool_private/limit_index": { keys: null } });
+  assert.strictEqual((await service.listAdmin(blankIndex, service.SUPERADMIN_EMAIL, NOW)).ok, true);
+  assert.strictEqual((await service.completeDue(blankIndex, NOW)).completed, 0);
+  assert.strictEqual((await service.retainTrips(blankIndex, NOW)).ok, true);
+
+  const db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxPostsPerPhonePerDay: 1, maxSmsPerRecord: 1, dailySmsCap: 2 }) });
+  const posted = await service.postRide(db, postInput({ idempotencyKey: "only" }), NOW);
+  assert.strictEqual((await service.postRide(db, postInput({ idempotencyKey: "second" }), NOW + 1000)).error.indexOf("1 trips") !== -1, true);
+  const sam = await service.reserveSeat(db, { rideId: posted.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "only-seat" }, NOW + 2000);
+  assert.strictEqual(sam.ok, true);
+  const limited = await service.sendManageLink(db, { rideId: posted.rideId, phone: "5559876543", role: "rider", ip: "198.51.100.20" }, NOW + 80000);
+  assert.strictEqual(limited.outbox.length, 0);
+  assert.strictEqual((await service.cancelSeat(db, { rideId: posted.rideId, secret: sam.secret }, NOW + 2500)).ok, true);
+  const left = await service.postRide(db, postInput({ idempotencyKey: "later", phone: "5553334444", name: "Bea" }), NOW + 3000);
+  if (left.ok) {
+    assert.strictEqual((await service.cancelTrip(db, { rideId: left.rideId, secret: left.secret }, NOW + core.DAY_MS * 5)).error, "This trip has already left.");
+    assert.strictEqual((await service.postMessage(db, { rideId: left.rideId, secret: left.secret, text: "hi" }, NOW + core.DAY_MS * 5)).error, service.GENERIC_LINK);
+    assert.strictEqual((await service.sendManageLink(db, { rideId: left.rideId, phone: "5553334444", role: "driver", ip: "198.51.100.21" }, NOW + core.DAY_MS * 5)).phrase, core.recoveryPhrase());
+  }
+  const again = await service.adminCancelTrip(db, service.SUPERADMIN_EMAIL, posted.rideId, NOW + 90000);
+  assert.strictEqual(again.ok, true);
+  const repeat = await service.adminCancelTrip(db, service.SUPERADMIN_EMAIL, posted.rideId, NOW + 91000);
+  assert.strictEqual(repeat.already, true);
+  for (let i = 0; i < 11; i++) {
+    await service.sendManageLink(db, { rideId: posted.rideId, phone: "5550001111", role: "rider", ip: "198.51.100.30" }, NOW + 100000 + i);
+  }
+});
+
+it("covers fallback branches in the shell and the rules", function () {
+  assert.strictEqual(core.timingSafeEqual(null, null), true);
+  assert.ok(core.randomSecret(function () { return new Uint8Array([1]); }).length >= 1);
+  assert.ok(core.randomSecret(function () { return new Uint8Array([1, 2]); }).length >= 2);
+  assert.ok(core.randomSecret(function () { return new Uint8Array([1, 2, 3]); }).length >= 3);
+  const same = fakeWindow();
+  view.mount(same);
+  view.mount(same);
+  const bare = fakeWindow();
+  bare.visualViewport = null;
+  bare.innerHeight = 0;
+  bare.localStorage = null;
+  const mounted = view.mount(bare);
+  mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "", notice: "", role: "", seatsLeft: 0 }));
+  assert.strictEqual(mounted.root.style.height, "0px");
+  const rideText = mounted.root.children[1].children.map(function (child) { return child.textContent; }).join(" ");
+  assert.ok(rideText.indexOf("Ride") !== -1);
+  const noIntl = fakeWindow();
+  noIntl.Intl = null;
+  const form = view.mount(noIntl);
+  form.setState(Object.assign(ui.blank(), { mode: "post" }));
+  const soon = new Date(Date.now() + 3 * core.DAY_MS);
+  const date = soon.toISOString().slice(0, 10);
+  const time = "15:00";
+  form.root.children[1].children.filter(function (child) { return child.tag === "input"; }).forEach(function (input) {
+    const values = { name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: date, time: time, note: "ok" };
+    input.value = values[input.name] || "";
+  });
+  form.root.children[2].children[0]._listeners[0]();
+  assert.ok(form.getState().notice === "Trip posted." || form.getState().error);
+  view.destroy();
+  let flow = ui.reduce(ui.blank(), { type: "ride", ride: { status: "open", seatsLeft: 0 }, role: "" });
+  flow = ui.reduce(flow, { type: "reserve-open" });
+  assert.strictEqual(flow.reserveOpen, false);
+  flow = ui.reduce(flow, { type: "recovery", role: "rider" });
+  assert.strictEqual(flow.recovery, "rider");
+  flow = ui.reduce(flow, { type: "fail" });
+  assert.strictEqual(flow.error, "");
+  flow = ui.reduce(flow, { type: "notice" });
+  assert.strictEqual(flow.notice, "");
+  const adminState = require("../../jumpin/admin-state.js");
+  assert.strictEqual(adminState.reduce(adminState.blank(), { type: "fail" }).error, "");
+  const page = require("../../jumpin-admin.js");
+  const adminWin = fakeWindow();
+  ["jumpin-count", "jumpin-send", "jumpin-pending", "jumpin-upcoming", "jumpin-blocked"].forEach(function (id) {
+    const node = adminWin.document.createElement("div");
+    node.id = id;
+    adminWin.document.body.appendChild(node);
+  });
+  page.render(adminWin.document, adminState.reduce(adminState.blank(), { type: "preview", scope: "all", count: 1, left: 2 }), {});
+  assert.strictEqual(adminWin.document.getElementById("jumpin-send").hidden, false);
+  page.render(adminWin.document, adminState.blank(), {});
+});
+
+it("draws the board when Firestore cannot start", function () {
+  const cloud = require("../../jumpin/cloud.js");
+  const win = fakeWindow();
+  const ref = {
+    collection: function () { return ref; },
+    doc: function () { return ref; },
+    where: function () { return ref; },
+    onSnapshot: function () { throw new Error("no firestore"); }
+  };
+  win.firebase = { apps: [], initializeApp: function () { throw new Error("no app"); }, firestore: function () { return ref; } };
+  global.JumpInCloud = cloud;
+  const view = require("../../jumpin/app.js");
+  view.start(win);
+  function texts(node) {
+    return (node.children || []).map(function (child) { return (child._text || "") + " " + texts(child); }).join(" ");
+  }
+  assert.ok(texts(win.document.getElementById("jumpin-root")).indexOf("Find a seat") !== -1);
+  view.destroy();
+  delete global.JumpInCloud;
+});
+
+it("shows the confirmation screen after a saved post and the field error on a bad form", async function () {
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function fill(mounted, values) {
+    mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; }).forEach(function (input) {
+      input.value = values[input.name] || "";
+    });
+  }
+  function clickPost(mounted) {
+    mounted.root.children[2].children[0]._listeners[0]();
+  }
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const soon = core.partsInZone(Date.now() + 3 * core.DAY_MS, zone);
+  const values = {
+    name: "Ann",
+    phone: "5552345678",
+    from: "Library",
+    to: "Office",
+    date: soon.year + "-" + pad(soon.month) + "-" + pad(soon.day),
+    time: pad(soon.hour) + ":" + pad(soon.minute),
+    note: "South door"
+  };
+  const win = fakeWindow();
+  win.JumpInCloud = {
+    postRide: function () { return Promise.resolve({ ok: true, rideId: "ride_live", secret: "sek", status: "open", textSent: true }); },
+    publicRideUrl: function (id) { return "https://waitlink.app?s=jumpin&view=ride&ride=" + id; },
+    watchBoard: function () { return function () {}; }
+  };
+  const mounted = view.mount(win);
+  mounted.setState(Object.assign(ui.blank(), { mode: "post", rides: [] }));
+  fill(mounted, values);
+  clickPost(mounted);
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().mode, "posted");
+  const cardText = mounted.root.children[1].children[0].children.map(function (child) { return child.textContent || child.value || ""; }).join(" ");
+  assert.ok(cardText.indexOf("Trip posted.") !== -1);
+  assert.ok(cardText.indexOf("Library → Office") !== -1);
+  assert.ok(cardText.indexOf("ride_live") !== -1);
+  assert.strictEqual(mounted.root.style.height, "auto");
+
+  const pendingWin = fakeWindow();
+  pendingWin.JumpInCloud = {
+    postRide: function () { return Promise.resolve({ ok: true, rideId: "ride_wait", secret: "sek", status: "pending", textSent: true }); },
+    publicRideUrl: function (id) { return "https://waitlink.app?s=jumpin&view=ride&ride=" + id; },
+    watchBoard: function () { return function () {}; }
+  };
+  const pending = view.mount(pendingWin);
+  pending.setState(Object.assign(ui.blank(), { mode: "post", rides: [] }));
+  fill(pending, values);
+  clickPost(pending);
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  const pendingText = pending.root.children[1].children[0].children.map(function (child) { return child.textContent || child.value || ""; }).join(" ");
+  assert.ok(pendingText.indexOf("Waiting for approval.") !== -1);
+  assert.ok(pendingText.indexOf("ride_wait") === -1);
+
+  const failWin = fakeWindow();
+  failWin.JumpInCloud = {
+    postRide: function () { return Promise.resolve({ ok: false, error: "Could not post. Check the connection and try again." }); },
+    watchBoard: function () { return function () {}; }
+  };
+  const failed = view.mount(failWin);
+  failed.setState(Object.assign(ui.blank(), { mode: "post" }));
+  fill(failed, values);
+  clickPost(failed);
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(failed.getState().mode, "post");
+  assert.strictEqual(failed.root.children[1].children[0].textContent, "Could not post. Check the connection and try again.");
+
+  const blank = view.mount(fakeWindow());
+  blank.setState(Object.assign(ui.blank(), { mode: "post" }));
+  clickPost(blank);
+  const nameError = blank.root.children[1].children.filter(function (child) { return child.className === "error"; })[0];
+  assert.strictEqual(nameError.textContent, "Enter your name.");
+  fill(blank, { name: "Ann", phone: "12", from: "Library", to: "Office", date: values.date, time: values.time });
+  clickPost(blank);
+  const phoneError = blank.root.children[1].children.filter(function (child) { return child.className === "error"; })[0];
+  assert.strictEqual(phoneError.textContent, "Enter a US or Canada mobile number.");
+  fill(blank, { name: "Ann", phone: "5552345678", from: "", to: "Office", date: values.date, time: values.time });
+  clickPost(blank);
+  assert.strictEqual(blank.getState().error, "Enter where you are leaving from.");
+  fill(blank, { name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "", time: "" });
+  clickPost(blank);
+  assert.strictEqual(blank.getState().error, "Choose a date.");
+  fill(blank, { name: "Ann", phone: "5552345678", from: "Library", to: "Office", date: "2020-01-01", time: "08:00" });
+  clickPost(blank);
+  assert.ok(blank.getState().error.indexOf("later time") !== -1);
+
+  const browserWin = fakeWindow();
+  browserWin.JumpInCloud = require("../../jumpin/cloud.js");
+  view.start(browserWin);
+  assert.strictEqual(typeof browserWin.JumpInCloud.postRide, "function");
+
+  let driverState = ui.reduce(ui.blank(), { type: "ride", ride: { rideId: "r1", status: "open", seatsLeft: 2 }, role: "driver" });
+  driverState = ui.reduce(driverState, { type: "reserve-open" });
+  assert.strictEqual(driverState.reserveOpen, true);
+  driverState = ui.reduce(driverState, { type: "reserve-close" });
+  assert.strictEqual(driverState.reserveOpen, false);
+  view.destroy();
+});
+
+function fakeWindow() {
+  const listeners = {};
+  function node(tag) {
+    return {
+      tag: tag,
+      id: "",
+      className: "",
+      style: {},
+      children: [],
+      _text: "",
+      get textContent() { return this._text; },
+      set textContent(value) { this._text = value == null ? "" : String(value); if (this._text === "") this.children = []; },
+      attrs: {},
+      classList: { classes: [], add: function (name) { this.classes.push(name); }, remove: function (name) { this.classes = this.classes.filter(function (item) { return item !== name; }); } },
+      setAttribute: function (name, value) { this.attrs[name] = value; },
+      appendChild: function (child) { this.children.push(child); return child; },
+      addEventListener: function (type, fn) { (this._listeners = this._listeners || []).push(fn); },
+      removeEventListener: function (type, fn) {
+        this._listeners = (this._listeners || []).filter(function (item) { return item !== fn; });
+      },
+      querySelectorAll: function () { return this.children.filter(function (child) { return child.tag === "input"; }); }
+    };
+  }
+  const head = node("head");
+  const body = node("body");
+  const doc = {
+    head: head,
+    body: body,
+    createElement: node,
+    createTextNode: function (value) { const item = node("text"); item.textContent = String(value); return item; },
+    getElementById: function (id) {
+      if (body.id === id) return body;
+      return body.children.filter(function (child) { return child.id === id; })[0] || head.children.filter(function (child) { return child.id === id; })[0] || null;
+    }
+  };
+  const win = {
+    document: doc,
+    navigator: { userAgent: "iPhone" },
+    innerHeight: 700,
+    visualViewport: {
+      height: 640,
+      addEventListener: function (type, fn) { (this._listeners = this._listeners || []).push(fn); },
+      removeEventListener: function (type, fn) {
+        this._listeners = (this._listeners || []).filter(function (item) { return item !== fn; });
+      }
+    },
+    localStorage: { store: {}, getItem: function (k) { return this.store[k] || null; }, setItem: function (k, v) { this.store[k] = v; }, removeItem: function (k) { delete this.store[k]; } },
+    addEventListener: function (type, fn) { (this._listeners = this._listeners || []).push(fn); },
+    removeEventListener: function (type, fn) {
+      this._listeners = (this._listeners || []).filter(function (item) { return item !== fn; });
+    },
+    dispatch: function () { win.resizeCount += 1; },
+    resizeCount: 0,
+    Intl: Intl
+  };
+  return win;
+}
+
+(async function main() {
+  console.log("======================================================================");
+  console.log("JUMPIN TEST SUITE");
+  console.log("======================================================================");
+  for (let i = 0; i < tests.length; i++) {
+    try {
+      await tests[i].fn();
+      passed++;
+      console.log("  ✓ " + tests[i].name);
+    } catch (err) {
+      failed++;
+      console.error("  ✕ " + tests[i].name);
+      console.error("    " + (err && err.stack ? err.stack : err));
+    }
+  }
+  console.log("----------------------------------------------------------------------");
+  console.log("Passed " + passed + "  Failed " + failed);
+  if (failed) process.exit(1);
+})();

@@ -84,6 +84,50 @@
     ],
     "rewrites": [
       {
+        "source": "/api/carpoolPostRide",
+        "function": { "functionId": "carpoolPostRide", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolReserveSeat",
+        "function": { "functionId": "carpoolReserveSeat", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolCancelSeat",
+        "function": { "functionId": "carpoolCancelSeat", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolCancelTrip",
+        "function": { "functionId": "carpoolCancelTrip", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolSendManageLink",
+        "function": { "functionId": "carpoolSendManageLink", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolPostMessage",
+        "function": { "functionId": "carpoolPostMessage", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolListPending",
+        "function": { "functionId": "carpoolListPending", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolReviewRide",
+        "function": { "functionId": "carpoolReviewRide", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolAdminCancelTrip",
+        "function": { "functionId": "carpoolAdminCancelTrip", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolAdminSetPosting",
+        "function": { "functionId": "carpoolAdminSetPosting", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolAdminBroadcast",
+        "function": { "functionId": "carpoolAdminBroadcast", "region": "us-central1" }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

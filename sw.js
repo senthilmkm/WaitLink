@@ -27,6 +27,8 @@ const NEVER_CACHE_PATTERNS = [
   'checkout.stripe.com',
   'js.stripe.com',
   'cloudfunctions.net',
+  '/api/',
+  '/jumpin',
   '/top_ups',
   '/billing'
 ];

@@ -5,6 +5,7 @@
   "description": "Live Walk-in Wait Time Tracker SaaS",
   "scripts": {
     "test": "node tests/run_all_tests.js",
+    "test:jumpin": "npx c8 --check-coverage --lines 100 --functions 100 --statements 100 --branches 95 --include jumpin/**/*.js --include jumpin-admin.js node tests/jumpin/test_jumpin.js",
     "deploy": "npx firebase-tools deploy --only hosting --project waitlink-app-8821 && node scripts/prune-firebase-versions.js",
     "prune-hosting": "node scripts/prune-firebase-versions.js"
   }

@@ -3040,6 +3040,8 @@ exports.pruneShopHistory = onSchedule({ schedule: "every 24 hours", timeoutSecon
   }
 });
 
+Object.assign(exports, require("./carpool"));
+
 
 
 

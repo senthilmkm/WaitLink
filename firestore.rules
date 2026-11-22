@@ -363,6 +363,21 @@ service cloud.firestore {
       }
     }
 
+    // JumpIn. Guests can read open ride cards. Everything else is written by Cloud Functions.
+    match /carpool_public/rides/{rideId} {
+      allow get: if true;
+      allow list: if resource.data.status == "open";
+      allow write: if false;
+    }
+    match /carpool_public/root/rides/{rideId} {
+      allow get: if true;
+      allow list: if resource.data.status == "open";
+      allow write: if false;
+    }
+    match /carpool_private/{document=**} {
+      allow read, write: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if isSuperAdmin();

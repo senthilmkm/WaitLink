@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f1f5f9">
+  <meta name="robots" content="noindex">
+  <title>JumpIn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-input: #ffffff;
+      --border-color: #cbd5e1;
+      --primary: #0891b2;
+      --text-main: #090d16;
+      --text-muted: #1e293b;
+      --accent-rose: #be123c;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --shadow-card: 0 4px 10px rgba(0, 0, 0, 0.06);
+    }
+    html, body { margin: 0; background: var(--bg-dark); color: var(--text-main); font: 16px/1.5 Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
+    main { max-width: 420px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+    h1 { font-family: Outfit, Inter, sans-serif; font-size: 22px; letter-spacing: -0.02em; margin: 0 0 4px; }
+    h2 { font-family: Outfit, Inter, sans-serif; font-size: 16px; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .lead, .quiet { color: var(--text-muted); font-size: 14px; margin: 0; }
+    section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 16px; margin: 12px 0; }
+    label { display: block; margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    input, textarea, select { width: 100%; box-sizing: border-box; font: 16px/1.4 Inter, sans-serif; min-height: 44px; margin-top: 6px; padding: 8px 12px; color: var(--text-main); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+    button { min-height: 44px; font-size: 16px; }
+    button.filled { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-md); background: var(--primary); color: #fff; font-weight: 700; }
+    button.textish { display: block; width: 100%; text-align: left; background: transparent; color: var(--primary); border: 0; font-weight: 600; padding: 0; }
+    p.error { color: var(--accent-rose); font-size: 14px; }
+    #jumpin-count:empty { display: none; }
+  </style>
+</head>
+<body>
+  <main id="jumpin-admin">
+    <h1>JumpIn</h1>
+    <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
+    <button type="button" class="filled" id="jumpin-signin">Sign in</button>
+    <button type="button" class="textish" id="jumpin-signout" hidden>Sign out</button>
+    <section>
+      <h2>Approval</h2>
+      <p class="quiet" id="jumpin-sms-today"></p>
+      <label>JumpIn is open
+        <select id="jumpin-enabled" aria-label="JumpIn is open">
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </label>
+      <label>New rides wait for approval
+        <select id="jumpin-review" aria-label="Ride review">
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </label>
+      <label>Daily text cap<input id="jumpin-daily" inputmode="numeric" value="200"></label>
+      <label>Seats on a new trip<input id="jumpin-seats" inputmode="numeric" value="6"></label>
+      <label>Days ahead<input id="jumpin-horizon" inputmode="numeric" value="30"></label>
+      <label>Messages on a trip<input id="jumpin-messages" inputmode="numeric" value="20"></label>
+      <label>Trips one phone may post today<input id="jumpin-posts" inputmode="numeric" value="10"></label>
+      <label>Upcoming seats one phone may hold<input id="jumpin-active" inputmode="numeric" value="5"></label>
+      <label>Manage texts per seat or trip<input id="jumpin-record" inputmode="numeric" value="4"></label>
+      <label>Seconds between replacement texts<input id="jumpin-cooldown" inputmode="numeric" value="60"></label>
+      <button type="button" class="filled" id="jumpin-save">Save JumpIn settings</button>
+    </section>
+    <section>
+      <h2>Waiting</h2>
+      <div id="jumpin-pending" class="quiet"></div>
+    </section>
+    <section>
+      <h2>Upcoming</h2>
+      <div id="jumpin-upcoming" class="quiet"></div>
+    </section>
+    <section>
+      <h2>Blocked from posting</h2>
+      <div id="jumpin-blocked" class="quiet"></div>
+    </section>
+    <section>
+      <h2>Send a text</h2>
+      <p class="quiet">One note. You’ll see how many people get it before it sends.</p>
+      <textarea id="jumpin-announce" maxlength="280" aria-label="Announcement" placeholder="What should we text?"></textarea>
+      <p id="jumpin-count"></p>
+      <button type="button" class="textish" id="jumpin-preview-trip">This trip</button>
+      <button type="button" class="textish" id="jumpin-preview-upcoming">Upcoming trips</button>
+      <button type="button" class="textish" id="jumpin-preview-all">Everyone</button>
+      <button type="button" class="filled" id="jumpin-send" hidden>Send</button>
+    </section>
+    <p class="error" id="jumpin-error"></p>
+  </main>
+  <script src="/firebase-app-compat.js"></script>
+  <script src="/firebase-auth-compat.js"></script>
+  <script src="/firebase-firestore-compat.js"></script>
+  <script src="/jumpin/core.js"></script>
+  <script src="/jumpin/cloud.js"></script>
+  <script src="/jumpin/admin-state.js"></script>
+  <script src="/jumpin-admin.js"></script>
+</body>
+</html>
