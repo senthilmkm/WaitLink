@@ -23,20 +23,41 @@
       --shadow-card: 0 4px 10px rgba(0, 0, 0, 0.06);
     }
     html, body { margin: 0; background: var(--bg-dark); color: var(--text-main); font: 16px/1.5 Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
-    main { max-width: 420px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+    main { max-width: 480px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+    @media (min-width: 760px) { main { max-width: 960px; } }
     h1 { font-family: Outfit, Inter, sans-serif; font-size: 22px; letter-spacing: -0.02em; margin: 0 0 4px; }
     h2 { font-family: Outfit, Inter, sans-serif; font-size: 16px; letter-spacing: -0.02em; margin: 0 0 8px; }
     .lead, .quiet { color: var(--text-muted); font-size: 14px; margin: 0; }
     section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 16px; margin: 12px 0; }
     label { display: block; margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    label[title] { cursor: help; }
+    label[title] span.tip { border-bottom: 1px dotted #64748b; }
     input, textarea, select { width: 100%; box-sizing: border-box; font: 16px/1.4 Inter, sans-serif; min-height: 44px; margin-top: 6px; padding: 8px 12px; color: var(--text-main); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
     button { min-height: 44px; font-size: 16px; }
-    button.filled { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-md); background: var(--primary); color: #fff; font-weight: 700; }
+    button.filled { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-md); background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
     button.textish { display: block; width: 100%; text-align: left; background: transparent; color: var(--primary); border: 0; font-weight: 600; padding: 0; cursor: pointer; }
     p.error { color: var(--accent-rose); font-size: 14px; }
     #jumpin-count:empty, .admin-count:empty { display: none; }
+    .admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .admin-tabs { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
+    .admin-tab { min-height: 38px; padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border-color); background: #fff; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+    .admin-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .admin-toolbar input { flex: 1 1 200px; min-height: 38px; margin-top: 0; font-size: 14px; }
     .admin-count { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #e2e8f0; color: var(--text-muted); font-size: 12px; font-weight: 600; vertical-align: middle; }
+    .admin-tab.active .admin-count { background: rgba(255,255,255,.25); color: #fff; }
     .admin-list { display: flex; flex-direction: column; gap: 10px; }
+    .admin-cards { display: flex; flex-direction: column; gap: 10px; }
+    .admin-table-wrap { display: none; overflow-x: auto; }
+    @media (min-width: 760px) {
+      .admin-cards { display: none; }
+      .admin-table-wrap { display: block; }
+    }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .admin-table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #475569; padding: 8px 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    .admin-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; color: var(--text-main); }
+    .admin-table tr:last-child td { border-bottom: 0; }
+    .admin-table .admin-actions { margin-top: 0; flex-wrap: nowrap; }
     .admin-card { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; }
     .admin-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
     .admin-route { font-weight: 700; font-size: 15px; color: var(--text-main); line-height: 1.3; }
@@ -45,75 +66,206 @@
     .admin-meta.muted { color: #475569; margin-top: 2px; }
     .admin-note { font-size: 13px; color: #334155; margin-top: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; }
     .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .admin-btn { min-height: 36px; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); }
+    .admin-btn { min-height: 36px; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); white-space: nowrap; }
     .admin-btn.primary { border-color: #0891b2; color: #0e7490; background: #ecfeff; }
     .admin-btn.warn { border-color: #cbd5e1; color: #475569; background: #ffffff; }
     .admin-btn.danger { border-color: #fecdd3; color: var(--accent-rose); background: #fff1f2; margin-left: auto; }
     .admin-blocked-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f8fafc; color: var(--text-main); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+    .admin-modal { position: fixed; inset: 0; z-index: 60; background: rgba(9,13,22,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .admin-modal[hidden] { display: none; }
+    .admin-modal-card { width: min(560px, 100%); max-height: 85vh; overflow: auto; background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.22); }
+    .admin-sublist { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .admin-subrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; }
+    .admin-msg { padding: 8px 10px; border-radius: 8px; background: #f0f9ff; border: 1px solid #bae6fd; font-size: 13px; }
+    .admin-msg-head { font-size: 12px; font-weight: 600; color: #0369a1; margin-bottom: 2px; }
+    .admin-settings-grid { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+    @media (min-width: 760px) { .admin-settings-grid { grid-template-columns: 1fr 1fr; } }
+    @keyframes admin-spin { to { transform: rotate(360deg); } }
+    .admin-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: admin-spin .7s linear infinite; vertical-align: middle; margin-right: 8px; opacity: .85; }
   </style>
 </head>
 <body>
   <main id="jumpin-admin">
-    <h1>JumpIn</h1>
-    <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
-    <button type="button" class="filled" id="jumpin-signin">Sign in</button>
-    <button type="button" class="textish" id="jumpin-signout" hidden>Sign out</button>
-    <section>
-      <h2>Approval</h2>
-      <p class="quiet" id="jumpin-sms-today"></p>
-      <label>JumpIn is open
-        <select id="jumpin-enabled" aria-label="JumpIn is open">
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
-        </select>
-      </label>
-      <label>New rides wait for approval
-        <select id="jumpin-review" aria-label="Ride review">
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
-        </select>
-      </label>
-      <label>Daily text cap<input id="jumpin-daily" inputmode="numeric" value="200"></label>
-      <label>Seats on a new trip<input id="jumpin-seats" inputmode="numeric" value="6"></label>
-      <label>Days ahead<input id="jumpin-horizon" inputmode="numeric" value="30"></label>
-      <label>Messages on a trip<input id="jumpin-messages" inputmode="numeric" value="20"></label>
-      <label>Trips one phone may post today<input id="jumpin-posts" inputmode="numeric" value="10"></label>
-      <label>Upcoming seats one phone may hold<input id="jumpin-active" inputmode="numeric" value="5"></label>
-      <label>Manage texts per seat or trip<input id="jumpin-record" inputmode="numeric" value="4"></label>
-      <label>Seconds between replacement texts<input id="jumpin-cooldown" inputmode="numeric" value="60"></label>
-      <button type="button" class="filled" id="jumpin-save">Save JumpIn settings</button>
-    </section>
-    <section>
-      <h2>Waiting<span class="admin-count" id="jumpin-pending-count"></span></h2>
-      <div id="jumpin-pending" class="quiet admin-list"></div>
-    </section>
-    <section>
-      <div class="admin-card-top">
-        <h2>Upcoming<span class="admin-count" id="jumpin-upcoming-count"></span></h2>
-        <button type="button" class="admin-btn" id="jumpin-open-broadcast">Broadcast</button>
+    <div class="admin-header">
+      <div>
+        <h1>JumpIn Admin</h1>
+        <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
       </div>
-      <div id="jumpin-upcoming" class="quiet admin-list"></div>
-    </section>
-    <section id="jumpin-text-section" hidden>
-      <div class="admin-card-top">
-        <h2>Send a text</h2>
-        <button type="button" class="admin-btn" id="jumpin-text-close">Close</button>
+      <div>
+        <button type="button" class="filled" id="jumpin-signin">Sign in</button>
+        <button type="button" class="admin-btn" id="jumpin-signout" hidden>Sign out</button>
       </div>
-      <p class="quiet">One note. You’ll see how many people get it before it sends.</p>
-      <p class="quiet" id="jumpin-selected-trip" hidden></p>
-      <textarea id="jumpin-announce" maxlength="280" aria-label="Announcement" placeholder="What should we text?"></textarea>
-      <p id="jumpin-count"></p>
-      <div class="admin-actions" style="margin-bottom: 10px;">
-        <button type="button" class="admin-btn" id="jumpin-preview-trip" hidden>Selected trip</button>
-        <button type="button" class="admin-btn" id="jumpin-preview-upcoming">Upcoming trips</button>
-        <button type="button" class="admin-btn" id="jumpin-preview-all">Everyone</button>
+    </div>
+    <nav class="admin-tabs" aria-label="Admin sections">
+      <button type="button" class="admin-tab active" id="jumpin-tab-btn-trips">Trips</button>
+      <button type="button" class="admin-tab" id="jumpin-tab-btn-members">Members<span class="admin-count" id="jumpin-members-count"></span></button>
+      <button type="button" class="admin-tab" id="jumpin-tab-btn-settings">Settings</button>
+      <button type="button" class="admin-tab" id="jumpin-tab-btn-blocked">Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
+      <button type="button" class="admin-tab" id="jumpin-tab-btn-cleanup">Cleanup</button>
+    </nav>
+    <div id="jumpin-tab-trips">
+      <section>
+        <div class="admin-toolbar">
+          <button type="button" class="admin-btn primary" id="jumpin-filter-upcoming">Upcoming<span class="admin-count" id="jumpin-upcoming-count"></span></button>
+          <button type="button" class="admin-btn" id="jumpin-filter-pending">Waiting<span class="admin-count" id="jumpin-pending-count"></span></button>
+          <button type="button" class="admin-btn" id="jumpin-filter-past">Past<span class="admin-count" id="jumpin-past-count"></span></button>
+          <button type="button" class="admin-btn" id="jumpin-filter-cancelled">Cancelled<span class="admin-count" id="jumpin-cancelled-count"></span></button>
+          <input id="jumpin-search" type="search" placeholder="Search route, driver, or last 4" aria-label="Search trips">
+          <button type="button" class="admin-btn" id="jumpin-open-broadcast">Broadcast</button>
+        </div>
+        <div id="jumpin-upcoming" class="quiet"></div>
+        <div id="jumpin-pending" class="quiet" hidden></div>
+        <div id="jumpin-past" class="quiet" hidden></div>
+        <div id="jumpin-cancelled" class="quiet" hidden></div>
+      </section>
+      <section id="jumpin-text-section" hidden>
+        <div class="admin-card-top">
+          <h2>Send a text</h2>
+          <button type="button" class="admin-btn" id="jumpin-text-close">Close</button>
+        </div>
+        <p class="quiet">One note. You’ll see how many people get it before it sends.</p>
+        <p class="quiet" id="jumpin-selected-trip" hidden></p>
+        <textarea id="jumpin-announce" maxlength="280" aria-label="Announcement" placeholder="What should we text?"></textarea>
+        <p id="jumpin-count"></p>
+        <div class="admin-actions" style="margin-bottom: 10px;">
+          <button type="button" class="admin-btn" id="jumpin-preview-trip" hidden>Preview recipients</button>
+          <button type="button" class="admin-btn" id="jumpin-preview-upcoming">Upcoming trips</button>
+          <button type="button" class="admin-btn" id="jumpin-preview-all">Everyone</button>
+        </div>
+        <button type="button" class="filled" id="jumpin-send" hidden>Send</button>
+      </section>
+    </div>
+    <div id="jumpin-tab-members" hidden>
+      <section>
+        <div class="admin-card-top">
+          <h2>Community Members</h2>
+          <span class="admin-badge" id="jumpin-members-mode">Open to all</span>
+        </div>
+        <p class="quiet" style="margin-bottom: 12px;">When "Members only" is Yes in Settings, only phone numbers on this list can post rides or reserve seats.</p>
+        <div class="admin-settings-grid">
+          <label>Name<input id="jumpin-member-name" placeholder="Alex"></label>
+          <label>Phone<input id="jumpin-member-phone" type="tel" placeholder="555 234 5678"></label>
+        </div>
+        <button type="button" class="admin-btn primary" id="jumpin-member-add">Add member</button>
+        <label style="margin-top: 14px;">Bulk import (one per line: <code>Name, 555 234 5678</code> or just <code>555 234 5678</code>)
+          <textarea id="jumpin-member-bulk" rows="3" placeholder="Alex, 555-234-5678&#10;Sam, 555-987-6543"></textarea>
+        </label>
+        <button type="button" class="admin-btn" id="jumpin-member-import">Import list</button>
+        <div class="admin-toolbar" style="margin-top: 14px;">
+          <input id="jumpin-member-search" type="search" placeholder="Search members by name or last 4" aria-label="Search members">
+        </div>
+        <div id="jumpin-members" class="quiet admin-list"></div>
+      </section>
+    </div>
+    <div id="jumpin-tab-settings" hidden>
+      <section>
+        <h2>Approval &amp; Limits</h2>
+        <p class="quiet" id="jumpin-sms-today" style="margin-bottom: 12px;"></p>
+        <div class="admin-settings-grid">
+          <label title="Turn JumpIn on or off for everyone. Set to No to pause new rides and bookings."><span class="tip">JumpIn is open</span>
+            <select id="jumpin-enabled" aria-label="JumpIn is open">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label title="If Yes, new trips stay hidden in Waiting until an admin approves them. If No, trips go live right away."><span class="tip">New rides wait for approval</span>
+            <select id="jumpin-review" aria-label="Ride review">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label title="If Yes, only phone numbers in the Members tab can post rides or reserve seats."><span class="tip">Members only</span>
+            <select id="jumpin-members-only" aria-label="Members only">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label title="Email shown to non-members when JumpIn is in Members only mode."><span class="tip">Admin contact email</span><input id="jumpin-contact-email" type="email" value="senthil930@gmail.com"></label>
+          <label title="Comma-separated Google emails allowed to sign in to JumpIn Admin (primary admin is always kept)."><span class="tip">Admin sign-in emails</span><input id="jumpin-admin-emails" value="senthil930@gmail.com"></label>
+          <label title="Maximum total SMS messages JumpIn can send across all users in one day."><span class="tip">Daily text cap</span><input id="jumpin-daily" inputmode="numeric" value="200"></label>
+          <label title="Maximum number of seats a driver can offer when posting a new trip."><span class="tip">Seats on a new trip</span><input id="jumpin-seats" inputmode="numeric" value="6"></label>
+          <label title="How many days into the future a driver can schedule a trip."><span class="tip">Days ahead</span><input id="jumpin-horizon" inputmode="numeric" value="30"></label>
+          <label title="Maximum number of in-app messages allowed in one trip's Trip Updates thread."><span class="tip">Messages on a trip</span><input id="jumpin-messages" inputmode="numeric" value="20"></label>
+          <label title="Maximum number of trips one phone number can post in a single day."><span class="tip">Trips one phone may post today</span><input id="jumpin-posts" inputmode="numeric" value="10"></label>
+          <label title="Maximum number of active upcoming seats one rider phone number can hold at the same time."><span class="tip">Upcoming seats one phone may hold</span><input id="jumpin-active" inputmode="numeric" value="5"></label>
+          <label title="How many times a manage-link SMS can be sent for a single seat or trip (prevents link-resend spam)."><span class="tip">Manage texts per seat or trip</span><input id="jumpin-record" inputmode="numeric" value="4"></label>
+          <label title="Minimum wait time (in seconds) before someone can request another manage-link text."><span class="tip">Seconds between replacement texts</span><input id="jumpin-cooldown" inputmode="numeric" value="60"></label>
+        </div>
+        <button type="button" class="filled" id="jumpin-save">Save JumpIn settings</button>
+      </section>
+    </div>
+    <div id="jumpin-tab-blocked" hidden>
+      <section>
+        <h2>Blocked from posting</h2>
+        <div id="jumpin-blocked" class="quiet admin-list"></div>
+      </section>
+    </div>
+    <div id="jumpin-tab-cleanup" hidden>
+      <section>
+        <h2>Cleanup &amp; Purge Firestore Data</h2>
+        <p class="quiet" id="jumpin-cleanup-summary" style="margin-bottom: 12px;"></p>
+        <div class="admin-list">
+          <div class="admin-card">
+            <div class="admin-card-top">
+              <div class="admin-route">1. Clean Past &amp; Cancelled Trips</div>
+              <span class="admin-badge">Safe</span>
+            </div>
+            <div class="admin-meta muted">Deletes completed, cancelled, declined, and expired trips + their reservations. Keeps upcoming trips, members, and settings.</div>
+            <div class="admin-actions"><button type="button" class="admin-btn primary" id="jumpin-purge-past">Preview &amp; Clean</button></div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-top">
+              <div class="admin-route">2. Wipe All Trips (Pre-Launch Reset)</div>
+              <span class="admin-badge">Board Reset</span>
+            </div>
+            <div class="admin-meta muted">Deletes ALL trips (including upcoming &amp; waiting), reservations, and rate limits. Keeps Members, Blocked, and Settings.</div>
+            <div class="admin-actions"><button type="button" class="admin-btn warn" id="jumpin-purge-trips">Preview &amp; Wipe Trips</button></div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-top">
+              <div class="admin-route">3. Clear Broadcast Audience</div>
+              <span class="admin-badge">SMS List</span>
+            </div>
+            <div class="admin-meta muted">Clears saved phone numbers used for "Everyone" broadcasts. Keeps trips, members, and settings.</div>
+            <div class="admin-actions"><button type="button" class="admin-btn warn" id="jumpin-purge-audience">Preview &amp; Clear Audience</button></div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-top">
+              <div class="admin-route">4. Full JumpIn Data Reset</div>
+              <span class="admin-badge" style="background:#ffe4e6;color:#be123c;">Danger</span>
+            </div>
+            <div class="admin-meta muted">Deletes ALL trips, reservations, audience, limits, blocks, and members. Only Settings are kept.</div>
+            <div class="admin-actions"><button type="button" class="admin-btn danger" style="margin-left:0;" id="jumpin-purge-all">Preview &amp; Full Reset</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="admin-modal" id="jumpin-detail-modal" hidden>
+      <div class="admin-modal-card">
+        <div class="admin-card-top">
+          <div>
+            <div class="admin-route" id="jumpin-detail-route"></div>
+            <div class="admin-meta muted" id="jumpin-detail-meta"></div>
+          </div>
+          <button type="button" class="admin-btn" id="jumpin-detail-close">Close</button>
+        </div>
+        <div class="admin-note" id="jumpin-detail-note" hidden></div>
+        <h2 style="margin-top: 14px;">Passengers (<span id="jumpin-detail-pax-count">0</span>)</h2>
+        <div class="admin-sublist" id="jumpin-detail-pax"></div>
+        <h2 style="margin-top: 14px;">Trip Messages (<span id="jumpin-detail-msg-count">0</span>)</h2>
+        <div class="admin-sublist" id="jumpin-detail-msgs"></div>
       </div>
-      <button type="button" class="filled" id="jumpin-send" hidden>Send</button>
-    </section>
-    <section>
-      <h2>Blocked from posting<span class="admin-count" id="jumpin-blocked-count"></span></h2>
-      <div id="jumpin-blocked" class="quiet admin-list"></div>
-    </section>
+    </div>
+    <div class="admin-modal" id="jumpin-confirm-modal" hidden>
+      <div class="admin-modal-card" style="width: min(400px, 100%);">
+        <div class="admin-route" id="jumpin-confirm-title"></div>
+        <p class="quiet" id="jumpin-confirm-msg" style="margin-top: 6px;"></p>
+        <div class="admin-actions" style="margin-top: 16px; justify-content: flex-end;">
+          <button type="button" class="admin-btn" id="jumpin-confirm-no">Keep</button>
+          <button type="button" class="admin-btn danger" id="jumpin-confirm-yes" style="margin-left: 0;">Confirm</button>
+        </div>
+      </div>
+    </div>
     <p class="error" id="jumpin-error"></p>
   </main>
   <script src="/firebase-app-compat.js"></script>

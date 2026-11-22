@@ -140,10 +140,28 @@
   }
   function randomSecret(rng) { return base64url(randomBytes(32, rng)); }
 
+  function cleanEmail(raw) {
+    const email = String(raw || "").trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+  }
+
+  function cleanAdminEmails(raw) {
+    const list = Array.isArray(raw) ? raw : String(raw || "").split(/[\n,;]+/);
+    const out = ["senthil930@gmail.com"];
+    list.forEach(function (item) {
+      const email = cleanEmail(item);
+      if (email && out.indexOf(email) === -1) out.push(email);
+    });
+    return out;
+  }
+
   function defaultConfig() {
     return {
       enabled: false,
       requireRideApproval: false,
+      membersOnly: false,
+      adminEmails: ["senthil930@gmail.com"],
+      contactEmail: "senthil930@gmail.com",
       dailySmsCap: 200,
       dailySmsSent: 0,
       dailySmsDay: "",
@@ -168,6 +186,9 @@
     return {
       enabled: src.enabled === true,
       requireRideApproval: src.requireRideApproval === true,
+      membersOnly: src.membersOnly === true,
+      adminEmails: cleanAdminEmails(src.adminEmails),
+      contactEmail: cleanEmail(src.contactEmail) || base.contactEmail,
       dailySmsCap: int("dailySmsCap", 0, 5000, base.dailySmsCap),
       dailySmsSent: Number.isFinite(Number(src.dailySmsSent)) ? Number(src.dailySmsSent) : 0,
       dailySmsDay: typeof src.dailySmsDay === "string" ? src.dailySmsDay : "",
@@ -420,6 +441,8 @@
     timingSafeEqual: timingSafeEqual,
     randomId: randomId,
     randomSecret: randomSecret,
+    cleanEmail: cleanEmail,
+    cleanAdminEmails: cleanAdminEmails,
     defaultConfig: defaultConfig,
     clampConfig: clampConfig,
     configFieldError: configFieldError,

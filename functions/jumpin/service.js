@@ -90,6 +90,9 @@ function saveConfig(tx, config) {
   tx.set("settings/carpool_config", {
     enabled: config.enabled,
     requireRideApproval: config.requireRideApproval,
+    membersOnly: config.membersOnly === true,
+    adminEmails: config.adminEmails,
+    contactEmail: config.contactEmail,
     dailySmsCap: config.dailySmsCap,
     dailySmsSent: config.dailySmsSent,
     dailySmsDay: config.dailySmsDay,
@@ -130,7 +133,7 @@ async function rememberRide(tx, ride, riders) {
     seatsTotal: ride.seatsTotal,
     timeZone: ride.timeZone || "UTC",
     riders: arr(riders).filter(function (row) { return row.status === "active" && row.phoneE164; }).map(function (row) {
-      return { phoneE164: row.phoneE164, status: "active" };
+      return { phoneE164: row.phoneE164, name: row.name || "", phoneLast4: core.last4(row.phoneE164), status: "active" };
     })
   };
   index.rides = arr(index.rides).filter(function (row) { return row.rideId !== ride.rideId; });
@@ -174,6 +177,14 @@ function activeRiders(list) {
   return arr(list).filter(function (row) { return row.status === "active"; });
 }
 
+async function memberError(tx, config, e164) {
+  if (!config.membersOnly) return "";
+  const pack = await tx.get("carpool_private/member_index") || { members: [] };
+  const hash = core.phoneHash16(e164);
+  if (arr(pack.members).some(function (m) { return m.phoneHash === hash; })) return "";
+  return "JumpIn is for approved community members only. Please contact the administrator at " + config.contactEmail + " to be added.";
+}
+
 function postRide(db, input, now, rng) {
   const checked = core.postErrors(input || {});
   if (checked.error) return Promise.resolve({ ok: false, field: checked.field, error: checked.error });
@@ -191,6 +202,8 @@ function postRide(db, input, now, rng) {
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
     if (await tx.get(blockKey(fields.phone))) return { ok: false, error: "You can't post a ride right now." };
+    const notMember = await memberError(tx, config, fields.phone);
+    if (notMember) return { ok: false, field: "phone", error: notMember };
     const phone = await tx.get(phoneKey(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     const today = core.postsToday(phone, now);
     if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You already posted " + config.maxPostsPerPhonePerDay + " trips today." };
@@ -271,6 +284,8 @@ function reserveSeat(db, input, now, rng) {
     if (ride.status !== "open" || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
     if (fields.phone === ride.driverPhoneE164) return { ok: false, error: "The driver already has this trip." };
     if (ride.seatsLeft < 1) return { ok: false, error: "That seat was just taken." };
+    const notMember = await memberError(tx, config, fields.phone);
+    if (notMember) return { ok: false, field: "phone", error: notMember };
     const phone = await tx.get(phoneKey(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     if (core.activeReservations(phone) >= config.maxActiveReservationsPerPhone) {
       return { ok: false, error: "You already have " + config.maxActiveReservationsPerPhone + " upcoming seats." };
@@ -327,7 +342,7 @@ function reserveSeat(db, input, now, rng) {
     for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
       const docId = ride.activeReservationDocIds[i];
       const row = docId === key ? reservation : await tx.get(docId);
-      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, status: "active" });
+      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
     }
     await rememberRide(tx, ride, riderRows);
     saveConfig(tx, config);
@@ -384,7 +399,7 @@ function cancelSeat(db, input, now) {
     for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
       const docId = ride.activeReservationDocIds[i];
       const row = docId === key ? reservation : await tx.get(docId);
-      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, status: "active" });
+      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
     }
     await rememberRide(tx, ride, riderRows);
     return { ok: true };
@@ -468,29 +483,33 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
   saveConfig(tx, config);
 }
 
+const MESSAGE_GRACE_MS = 60 * 60 * 1000;
+
 function postMessage(db, input, now) {
   const checked = core.messageError(input.text);
   if (checked.error) return Promise.resolve({ ok: false, error: checked.error });
   return db.runTransaction(async function (tx) {
+    const texts = freshTexts();
     const config = await loadConfig(tx, now);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(ridePrivate(input.rideId));
-    if (!ride || ride.status !== "open" || ride.departAt <= now) return { ok: false, error: GENERIC_LINK };
+    if (!ride || ride.status !== "open" || ride.departAt + MESSAGE_GRACE_MS <= now) return { ok: false, error: GENERIC_LINK };
     let authorName = "";
     let authorRole = "";
+    const riderPhones = [];
+    const keys = arr(ride.activeReservationDocIds);
+    for (let i = 0; i < keys.length; i++) {
+      const reservation = await tx.get(keys[i]);
+      if (!reservation || reservation.status !== "active") continue;
+      if (reservation.phoneE164) riderPhones.push(reservation.phoneE164);
+      if (!authorRole && assertSecret(input.secret, reservation.tokenHash)) {
+        authorName = reservation.name;
+        authorRole = "rider";
+      }
+    }
     if (assertSecret(input.secret, ride.driverTokenHash)) {
       authorName = ride.driverName;
       authorRole = "driver";
-    } else {
-      const keys = arr(ride.activeReservationDocIds);
-      for (let i = 0; i < keys.length; i++) {
-        const reservation = await tx.get(keys[i]);
-        if (reservation && reservation.status === "active" && assertSecret(input.secret, reservation.tokenHash)) {
-          authorName = reservation.name;
-          authorRole = "rider";
-          break;
-        }
-      }
     }
     if (!authorRole) return { ok: false, error: GENERIC_LINK };
     const pub = await tx.get(ridePublic(ride.rideId));
@@ -507,8 +526,19 @@ function postMessage(db, input, now) {
     });
     pub.messages = messages;
     pub.updatedAt = now;
+    const targets = authorRole === "driver" ? riderPhones : [ride.driverPhoneE164];
+    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app?s=jumpin&view=ride&ride=" + ride.rideId;
+    for (let i = 0; i < targets.length; i++) {
+      if (targets[i] && core.canSend(config, now)) {
+        bumpSms(config);
+        queueText(texts, targets[i], noteBody, "CARPOOL_MESSAGE");
+      }
+    }
     tx.set(ridePublic(ride.rideId), pub);
-    return { ok: true };
+    saveConfig(tx, config);
+    return { ok: true, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
   });
 }
 
@@ -571,15 +601,19 @@ function manageUrl(kind, id, secret, rideId) {
   return "https://waitlink.app?s=jumpin&view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
 }
 
-function requireAdmin(email) {
-  return String(email || "").toLowerCase() === SUPERADMIN_EMAIL;
+function requireAdmin(email, config) {
+  const clean = core.cleanEmail(email);
+  if (!clean) return false;
+  if (clean === SUPERADMIN_EMAIL) return true;
+  return !!(config && Array.isArray(config.adminEmails) && config.adminEmails.indexOf(clean) !== -1);
 }
 
 function reviewRide(db, email, input, now) {
-  if (!requireAdmin(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const texts = freshTexts();
     const config = await loadConfig(tx, now);
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     const ride = await tx.get(ridePrivate(input.rideId));
     if (!ride || ride.status !== "pending") return { ok: true, already: true, texts: texts };
     const pub = await tx.get(ridePublic(ride.rideId));
@@ -612,10 +646,11 @@ function reviewRide(db, email, input, now) {
 }
 
 function adminCancelTrip(db, email, rideId, now) {
-  if (!requireAdmin(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const texts = freshTexts();
     const config = await loadConfig(tx, now);
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     const ride = await tx.get(ridePrivate(rideId));
     if (!ride) return { ok: false, error: "This ride is not available." };
     if (ride.status === "cancelled") return { ok: true, already: true, texts: texts };
@@ -628,8 +663,10 @@ function adminCancelTrip(db, email, rideId, now) {
 }
 
 function setPosting(db, email, input, now) {
-  if (!requireAdmin(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
+    const config = await loadConfig(tx, now || Date.now());
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     if (input.phoneHash && input.blocked === false) {
       const index = await tx.get("carpool_private/block_index") || { blocks: [] };
       index.blocks = arr(index.blocks).filter(function (row) { return row.phoneHash !== input.phoneHash; });
@@ -665,13 +702,28 @@ function setPosting(db, email, input, now) {
 }
 
 function listAdmin(db, email, now) {
-  if (!requireAdmin(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const config = await loadConfig(tx, now || Date.now());
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
     const blocks = await tx.get("carpool_private/block_index") || { blocks: [] };
+    const memberPack = await tx.get("carpool_private/member_index") || { members: [] };
     const clock = now || Date.now();
+    const allRides = arr(pack.rides);
+    const pubs = {};
+    for (let i = 0; i < allRides.length; i++) {
+      pubs[allRides[i].rideId] = await tx.get(ridePublic(allRides[i].rideId));
+    }
     function card(ride) {
+      const pub = pubs[ride.rideId] || {};
+      const riders = arr(ride.riders).filter(function (r) { return r.status === "active"; }).map(function (r) {
+        return {
+          name: r.name || "Passenger",
+          phoneLast4: core.last4(r.phoneE164),
+          status: "active"
+        };
+      });
       return {
         rideId: ride.rideId,
         status: ride.status,
@@ -682,17 +734,23 @@ function listAdmin(db, email, now) {
         to: ride.to || "",
         note: ride.note || "",
         seatsLeft: ride.seatsLeft,
-        timeZone: ride.timeZone || "UTC"
+        timeZone: ride.timeZone || "UTC",
+        riders: riders,
+        messages: arr(pub.messages)
       };
     }
     return {
       ok: true,
       config: config,
-      pending: arr(pack.rides).filter(function (ride) { return ride.status === "pending"; }).map(card),
-      upcoming: arr(pack.rides).filter(function (ride) { return ride.status === "open" && ride.departAt > clock; }).map(card),
+      pending: allRides.filter(function (ride) { return ride.status === "pending"; }).map(card),
+      upcoming: allRides.filter(function (ride) { return ride.status === "open" && ride.departAt > clock; }).map(card),
+      past: allRides.filter(function (ride) { return ride.status === "completed" || (ride.status === "open" && ride.departAt <= clock); }).map(card),
+      cancelled: allRides.filter(function (ride) { return ride.status === "cancelled" || ride.status === "rejected"; }).map(card),
       blocked: arr(blocks.blocks).map(function (entry) {
         return { driverName: entry.driverName, phoneLast4: entry.phoneLast4, phoneHash: entry.phoneHash, blockedAt: entry.blockedAt };
-      })
+      }),
+      members: arr(memberPack.members),
+      audienceCount: arr(pack.audience).length
     };
   });
 }
@@ -729,7 +787,7 @@ function optedOut(records, e164) {
 }
 
 function broadcast(db, email, input, now) {
-  if (!requireAdmin(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   const text = core.announceError(input.text);
   if (text.error) return Promise.resolve({ ok: false, error: text.error });
   const scope = input.scope;
@@ -737,6 +795,7 @@ function broadcast(db, email, input, now) {
   if (scope === "trip" && !input.rideId) return Promise.resolve({ ok: false, error: "Choose a trip." });
   return db.runTransaction(async function (tx) {
     const config = await loadConfig(tx, now);
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
     const phones = broadcastPlan(pack, scope, input.rideId, now);
     const left = core.smsBudget(config, now).left;
@@ -767,7 +826,7 @@ function completeDue(db, now) {
       const row = rides[i];
       const ride = await tx.get(ridePrivate(row.rideId));
       if (!ride) continue;
-      if ((ride.status === "open" || ride.status === "pending") && ride.departAt <= now) {
+      if ((ride.status === "open" || ride.status === "pending") && ride.departAt + MESSAGE_GRACE_MS <= now) {
         ride.status = "completed";
         ride.completedAt = now;
         row.status = "completed";
@@ -840,6 +899,124 @@ function markOptOut(db, phone, now) {
   });
 }
 
+function setMembers(db, email, input, now) {
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const body = input || {};
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const config = await loadConfig(tx, clock);
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    const pack = await tx.get("carpool_private/member_index") || { members: [] };
+    let list = arr(pack.members).slice();
+    if (body.removePhoneHash) {
+      list = list.filter(function (m) { return m.phoneHash !== body.removePhoneHash; });
+      tx.set("carpool_private/member_index", { members: list });
+      return { ok: true, count: list.length };
+    }
+    const lines = body.bulk ? String(body.bulk).split(/\r?\n|;/).map(function (l) { return l.trim(); }).filter(Boolean) : [String(body.name || "") + "," + String(body.phone || "")];
+    let added = 0;
+    let skipped = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const parts = lines[i].split(",");
+      const rawPhone = parts.length > 1 ? parts.slice(1).join(",") : parts[0];
+      const rawName = parts.length > 1 ? parts[0] : "";
+      const parsed = core.normalizePhone(rawPhone);
+      if (!parsed.ok) {
+        if (!body.bulk) return { ok: false, error: parsed.error };
+        skipped += 1;
+        continue;
+      }
+      const hash = core.phoneHash16(parsed.e164);
+      const entry = {
+        phoneHash: hash,
+        phoneLast4: core.last4(parsed.e164),
+        name: rawName.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Member",
+        addedAt: clock
+      };
+      list = list.filter(function (m) { return m.phoneHash !== hash; });
+      list.push(entry);
+      added += 1;
+    }
+    tx.set("carpool_private/member_index", { members: list });
+    return { ok: true, added: added, skipped: skipped, count: list.length };
+  });
+}
+
+function saveAdminConfig(db, email, input, now) {
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  return db.runTransaction(async function (tx) {
+    const prev = await loadConfig(tx, now || Date.now());
+    if (!requireAdmin(email, prev)) return { ok: false, error: "This page is not available." };
+    const next = core.clampConfig(input);
+    next.dailySmsSent = prev.dailySmsSent;
+    next.dailySmsDay = prev.dailySmsDay;
+    saveConfig(tx, next);
+    return { ok: true, config: next };
+  });
+}
+
+function purgeData(db, email, input, now) {
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const body = input || {};
+  const scope = body.scope;
+  if (scope !== "past" && scope !== "trips" && scope !== "audience" && scope !== "all") {
+    return Promise.resolve({ ok: false, error: "Choose what to clean up." });
+  }
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const config = await loadConfig(tx, clock);
+    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+    const limits = await tx.get("carpool_private/limit_index") || { keys: [] };
+    const blocks = await tx.get("carpool_private/block_index") || { blocks: [] };
+    const members = await tx.get("carpool_private/member_index") || { members: [] };
+    const allRides = arr(pack.rides);
+    const isPastOrClosed = function (r) {
+      return r.status === "completed" || r.status === "cancelled" || r.status === "rejected" || (r.status === "open" && r.departAt + MESSAGE_GRACE_MS <= clock);
+    };
+    const targetRides = scope === "past" ? allRides.filter(isPastOrClosed) : (scope === "trips" || scope === "all" ? allRides : []);
+    const resKeys = [];
+    for (let i = 0; i < targetRides.length; i++) {
+      const priv = await tx.get(ridePrivate(targetRides[i].rideId));
+      if (priv) arr(priv.activeReservationDocIds).forEach(function (k) { resKeys.push(k); });
+    }
+    const counts = {
+      rides: targetRides.length,
+      reservations: resKeys.length,
+      audience: (scope === "audience" || scope === "all") ? arr(pack.audience).length : 0,
+      blocks: scope === "all" ? arr(blocks.blocks).length : 0,
+      members: scope === "all" ? arr(members.members).length : 0
+    };
+    if (!body.confirm) return { ok: true, confirm: false, scope: scope, counts: counts };
+    targetRides.forEach(function (r) {
+      tx.del(ridePrivate(r.rideId));
+      tx.del(ridePublic(r.rideId));
+    });
+    resKeys.forEach(function (k) { tx.del(k); });
+    if (scope === "past") {
+      const dropIds = targetRides.map(function (r) { return r.rideId; });
+      tx.set("carpool_private/broadcast_index", {
+        rides: allRides.filter(function (r) { return dropIds.indexOf(r.rideId) === -1; }),
+        audience: arr(pack.audience)
+      });
+    } else if (scope === "trips") {
+      arr(limits.keys).forEach(function (k) { tx.del(k); });
+      tx.set("carpool_private/limit_index", { keys: [] });
+      tx.set("carpool_private/broadcast_index", { rides: [], audience: arr(pack.audience) });
+    } else if (scope === "audience") {
+      tx.set("carpool_private/broadcast_index", { rides: allRides, audience: [] });
+    } else {
+      arr(limits.keys).forEach(function (k) { tx.del(k); });
+      arr(blocks.blocks).forEach(function (b) { tx.del("carpool_private/blocks/" + b.phoneHash); });
+      tx.set("carpool_private/limit_index", { keys: [] });
+      tx.set("carpool_private/block_index", { blocks: [] });
+      tx.set("carpool_private/member_index", { members: [] });
+      tx.set("carpool_private/broadcast_index", { rides: [], audience: [] });
+    }
+    return { ok: true, confirm: true, scope: scope, deleted: counts };
+  });
+}
+
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
   GENERIC_LINK: GENERIC_LINK,
@@ -853,6 +1030,9 @@ module.exports = {
   reviewRide: reviewRide,
   adminCancelTrip: adminCancelTrip,
   setPosting: setPosting,
+  setMembers: setMembers,
+  saveAdminConfig: saveAdminConfig,
+  purgeData: purgeData,
   listAdmin: listAdmin,
   broadcast: broadcast,
   broadcastPlan: broadcastPlan,

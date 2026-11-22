@@ -17,6 +17,9 @@ function call(db, name, data, auth, now) {
   if (name === "carpoolReviewRide") return service.reviewRide(db, email, body, now);
   if (name === "carpoolAdminCancelTrip") return service.adminCancelTrip(db, email, body.rideId, now);
   if (name === "carpoolAdminSetPosting") return service.setPosting(db, email, body, now);
+  if (name === "carpoolAdminSetMembers") return service.setMembers(db, email, body, now);
+  if (name === "carpoolAdminSaveConfig") return service.saveAdminConfig(db, email, body, now);
+  if (name === "carpoolAdminPurge") return service.purgeData(db, email, body, now);
   if (name === "carpoolAdminBroadcast") return service.broadcast(db, email, body, now);
   if (name === "carpoolCompleteTrips") return service.completeDue(db, now);
   if (name === "carpoolRetainTrips") return service.retainTrips(db, now);

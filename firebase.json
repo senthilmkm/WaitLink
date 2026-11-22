@@ -124,6 +124,18 @@
         "function": { "functionId": "carpoolAdminSetPosting", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolAdminSetMembers",
+        "function": { "functionId": "carpoolAdminSetMembers", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolAdminSaveConfig",
+        "function": { "functionId": "carpoolAdminSaveConfig", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolAdminPurge",
+        "function": { "functionId": "carpoolAdminPurge", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolAdminBroadcast",
         "function": { "functionId": "carpoolAdminBroadcast", "region": "us-central1" }
       },

@@ -71,10 +71,13 @@
       "#jumpin-top nav{margin-left:auto;display:flex;align-items:center;gap:16px}",
       "#jumpin-top nav a{color:var(--text-muted,#1e293b);font-weight:600}",
       "#jumpin-top .title{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px}",
-      "#jumpin-root.app-screen{width:100%;max-width:480px;margin:0 auto;padding-bottom:24px}",
-      "#jumpin-root.app-screen #jumpin-top{position:relative;display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 16px calc(10px + env(safe-area-inset-top));border-radius:0 0 14px 14px}",
-      "#jumpin-mid{flex:0 1 auto;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}",
-      "#jumpin-root.app-screen #jumpin-mid{padding:18px 16px 12px}",
+      "#jumpin-root.app-screen{width:100%;background:var(--bg-dark,#f1f5f9)}",
+      "#jumpin-root.app-screen #jumpin-top{display:flex;align-items:center;gap:12px;width:100%;padding:0 16px;background:var(--bg-card,#fff);border-bottom:1px solid var(--border-color,#cbd5e1)}",
+      "#jumpin-root.app-screen #jumpin-top .bar{flex:1;padding:12px 0;min-height:56px}",
+      "#jumpin-root.app-screen #jumpin-top .back-btn{flex-shrink:0}",
+      "#jumpin-mid{flex:1 1 auto;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}",
+      "#jumpin-root.app-screen #jumpin-mid{width:100%;max-width:520px;margin:0 auto;padding:18px 16px 20px}",
+      "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:520px;margin:18px auto;padding:24px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
       "#jumpin-mid .wrap{width:min(1040px,100%);margin:0 auto;padding:28px 24px 12px}",
       "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 20px;padding:28px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
       "#jumpin-mid .hero .copy{flex:1 1 260px;min-width:0}",
@@ -88,20 +91,20 @@
       "#jumpin-root .site-foot{width:min(1040px,100%);margin:0 auto;padding:16px 24px calc(16px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;color:var(--text-muted,#1e293b);font-size:14px}",
       "#jumpin-root .site-foot a{color:var(--primary,#0891b2);font-weight:600}",
       "#jumpin-root .site-foot .spacer{margin-left:auto}",
-      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;background:var(--bg-dark,#f1f5f9)}",
+      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:12px 16px 0;background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
       "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:var(--primary,#0891b2);color:#fff;font-size:17px;font-weight:700}",
-      "#jumpin-root.app-screen #jumpin-bottom button{width:100%}",
+      "#jumpin-root.app-screen #jumpin-bottom button{display:block;width:100%;max-width:520px;margin:0 auto}",
       "body.jumpin-android #jumpin-bottom button,body.jumpin-android #jumpin-mid .hero button{border-radius:var(--radius-lg,20px)}",
       "#jumpin-mid .lbl{display:block;margin:0 0 6px;color:var(--text-muted,#1e293b);font-size:14px;font-weight:600}",
-      "#jumpin-mid input,#jumpin-mid select{width:100%;font-size:16px;min-height:44px;margin:0 0 14px;padding:0 12px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
+      "#jumpin-mid input,#jumpin-mid select{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 14px;padding:0 12px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
       "#jumpin-mid .confirm{padding:24px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
       "#jumpin-mid .confirm h1{font-size:28px}",
       "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;min-height:44px;padding:16px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
       "#jumpin-mid .route{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px;font-weight:700}",
       "#jumpin-mid .meta,#jumpin-mid .muted{color:var(--text-muted,#1e293b);font-size:14px;margin:0}",
       "#jumpin-mid .hint{color:var(--text-muted,#1e293b);font-size:14px;margin:8px 0 0}",
-      "#jumpin-mid .error{color:var(--accent-rose,#be123c);font-size:14px;margin:-8px 0 14px}",
-      "@media (max-width:700px){#jumpin-top .bar{padding:10px 16px;gap:10px;min-height:56px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-mid .wrap{padding:16px}#jumpin-mid .hero{padding:20px}#jumpin-mid h1{font-size:28px}#jumpin-mid .hero button{width:100%}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
+      "#jumpin-root #jumpin-mid .error{color:#dc2626;font-weight:600;font-size:14px;margin:-4px 0 14px}",
+      "@media (max-width:700px){#jumpin-top .bar{padding:10px 14px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:12px}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:16px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
       "#jumpin-sheet{position:fixed;left:50%;transform:translateX(-50%);width:min(448px,calc(100% - 32px));bottom:16px;z-index:50;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:18px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 12px 32px rgba(0,0,0,.16))}",
       "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
@@ -112,7 +115,9 @@
       "#jumpin-root .textish:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .linkish{display:block;background:transparent;color:var(--primary,#0891b2);border:0;padding:4px 0;font-size:14px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-root .linkish:hover{text-decoration:underline}",
-      "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:0;font-size:16px;font-weight:700;min-height:44px;cursor:pointer;margin-left:12px}"
+      "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:0;font-size:16px;font-weight:700;min-height:44px;cursor:pointer;margin-left:12px}",
+      "@keyframes jumpin-spin{to{transform:rotate(360deg)}}",
+      ".jumpin-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:jumpin-spin .7s linear infinite;vertical-align:middle;margin-right:8px}"
     ].join("");
     doc.head.appendChild(style);
   }
@@ -305,8 +310,15 @@
     function sendMessage(text) {
       if (!cloud || !state.ride) return;
       const secret = state.role === "driver" ? cloud.tripSecret(state.ride.rideId) : cloud.seatSecretFor(state.ride);
+      state.busy = true;
+      draw();
       cloud.postMessage(state.ride.rideId, secret, text).then(function (result) {
+        state.busy = false;
         if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
+        draw();
+      }, function () {
+        state.busy = false;
+        state = ui.reduce(state, { type: "fail", error: "Could not send message. Check the connection and try again." });
         draw();
       });
     }
@@ -318,7 +330,7 @@
       top.id = "jumpin-top";
       if (state.mode === "board") brandBar(doc, top);
       else {
-        const back = el(doc, "button", "textish", "Back");
+        const back = el(doc, "button", "textish back-btn", "Back");
         on(back, "click", function () {
           stopRide();
           const kept = state.rides || [];
@@ -327,10 +339,11 @@
           draw();
         });
         top.appendChild(back);
-        top.appendChild(el(doc, "strong", "title", "JumpIn"));
+        brandBar(doc, top);
       }
       const mid = el(doc, "main");
       mid.id = "jumpin-mid";
+      if (state.mode === "post") mid.className = "post-card";
       const bottom = el(doc, "footer");
       bottom.id = "jumpin-bottom";
       let hero = null;
@@ -442,8 +455,11 @@
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
+      if (state.busy && (label === "Text me a link" || label === "Send")) label = "Sending…";
       if (label) {
-        const button = el(doc, "button", "", label);
+        const button = el(doc, "button", "");
+        if (state.busy) button.appendChild(el(doc, "span", "jumpin-spin"));
+        button.appendChild(doc.createTextNode(label));
         on(button, "click", function () {
           if (label === "Post a ride") {
             const kept = state.rides || [];
@@ -526,8 +542,15 @@
           } else if (label === "Text me a link" && cloud && state.ride) {
             const values = {};
             mid.querySelectorAll("input").forEach(function (input) { values[input.name] = input.value; });
+            state.busy = true;
+            draw();
             cloud.sendManageLink(state.ride.rideId, values.phone, state.recovery === "driver" ? "driver" : "rider").then(function () {
+              state.busy = false;
               state = ui.reduce(state, { type: "notice", notice: core.recoveryPhrase() });
+              draw();
+            }, function () {
+              state.busy = false;
+              state = ui.reduce(state, { type: "fail", error: "Could not send link. Check the connection and try again." });
               draw();
             });
             return;
@@ -556,7 +579,7 @@
         if (state.mode === "board" && hero) hero.appendChild(button);
         else bottom.appendChild(button);
       }
-      if (state.mode === "board") bottom.appendChild(siteFooter(doc));
+      bottom.appendChild(siteFooter(doc));
       rootNode.appendChild(top);
       rootNode.appendChild(mid);
       rootNode.appendChild(bottom);

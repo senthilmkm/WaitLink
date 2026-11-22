@@ -76,8 +76,8 @@ async function deliver(db, result) {
   return result;
 }
 
-const guest = { enforceAppCheck: false };
-const staff = { enforceAppCheck: false };
+const guest = { enforceAppCheck: false, invoker: "public" };
+const staff = { enforceAppCheck: false, invoker: "public" };
 
 function guestCall(name) {
   return onCall(guest, async function (req) {
@@ -113,6 +113,9 @@ exports.carpoolListPending = staffCall("carpoolListPending");
 exports.carpoolReviewRide = staffCall("carpoolReviewRide");
 exports.carpoolAdminCancelTrip = staffCall("carpoolAdminCancelTrip");
 exports.carpoolAdminSetPosting = staffCall("carpoolAdminSetPosting");
+exports.carpoolAdminSetMembers = staffCall("carpoolAdminSetMembers");
+exports.carpoolAdminSaveConfig = staffCall("carpoolAdminSaveConfig");
+exports.carpoolAdminPurge = staffCall("carpoolAdminPurge");
 exports.carpoolAdminBroadcast = staffCall("carpoolAdminBroadcast");
 exports.carpoolCompleteTrips = onSchedule("every 5 minutes", function () {
   return handlers.call(database(), "carpoolCompleteTrips", {}, null, Date.now());
