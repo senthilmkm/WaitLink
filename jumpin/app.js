@@ -58,7 +58,7 @@
       "html:has(body.jumpin-on),body.jumpin-on{display:block !important;height:auto;min-height:100%;background:var(--bg-dark,#f1f5f9);color:var(--text-main,#090d16)}",
       "body.jumpin-on{margin:0;overflow:auto}",
       "body.jumpin-on > *:not(#jumpin-root){display:none !important}",
-      "#jumpin-root{display:flex;flex-direction:column;width:100%;min-height:100%;background:var(--bg-dark,#f1f5f9);color:var(--text-main,#090d16);font-family:var(--font-family-body,Inter,-apple-system,BlinkMacSystemFont,sans-serif);font-size:16px;line-height:1.5}",
+      "#jumpin-root{display:flex;flex-direction:column;width:100%;max-width:100vw;overflow-x:hidden;min-height:100%;background:var(--bg-dark,#f1f5f9);color:var(--text-main,#090d16);font-family:var(--font-family-body,Inter,-apple-system,BlinkMacSystemFont,sans-serif);font-size:16px;line-height:1.5}",
       "#jumpin-root.portal{min-height:100dvh}",
       "#jumpin-root *{box-sizing:border-box}",
       "#jumpin-root a{color:inherit;text-decoration:none}",
@@ -100,24 +100,44 @@
       "#jumpin-mid .confirm{padding:24px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
       "#jumpin-mid .confirm h1{font-size:28px}",
       "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;min-height:44px;padding:16px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
-      "#jumpin-mid .route{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px;font-weight:700}",
-      "#jumpin-mid .meta,#jumpin-mid .muted{color:var(--text-muted,#1e293b);font-size:14px;margin:0}",
+      "#jumpin-mid .route{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px;font-weight:700;overflow-wrap:anywhere;word-break:break-word}",
+      "#jumpin-mid .meta,#jumpin-mid .muted{color:var(--text-muted,#1e293b);font-size:14px;margin:0;overflow-wrap:anywhere}",
       "#jumpin-mid .hint{color:var(--text-muted,#1e293b);font-size:14px;margin:8px 0 0}",
-      "#jumpin-root #jumpin-mid .error{color:#dc2626;font-weight:600;font-size:14px;margin:-4px 0 14px}",
-      "@media (max-width:700px){#jumpin-top .bar{padding:10px 14px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:12px}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:16px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
-      "#jumpin-sheet{position:fixed;left:50%;transform:translateX(-50%);width:min(448px,calc(100% - 32px));bottom:16px;z-index:50;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:18px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 12px 32px rgba(0,0,0,.16))}",
+      "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
+      "@media (max-width:700px){#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:12px 12px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:16px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
+      "@media (max-width:380px){#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 auto;justify-content:center;text-align:center}}",
+      "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
+      "#jumpin-sheet p{margin:0 0 12px;font-weight:600}",
+      "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
       "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}",
+      "#jumpin-root .action-row select{width:auto;min-width:68px;margin:0;min-height:40px}",
+      "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}",
+      "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;min-height:32px;cursor:pointer}",
+      "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-root .board-search{width:100%;max-width:420px;min-height:42px;margin:0 0 14px;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
-      "#jumpin-root .rider-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin-bottom:6px;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:10px;font-size:14px;font-weight:600}",
-      "#jumpin-root .msg-row{padding:8px 12px;margin-bottom:6px;background:rgba(8,145,178,.06);border-radius:10px;font-size:14px;color:var(--text-main,#090d16)}",
+      "#jumpin-root .rider-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin-bottom:6px;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:10px;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
+      "#jumpin-root .msg-row{padding:8px 12px;margin-bottom:6px;background:rgba(8,145,178,.06);border-radius:10px;font-size:14px;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-root .textish{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:10px;padding:0 14px;font-size:14px;font-weight:600;min-height:40px;cursor:pointer}",
       "#jumpin-root .textish:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .linkish{display:block;background:transparent;color:var(--primary,#0891b2);border:0;padding:4px 0;font-size:14px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-root .linkish:hover{text-decoration:underline}",
       "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:0;font-size:16px;font-weight:700;min-height:44px;cursor:pointer;margin-left:12px}",
+      "#jumpin-sheet button.confirm-primary{background:var(--primary,#0891b2);color:#fff;border:0;border-radius:10px;padding:0 16px;font-size:15px;font-weight:700;min-height:40px;cursor:pointer;margin-left:10px}",
       "@keyframes jumpin-spin{to{transform:rotate(360deg)}}",
-      ".jumpin-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:jumpin-spin .7s linear infinite;vertical-align:middle;margin-right:8px}"
+      ".jumpin-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:jumpin-spin .7s linear infinite;vertical-align:middle;margin-right:8px}",
+      ".jumpin-spin.dark{border-color:rgba(8,145,178,.25);border-top-color:var(--primary,#0891b2)}",
+      "#jumpin-mid .support-card{margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:12px;color:#78350f}",
+      "#jumpin-mid .support-title{font-weight:700;font-size:14px;margin:0 0 2px;color:#78350f}",
+      "#jumpin-mid .support-sub{font-size:13px;margin:0 0 8px;color:#92400e}",
+      "#jumpin-mid .support-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;color:#090d16}",
+      "#jumpin-mid .support-copy{background:#f59e0b;color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;min-height:28px;cursor:pointer}",
+      "#jumpin-mid .link-row{display:flex;align-items:center;gap:8px;margin:0 0 14px}",
+      "#jumpin-mid .link-row input{margin:0;flex:1 1 auto;min-width:0}",
+      "#jumpin-mid .link-copy{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:8px;padding:0 12px;min-height:44px;font-size:14px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .link-copy:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-root .site-foot .support-foot{flex-basis:100%;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-weight:600;font-size:13px}"
     ].join("");
     doc.head.appendChild(style);
   }
@@ -134,6 +154,25 @@
     const cloud = win.JumpInCloud || null;
     let state = Object.assign(ui.blank(), { platform: platform, rides: cloud ? [] : loadRides(secrets) });
     let stopRide = function () { };
+    let supportNote = "";
+    let boardQuery = "";
+
+    function loadProfile() {
+      if (!secrets || !secrets.getItem) return { name: "", phone: "" };
+      try {
+        const raw = JSON.parse(secrets.getItem("waitlink_jumpin_profile") || "{}");
+        return { name: String(raw.name || ""), phone: String(raw.phone || "") };
+      } catch (err) {
+        return { name: "", phone: "" };
+      }
+    }
+
+    function saveProfile(name, phone) {
+      if (!secrets || !secrets.setItem || !name || !phone) return;
+      try {
+        secrets.setItem("waitlink_jumpin_profile", JSON.stringify({ name: name, phone: phone }));
+      } catch (err) { /* ignore storage quota errors */ }
+    }
 
     function seatsLabel(n) {
       return n === 1 ? "1 seat left" : n + " seats left";
@@ -163,38 +202,79 @@
           return;
         } else {
           const prevNotice = state.notice;
-          state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: cloud.roleFor(ride) }), {
+          const role = cloud.roleFor(ride);
+          const autoReserve = !role && ride.status === "open" && ride.seatsLeft > 0 && (!ride.departAt || Date.now() < ride.departAt) && !state.recovery && state.mode !== "reserved";
+          state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: role }), {
             rides: kept,
             ride: ride,
+            reserveOpen: autoReserve,
             route: ride.from + " → " + ride.to,
             when: whenOf(ride),
             link: cloud.publicRideUrl(ride.rideId),
-            notice: ride.status === "open" && (prevNotice === "You have a seat." || prevNotice === "Passenger added." || prevNotice === "Seat cancelled.") ? prevNotice : ""
+            notice: ride.status === "open" && (prevNotice === "You have a seat." || /^You have \d+ seats\.$/.test(prevNotice || "") || prevNotice === "Passenger added." || prevNotice === "Seat cancelled." || prevNotice === "Seats updated.") ? prevNotice : ""
           });
         }
         draw();
       }) || function () { };
     }
 
+    function spinText(doc, btn, spinning, busyText, idleText, dark) {
+      if (spinning) {
+        btn.appendChild(el(doc, "span", dark ? "jumpin-spin dark" : "jumpin-spin"));
+        btn.appendChild(doc.createTextNode(busyText));
+      } else {
+        btn.textContent = idleText;
+      }
+      if (state.busy) btn.disabled = true;
+    }
+
     function confirmSheet(doc) {
       const sheet = el(doc, "section");
       sheet.id = "jumpin-sheet";
-      sheet.appendChild(el(doc, "p", "", state.sheet === "trip" ? "Cancel this trip?" : "Cancel your seat?"));
-      const keep = el(doc, "button", "textish", state.sheet === "trip" ? "Keep trip" : "Keep seat");
+      const kind = state.sheet || state.busySheet;
+      const isComplete = kind === "complete";
+      const title = isComplete ? "Complete this trip?" : (kind === "trip" ? "Cancel this trip?" : "Cancel your seat?");
+      sheet.appendChild(el(doc, "p", "", title));
+      if (isComplete) sheet.appendChild(el(doc, "p", "muted", "This marks the trip as completed and closes trip messaging."));
+      const keep = el(doc, "button", "textish", isComplete ? "Keep open" : (kind === "trip" ? "Keep trip" : "Keep seat"));
+      if (state.busy) keep.disabled = true;
       on(keep, "click", function () { state = ui.reduce(state, { type: "keep" }); draw(); });
       sheet.appendChild(keep);
-      const yes = el(doc, "button", "danger", state.sheet === "trip" ? "Cancel trip" : "Cancel seat");
+      const idleConfirm = isComplete ? "Complete trip" : (kind === "trip" ? "Cancel trip" : "Cancel seat");
+      const busyConfirm = isComplete ? "Completing…" : "Cancelling…";
+      const yes = el(doc, "button", isComplete ? "confirm-primary" : "danger");
+      spinText(doc, yes, state.busy && state.busyAction === "sheet", busyConfirm, idleConfirm, !isComplete);
       on(yes, "click", function () {
         const ride = state.ride || (state.rideId ? { rideId: state.rideId } : null);
+        const sheetKind = state.sheet;
         state = ui.reduce(state, { type: "confirm" });
         const action = state.pendingAction;
         if (cloud && ride && action) {
-          const secret = action === "cancel-trip" ? cloud.tripSecret(ride.rideId) : cloud.seatSecretFor(ride);
-          const job = action === "cancel-trip" ? cloud.cancelTrip(ride.rideId, secret) : cloud.cancelSeat(ride.rideId, secret);
+          state.busy = true;
+          state.busyAction = "sheet";
+          state.busySheet = sheetKind;
+          const isDriverAction = action === "cancel-trip" || action === "complete-trip";
+          const secret = isDriverAction ? cloud.tripSecret(ride.rideId) : cloud.seatSecretFor(ride);
+          const job = action === "complete-trip"
+            ? cloud.completeTrip(ride.rideId, secret)
+            : (action === "cancel-trip" ? cloud.cancelTrip(ride.rideId, secret) : cloud.cancelSeat(ride.rideId, secret));
           job.then(function (result) {
+            state.busy = false;
+            state.busyAction = "";
+            state.busySheet = "";
             if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
+            else if (action === "complete-trip") {
+              const nextRide = Object.assign({}, state.ride || {}, { status: "completed" });
+              state = Object.assign({}, state, { status: "completed", notice: "Trip completed.", ride: nextRide });
+            }
             else if (action === "cancel-trip") state = Object.assign({}, state, { status: "cancelled", notice: "This trip was cancelled.", link: "" });
-            else state = Object.assign({}, state, { role: "", notice: "Seat cancelled.", reserveOpen: false });
+            else state = Object.assign({}, state, { mode: "ride", role: "", notice: "Seat cancelled.", reserveOpen: false });
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state.busySheet = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not complete request. Check the connection and try again." });
             draw();
           });
         }
@@ -209,16 +289,19 @@
       const card = el(doc, "section", "confirm");
       if (current.notice) card.appendChild(el(doc, "h1", "", current.notice));
       card.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
-      card.appendChild(el(doc, "p", "muted", current.when || whenOf(ride)));
+      const whenText = (current.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
+      card.appendChild(el(doc, "p", "muted", whenText));
       if (ride.seatsLeft != null) {
         card.appendChild(el(doc, "p", "muted", seatsLabel(ride.seatsLeft)));
       }
       if (ride.note) card.appendChild(el(doc, "p", "muted", ride.note));
       if (ride.driverName) card.appendChild(el(doc, "p", "muted", "Driver: " + ride.driverName));
       if (ride.riders && ride.riders.length) {
-        card.appendChild(el(doc, "div", "section-lbl", "Passengers (" + ride.riders.length + ")"));
+        const totalReserved = ride.riders.reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
+        card.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
         ride.riders.forEach(function (rider) {
-          card.appendChild(el(doc, "div", "rider-row", rider.name || "Passenger"));
+          const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : "";
+          card.appendChild(el(doc, "div", "rider-row", (rider.name || "Passenger") + seatSuffix));
         });
       }
       if (ride.messages && ride.messages.length) {
@@ -231,17 +314,37 @@
       if (current.status === "pending") card.appendChild(el(doc, "p", "route", "Waiting for approval."));
       if (current.status === "rejected") card.appendChild(el(doc, "p", "route", "This trip was not approved."));
       if (current.status === "cancelled") card.appendChild(el(doc, "p", "route", "This trip was cancelled."));
+      if (current.status === "completed") {
+        card.appendChild(el(doc, "p", "route", "Trip completed — hope you had a great ride!"));
+        if (supportNote) card.appendChild(supportCard(doc, supportNote));
+      }
       if (current.status === "open" && ride.seatsLeft === 0) card.appendChild(el(doc, "p", "route", "Full"));
       if (current.reserveOpen) {
+        const saved = current.role === "driver" ? { name: "", phone: "" } : loadProfile();
         card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger name" : "Your name"));
         const name = el(doc, "input");
         name.name = "name";
+        if (saved.name) name.value = saved.name;
         card.appendChild(name);
         card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone" : "Phone"));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
+        if (saved.phone) phone.value = saved.phone;
         card.appendChild(phone);
+        if ((Number(ride.seatsLeft) || 1) > 1) {
+          card.appendChild(el(doc, "label", "lbl", "Seats"));
+          const seatSel = el(doc, "select");
+          seatSel.name = "seats";
+          const maxPick = Math.min(6, Number(ride.seatsLeft) || 1);
+          for (let s = 1; s <= maxPick; s++) {
+            const opt = el(doc, "option", "", String(s));
+            opt.value = String(s);
+            if (s === 1) opt.selected = true;
+            seatSel.appendChild(opt);
+          }
+          card.appendChild(seatSel);
+        }
         card.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage their seat, and JumpIn notices."));
         if (current.error) card.appendChild(el(doc, "p", "error", current.error));
         const cancelForm = el(doc, "button", "textish", "Cancel");
@@ -261,43 +364,109 @@
         card.appendChild(phone);
         if (current.error) card.appendChild(el(doc, "p", "error", current.error));
       }
-      if (!current.reserveOpen && (current.role === "driver" || current.role === "rider")) {
-        card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Message passengers" : "Message the driver"));
-        const box = el(doc, "input");
-        box.name = "message";
-        box.placeholder = "Write an update (e.g. I am at the pickup spot)";
-        card.appendChild(box);
+      if (!current.reserveOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
+        let box = null;
+        const hasRiders = !!(ride.riders && ride.riders.length);
+        if (current.status === "open" && (current.role === "rider" || hasRiders)) {
+          card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Message passengers" : "Message the driver"));
+          const quickRow = el(doc, "div", "chip-row");
+          ["On my way", "At pickup spot", "5 min late"].forEach(function (phrase) {
+            const chip = el(doc, "button", "chip-btn", phrase);
+            chip.type = "button";
+            if (state.busy) chip.disabled = true;
+            on(chip, "click", function () { sendMessage(phrase); });
+            quickRow.appendChild(chip);
+          });
+          card.appendChild(quickRow);
+          const msgRow = el(doc, "div", "link-row");
+          box = el(doc, "input");
+          box.name = "message";
+          box.placeholder = "Write an update (e.g. I am at the pickup spot)";
+          msgRow.appendChild(box);
+          const sendInline = el(doc, "button", "link-copy");
+          sendInline.type = "button";
+          spinText(doc, sendInline, state.busy && state.busyAction === "send", "Sending…", "Send", true);
+          on(sendInline, "click", function () { sendMessage(box.value); });
+          msgRow.appendChild(sendInline);
+          card.appendChild(msgRow);
+        }
         const actions = el(doc, "div", "action-row");
+        const departed = !!(ride.departAt && Date.now() >= ride.departAt);
         if (current.role === "driver") {
-          const send = el(doc, "button", "textish", "Send");
-          on(send, "click", function () { sendMessage(box.value); });
-          actions.appendChild(send);
-          if (current.status === "open" && ride.seatsLeft > 0) {
+          if (current.status === "open" && !departed && ride.seatsLeft > 0) {
             const addPax = el(doc, "button", "textish", "Add passenger");
             on(addPax, "click", function () { state = ui.reduce(state, { type: "reserve-open" }); draw(); });
             actions.appendChild(addPax);
           }
+          if (current.status === "open" && departed && hasRiders) {
+            const complete = el(doc, "button", "textish", "Complete trip");
+            on(complete, "click", function () { state = ui.reduce(state, { type: "complete-ask" }); draw(); });
+            actions.appendChild(complete);
+          }
           const cancel = el(doc, "button", "textish", "Cancel trip");
           on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
           actions.appendChild(cancel);
-        } else if (cloud && cloud.seatSecretFor(ride)) {
+        } else if (cloud && cloud.seatSecretFor(ride) && !departed) {
+          const myInfo = cloud.seatInfoFor ? cloud.seatInfoFor(ride) : null;
+          const mySeats = (myInfo && Number(myInfo.seats)) || 1;
+          const maxTotal = Math.min(6, mySeats + (Number(ride.seatsLeft) || 0));
+          if (maxTotal > 1 && cloud.updateSeat) {
+            const seatPick = el(doc, "select");
+            seatPick.name = "mySeats";
+            seatPick.setAttribute("aria-label", "My seats");
+            for (let n = 1; n <= maxTotal; n++) {
+              const opt = el(doc, "option", "", n === 1 ? "1 seat" : n + " seats");
+              opt.value = String(n);
+              if (n === mySeats) opt.selected = true;
+              seatPick.appendChild(opt);
+            }
+            actions.appendChild(seatPick);
+            const saveSeats = el(doc, "button", "textish");
+            spinText(doc, saveSeats, state.busy && state.busyAction === "update-seats", "Updating…", "Update seats", true);
+            if (!state.busy && Number(seatPick.value || 1) === mySeats) saveSeats.disabled = true;
+            on(seatPick, "change", function () {
+              saveSeats.disabled = state.busy || Number(seatPick.value || 1) === mySeats;
+            });
+            on(saveSeats, "click", function () {
+              const nextSeats = Number(seatPick.value || 1);
+              if (nextSeats === mySeats) return;
+              state.busy = true;
+              state.busyAction = "update-seats";
+              draw();
+              cloud.updateSeat(ride.rideId, cloud.seatSecretFor(ride), nextSeats).then(function (result) {
+                state.busy = false;
+                state.busyAction = "";
+                if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
+                else state = ui.reduce(state, { type: "notice", notice: "Seats updated." });
+                draw();
+              }, function () {
+                state.busy = false;
+                state.busyAction = "";
+                state = ui.reduce(state, { type: "fail", error: "Could not update seats. Check the connection and try again." });
+                draw();
+              });
+            });
+            actions.appendChild(saveSeats);
+          }
           const cancelSeat = el(doc, "button", "textish", "Cancel my seat");
           on(cancelSeat, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "rider" }); draw(); });
           actions.appendChild(cancelSeat);
         }
-        const forget = el(doc, "button", "textish", "Sign out on this device");
-        on(forget, "click", function () {
-          cloud.forget(ride);
-          state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { ride: ride, rides: state.rides || [], when: current.when, link: current.link });
-          draw();
-        });
-        actions.appendChild(forget);
-        card.appendChild(actions);
+        if (current.role === "driver") {
+          const forget = el(doc, "button", "textish", "Sign out on this device");
+          on(forget, "click", function () {
+            cloud.forget(ride);
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { ride: ride, rides: state.rides || [], when: current.when, link: current.link });
+            draw();
+          });
+          actions.appendChild(forget);
+        }
+        if (actions.children.length) card.appendChild(actions);
       } else if (!current.reserveOpen && (current.status === "open" || current.status === "pending")) {
         const recBox = el(doc, "div", "recovery-box");
         const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
         on(seat, "click", function () { state = ui.reduce(state, { type: "recovery", role: "rider" }); draw(); });
-        const trip = el(doc, "button", "linkish", "Driver? Manage or cancel this trip");
+        const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
         on(trip, "click", function () { state = ui.reduce(state, { type: "recovery", role: "driver" }); draw(); });
         recBox.appendChild(seat);
         recBox.appendChild(trip);
@@ -311,13 +480,16 @@
       if (!cloud || !state.ride) return;
       const secret = state.role === "driver" ? cloud.tripSecret(state.ride.rideId) : cloud.seatSecretFor(state.ride);
       state.busy = true;
+      state.busyAction = "send";
       draw();
       cloud.postMessage(state.ride.rideId, secret, text).then(function (result) {
         state.busy = false;
+        state.busyAction = "";
         if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
         draw();
       }, function () {
         state.busy = false;
+        state.busyAction = "";
         state = ui.reduce(state, { type: "fail", error: "Could not send message. Check the connection and try again." });
         draw();
       });
@@ -352,24 +524,42 @@
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
-        copy.appendChild(el(doc, "p", "muted", "Post one trip. Reserve one seat. No payment."));
+        copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No payment."));
         hero.appendChild(copy);
         wrap.appendChild(hero);
         const rides = state.rides || [];
         const list = el(doc, "div", "board");
-        if (!rides.length) {
-          const empty = el(doc, "div", "empty");
-          empty.appendChild(el(doc, "p", "route", "No rides yet"));
-          empty.appendChild(el(doc, "p", "muted", "Post one trip and it will show up here."));
-          list.appendChild(empty);
+        function paintBoard() {
+          list.textContent = "";
+          const q = boardQuery.trim().toLowerCase();
+          const shown = q ? rides.filter(function (ride) {
+            return [ride.from, ride.to, ride.driverName].join(" ").toLowerCase().indexOf(q) !== -1;
+          }) : rides;
+          if (!shown.length) {
+            const empty = el(doc, "div", "empty");
+            empty.appendChild(el(doc, "p", "route", q ? "No matching rides" : "No rides yet"));
+            empty.appendChild(el(doc, "p", "muted", q ? "Try another route or clear the search." : "Post one trip and it will show up here."));
+            list.appendChild(empty);
+            return;
+          }
+          shown.forEach(function (ride) {
+            const row = el(doc, "button", "row");
+            row.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
+            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "") + " · " + (ride.seats || seatsLabel(ride.seatsLeft))));
+            on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
+            list.appendChild(row);
+          });
         }
-        rides.forEach(function (ride) {
-          const row = el(doc, "button", "row");
-          row.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
-          row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + " · " + (ride.seats || seatsLabel(ride.seatsLeft))));
-          on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
-          list.appendChild(row);
-        });
+        if (rides.length >= 5) {
+          const search = el(doc, "input", "board-search");
+          search.type = "search";
+          search.placeholder = "Search route or city…";
+          search.value = boardQuery;
+          search.setAttribute("aria-label", "Search rides");
+          on(search, "input", function () { boardQuery = search.value || ""; paintBoard(); });
+          wrap.appendChild(search);
+        }
+        paintBoard();
         wrap.appendChild(list);
         mid.appendChild(wrap);
       } else if (state.mode === "post") {
@@ -382,6 +572,8 @@
           ["date", "Date", "date", ""],
           ["time", "Time", "time", ""]
         ];
+        const saved = loadProfile();
+        const postInputs = {};
         fields.forEach(function (spec) {
           mid.appendChild(el(doc, "label", "lbl", spec[1]));
           const input = el(doc, "input");
@@ -390,9 +582,30 @@
           if (spec[3]) input.placeholder = spec[3];
           input.autocomplete = spec[0] === "phone" ? "tel" : "on";
           if (state.draft && state.draft[spec[0]]) input.value = state.draft[spec[0]];
+          else if (!state.draft && (spec[0] === "name" || spec[0] === "phone") && saved[spec[0]]) input.value = saved[spec[0]];
+          postInputs[spec[0]] = input;
           mid.appendChild(input);
           if (state.error && state.field === spec[0]) mid.appendChild(el(doc, "p", "error", state.error));
         });
+        const whenChips = el(doc, "div", "chip-row");
+        [
+          ["Today", 0, true, false],
+          ["Tomorrow", 24 * 60, true, false],
+          ["In 30m", 30, true, true],
+          ["In 1h", 60, true, true],
+          ["In 2h", 120, true, true]
+        ].forEach(function (spec) {
+          const chip = el(doc, "button", "chip-btn", spec[0]);
+          chip.type = "button";
+          on(chip, "click", function () {
+            const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+            const p = core.partsInZone(Date.now() + spec[1] * 60000, zone);
+            if (spec[2] && postInputs.date) postInputs.date.value = p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
+            if (spec[3] && postInputs.time) postInputs.time.value = String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0");
+          });
+          whenChips.appendChild(chip);
+        });
+        mid.appendChild(whenChips);
         mid.appendChild(el(doc, "label", "lbl", "Seats"));
         const seats = el(doc, "select");
         seats.name = "seats";
@@ -403,6 +616,24 @@
           seats.appendChild(option);
         }
         mid.appendChild(seats);
+        mid.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+        const dur = el(doc, "select");
+        dur.name = "durationMinutes";
+        [
+          [30, "30 min"],
+          [60, "1 hr"],
+          [120, "2 hrs"],
+          [180, "3 hrs"],
+          [240, "4 hrs"],
+          [300, "5 hrs"],
+          [360, "6 hrs"]
+        ].forEach(function (pair) {
+          const option = el(doc, "option", "", pair[1]);
+          option.value = String(pair[0]);
+          if (String(pair[0]) === String((state.draft && state.draft.durationMinutes) || 60)) option.selected = true;
+          dur.appendChild(option);
+        });
+        mid.appendChild(dur);
         mid.appendChild(el(doc, "label", "lbl", "Note, optional"));
         const note = el(doc, "input");
         note.name = "note";
@@ -418,13 +649,25 @@
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
         if (state.link) {
+          const linkRow = el(doc, "div", "link-row");
           const link = el(doc, "input");
           link.readOnly = true;
           link.value = state.link;
-          card.appendChild(link);
+          linkRow.appendChild(link);
+          const copyBtn = el(doc, "button", "link-copy", "📋 Copy");
+          copyBtn.type = "button";
+          copyBtn.setAttribute("aria-label", "Copy link");
+          on(copyBtn, "click", function () {
+            const clip = win.navigator && win.navigator.clipboard;
+            if (clip && clip.writeText) clip.writeText(state.link);
+            copyBtn.textContent = "✓ Copied";
+          });
+          linkRow.appendChild(copyBtn);
+          card.appendChild(linkRow);
           card.appendChild(el(doc, "p", "hint", "Send this link to the people riding with you."));
         }
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
+        if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
         if (state.role === "driver" && state.status !== "cancelled") {
           const actions = el(doc, "div", "action-row");
@@ -434,7 +677,6 @@
           card.appendChild(actions);
         }
         mid.appendChild(card);
-        if (state.sheet) mid.appendChild(confirmSheet(doc));
       } else if (state.mode === "reserved") {
         const card = el(doc, "section", "confirm");
         card.appendChild(el(doc, "h1", "", state.notice || "You have a seat."));
@@ -442,20 +684,44 @@
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
-        else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : "We texted you a link to manage your seat."));
+        else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : (state.bookedSeats > 1 ? "We texted you a link to manage your seats." : "We texted you a link to manage your seat.")));
+        if (supportNote) card.appendChild(supportCard(doc, supportNote));
+        if (state.role === "rider" && state.ride) {
+          const actions = el(doc, "div", "action-row");
+          const editBtn = el(doc, "button", "textish", "Edit seats");
+          on(editBtn, "click", function () {
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: state.ride, role: state.role }), {
+              ride: state.ride,
+              rides: state.rides || [],
+              route: state.route,
+              when: state.when,
+              link: state.link
+            });
+            draw();
+          });
+          actions.appendChild(editBtn);
+          const cancelBtn = el(doc, "button", "textish", "Cancel reservation");
+          on(cancelBtn, "click", function () {
+            state = ui.reduce(state, { type: "cancel-ask", role: "rider" });
+            draw();
+          });
+          actions.appendChild(cancelBtn);
+          card.appendChild(actions);
+        }
         mid.appendChild(card);
       } else if (state.ride) {
         mid.appendChild(rideCard(doc, state));
-        if (state.sheet) mid.appendChild(confirmSheet(doc));
       } else {
         mid.appendChild(el(doc, "p", "route", rideLine(state)));
-        if (state.sheet) mid.appendChild(confirmSheet(doc));
       }
       let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
+      if (label === "Post") label = "Post ride";
+      if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
+      if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
-      if (state.busy && (label === "Text me a link" || label === "Send")) label = "Sending…";
+      if (state.busy && (label === "Text me a link" || label === "Send message")) label = "Sending…";
       if (label) {
         const button = el(doc, "button", "");
         if (state.busy) button.appendChild(el(doc, "span", "jumpin-spin"));
@@ -466,7 +732,7 @@
             state = ui.reduce(state, { type: "post" });
             state.rides = kept;
           }
-          else if (label === "Post") {
+          else if (label === "Post" || label === "Post ride") {
             const values = {};
             mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
             if (!values.seats) values.seats = 3;
@@ -489,7 +755,10 @@
                   state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
                   state.draft = values;
                   state.rides = state.rides || [];
-                } else state = postedFromServer(state, result, values, when.departAt);
+                } else {
+                  saveProfile(values.name, values.phone);
+                  state = postedFromServer(state, result, values, when.departAt);
+                }
                 draw();
               }, function () {
                 state.busy = false;
@@ -503,7 +772,7 @@
             state = ui.reduce(state, { type: "reserve-open" });
           } else if ((label === "Confirm seat" || label === "Confirm passenger") && cloud && state.ride) {
             const values = {};
-            mid.querySelectorAll("input").forEach(function (input) { values[input.name] = input.value; });
+            mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
             const errors = core.reserveErrors(values);
             if (errors.error) state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
             else {
@@ -515,9 +784,11 @@
                 if (!result || result.ok === false) {
                   state = ui.reduce(state, { type: "fail", error: (result && result.error) || "Could not reserve. Check the connection and try again." });
                 } else {
+                  if (!wasDriver) saveProfile(values.name, values.phone);
+                  const bookedSeats = Number(values.seats || 1);
                   const ride = Object.assign({}, state.ride, {
-                    seatsLeft: Math.max(0, Number(state.ride.seatsLeft || 1) - 1),
-                    riders: (state.ride.riders || []).concat([{ reservationId: result.reservationId, name: values.name, status: "active" }])
+                    seatsLeft: Math.max(0, Number(state.ride.seatsLeft || 1) - bookedSeats),
+                    riders: (state.ride.riders || []).concat([{ reservationId: result.reservationId, name: values.name, seats: bookedSeats, status: "active" }])
                   });
                   state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: wasDriver ? "driver" : "rider" }), {
                     mode: "reserved",
@@ -526,9 +797,10 @@
                     route: (ride.from || "") + " → " + (ride.to || ""),
                     when: state.when,
                     seatsText: seatsLabel(ride.seatsLeft),
+                    bookedSeats: bookedSeats,
                     link: state.link,
                     smsNote: result.textSent === false ? (result.error || "Seat saved on this browser. Text could not be sent right now.") : "",
-                    notice: wasDriver ? "Passenger added." : "You have a seat."
+                    notice: wasDriver ? "Passenger added." : (bookedSeats === 1 ? "You have a seat." : "You have " + bookedSeats + " seats.")
                   });
                 }
                 draw();
@@ -562,10 +834,16 @@
               when: state.when,
               link: state.link
             });
-          } else if (label === "Send") {
+          } else if (label === "Sign out on this device" && state.ride) {
+            if (cloud) cloud.forget(state.ride);
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: state.ride, role: "" }), { ride: state.ride, rides: state.rides || [], when: state.when, link: state.link });
+          } else if (label === "Send" || label === "Send message") {
             const box = mid.querySelector("input[name=message]");
             sendMessage(box ? box.value : "");
             return;
+          } else if (label === "Share on WhatsApp" && state.link) {
+            const waUrl = "https://wa.me/?text=" + encodeURIComponent("JumpIn carpool: " + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
+            if (win.open) win.open(waUrl, "_blank", "noopener,noreferrer");
           } else if (label === "Copy link") {
             const clip = win.navigator && win.navigator.clipboard;
             const link = state.link || (state.ride && cloud ? cloud.publicRideUrl(state.ride.rideId) : "");
@@ -579,10 +857,11 @@
         if (state.mode === "board" && hero) hero.appendChild(button);
         else bottom.appendChild(button);
       }
-      bottom.appendChild(siteFooter(doc));
+      bottom.appendChild(siteFooter(doc, supportNote));
       rootNode.appendChild(top);
       rootNode.appendChild(mid);
       rootNode.appendChild(bottom);
+      if (state.sheet || (state.busy && state.busyAction === "sheet")) rootNode.appendChild(confirmSheet(doc));
       applyShell(win, rootNode, state.mode);
       const bad = rootNode.querySelector && rootNode.querySelector(".error");
       if (bad && bad.scrollIntoView) bad.scrollIntoView({ block: "center" });
@@ -622,6 +901,12 @@
         }) || function () { };
       } catch (err) { stop = function () { }; }
       cleanups.push(stop);
+      if (cloud.watchSupportNote) {
+        cleanups.push(cloud.watchSupportNote(function (note) {
+          supportNote = note || "";
+          if (state.mode === "board" || state.mode === "posted" || state.mode === "reserved") draw();
+        }));
+      }
       const params = new URLSearchParams((win.location && win.location.search) || "");
       const view = params.get("view") || "";
       const rideId = params.get("ride") || "";
@@ -702,10 +987,31 @@
     });
   }
 
-  function siteFooter(doc) {
+  function supportCard(doc, note) {
+    const box = el(doc, "div", "support-card");
+    box.appendChild(el(doc, "p", "support-title", "Keep JumpIn free for our community"));
+    box.appendChild(el(doc, "p", "support-sub", "Text alerts cost money to send. Chip in $1–$2 to help cover SMS costs:"));
+    const row = el(doc, "div", "support-row");
+    row.appendChild(el(doc, "span", "", note));
+    const copy = el(doc, "button", "support-copy", "Copy");
+    on(copy, "click", function () {
+      const val = note.replace(/^(zelle|venmo)\s*:\s*/i, "").trim();
+      const clip = doc.defaultView && doc.defaultView.navigator && doc.defaultView.navigator.clipboard;
+      if (clip && clip.writeText) clip.writeText(val);
+      copy.textContent = "Copied!";
+    });
+    row.appendChild(copy);
+    box.appendChild(row);
+    return box;
+  }
+
+  function siteFooter(doc, supportNote) {
     const foot = el(doc, "div", "site-foot");
+    if (supportNote) {
+      foot.appendChild(el(doc, "span", "support-foot", "Free community tool — chip in $1–$2 via " + supportNote + " to help cover text costs."));
+    }
     foot.appendChild(el(doc, "span", "", "JumpIn by WaitLink"));
-    [["Privacy", "/privacy.html"], ["Terms", "/terms.html"], ["Contact", "/contact.html"]].forEach(function (item) {
+    [["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
       const link = el(doc, "a", "", item[0]);
       link.href = item[1];
       foot.appendChild(link);

@@ -22,26 +22,53 @@
       --radius-md: 14px;
       --shadow-card: 0 4px 10px rgba(0, 0, 0, 0.06);
     }
-    html, body { margin: 0; background: var(--bg-dark); color: var(--text-main); font: 16px/1.5 Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
-    main { max-width: 480px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
-    @media (min-width: 760px) { main { max-width: 960px; } }
-    h1 { font-family: Outfit, Inter, sans-serif; font-size: 22px; letter-spacing: -0.02em; margin: 0 0 4px; }
-    h2 { font-family: Outfit, Inter, sans-serif; font-size: 16px; letter-spacing: -0.02em; margin: 0 0 8px; }
-    .lead, .quiet { color: var(--text-muted); font-size: 14px; margin: 0; }
-    section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 16px; margin: 12px 0; }
-    label { display: block; margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    html, body { margin: 0; min-height: 100%; background: var(--bg-dark); color: var(--text-main); font: 15px/1.55 Inter, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+    .saas-top { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.94); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; }
+    .saas-top-inner { max-width: 1040px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 20px 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .saas-brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text-main); font-family: Outfit, Inter, sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+    .saas-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: rgba(8,145,178,.12); font-size: 17px; }
+    .saas-pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
+    .saas-nav { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 14px; font-weight: 600; }
+    .saas-nav a { color: var(--text-muted); text-decoration: none; }
+    .saas-nav a:hover { color: var(--primary); }
+    main { flex: 1 0 auto; width: 100%; max-width: 1040px; margin: 0 auto; padding: 24px 20px 40px; box-sizing: border-box; }
+    h1 { font-family: Outfit, Inter, sans-serif; font-size: 24px; letter-spacing: -0.02em; margin: 0 0 4px; }
+    h2 { font-family: Outfit, Inter, sans-serif; font-size: 17px; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .lead, .quiet { color: #475569; font-size: 14px; margin: 0; }
+    section { background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04); padding: 22px; margin: 14px 0; }
+    label { display: block; margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
     label[title] { cursor: help; }
     label[title] span.tip { border-bottom: 1px dotted #64748b; }
-    input, textarea, select { width: 100%; box-sizing: border-box; font: 16px/1.4 Inter, sans-serif; min-height: 44px; margin-top: 6px; padding: 8px 12px; color: var(--text-main); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
-    button { min-height: 44px; font-size: 16px; }
-    button.filled { width: 100%; min-height: 52px; border: 0; border-radius: var(--radius-md); background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
+    input, textarea, select { width: 100%; box-sizing: border-box; font: 15px/1.4 Inter, sans-serif; min-height: 44px; margin-top: 6px; padding: 8px 12px; color: var(--text-main); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; transition: border-color .15s, box-shadow .15s; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(8,145,178,.14); }
+    button { min-height: 40px; font-size: 14px; font-family: inherit; }
+    button.filled { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(8,145,178,.22); transition: background .15s; }
+    button.filled:hover { background: #0e7490; }
     button.textish { display: block; width: 100%; text-align: left; background: transparent; color: var(--primary); border: 0; font-weight: 600; padding: 0; cursor: pointer; }
-    p.error { color: var(--accent-rose); font-size: 14px; }
+    p.error { color: var(--accent-rose); font-size: 14px; font-weight: 600; }
+    p.error:empty { display: none; }
     #jumpin-count:empty, .admin-count:empty { display: none; }
-    .admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .admin-tabs { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
-    .admin-tab { min-height: 38px; padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border-color); background: #fff; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; }
-    .admin-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 22px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04); margin-bottom: 14px; }
+    .admin-header .filled { width: auto; min-height: 42px; padding: 0 20px; }
+    .admin-tabs { display: flex; gap: 8px; margin: 4px 0 6px; padding: 6px; background: #e2e8f0; border-radius: 14px; flex-wrap: wrap; width: fit-content; max-width: 100%; }
+    .admin-tab { min-height: 36px; padding: 6px 16px; border-radius: 10px; border: 0; background: transparent; color: #475569; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .admin-tab:hover { color: var(--text-main); }
+    .admin-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 6px rgba(15,23,42,.08); }
+    .saas-foot { margin-top: auto; background: var(--bg-card); border-top: 1px solid #e2e8f0; }
+    .saas-foot-inner { max-width: 1040px; margin: 0 auto; padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; color: #475569; font-size: 14px; }
+    .saas-foot-inner a { color: var(--primary); font-weight: 600; text-decoration: none; }
+    .saas-foot-inner a:hover { text-decoration: underline; }
+    .saas-foot-inner .spacer { margin-left: auto; }
+    @media (max-width: 680px) {
+      .saas-top-inner { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
+      main { padding: 16px 12px 28px; }
+      section, .admin-header { padding: 16px; border-radius: 14px; }
+      .admin-tabs { width: 100%; }
+      .admin-tab { flex: 1 1 auto; text-align: center; padding: 6px 10px; font-size: 13px; }
+      .saas-foot-inner { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); }
+      .saas-foot-inner .spacer { margin-left: 0; width: 100%; }
+    }
     .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
     .admin-toolbar input { flex: 1 1 200px; min-height: 38px; margin-top: 0; font-size: 14px; }
     .admin-count { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #e2e8f0; color: var(--text-muted); font-size: 12px; font-weight: 600; vertical-align: middle; }
@@ -71,9 +98,9 @@
     .admin-btn.warn { border-color: #cbd5e1; color: #475569; background: #ffffff; }
     .admin-btn.danger { border-color: #fecdd3; color: var(--accent-rose); background: #fff1f2; margin-left: auto; }
     .admin-blocked-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f8fafc; color: var(--text-main); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
-    .admin-modal { position: fixed; inset: 0; z-index: 60; background: rgba(9,13,22,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .admin-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(9,13,22,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
     .admin-modal[hidden] { display: none; }
-    .admin-modal-card { width: min(560px, 100%); max-height: 85vh; overflow: auto; background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.22); }
+    .admin-modal-card { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto; background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.22); }
     .admin-sublist { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
     .admin-subrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; }
     .admin-msg { padding: 8px 10px; border-radius: 8px; background: #f0f9ff; border: 1px solid #bae6fd; font-size: 13px; }
@@ -85,10 +112,23 @@
   </style>
 </head>
 <body>
+  <header class="saas-top">
+    <div class="saas-top-inner">
+      <a class="saas-brand" href="https://waitlink.app/?s=jumpin">
+        <span class="saas-mark">⏳</span>
+        <span>WaitLink</span>
+      </a>
+      <span class="saas-pill">JumpIn Admin</span>
+      <nav class="saas-nav" aria-label="JumpIn links">
+        <a href="https://waitlink.app/?s=jumpin">Rides</a>
+        <a href="/jumpin-guide.html">Guide</a>
+      </nav>
+    </div>
+  </header>
   <main id="jumpin-admin">
     <div class="admin-header">
       <div>
-        <h1>JumpIn Admin</h1>
+        <h1>Community Carpool Console</h1>
         <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
       </div>
       <div>
@@ -181,6 +221,13 @@
             </select>
           </label>
           <label title="Email shown to non-members when JumpIn is in Members only mode."><span class="tip">Admin contact email</span><input id="jumpin-contact-email" type="email" value="senthil930@gmail.com"></label>
+          <label title="Optional Zelle/Venmo tip note shown on JumpIn confirmation screens and footer. Leave blank to hide."><span class="tip">Support / Tip handle (optional)</span><input id="jumpin-support-note" maxlength="120" placeholder="e.g. Zelle: name@email.com · Venmo: @handle"></label>
+          <label title="If Yes and Support / Tip handle is set, sends one thank-you text with your tip handle after a ride completes."><span class="tip">Post-ride thank-you text</span>
+            <select id="jumpin-thankyou" aria-label="Post-ride thank-you text">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
           <label title="Comma-separated Google emails allowed to sign in to JumpIn Admin (primary admin is always kept)."><span class="tip">Admin sign-in emails</span><input id="jumpin-admin-emails" value="senthil930@gmail.com"></label>
           <label title="Maximum total SMS messages JumpIn can send across all users in one day."><span class="tip">Daily text cap</span><input id="jumpin-daily" inputmode="numeric" value="200"></label>
           <label title="Maximum number of seats a driver can offer when posting a new trip."><span class="tip">Seats on a new trip</span><input id="jumpin-seats" inputmode="numeric" value="6"></label>
@@ -268,12 +315,22 @@
     </div>
     <p class="error" id="jumpin-error"></p>
   </main>
+  <footer class="saas-foot">
+    <div class="saas-foot-inner">
+      <span>JumpIn by WaitLink</span>
+      <a href="/jumpin-privacy.html">Privacy</a>
+      <a href="/jumpin-terms.html">Terms</a>
+      <a href="/jumpin-contact.html">Contact</a>
+      <a href="/jumpin-guide.html">Guide</a>
+      <span class="spacer">© 2026 WaitLink</span>
+    </div>
+  </footer>
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js"></script>
-  <script src="/jumpin/cloud.js"></script>
-  <script src="/jumpin/admin-state.js"></script>
-  <script src="/jumpin-admin.js"></script>
+  <script src="/jumpin/core.js?v=20261123a"></script>
+  <script src="/jumpin/cloud.js?v=20261123a"></script>
+  <script src="/jumpin/admin-state.js?v=20261123a"></script>
+  <script src="/jumpin-admin.js?v=20261123a"></script>
 </body>
 </html>

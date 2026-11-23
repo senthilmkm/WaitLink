@@ -92,12 +92,20 @@
         "function": { "functionId": "carpoolReserveSeat", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolUpdateSeat",
+        "function": { "functionId": "carpoolUpdateSeat", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolCancelSeat",
         "function": { "functionId": "carpoolCancelSeat", "region": "us-central1" }
       },
       {
         "source": "/api/carpoolCancelTrip",
         "function": { "functionId": "carpoolCancelTrip", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolCompleteTrip",
+        "function": { "functionId": "carpoolCompleteTrip", "region": "us-central1" }
       },
       {
         "source": "/api/carpoolSendManageLink",

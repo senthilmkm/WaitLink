@@ -99,7 +99,7 @@
       }
     } catch (err) { checkWait = Promise.resolve(""); }
     const timed = new Promise(function (resolve) {
-      const timer = setTimeout(function () { resolve(["", ""]); }, 12000);
+      const timer = setTimeout(function () { resolve(["", ""]); }, 1500);
       Promise.all([tokenWait, checkWait]).then(function (pair) {
         clearTimeout(timer);
         resolve(pair);
@@ -116,10 +116,19 @@
     return timed.then(function (pair) {
       if (pair[0]) headers.Authorization = "Bearer " + pair[0];
       if (pair[1]) headers["X-Firebase-AppCheck"] = pair[1];
+      const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+      const netTimer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
       return fetch(endpoint(), {
         method: "POST",
         headers: headers,
+        signal: ctrl ? ctrl.signal : undefined,
         body: JSON.stringify({ data: data || {} })
+      }).then(function (res) {
+        if (netTimer) clearTimeout(netTimer);
+        return res;
+      }, function (err) {
+        if (netTimer) clearTimeout(netTimer);
+        throw err;
       });
     }).then(function (res) { return res.json(); }).then(function (body) {
       if (body && body.result) return body.result;
@@ -172,11 +181,23 @@
     }, function () { onChange(null); });
   }
 
+  function watchSupportNote(win, onNote) {
+    const firebase = ensureFirebase(win);
+    if (!firebase || !firebase.firestore) return function () {};
+    return firebase.firestore().doc("settings/carpool_config").onSnapshot(function (snap) {
+      const data = snap.exists ? snap.data() : null;
+      onNote((data && typeof data.supportNote === "string") ? data.supportNote : "");
+    }, function () { onNote(""); });
+  }
+
   function attach(win) {
     let storage = null;
     try { storage = win.localStorage; } catch (err) { storage = null; }
     const keys = { post: "", reserve: "" };
-    const ready = prepareAppCheck(win);
+    const ready = Promise.race([
+      prepareAppCheck(win),
+      new Promise(function (resolve) { setTimeout(resolve, 1500); })
+    ]);
     function call(name, data) {
       return ready.then(function () { return callNamed(win, name, data); });
     }
@@ -199,6 +220,7 @@
           rideId: rideId,
           name: values.name,
           phone: values.phone,
+          seats: Number(values.seats || 1),
           idempotencyKey: once("reserve")
         }).then(function (result) {
           if (result && result.ok && result.secret) {
@@ -211,8 +233,14 @@
       cancelSeat: function (rideId, secret) {
         return call("carpoolCancelSeat", { rideId: rideId, secret: secret });
       },
+      updateSeat: function (rideId, secret, seats) {
+        return call("carpoolUpdateSeat", { rideId: rideId, secret: secret, seats: Number(seats) });
+      },
       cancelTrip: function (rideId, secret) {
         return call("carpoolCancelTrip", { rideId: rideId, secret: secret });
+      },
+      completeTrip: function (rideId, secret) {
+        return call("carpoolCompleteTrip", { rideId: rideId, secret: secret });
       },
       sendManageLink: function (rideId, phone, role) {
         return call("carpoolSendManageLink", { rideId: rideId, phone: phone, role: role });
@@ -230,8 +258,16 @@
       broadcast: function (body) { return call("carpoolAdminBroadcast", body); },
       watchBoard: function (onChange) { return watchBoard(win, onChange); },
       watchRide: function (rideId, onChange) { return watchRide(win, rideId, onChange); },
+      watchSupportNote: function (onNote) { return watchSupportNote(win, onNote); },
       tripSecret: function (rideId) { return tripSecret(storage, rideId); },
       seatSecretFor: function (ride) { return seatSecretFor(storage, ride); },
+      seatInfoFor: function (ride) {
+        const riders = (ride && ride.riders) || [];
+        for (let i = 0; i < riders.length; i++) {
+          if (seatSecret(storage, riders[i].reservationId)) return riders[i];
+        }
+        return null;
+      },
       roleFor: function (ride) { return roleFor(storage, ride); },
       saveTrip: function (rideId, secret) { saveTrip(storage, rideId, secret); },
       saveSeat: function (reservationId, secret) { saveSeat(storage, reservationId, secret); },

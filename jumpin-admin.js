@@ -248,12 +248,12 @@
         list.push({ label: "Text trip", tone: "primary", onClick: function () { cloud.chooseTrip(ride); } });
         list.push({ label: "Block", tone: "warn", onClick: function () {
           askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips.", "Block driver", function () {
-            cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
+            return cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
           });
         } });
         list.push({ label: "Cancel", tone: "danger", onClick: function () {
           askConfirm(doc, "Cancel this trip?", route + " (" + (formatWhen(ride.departAt) || "upcoming") + ") will be cancelled and riders notified.", "Cancel trip", function () {
-            cloud.adminCancel(ride.rideId).then(cloud.refresh);
+            return cloud.adminCancel(ride.rideId).then(cloud.refresh);
           });
         } });
       }
@@ -284,7 +284,7 @@
       if (cloud && cloud.setMembers) {
         row.appendChild(pillBtn(doc, "Remove", "danger", function () {
           askConfirm(doc, "Remove member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will no longer be on the community list.", "Remove", function () {
-            cloud.setMembers({ removePhoneHash: m.phoneHash }).then(cloud.refresh);
+            return cloud.setMembers({ removePhoneHash: m.phoneHash }).then(cloud.refresh);
           });
         }));
       }
@@ -469,8 +469,10 @@
       if (confirmModal) confirmModal.addEventListener("click", function (ev) { if (ev.target === confirmModal) closeConfirm(); });
       if (confirmYes) confirmYes.addEventListener("click", function () {
         const fn = pendingConfirmFn;
-        closeConfirm();
-        if (fn) fn();
+        if (!fn) { closeConfirm(); return; }
+        withBusy(page, confirmYes, "Working…", function () {
+          return Promise.resolve(fn()).then(closeConfirm, function (err) { closeConfirm(); throw err; });
+        });
       });
       firebase.auth().onAuthStateChanged(function (user) {
         const button = page.getElementById("jumpin-signin");
@@ -589,11 +591,15 @@
     const review = doc.getElementById("jumpin-review");
     const membersOnly = doc.getElementById("jumpin-members-only");
     const contactEmail = doc.getElementById("jumpin-contact-email");
+    const supportNote = doc.getElementById("jumpin-support-note");
+    const thankYou = doc.getElementById("jumpin-thankyou");
     const adminEmails = doc.getElementById("jumpin-admin-emails");
     if (enabled) enabled.value = config.enabled ? "yes" : "no";
     if (review) review.value = config.requireRideApproval ? "yes" : "no";
     if (membersOnly) membersOnly.value = config.membersOnly ? "yes" : "no";
     if (contactEmail && config.contactEmail) contactEmail.value = config.contactEmail;
+    if (supportNote) supportNote.value = config.supportNote || "";
+    if (thankYou) thankYou.value = config.postRideThankYouSms ? "yes" : "no";
     if (adminEmails && Array.isArray(config.adminEmails)) adminEmails.value = config.adminEmails.join(", ");
     const map = {
       "jumpin-daily": config.dailySmsCap,
@@ -614,12 +620,16 @@
   function saveSettings(firebase, doc, api, onSaved) {
     const membersNode = doc.getElementById("jumpin-members-only");
     const contactNode = doc.getElementById("jumpin-contact-email");
+    const supportNode = doc.getElementById("jumpin-support-note");
+    const thankYouNode = doc.getElementById("jumpin-thankyou");
     const adminsNode = doc.getElementById("jumpin-admin-emails");
     const fields = {
       enabled: doc.getElementById("jumpin-enabled").value === "yes",
       requireRideApproval: doc.getElementById("jumpin-review").value === "yes",
       membersOnly: membersNode ? membersNode.value === "yes" : false,
       contactEmail: contactNode ? contactNode.value : "",
+      supportNote: supportNode ? supportNode.value : "",
+      postRideThankYouSms: thankYouNode ? thankYouNode.value === "yes" : false,
       adminEmails: adminsNode ? adminsNode.value : "",
       dailySmsCap: Number(doc.getElementById("jumpin-daily").value),
       maxSeats: Number(doc.getElementById("jumpin-seats").value),
@@ -637,6 +647,8 @@
       return;
     }
     if (api && api.saveAdminConfig) {
+      checked.value.supportNote = String(fields.supportNote || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
+      checked.value.postRideThankYouSms = fields.postRideThankYouSms === true;
       return api.saveAdminConfig(checked.value).then(function (res) {
         if (!res || res.ok === false) {
           if (error) error.textContent = (res && res.error) || "This page is not available.";

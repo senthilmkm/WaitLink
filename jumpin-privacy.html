@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>JumpIn Privacy Policy — WaitLink</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#f1f5f9; --card:#fff; --border:#e2e8f0; --text:#0f172a; --muted:#475569; --primary:#0891b2; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.65 Inter,-apple-system,BlinkMacSystemFont,sans-serif; }
+    header { background:var(--card); border-bottom:1px solid var(--border); padding:14px 20px; }
+    .bar { max-width:860px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .brand { font-family:Outfit,Inter,sans-serif; font-weight:800; font-size:18px; color:var(--text); text-decoration:none; }
+    .brand span { color:var(--primary); }
+    .nav { display:flex; gap:16px; font-size:14px; font-weight:600; }
+    .nav a { color:var(--primary); text-decoration:none; }
+    main { max-width:860px; margin:28px auto 60px; padding:0 16px; }
+    article { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+    h1 { font-family:Outfit,Inter,sans-serif; font-size:28px; margin:0 0 6px; letter-spacing:-.02em; }
+    .updated { color:var(--muted); font-size:13px; margin:0 0 22px; }
+    h2 { font-family:Outfit,Inter,sans-serif; font-size:18px; margin:22px 0 8px; }
+    p, li { color:#1e293b; }
+    ul { padding-left:20px; }
+    footer { text-align:center; color:var(--muted); font-size:13px; margin-top:24px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <a class="brand" href="https://waitlink.app/?s=jumpin">⏳ WaitLink <span>JumpIn</span></a>
+      <nav class="nav">
+        <a href="https://waitlink.app/?s=jumpin">Rides</a>
+        <a href="/jumpin-privacy.html">Privacy</a>
+        <a href="/jumpin-terms.html">Terms</a>
+        <a href="/jumpin-contact.html">Contact</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <article>
+      <h1>JumpIn Privacy Policy</h1>
+      <p class="updated">Effective: November 2026 &bull; WaitLink JumpIn Community Carpool</p>
+      <p>JumpIn is designed to coordinate community rides with minimal personal data and zero user accounts or passwords.</p>
+
+      <h2>1. Information We Collect</h2>
+      <ul>
+        <li><strong>Trip &amp; Seat Details:</strong> Display name, US/Canada mobile phone number, route (From / To), departure date and time, estimated trip duration, seat count, and optional pickup notes.</li>
+        <li><strong>Trip Messages:</strong> Updates you post inside a trip's message thread.</li>
+        <li><strong>Device Tokens:</strong> A cryptographic management secret stored locally in your browser (<code>localStorage</code>) so you can manage your trip or seat without logging in.</li>
+      </ul>
+
+      <h2>2. How Phone Numbers Are Protected</h2>
+      <ul>
+        <li>Phone numbers are stored only in private server-side collections and are <strong>never published</strong> on public ride boards or ride pages.</li>
+        <li>In the JumpIn Admin console, phone numbers are masked to the last 4 digits (e.g., <code>····5678</code>).</li>
+        <li>Recovery link requests always return a neutral response so unauthorized visitors cannot check whether a phone number is on a trip.</li>
+      </ul>
+
+      <h2>3. SMS Text Messages &amp; Opt-Out</h2>
+      <p>JumpIn uses Twilio to send transactional SMS alerts solely for ride coordination (manage links, trip updates, cancellations, and optional post-ride thank-you notices). You may opt out at any time by replying <strong>STOP</strong> to any JumpIn text message.</p>
+
+      <h2>4. Automatic Data Retention &amp; Deletion</h2>
+      <ul>
+        <li><strong>7-Day Private Purge:</strong> Private trip records, reservations, and phone numbers are automatically deleted <strong>7 days</strong> after a trip is completed, cancelled, or declined.</li>
+        <li><strong>30-Day Public Purge:</strong> Remaining public trip stubs are deleted <strong>30 days</strong> after purge.</li>
+      </ul>
+
+      <h2>5. Contact</h2>
+      <p>For privacy questions or data removal requests, email <a href="mailto:senthil930@gmail.com">senthil930@gmail.com</a> or visit <a href="/jumpin-contact.html">JumpIn Contact</a>.</p>
+    </article>
+    <footer>JumpIn by WaitLink &bull; <a href="https://waitlink.app/?s=jumpin" style="color:var(--primary);text-decoration:none;font-weight:600">Back to JumpIn Rides</a></footer>
+  </main>
+</body>
+</html>

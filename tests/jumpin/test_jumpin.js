@@ -380,6 +380,75 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   const finishing = await service.postRide(db, postInput({ idempotencyKey: "finish", phone: "5557778888", name: "Jo" }), NOW + 100000);
   const done = await service.completeDue(db, NOW + core.DAY_MS * 5);
   assert.ok(done.completed >= 1);
+  const tyDb = service.createMemoryDb(seed());
+  await service.saveAdminConfig(tyDb, service.SUPERADMIN_EMAIL, Object.assign(enabledConfig(), { postRideThankYouSms: true, supportNote: "Zelle: test@example.com" }), NOW);
+  const tyRide = await service.postRide(tyDb, postInput({ idempotencyKey: "ty-1" }), NOW);
+  await service.reserveSeat(tyDb, { rideId: tyRide.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "ty-seat" }, NOW + 100);
+  const tyDone = await service.completeDue(tyDb, NOW + core.DAY_MS * 5);
+  assert.strictEqual(tyDone.completed, 1);
+  assert.strictEqual(tyDone.outbox.length, 2);
+  assert.ok(tyDone.outbox[0].body.indexOf("Zelle: test@example.com") !== -1);
+  const tyAgain = await service.completeDue(tyDb, NOW + core.DAY_MS * 5 + 1000);
+  assert.strictEqual(tyAgain.completed, 0);
+  assert.strictEqual(tyAgain.outbox.length, 0);
+
+  const manualDb = service.createMemoryDb(seed());
+  await service.saveAdminConfig(manualDb, service.SUPERADMIN_EMAIL, Object.assign(enabledConfig(), { postRideThankYouSms: true, supportNote: "Zelle: test@example.com" }), NOW);
+  const longRide = await service.postRide(manualDb, postInput({ idempotencyKey: "long-1", durationMinutes: 240 }), NOW);
+  await service.reserveSeat(manualDb, { rideId: longRide.rideId, name: "Sam", phone: "5559876543", idempotencyKey: "long-seat" }, NOW + 100);
+  const longDepart = manualDb.snapshot()["carpool_private/rides/" + longRide.rideId].departAt;
+  assert.strictEqual((await service.completeDue(manualDb, longDepart + 90 * 60000)).completed, 0);
+  assert.strictEqual((await service.postMessage(manualDb, { rideId: longRide.rideId, secret: longRide.secret, text: "Halfway there" }, longDepart + 120 * 60000)).ok, true);
+  assert.strictEqual((await service.completeTrip(manualDb, { rideId: longRide.rideId, secret: longRide.secret }, longDepart - 1000)).error, "You can complete this trip after it departs.");
+  const manualDone = await service.completeTrip(manualDb, { rideId: longRide.rideId, secret: longRide.secret }, longDepart + 180 * 60000);
+  assert.strictEqual(manualDone.ok, true);
+  assert.strictEqual(manualDone.outbox.length, 2);
+  assert.ok(manualDone.outbox[0].body.indexOf("Zelle: test@example.com") !== -1);
+  assert.strictEqual((await service.completeTrip(manualDb, { rideId: longRide.rideId, secret: longRide.secret }, longDepart + 185 * 60000)).already, true);
+  assert.strictEqual((await service.completeDue(manualDb, longDepart + 400 * 60000)).completed, 0);
+  assert.strictEqual(core.formatDuration(240), "4 hrs");
+  assert.strictEqual(core.formatDuration(90), "1.5 hrs");
+  assert.strictEqual(core.formatDuration(60), "1 hr");
+  assert.strictEqual(core.formatDuration(30), "30 min");
+  assert.strictEqual(core.formatDuration(0), "");
+  assert.strictEqual(core.postErrors(postInput({ durationMinutes: 5 })).field, "durationMinutes");
+  const disabledManual = service.createMemoryDb({ "settings/carpool_config": { enabled: false } });
+  assert.strictEqual((await service.completeTrip(disabledManual, { rideId: longRide.rideId, secret: longRide.secret }, longDepart + 1000)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.completeTrip(manualDb, { rideId: "missing", secret: "nope" }, longDepart + 1000)).error, service.GENERIC_LINK);
+  await service.cancelTrip(manualDb, { rideId: (await service.postRide(manualDb, postInput({ idempotencyKey: "cancel-then-complete", phone: "5553334444" }), NOW + 50)).rideId, secret: "nope" }, NOW + 60);
+  const soloRide = await service.postRide(manualDb, postInput({ idempotencyKey: "solo-1", phone: "5554445555", name: "Solo" }), NOW + 60);
+  await service.cancelTrip(manualDb, { rideId: soloRide.rideId, secret: soloRide.secret }, NOW + 70);
+  assert.strictEqual((await service.completeTrip(manualDb, { rideId: soloRide.rideId, secret: soloRide.secret }, longDepart + 1000)).error, service.GENERIC_LINK);
+  assert.strictEqual(core.reserveErrors({ name: "Sam", phone: "5559876543", seats: 9 }).field, "seats");
+  const famRide = await service.postRide(manualDb, postInput({ idempotencyKey: "fam-1", phone: "5556667777", name: "Fam", seats: 3 }), NOW + 80);
+  assert.strictEqual((await service.reserveSeat(manualDb, { rideId: famRide.rideId, name: "Lee", phone: "5558889999", seats: 4 }, NOW + 85)).error, "Only 3 seats are left.");
+  const famSeat = await service.reserveSeat(manualDb, { rideId: famRide.rideId, name: "Lee", phone: "5558889999", seats: 2, idempotencyKey: "fam-seat" }, NOW + 90);
+  const famSeat2 = await service.reserveSeat(manualDb, { rideId: famRide.rideId, name: "Kim", phone: "5558880000", seats: 1, idempotencyKey: "fam-seat-2" }, NOW + 91);
+  assert.strictEqual(famSeat.ok, true);
+  assert.strictEqual(famSeat2.ok, true);
+  assert.ok(famSeat.outbox[0].body.indexOf("2 seats") !== -1);
+  assert.strictEqual((await service.reserveSeat(manualDb, { rideId: famRide.rideId, name: "Bo", phone: "5558881111", seats: 2 }, NOW + 95)).error, "That seat was just taken.");
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 0 }, NOW + 95)).error, "Choose seats from 1 to 6.");
+  assert.strictEqual((await service.updateSeat(disabledManual, { rideId: famRide.rideId, secret: famSeat.secret, seats: 1 }, NOW + 95)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: "bad", seats: 1 }, NOW + 95)).error, service.GENERIC_LINK);
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 2 }, NOW + 95)).already, true);
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 4 }, NOW + 95)).error, "No extra seats are left.");
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 1 }, NOW + 95)).ok, true);
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 3 }, NOW + 95)).error, "Only 1 more seat is left.");
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 2 }, NOW + 95)).ok, true);
+  assert.strictEqual(manualDb.snapshot()["carpool_public/rides/" + famRide.rideId].seatsLeft, 0);
+  const famDepart = manualDb.snapshot()["carpool_private/rides/" + famRide.rideId].departAt;
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 1 }, famDepart + 1000)).error, "This trip has already left.");
+  assert.strictEqual((await service.cancelSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret }, NOW + 96)).ok, true);
+  assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 2 }, NOW + 96)).error, service.GENERIC_LINK);
+  assert.strictEqual((await service.cancelSeat(manualDb, { rideId: famRide.rideId, secret: famSeat2.secret }, NOW + 97)).ok, true);
+  assert.strictEqual(manualDb.snapshot()["carpool_public/rides/" + famRide.rideId].seatsLeft, 3);
+  const famRec = await service.sendManageLink(manualDb, { rideId: famRide.rideId, phone: "5556667777", role: "driver", ip: "127.0.0.1" }, famDepart + 30 * 60000);
+  assert.strictEqual(famRec.outbox.length, 1);
+  let uiComplete = ui.reduce(ui.openRide ? ui.blank() : Object.assign(ui.blank(), { mode: "ride", status: "open", role: "driver" }), { type: "complete-ask" });
+  assert.strictEqual(uiComplete.sheet, "complete");
+  uiComplete = ui.reduce(uiComplete, { type: "confirm" });
+  assert.strictEqual(uiComplete.pendingAction, "complete-trip");
   const kept = await service.retainTrips(db, NOW + core.DAY_MS * 13);
   assert.ok(kept.audience >= 1);
   assert.ok(!db.snapshot()["carpool_private/rides/" + posted.rideId]);
@@ -546,7 +615,7 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   assert.strictEqual((await service.reserveSeat(db, { rideId: "missing", name: "Sam", phone: "5559876543", idempotencyKey: "gone" }, NOW)).error, "This ride is not available.");
   const handlers = require("../../jumpin/handlers.js");
   const auth = { token: { email: service.SUPERADMIN_EMAIL } };
-  const names = ["carpoolPostRide", "carpoolReserveSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolSendManageLink", "carpoolPostMessage", "carpoolListPending", "carpoolReviewRide", "carpoolAdminCancelTrip", "carpoolAdminSetPosting", "carpoolAdminSetMembers", "carpoolAdminSaveConfig", "carpoolAdminPurge", "carpoolAdminBroadcast", "carpoolCompleteTrips", "carpoolRetainTrips", "carpoolMarkOptOut"];
+  const names = ["carpoolPostRide", "carpoolReserveSeat", "carpoolUpdateSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolCompleteTrip", "carpoolSendManageLink", "carpoolPostMessage", "carpoolListPending", "carpoolReviewRide", "carpoolAdminCancelTrip", "carpoolAdminSetPosting", "carpoolAdminSetMembers", "carpoolAdminSaveConfig", "carpoolAdminPurge", "carpoolAdminBroadcast", "carpoolCompleteTrips", "carpoolRetainTrips", "carpoolMarkOptOut"];
   for (let i = 0; i < names.length; i++) {
     const result = await handlers.call(db, names[i], { text: "Hello", scope: "all", confirm: false, phone: "5552345678", rideId: posted.rideId }, auth, NOW + 90000);
     assert.ok(result && typeof result.ok === "boolean");
@@ -614,12 +683,12 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   const win = fakeWindow();
   const mounted = view.mount(win);
   mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "open", role: "rider", seatsLeft: 1, sheet: "seat" }));
-  const seatSheet = mounted.root.children[1].children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
+  const seatSheet = mounted.root.children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
   assert.ok(seatSheet.children[0].textContent.indexOf("seat") !== -1);
   seatSheet.children[1]._listeners[0]();
   assert.strictEqual(mounted.getState().sheet, "");
   mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "open", role: "driver", seatsLeft: 1, sheet: "trip" }));
-  const tripSheet = mounted.root.children[1].children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
+  const tripSheet = mounted.root.children.filter(function (child) { return child.id === "jumpin-sheet"; })[0];
   tripSheet.children[2]._listeners[0]();
   assert.strictEqual(mounted.getState().pendingAction, "cancel-trip");
   mounted.setState(Object.assign(ui.blank(), { mode: "post" }));
@@ -826,7 +895,10 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   clickPost(mounted);
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().mode, "posted");
-  const cardText = mounted.root.children[1].children[0].children.map(function (child) { return child.textContent || child.value || ""; }).join(" ");
+  const cardText = mounted.root.children[1].children[0].children.map(function (child) {
+    if (child.textContent || child.value) return child.textContent || child.value;
+    return (child.children || []).map(function (c) { return c.textContent || c.value || ""; }).join(" ");
+  }).join(" ");
   assert.ok(cardText.indexOf("Trip posted.") !== -1);
   assert.ok(cardText.indexOf("Library → Office") !== -1);
   assert.ok(cardText.indexOf("ride_live") !== -1);
@@ -889,6 +961,48 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   assert.strictEqual(driverState.reserveOpen, true);
   driverState = ui.reduce(driverState, { type: "reserve-close" });
   assert.strictEqual(driverState.reserveOpen, false);
+  const famWin = fakeWindow();
+  const famMount = view.mount(famWin);
+  famMount.setState(Object.assign(ui.reduce(ui.blank(), {
+    type: "ride",
+    ride: { rideId: "r_fam", from: "A", to: "B", status: "open", seatsLeft: 3, riders: [{ reservationId: "r1", name: "Sam", seats: 2 }] },
+    role: ""
+  }), {
+    ride: { rideId: "r_fam", from: "A", to: "B", status: "open", seatsLeft: 3, riders: [{ reservationId: "r1", name: "Sam", seats: 2 }] },
+    reserveOpen: true
+  }));
+  assert.ok(famMount.root.children[1].children[0].children.some(function (c) { return c.tag === "select"; }));
+  const rUpWin = fakeWindow();
+  rUpWin.JumpInCloud = {
+    watchBoard: function () { return function () {}; },
+    seatSecretFor: function () { return "r_sec"; },
+    seatInfoFor: function () { return { reservationId: "r1", name: "Sam", seats: 1 }; },
+    updateSeat: function () { return Promise.resolve({ ok: true, seats: 2 }); }
+  };
+  const rUpMount = view.mount(rUpWin);
+  const rUpRide = { rideId: "r_up", from: "A", to: "B", status: "open", departAt: Date.now() + 600000, seatsLeft: 2, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }] };
+  rUpMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: rUpRide, role: "rider" }), { ride: rUpRide }));
+  const rActions = rUpMount.root.children[1].children[0].children.find(function (c) { return c.className === "action-row"; });
+  const rSel = rActions.children.find(function (c) { return c.tag === "select"; });
+  const rBtn = rActions.children.find(function (c) { return c.textContent === "Update seats"; });
+  rSel.value = "1";
+  rBtn._listeners[0]();
+  rSel.value = "2";
+  rBtn._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(rUpMount.getState().notice, "Seats updated.");
+  rUpWin.JumpInCloud.updateSeat = function () { return Promise.resolve({ ok: false, error: "Full" }); };
+  rBtn._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(rUpMount.getState().error, "Full");
+  rUpWin.JumpInCloud.updateSeat = function () { return Promise.reject(new Error("net")); };
+  rBtn._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.ok(rUpMount.getState().error.indexOf("Could not update seats") !== -1);
+  const cAttach = require("../../jumpin/cloud.js").attach(fakeWindow());
+  cAttach.saveSeat("r_hit", "sec_hit");
+  assert.strictEqual(cAttach.seatInfoFor({ riders: [{ reservationId: "r_hit", seats: 2 }] }).seats, 2);
+  assert.strictEqual(cAttach.seatInfoFor({ riders: [{ reservationId: "x" }] }), null);
   view.destroy();
 });
 

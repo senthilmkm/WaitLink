@@ -9,8 +9,10 @@ function call(db, name, data, auth, now) {
   const body = data || {};
   if (name === "carpoolPostRide") return service.postRide(db, body, now);
   if (name === "carpoolReserveSeat") return service.reserveSeat(db, body, now);
+  if (name === "carpoolUpdateSeat") return service.updateSeat(db, body, now);
   if (name === "carpoolCancelSeat") return service.cancelSeat(db, body, now);
   if (name === "carpoolCancelTrip") return service.cancelTrip(db, body, now);
+  if (name === "carpoolCompleteTrip") return service.completeTrip(db, body, now);
   if (name === "carpoolSendManageLink") return service.sendManageLink(db, body, now);
   if (name === "carpoolPostMessage") return service.postMessage(db, body, now);
   if (name === "carpoolListPending") return service.listAdmin(db, email, now);

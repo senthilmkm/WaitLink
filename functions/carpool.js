@@ -105,8 +105,10 @@ function staffCall(name) {
 
 exports.carpoolPostRide = guestCall("carpoolPostRide");
 exports.carpoolReserveSeat = guestCall("carpoolReserveSeat");
+exports.carpoolUpdateSeat = guestCall("carpoolUpdateSeat");
 exports.carpoolCancelSeat = guestCall("carpoolCancelSeat");
 exports.carpoolCancelTrip = guestCall("carpoolCancelTrip");
+exports.carpoolCompleteTrip = guestCall("carpoolCompleteTrip");
 exports.carpoolSendManageLink = guestCall("carpoolSendManageLink");
 exports.carpoolPostMessage = guestCall("carpoolPostMessage");
 exports.carpoolListPending = staffCall("carpoolListPending");
@@ -117,8 +119,11 @@ exports.carpoolAdminSetMembers = staffCall("carpoolAdminSetMembers");
 exports.carpoolAdminSaveConfig = staffCall("carpoolAdminSaveConfig");
 exports.carpoolAdminPurge = staffCall("carpoolAdminPurge");
 exports.carpoolAdminBroadcast = staffCall("carpoolAdminBroadcast");
-exports.carpoolCompleteTrips = onSchedule("every 5 minutes", function () {
-  return handlers.call(database(), "carpoolCompleteTrips", {}, null, Date.now());
+exports.carpoolCompleteTrips = onSchedule("every 5 minutes", async function () {
+  const db = database();
+  const result = await handlers.call(db, "carpoolCompleteTrips", {}, null, Date.now());
+  await deliver(db, result);
+  return result;
 });
 exports.carpoolRetainTrips = onSchedule("every 24 hours", function () {
   return handlers.call(database(), "carpoolRetainTrips", {}, null, Date.now());

@@ -93,6 +93,8 @@ function saveConfig(tx, config) {
     membersOnly: config.membersOnly === true,
     adminEmails: config.adminEmails,
     contactEmail: config.contactEmail,
+    supportNote: config.supportNote,
+    postRideThankYouSms: config.postRideThankYouSms === true,
     dailySmsCap: config.dailySmsCap,
     dailySmsSent: config.dailySmsSent,
     dailySmsDay: config.dailySmsDay,
@@ -223,6 +225,7 @@ function postRide(db, input, now, rng) {
       from: fields.from,
       to: fields.to,
       departAt: depart.departAt,
+      durationMinutes: fields.durationMinutes,
       timeZone: input.timeZone,
       seatsTotal: fields.seats,
       seatsLeft: fields.seats,
@@ -283,7 +286,15 @@ function reserveSeat(db, input, now, rng) {
     if (ride.status === "pending") return { ok: false, error: "Waiting for approval." };
     if (ride.status !== "open" || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
     if (fields.phone === ride.driverPhoneE164) return { ok: false, error: "The driver already has this trip." };
-    if (ride.seatsLeft < 1) return { ok: false, error: "That seat was just taken." };
+    const requested = fields.seats || 1;
+    if (ride.seatsLeft < requested) {
+      return {
+        ok: false,
+        error: ride.seatsLeft < 1
+          ? "That seat was just taken."
+          : (ride.seatsLeft === 1 ? "Only 1 seat is left." : "Only " + ride.seatsLeft + " seats are left.")
+      };
+    }
     const notMember = await memberError(tx, config, fields.phone);
     if (notMember) return { ok: false, field: "phone", error: notMember };
     const phone = await tx.get(phoneKey(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
@@ -306,6 +317,7 @@ function reserveSeat(db, input, now, rng) {
       rideId: ride.rideId,
       name: fields.name,
       phoneE164: fields.phone,
+      seats: requested,
       status: "active",
       tokenHash: core.hashSecret(secret),
       tokenIssuedAt: now,
@@ -316,14 +328,15 @@ function reserveSeat(db, input, now, rng) {
       createdAt: existing ? existing.createdAt : now,
       cancelledAt: null
     };
-    ride.seatsLeft -= 1;
+    ride.seatsLeft -= requested;
     if (ride.activeReservationDocIds.indexOf(key) === -1) ride.activeReservationDocIds.push(key);
     phone.activeReservations = core.activeReservations(phone) + 1;
     phone.updatedAt = now;
     const pub = await tx.get(ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
     pub.seatsLeft = ride.seatsLeft;
-    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, status: "active" }]);
-    pub.messages = arr(pub.messages).concat([core.systemMessage(fields.name + " reserved a seat.", now, pub.messages.length + 1)]);
+    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, status: "active" }]);
+    const reserveMsg = requested === 1 ? (fields.name + " reserved a seat.") : (fields.name + " reserved " + requested + " seats.");
+    pub.messages = arr(pub.messages).concat([core.systemMessage(reserveMsg, now, pub.messages.length + 1)]);
     pub.updatedAt = now;
     pub.status = ride.status;
     const sent = core.canSend(config, now);
@@ -331,7 +344,8 @@ function reserveSeat(db, input, now, rng) {
       reservation.smsSent = 1;
       bumpSms(config);
       const when = core.formatWhen(ride.departAt, ride.timeZone);
-      queueText(texts, fields.phone, "You have a seat. " + when + ", " + ride.from + " to " + ride.to + ". Manage: " + manageUrl("seat", reservationId, secret, ride.rideId), "CARPOOL_RIDER_LINK");
+      const seatWord = requested === 1 ? "a seat" : (requested + " seats");
+      queueText(texts, fields.phone, "You have " + seatWord + ". " + when + ", " + ride.from + " to " + ride.to + ". Manage: " + manageUrl("seat", reservationId, secret, ride.rideId), "CARPOOL_RIDER_LINK");
     }
     tx.set(key, reservation);
     tx.set(ridePrivate(ride.rideId), ride);
@@ -364,6 +378,58 @@ function assertSecret(presented, hash) {
   return true;
 }
 
+function updateSeat(db, input, now) {
+  const seats = Number(input && input.seats);
+  if (!Number.isInteger(seats) || seats < 1 || seats > 6) {
+    return Promise.resolve({ ok: false, error: "Choose seats from 1 to 6." });
+  }
+  return db.runTransaction(async function (tx) {
+    const config = await loadConfig(tx, now);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const key = await findReservationKey(tx, input);
+    const reservation = key ? await tx.get(key) : null;
+    if (!reservation || !assertSecret(input.secret, reservation.tokenHash)) return { ok: false, error: GENERIC_LINK };
+    const ride = await tx.get(ridePrivate(reservation.rideId));
+    if (!ride || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
+    if (ride.status !== "open" || reservation.status !== "active") return { ok: false, error: GENERIC_LINK };
+    const oldSeats = Number(reservation.seats) || 1;
+    const delta = seats - oldSeats;
+    if (delta === 0) return { ok: true, already: true, seats: seats };
+    if (delta > 0 && ride.seatsLeft < delta) {
+      return {
+        ok: false,
+        error: ride.seatsLeft < 1
+          ? "No extra seats are left."
+          : (ride.seatsLeft === 1 ? "Only 1 more seat is left." : "Only " + ride.seatsLeft + " more seats are left.")
+      };
+    }
+    const pub = await tx.get(ridePublic(ride.rideId));
+    const riderRows = [];
+    reservation.seats = seats;
+    ride.seatsLeft -= delta;
+    for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
+      const docId = ride.activeReservationDocIds[i];
+      const row = docId === key ? reservation : await tx.get(docId);
+      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
+    }
+    if (pub) {
+      pub.seatsLeft = ride.seatsLeft;
+      pub.riders = arr(pub.riders).map(function (row) {
+        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, status: "active" };
+        return row;
+      });
+      const word = seats === 1 ? "1 seat." : (seats + " seats.");
+      pub.messages = arr(pub.messages).concat([core.systemMessage(reservation.name + " updated to " + word, now, arr(pub.messages).length + 1)]);
+      pub.updatedAt = now;
+      tx.set(ridePublic(ride.rideId), pub);
+    }
+    tx.set(key, reservation);
+    tx.set(ridePrivate(ride.rideId), ride);
+    await rememberRide(tx, ride, riderRows);
+    return { ok: true, seats: seats };
+  });
+}
+
 function cancelSeat(db, input, now) {
   return db.runTransaction(async function (tx) {
     const config = await loadConfig(tx, now);
@@ -378,7 +444,7 @@ function cancelSeat(db, input, now) {
     reservation.status = "cancelled";
     reservation.cancelledAt = now;
     reservation.idempotencySecret = "";
-    ride.seatsLeft += 1;
+    ride.seatsLeft += (Number(reservation.seats) || 1);
     const phone = await tx.get(phoneKey(reservation.phoneE164)) || { activeReservations: 0 };
     phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
     const pub = await tx.get(ridePublic(ride.rideId));
@@ -423,6 +489,58 @@ async function findReservationKey(tx, input) {
   return input.reservationKey || "";
 }
 
+function completeTrip(db, input, now) {
+  return db.runTransaction(async function (tx) {
+    const texts = freshTexts();
+    const config = await loadConfig(tx, now);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(ridePrivate(input.rideId));
+    if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
+    if (ride.status === "completed") return { ok: true, already: true, texts: [] };
+    if (ride.status !== "open") return { ok: false, error: GENERIC_LINK };
+    if (ride.departAt > now) return { ok: false, error: "You can complete this trip after it departs." };
+    const pub = await tx.get(ridePublic(ride.rideId));
+    const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+    const phones = [];
+    if (!ride.thankYouSentAt && config.postRideThankYouSms && config.supportNote) {
+      if (ride.driverPhoneE164) phones.push(ride.driverPhoneE164);
+      const keys = arr(ride.activeReservationDocIds);
+      for (let k = 0; k < keys.length; k++) {
+        const res = await tx.get(keys[k]);
+        if (res && res.status === "active" && res.phoneE164 && phones.indexOf(res.phoneE164) === -1) phones.push(res.phoneE164);
+      }
+    }
+    ride.status = "completed";
+    ride.completedAt = now;
+    if (phones.length) {
+      ride.thankYouSentAt = now;
+      const body = "Hope your JumpIn ride (" + ride.from + " to " + ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
+      phones.forEach(function (p) {
+        if (core.canSend(config, now)) {
+          bumpSms(config);
+          queueText(texts, p, body, "CARPOOL_THANKYOU");
+        }
+      });
+    }
+    if (pub) {
+      pub.status = "completed";
+      pub.messages = arr(pub.messages).concat([core.systemMessage("Trip completed.", now, arr(pub.messages).length + 1)]);
+      pub.updatedAt = now;
+      tx.set(ridePublic(ride.rideId), pub);
+    }
+    tx.set(ridePrivate(ride.rideId), ride);
+    const rides = arr(index.rides);
+    rides.forEach(function (row) {
+      if (row.rideId === ride.rideId) row.status = "completed";
+    });
+    tx.set("carpool_private/broadcast_index", { rides: rides, audience: arr(index.audience) });
+    if (texts.length) saveConfig(tx, config);
+    return { ok: true, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
+  });
+}
+
 function cancelTrip(db, input, now) {
   return db.runTransaction(async function (tx) {
     const texts = freshTexts();
@@ -430,7 +548,7 @@ function cancelTrip(db, input, now) {
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
-    if (ride.departAt <= now) return { ok: false, error: "This trip has already left." };
+    if (completionDeadline(ride) <= now) return { ok: false, error: "This trip has already left." };
     if (ride.status !== "open" && ride.status !== "pending") {
       if (ride.status === "cancelled") return { ok: true, already: true };
       return { ok: false, error: GENERIC_LINK };
@@ -485,6 +603,12 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
 
 const MESSAGE_GRACE_MS = 60 * 60 * 1000;
 
+function completionDeadline(ride) {
+  const mins = Number(ride && ride.durationMinutes);
+  const durationMs = Number.isFinite(mins) && mins > 0 ? mins * 60 * 1000 : 0;
+  return Number((ride && ride.departAt) || 0) + durationMs + MESSAGE_GRACE_MS;
+}
+
 function postMessage(db, input, now) {
   const checked = core.messageError(input.text);
   if (checked.error) return Promise.resolve({ ok: false, error: checked.error });
@@ -493,7 +617,7 @@ function postMessage(db, input, now) {
     const config = await loadConfig(tx, now);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(ridePrivate(input.rideId));
-    if (!ride || ride.status !== "open" || ride.departAt + MESSAGE_GRACE_MS <= now) return { ok: false, error: GENERIC_LINK };
+    if (!ride || ride.status !== "open" || completionDeadline(ride) <= now) return { ok: false, error: GENERIC_LINK };
     let authorName = "";
     let authorRole = "";
     const riderPhones = [];
@@ -559,7 +683,7 @@ function sendManageLink(db, input, now, rng) {
     if (limitIndex.keys.indexOf(limitId) === -1) limitIndex.keys.push(limitId);
     tx.set("carpool_private/limit_index", limitIndex);
     const ride = await tx.get(ridePrivate(input.rideId));
-    if (!ride || ride.departAt <= now) return { ok: true, phrase: core.recoveryPhrase() };
+    if (!ride || (ride.status !== "open" && ride.status !== "pending") || completionDeadline(ride) <= now) return { ok: true, phrase: core.recoveryPhrase() };
     let target = null;
     let kind = "";
     if (input.role === "driver" && ride.driverPhoneE164 === phone.e164) {
@@ -819,29 +943,69 @@ function broadcast(db, email, input, now) {
 
 function completeDue(db, now) {
   return db.runTransaction(async function (tx) {
+    const texts = freshTexts();
+    const config = await loadConfig(tx, now);
     const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
-    let changed = 0;
     const rides = arr(index.rides);
+    const due = [];
     for (let i = 0; i < rides.length; i++) {
       const row = rides[i];
       const ride = await tx.get(ridePrivate(row.rideId));
       if (!ride) continue;
-      if ((ride.status === "open" || ride.status === "pending") && ride.departAt + MESSAGE_GRACE_MS <= now) {
-        ride.status = "completed";
-        ride.completedAt = now;
-        row.status = "completed";
+      if ((ride.status === "open" || ride.status === "pending") && completionDeadline(ride) <= now) {
         const pub = await tx.get(ridePublic(ride.rideId));
-        if (pub) {
-          pub.status = "completed";
-          pub.updatedAt = now;
-          tx.set(ridePublic(ride.rideId), pub);
+        const riderPhones = [];
+        const keys = arr(ride.activeReservationDocIds);
+        for (let k = 0; k < keys.length; k++) {
+          const res = await tx.get(keys[k]);
+          if (res && res.status === "active" && res.phoneE164 && riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
         }
-        tx.set(ridePrivate(ride.rideId), ride);
-        changed += 1;
+        const hasRiders = ride.status === "open" && riderPhones.length > 0;
+        const phones = [];
+        if (hasRiders && !ride.thankYouSentAt && config.enabled && config.postRideThankYouSms && config.supportNote) {
+          if (ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.push(ride.driverPhoneE164);
+          riderPhones.forEach(function (p) { if (phones.indexOf(p) === -1) phones.push(p); });
+        }
+        due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders });
       }
     }
+    due.forEach(function (item) {
+      if (item.hasRiders) {
+        item.ride.status = "completed";
+        item.ride.completedAt = now;
+        item.row.status = "completed";
+      } else {
+        item.ride.status = "cancelled";
+        item.ride.cancelledAt = now;
+        item.ride.seatsLeft = 0;
+        item.row.status = "cancelled";
+      }
+      if (item.phones.length) {
+        item.ride.thankYouSentAt = now;
+        const body = "Hope your JumpIn ride (" + item.ride.from + " to " + item.ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
+        item.phones.forEach(function (p) {
+          if (core.canSend(config, now)) {
+            bumpSms(config);
+            queueText(texts, p, body, "CARPOOL_THANKYOU");
+          }
+        });
+      }
+      if (item.pub) {
+        item.pub.status = item.hasRiders ? "completed" : "cancelled";
+        if (!item.hasRiders) {
+          item.pub.seatsLeft = 0;
+          item.pub.messages = arr(item.pub.messages).concat([core.systemMessage("Trip cancelled — no passengers joined.", now, arr(item.pub.messages).length + 1)]);
+        }
+        item.pub.updatedAt = now;
+        tx.set(ridePublic(item.ride.rideId), item.pub);
+      }
+      tx.set(ridePrivate(item.ride.rideId), item.ride);
+    });
+    if (texts.length) saveConfig(tx, config);
     tx.set("carpool_private/broadcast_index", index);
-    return { ok: true, completed: changed };
+    return { ok: true, completed: due.length, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
   });
 }
 
@@ -1023,8 +1187,10 @@ module.exports = {
   createMemoryDb: createMemoryDb,
   postRide: postRide,
   reserveSeat: reserveSeat,
+  updateSeat: updateSeat,
   cancelSeat: cancelSeat,
   cancelTrip: cancelTrip,
+  completeTrip: completeTrip,
   postMessage: postMessage,
   sendManageLink: sendManageLink,
   reviewRide: reviewRide,

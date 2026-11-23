@@ -82,6 +82,11 @@
       next.pendingAction = "";
       return next;
     }
+    if (event.type === "complete-ask") {
+      if (next.role === "driver" && next.status === "open") next.sheet = "complete";
+      next.pendingAction = "";
+      return next;
+    }
     if (event.type === "keep") {
       next.sheet = "";
       next.pendingAction = "";
@@ -90,6 +95,7 @@
     if (event.type === "confirm") {
       if (next.sheet === "seat") next.pendingAction = "cancel-seat";
       if (next.sheet === "trip") next.pendingAction = "cancel-trip";
+      if (next.sheet === "complete") next.pendingAction = "complete-trip";
       next.sheet = "";
       return next;
     }

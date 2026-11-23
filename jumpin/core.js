@@ -162,6 +162,8 @@
       membersOnly: false,
       adminEmails: ["senthil930@gmail.com"],
       contactEmail: "senthil930@gmail.com",
+      supportNote: "",
+      postRideThankYouSms: false,
       dailySmsCap: 200,
       dailySmsSent: 0,
       dailySmsDay: "",
@@ -189,6 +191,8 @@
       membersOnly: src.membersOnly === true,
       adminEmails: cleanAdminEmails(src.adminEmails),
       contactEmail: cleanEmail(src.contactEmail) || base.contactEmail,
+      supportNote: String(src.supportNote || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120),
+      postRideThankYouSms: src.postRideThankYouSms === true,
       dailySmsCap: int("dailySmsCap", 0, 5000, base.dailySmsCap),
       dailySmsSent: Number.isFinite(Number(src.dailySmsSent)) ? Number(src.dailySmsSent) : 0,
       dailySmsDay: typeof src.dailySmsDay === "string" ? src.dailySmsDay : "",
@@ -269,7 +273,12 @@
     if (note.error) return { field: "note", error: note.error };
     const seats = Number(fields.seats);
     if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
-    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, seats: seats } };
+    const rawDuration = fields.durationMinutes;
+    const durationMinutes = rawDuration == null || rawDuration === "" ? 60 : Number(rawDuration);
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720) {
+      return { field: "durationMinutes", error: "Choose an estimated trip duration." };
+    }
+    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, seats: seats, durationMinutes: durationMinutes } };
   }
 
   function reserveErrors(fields) {
@@ -277,7 +286,10 @@
     if (name.error) return { field: "name", error: name.error };
     const phone = normalizePhone(fields.phone);
     if (!phone.ok) return { field: "phone", error: phone.error };
-    return { value: { name: name.value, phone: phone.e164 } };
+    const rawSeats = fields.seats;
+    const seats = rawSeats == null || rawSeats === "" ? 1 : Number(rawSeats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
+    return { value: { name: name.value, phone: phone.e164, seats: seats } };
   }
 
   function partsInZone(utcMs, timeZone) {
@@ -340,6 +352,15 @@
 
   const ZONE_SHORT = { EST: "ET", EDT: "ET", CST: "CT", CDT: "CT", MST: "MT", MDT: "MT", PST: "PT", PDT: "PT" };
 
+  function formatDuration(minutes) {
+    const mins = Number(minutes);
+    if (!Number.isFinite(mins) || mins <= 0) return "";
+    if (mins < 60) return mins + " min";
+    const hrs = mins / 60;
+    if (Number.isInteger(hrs)) return hrs === 1 ? "1 hr" : hrs + " hrs";
+    return hrs.toFixed(1) + " hrs";
+  }
+
   function formatWhen(utcMs, timeZone) {
     const fmt = new Intl.DateTimeFormat("en-US", {
       timeZone: timeZone,
@@ -392,6 +413,7 @@
       from: ride.from,
       to: ride.to,
       departAt: ride.departAt,
+      durationMinutes: Number(ride.durationMinutes) || 60,
       timeZone: ride.timeZone,
       seatsTotal: ride.seatsTotal,
       seatsLeft: ride.seatsLeft,
@@ -452,6 +474,7 @@
     announceError: announceError,
     zonedToUtc: zonedToUtc,
     departureError: departureError,
+    formatDuration: formatDuration,
     formatWhen: formatWhen,
     partsInZone: partsInZone,
     utcDay: utcDay,

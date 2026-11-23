@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>JumpIn — Community Carpool Guide &amp; Workflows</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --border: #cbd5e1;
+      --border-soft: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
+      --primary: #0891b2;
+      --primary-dark: #0e7490;
+      --primary-soft: #ecfeff;
+      --emerald: #059669;
+      --emerald-soft: #ecfdf5;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --amber-border: #fcd34d;
+      --rose: #be123c;
+      --rose-soft: #fff1f2;
+      --indigo: #4f46e5;
+      --indigo-soft: #eef2ff;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .topbar-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: Outfit, Inter, sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0891b2, #06b6d4);
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(8, 145, 178, 0.25);
+    }
+
+    .brand span.accent { color: var(--primary); }
+
+    .nav-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-pills a {
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border-soft);
+      transition: all 0.15s ease;
+    }
+
+    .nav-pills a:hover {
+      color: var(--primary-dark);
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0f172a 0%, #0e7490 55%, #0891b2 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 40px 36px;
+      margin-bottom: 28px;
+      box-shadow: 0 20px 45px rgba(8, 145, 178, 0.22);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -80px;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      font-family: Outfit, Inter, sans-serif;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      margin: 0 0 14px;
+      max-width: 780px;
+    }
+
+    .hero p {
+      font-size: 16px;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 760px;
+      margin: 0 0 24px;
+    }
+
+    .hero-pillars {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .pillar {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .pillar strong {
+      display: block;
+      font-family: Outfit, Inter, sans-serif;
+      font-size: 15px;
+      margin-bottom: 3px;
+    }
+
+    .pillar span {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    /* Section Cards */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 76px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      flex-shrink: 0;
+    }
+
+    .section-icon.driver { background: #e0f2fe; color: #0369a1; }
+    .section-icon.rider { background: var(--emerald-soft); color: var(--emerald); }
+    .section-icon.admin { background: var(--indigo-soft); color: var(--indigo); }
+    .section-icon.cycle { background: var(--amber-soft); color: var(--amber); }
+
+    h2 {
+      font-family: Outfit, Inter, sans-serif;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      margin: 0 0 20px;
+      font-size: 15px;
+    }
+
+    /* Definition Grid */
+    .def-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .def-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .def-card h3 {
+      font-family: Outfit, Inter, sans-serif;
+      font-size: 16px;
+      margin: 0 0 6px;
+      color: var(--primary-dark);
+    }
+
+    .def-card p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 640px;
+      font-size: 14px;
+    }
+
+    thead th {
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: top;
+      color: var(--text);
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fafcff; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .tag-open { background: #e0f2fe; color: #0369a1; }
+    .tag-pending { background: var(--amber-soft); color: #b45309; border: 1px solid #fde68a; }
+    .tag-active { background: var(--emerald-soft); color: #047857; }
+    .tag-done { background: #f1f5f9; color: #334155; }
+    .tag-cancel { background: var(--rose-soft); color: var(--rose); }
+    .tag-sms { background: var(--indigo-soft); color: var(--indigo); }
+
+    ul.clean {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    ul.clean li { margin-bottom: 4px; }
+    ul.clean li:last-child { margin-bottom: 0; }
+
+    /* Lifecycle Stepper */
+    .lifecycle {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px;
+      margin: 18px 0 20px;
+    }
+
+    .stage-box {
+      position: relative;
+      background: var(--surface-soft);
+      border: 1px solid var(--border-soft);
+      border-top: 4px solid var(--primary);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .stage-box.pending { border-top-color: var(--amber); }
+    .stage-box.progress { border-top-color: var(--indigo); }
+    .stage-box.complete { border-top-color: var(--emerald); }
+    .stage-box.purge { border-top-color: #64748b; }
+
+    .stage-num {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stage-box h3 {
+      font-family: Outfit, Inter, sans-serif;
+      font-size: 16px;
+      margin: 0 0 6px;
+    }
+
+    .stage-box p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Callout */
+    .callout {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 18px;
+      border-radius: 14px;
+      background: var(--amber-soft);
+      border: 1px solid var(--amber-border);
+      color: #78350f;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #78350f; }
+
+    .callout.info {
+      background: var(--primary-soft);
+      border-color: #a5f3fc;
+      color: #164e63;
+    }
+
+    .callout.info strong { color: #164e63; }
+
+    /* Footer */
+    .doc-foot {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 680px) {
+      .hero { padding: 28px 20px; border-radius: 18px; }
+      .section { padding: 20px 16px; border-radius: 16px; }
+      .topbar-inner { padding: 10px 14px; }
+    }
+
+    @media print {
+      .topbar { position: static; }
+      body { background: #fff; }
+      .section, .hero { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark">⏳</span>
+        <span>WaitLink <span class="accent">JumpIn</span></span>
+      </a>
+      <nav class="nav-pills" aria-label="JumpIn Guide Sections">
+        <a href="#definition">What is JumpIn</a>
+        <a href="#features">Features</a>
+        <a href="#lifecycle">Trip Lifecycle</a>
+        <a href="#driver">Driver Workflow</a>
+        <a href="#rider">Rider Workflow</a>
+        <a href="#admin">Admin Workflow</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">Community Carpool &amp; Seat Sharing</div>
+      <h1>JumpIn — Share a Ride, Fill Empty Seats, Stay Connected by Text</h1>
+      <p>
+        <strong>JumpIn</strong> is a free, zero-app-install community carpool tool built into WaitLink.
+        Drivers post an upcoming trip in seconds, riders reserve one or more seats for themselves or their family,
+        and everyone coordinates via private SMS magic links — no logins, no passwords, and no payment processing.
+      </p>
+      <div class="hero-pillars">
+        <div class="pillar">
+          <strong>No App or Account Needed</strong>
+          <span>Works in any iOS or Android mobile browser with one-tap SMS manage links.</span>
+        </div>
+        <div class="pillar">
+          <strong>Privacy-First Design</strong>
+          <span>Phone numbers stay hidden on public ride boards; riders only see names and trip updates.</span>
+        </div>
+        <div class="pillar">
+          <strong>Family-Friendly &amp; Real-Time</strong>
+          <span>Book 1–6 seats in one reservation, adjust seat counts, and message in real time.</span>
+        </div>
+        <div class="pillar">
+          <strong>Community Supported</strong>
+          <span>Free to use with optional Zelle/Venmo tip cards to help cover SMS delivery costs.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. Definition & Description -->
+    <section class="section" id="definition">
+      <div class="section-head">
+        <span class="section-icon">🚗</span>
+        <h2>1. Definition &amp; Description of JumpIn</h2>
+      </div>
+      <p class="section-sub">
+        JumpIn connects trusted community members heading in the same direction. Instead of messy group chat threads where seats get double-booked or ride details get buried, JumpIn gives every trip a single live page with real-time seat tracking and automated text alerts.
+      </p>
+      <div class="def-grid">
+        <div class="def-card">
+          <h3>How It Works</h3>
+          <p>A driver posts a route (From → To), departure time, estimated trip duration, available seats (1–6), and an optional pickup note. JumpIn generates a shareable ride link and texts the driver a private management link.</p>
+        </div>
+        <div class="def-card">
+          <h3>How Riders Join</h3>
+          <p>Riders open the shared link or browse the live JumpIn board, enter their name, phone number, and number of seats needed (e.g., 3 seats for a family), and instantly receive a private SMS link to manage their reservation.</p>
+        </div>
+        <div class="def-card">
+          <h3>How Access &amp; Safety Work</h3>
+          <p>Each device holds a cryptographic secret in local storage (or via SMS recovery link). Admins can enable <strong>Members-Only</strong> access, require <strong>Ride Approval</strong>, block abusive numbers, and cap daily SMS usage.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Features Table -->
+    <section class="section" id="features">
+      <div class="section-head">
+        <span class="section-icon">✨</span>
+        <h2>2. Features of JumpIn</h2>
+      </div>
+      <p class="section-sub">A complete overview of what JumpIn provides out of the box for drivers, riders, and community administrators.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">Feature</th>
+              <th style="width:48%">Description</th>
+              <th style="width:30%">Who Benefits &amp; How</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Zero-Login SMS Magic Links</strong></td>
+              <td>Posting a trip or reserving a seat automatically texts a secure, device-independent manage link (<code>view=trip</code> or <code>view=seat</code>).</td>
+              <td>Drivers &amp; Riders — manage trips from any phone or browser without creating passwords.</td>
+            </tr>
+            <tr>
+              <td><strong>Estimated Trip Duration</strong></td>
+              <td>Drivers pick an estimated length (<code>30 min</code> to <code>6 hrs</code>) when posting. Displayed on both the board and ride page.</td>
+              <td>Riders know trip length upfront; messaging stays open throughout long 3–4+ hour drives.</td>
+            </tr>
+            <tr>
+              <td><strong>Multi-Seat (Family) Booking</strong></td>
+              <td>Riders can reserve <strong>1 to 6 seats</strong> (up to remaining seats) in a single booking and adjust seat count anytime before departure.</td>
+              <td>Families &amp; groups — reserve 3 seats together under one phone number and update if plans change.</td>
+            </tr>
+            <tr>
+              <td><strong>Two-Way Trip Messaging</strong></td>
+              <td>Live Trip Updates thread on the ride page. Driver messages text all active riders; rider messages text the driver.</td>
+              <td>Everyone — share pickup spot updates or ETA changes without exposing personal phone numbers.</td>
+            </tr>
+            <tr>
+              <td><strong>1-Tap WhatsApp &amp; Copy Share</strong></td>
+              <td>Confirmation screen includes a <code>📋 Copy</code> button right next to the link box and a <strong>Share on WhatsApp</strong> button.</td>
+              <td>Drivers — share new rides into community WhatsApp groups in one tap to go viral.</td>
+            </tr>
+            <tr>
+              <td><strong>Driver Trip Completion</strong></td>
+              <td>After departure time, drivers get a <strong>Complete trip</strong> button (with confirmation modal) plus an automatic fallback after <code>depart + duration + 60m</code>.</td>
+              <td>Drivers &amp; Riders — closes messaging cleanly and prompts post-ride community support.</td>
+            </tr>
+            <tr>
+              <td><strong>Community Tip / Support Card</strong></td>
+              <td>Warm gold Zelle/Venmo support card with a 1-tap <strong>Copy</strong> button shown after posting, reserving, and trip completion (plus optional thank-you SMS).</td>
+              <td>Community Admins — helps offset Twilio SMS costs through voluntary $1–$2 tips.</td>
+            </tr>
+            <tr>
+              <td><strong>Members-Only &amp; Approval Gates</strong></td>
+              <td>Optional whitelist of approved phone numbers and optional pre-approval queue before newly posted trips go public.</td>
+              <td>Community Admins — keeps rides restricted to vetted community members.</td>
+            </tr>
+            <tr>
+              <td><strong>Automatic Data Retention</strong></td>
+              <td>Completed/cancelled trips purge private phone records after <strong>7 days</strong> and public stubs after <strong>30 days</strong>.</td>
+              <td>Everyone — automatic privacy cleanup with zero manual maintenance.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. Lifecycle of a Trip -->
+    <section class="section" id="lifecycle">
+      <div class="section-head">
+        <span class="section-icon cycle">🔄</span>
+        <h2>3. Lifecycle of a Trip</h2>
+      </div>
+      <p class="section-sub">Every JumpIn trip follows a predictable, race-condition-free state machine from creation to cleanup.</p>
+
+      <div class="lifecycle">
+        <div class="stage-box pending">
+          <div class="stage-num">Stage 1 (Optional)</div>
+          <h3>Pending Approval</h3>
+          <p>If Admin sets <em>New rides wait for approval = Yes</em>, the trip is hidden until approved (or declined) by an admin.</p>
+        </div>
+        <div class="stage-box">
+          <div class="stage-num">Stage 2</div>
+          <h3>Open (Pre-Departure)</h3>
+          <p>Listed on the live JumpIn board. Riders can reserve or update seats, cancel seats, and message. Driver can cancel or add passengers.</p>
+        </div>
+        <div class="stage-box progress">
+          <div class="stage-num">Stage 3</div>
+          <h3>In Progress (Departed)</h3>
+          <p>Once <code>now &ge; departAt</code>, new seat bookings/cancellations lock. Messaging stays open, and the driver sees <strong>Complete trip</strong>.</p>
+        </div>
+        <div class="stage-box complete">
+          <div class="stage-num">Stage 4</div>
+          <h3>Completed / Cancelled</h3>
+          <p>Triggered manually by Driver (or auto-completed at <code>depart + duration + 60m</code>). Compose box hides; Zelle support card &amp; optional thank-you SMS fire once.</p>
+        </div>
+        <div class="stage-box purge">
+          <div class="stage-num">Stage 5</div>
+          <h3>Retention &amp; Purge</h3>
+          <p>Private reservation/phone data is deleted <strong>7 days</strong> after completion/cancellation; public trip stub is deleted after <strong>30 days</strong>.</p>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <div>
+          <strong>Idempotency &amp; Race-Condition Protection:</strong> All seat reservations, seat updates, cancellations, and trip completions execute inside atomic Firestore transactions. Even if two riders tap <em>Confirm seat</em> at the exact same millisecond for the last seat, only one succeeds — and post-ride thank-you SMS is locked by <code>thankYouSentAt</code> so it is never sent twice.
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Driver Workflow -->
+    <section class="section" id="driver">
+      <div class="section-head">
+        <span class="section-icon driver">🧑‍✈️</span>
+        <h2>4. Driver Workflow (Stage-by-Stage Operations)</h2>
+      </div>
+      <p class="section-sub">Everything a driver can do from posting a ride to completing it — including switching to another phone mid-trip.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20%">Trip Stage</th>
+              <th style="width:45%">Operations Driver Can Perform</th>
+              <th style="width:35%">System &amp; SMS Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-open">Posting a Ride</span></td>
+              <td>
+                <ul class="clean">
+                  <li>Enter name, phone (auto-remembered after first use), From, To, date/time (or 1-tap <strong>Today / Tomorrow / In 30m / 1h / 2h</strong> presets), seats (1–6), <strong>Estimated duration</strong> (30m–6h), and optional note.</li>
+                  <li>Tap <strong>Post ride</strong> (spinner shown while saving).</li>
+                  <li>On <em>Trip posted</em> screen: tap <strong>📋 Copy</strong> next to URL or the primary <strong>Share on WhatsApp</strong> button.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Texts driver the private manage link (<code>view=trip</code>). Checks daily post cap, blocklist, and Members-Only whitelist.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-pending">Pending Approval</span><br><small>(if enabled)</small></td>
+              <td>
+                <ul class="clean">
+                  <li>View waiting status on manage link.</li>
+                  <li><strong>Cancel trip</strong> (opens confirmation modal).</li>
+                  <li><strong>Sign out on this device</strong>.</li>
+                </ul>
+              </td>
+              <td>
+                Ride stays hidden from public board until Admin approves. Messaging and adding passengers are disabled while pending.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Open (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
+              <td>
+                <ul class="clean">
+                  <li><strong>Message passengers</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> (with spinner).</li>
+                  <li><strong>Add passenger</strong> manually (if seats left &gt; 0).</li>
+                  <li><strong>Cancel trip</strong> (confirmation modal: <em>Keep trip / Cancel trip</em>).</li>
+                  <li><strong>Copy link</strong> or <strong>Sign out on this device</strong>.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Driver messages text all active riders. Adding a passenger texts that passenger their seat link. Cancelling notifies all active riders.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-active">In Progress (Departed)</span><br><small><code>now &ge; departAt</code></small></td>
+              <td>
+                <ul class="clean">
+                  <li><strong>Message passengers</strong> (shown when 1+ passengers joined) using quick pills or custom text + inline <strong>Send</strong>.</li>
+                  <li><strong>Complete trip</strong> (shown when 1+ passengers joined) — opens centered <em>Complete this trip?</em> confirmation modal with spinner.</li>
+                  <li><strong>Cancel trip</strong> remains available at any time before completion.</li>
+                  <li><em>Add passenger</em> is hidden once departed.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Completing the trip marks it <code>completed</code> and sends the optional thank-you + Zelle tip SMS to driver &amp; active riders. If 0 passengers joined and the driver forgets, the scheduler auto-cancels the trip with 0 tip SMS.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Completed / Cancelled</span></td>
+              <td>
+                <ul class="clean">
+                  <li>View final trip summary, passenger list, and trip updates.</li>
+                  <li>Copy community Zelle/Venmo handle from the warm gold Support Card.</li>
+                </ul>
+              </td>
+              <td>
+                Message box and action buttons are cleanly hidden. If driver didn't tap Complete, the 5-minute scheduler auto-completes after <code>depart + duration + 60m</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-sms">Another Phone / Recovery</span></td>
+              <td>
+                <ul class="clean">
+                  <li>Open ride link → tap <strong>Driver? Manage this trip</strong>.</li>
+                  <li>Enter driver phone → tap <strong>Text me a link</strong>.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Works both before departure and mid-trip (until <code>depart + duration + 60m</code>). Always displays a neutral confirmation message to protect privacy.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. Rider Workflow -->
+    <section class="section" id="rider">
+      <div class="section-head">
+        <span class="section-icon rider">🙋</span>
+        <h2>5. Rider Workflow (Stage-by-Stage Operations)</h2>
+      </div>
+      <p class="section-sub">Everything a rider can do from finding a ride to reserving family seats, adjusting seat counts, and messaging the driver.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20%">Trip Stage</th>
+              <th style="width:45%">Operations Rider Can Perform</th>
+              <th style="width:35%">System &amp; SMS Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-open">Browsing &amp; Reserving</span><br><small><code>now &lt; departAt</code></small></td>
+              <td>
+                <ul class="clean">
+                  <li>Open shared ride link or select a trip from the live board (with route search when 5+ trips are open).</li>
+                  <li>The reserve form opens automatically — enter name, phone (auto-remembered after first use), and choose <strong>Seats</strong> (1 up to remaining seats, e.g., 3 for family).</li>
+                  <li>Tap <strong>Confirm seat</strong> (spinner shown). Confirmation screen shows <em>"You have N seat(s)."</em> with quick <strong>Edit seats</strong>, <strong>Cancel reservation</strong>, and <strong>View trip</strong> buttons.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Deducts chosen seat count from <code>seatsLeft</code>, texts rider their private seat link (<code>view=seat</code>), and shows the Zelle Support Card.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Reserved (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
+              <td>
+                <ul class="clean">
+                  <li><strong>Message the driver</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> button right beside the input (with spinner).</li>
+                  <li>Change seat count using the <strong>My seats</strong> dropdown + <strong>Update seats</strong> (enabled once changed; increase or decrease within available seats).</li>
+                  <li><strong>Cancel my seat</strong> (opens centered <em>Cancel your seat?</em> confirmation modal).</li>
+                  <li><strong>Sign out on this device</strong> (bottom button).</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Messages text the driver directly. Updating or cancelling seats adjusts <code>seatsLeft</code> immediately and posts a system update to the trip thread.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-active">In Progress (Departed)</span><br><small><code>now &ge; departAt</code></small></td>
+              <td>
+                <ul class="clean">
+                  <li><strong>Message the driver</strong> + inline <strong>Send</strong> button (open until <code>depart + duration + 60m</code>).</li>
+                  <li><strong>Sign out on this device</strong> (bottom button).</li>
+                  <li><em>Update seats</em> and <em>Cancel my seat</em> are hidden after departure.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Rider updates text the driver during the ride. Seat count is locked once the trip has departed.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Completed / Cancelled</span></td>
+              <td>
+                <ul class="clean">
+                  <li>View <em>"Trip completed — hope you had a great ride!"</em> (or cancellation notice).</li>
+                  <li>Tap <strong>Copy</strong> on the warm gold Zelle/Venmo Support Card to chip in $1–$2 for SMS costs.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> If enabled by Admin, rider receives one post-ride thank-you SMS with the community tip handle after trip completion.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-sms">Another Phone / Recovery</span></td>
+              <td>
+                <ul class="clean">
+                  <li>Open ride link → tap <strong>Rider? Manage seat or message driver</strong>.</li>
+                  <li>Enter phone used to reserve → tap <strong>Text me a link</strong>.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Works both before departure and mid-trip (until <code>depart + duration + 60m</code>) so riders can always message the driver from another device.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. Admin Workflow -->
+    <section class="section" id="admin">
+      <div class="section-head">
+        <span class="section-icon admin">🛡️</span>
+        <h2>6. Admin Workflow (Community Governance &amp; Controls)</h2>
+      </div>
+      <p class="section-sub">Authenticated via Google Sign-In on <code>jumpin-admin.html</code>. Responsive desktop table and mobile cards, with spinner feedback and confirmation modals on destructive actions.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18%">Admin Tab</th>
+              <th style="width:47%">Operations Admin Can Perform</th>
+              <th style="width:35%">Notes &amp; Safeguards</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Trips</strong></td>
+              <td>
+                <ul class="clean">
+                  <li>Filter by <strong>Upcoming</strong>, <strong>Waiting</strong> (pending approval), <strong>Past</strong>, or <strong>Cancelled</strong>, and search by route/driver/last-4 digits.</li>
+                  <li><strong>Approve</strong> or <strong>Decline</strong> pending trips.</li>
+                  <li>Open <strong>Details</strong> modal to inspect riders and trip messages.</li>
+                  <li><strong>Cancel</strong> any active trip or <strong>Block</strong> a driver from posting.</li>
+                  <li><strong>Broadcast</strong> an announcement SMS to all contacts, upcoming trips, or one specific trip.</li>
+                </ul>
+              </td>
+              <td>
+                All phone numbers are masked to last 4 digits. Broadcasts show a recipient count &amp; daily SMS budget preview before confirming.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Members</strong></td>
+              <td>
+                <ul class="clean">
+                  <li>Add individual approved community members (name + US/Canada phone).</li>
+                  <li>Bulk-import members via CSV / pasted list.</li>
+                  <li>Remove members (with confirmation modal).</li>
+                </ul>
+              </td>
+              <td>
+                Used when <strong>Members only = Yes</strong>. Non-members receive a red contact message directing them to the Admin contact email.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Settings</strong></td>
+              <td>
+                <ul class="clean">
+                  <li>Toggle <strong>JumpIn is open</strong>, <strong>New rides wait for approval</strong>, <strong>Members only</strong>, and <strong>Post-ride thank-you text</strong>.</li>
+                  <li>Configure <strong>Admin contact email</strong>, <strong>Admin sign-in emails</strong>, and <strong>Support / Tip handle</strong> (e.g., <code>Zelle:name@email.com</code>).</li>
+                  <li>Tune safety limits: Daily text cap, Seats per trip (1–6), Days ahead, Messages per trip, Daily posts per phone, Upcoming seats per phone, Manage texts per record, and Resend cooldown seconds.</li>
+                </ul>
+              </td>
+              <td>
+                Validated and clamped server-side on every save. All cloud functions preserve every config field atomically so settings never get overwritten.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Blocked</strong></td>
+              <td>
+                <ul class="clean">
+                  <li>Review all blocked driver phone numbers (shown by name/last 4).</li>
+                  <li>Tap any blocked entry to <strong>Unblock</strong> them immediately.</li>
+                </ul>
+              </td>
+              <td>
+                Blocked numbers are prevented from posting new trips without exposing block status publicly.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Cleanup</strong></td>
+              <td>
+                <ul class="clean">
+                  <li>Run two-step verified data purges for: <strong>Past trips</strong>, <strong>All trips</strong>, <strong>Saved contacts</strong>, or <strong>Everything</strong>.</li>
+                </ul>
+              </td>
+              <td>
+                First checks exact item counts, then requires explicit confirmation in a modal before deleting records.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div>
+          <strong>SMS Budget &amp; Opt-Out Compliance:</strong> Every outgoing text checks the configurable <code>dailySmsCap</code> before sending. If Twilio returns error <code>21610</code> (STOP / opt-out), JumpIn automatically marks that contact opted out so they are excluded from future broadcasts.
+        </div>
+      </div>
+    </section>
+
+    <p class="doc-foot">WaitLink JumpIn — Community Carpool Reference Guide &bull; Built for mobile and desktop browsers</p>
+  </main>
+</body>
+</html>

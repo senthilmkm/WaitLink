@@ -19,7 +19,8 @@ const testSuites = [
   { name: "6. 15-Second Shop Launch, 8 Industry Catalogs & Pre-Publishing Review", file: "test_onboarding_and_review_engine.js" },
   { name: "7. SuperAdmin Revenue Metrics, Unit Economics & Account 360° Engine", file: "test_superadmin_revenue_metrics.js" },
   { name: "8. Anti-Spam, Dynamic Rolling QR & GPS Proximity Engine", file: "test_anti_spam_and_proximity_engine.js" },
-  { name: "9. Post-Service Survey & Dual-Mode Service Completion Engine", file: "test_survey_and_service_completion.js" }
+  { name: "9. Post-Service Survey & Dual-Mode Service Completion Engine", file: "test_survey_and_service_completion.js" },
+  { name: "10. JumpIn End-to-End Driver, Rider & SMS Regression", file: "jumpin/test_jumpin_e2e_regression.js" }
 ];
 
 let totalSuitesPassed = 0;
