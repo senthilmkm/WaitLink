@@ -275,7 +275,7 @@
     if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
     const rawDuration = fields.durationMinutes;
     const durationMinutes = rawDuration == null || rawDuration === "" ? 60 : Number(rawDuration);
-    if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720) {
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 900) {
       return { field: "durationMinutes", error: "Choose an estimated trip duration." };
     }
     const rawCost = String(fields.rideCost == null ? "" : fields.rideCost).replace(/^\s*\$/, "").trim();

@@ -129,6 +129,11 @@
       "#jumpin-mid .info-v{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-mid .post-head{margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0}",
       "#jumpin-mid .post-head h1{font-size:26px;margin:0}",
+      "#jumpin-mid .dur-stepper{display:flex;align-items:center;gap:10px;margin:0 0 14px}",
+      "#jumpin-mid .dur-btn{min-width:52px;min-height:44px;padding:0 14px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:18px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .dur-btn:hover:not(:disabled){background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-mid .dur-btn:disabled{opacity:.4;cursor:not-allowed;color:#64748b}",
+      "#jumpin-mid .dur-val{flex:1;min-height:44px;display:grid;place-items:center;padding:0 12px;background:#f8fafc;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);font-size:16px;font-weight:700;color:var(--text-main,#090d16)}",
       "#jumpin-mid .row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%}",
       "#jumpin-mid .pill-group{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 0 auto}",
       "#jumpin-mid .status-pill{flex:0 0 auto;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.3;border:1px solid transparent}",
@@ -826,23 +831,36 @@
         }
         mid.appendChild(seats);
         mid.appendChild(el(doc, "label", "lbl", "Estimated duration"));
-        const dur = el(doc, "select");
+        const dur = el(doc, "input");
+        dur.type = "hidden";
         dur.name = "durationMinutes";
-        [
-          [30, "30 min"],
-          [60, "1 hr"],
-          [120, "2 hrs"],
-          [180, "3 hrs"],
-          [240, "4 hrs"],
-          [300, "5 hrs"],
-          [360, "6 hrs"]
-        ].forEach(function (pair) {
-          const option = el(doc, "option", "", pair[1]);
-          option.value = String(pair[0]);
-          if (String(pair[0]) === String((state.draft && state.draft.durationMinutes) || 60)) option.selected = true;
-          dur.appendChild(option);
-        });
+        let durMins = Number((state.draft && state.draft.durationMinutes) || 30);
+        if (!Number.isFinite(durMins) || durMins < 30) durMins = 30;
+        if (durMins > 900) durMins = 900;
+        dur.value = String(durMins);
+        const stepper = el(doc, "div", "dur-stepper");
+        const minusDur = el(doc, "button", "dur-btn", "−");
+        minusDur.type = "button";
+        minusDur.setAttribute("aria-label", "Decrease duration by 30 minutes");
+        const durReadout = el(doc, "div", "dur-val");
+        const plusDur = el(doc, "button", "dur-btn", "+");
+        plusDur.type = "button";
+        plusDur.setAttribute("aria-label", "Increase duration by 30 minutes");
+        function syncDur(next) {
+          durMins = Math.max(30, Math.min(900, next));
+          dur.value = String(durMins);
+          durReadout.textContent = core.formatDuration(durMins);
+          minusDur.disabled = durMins <= 30;
+          plusDur.disabled = durMins >= 900;
+        }
+        syncDur(durMins);
+        on(minusDur, "click", function () { syncDur(durMins - 30); });
+        on(plusDur, "click", function () { syncDur(durMins + 30); });
+        stepper.appendChild(minusDur);
+        stepper.appendChild(durReadout);
+        stepper.appendChild(plusDur);
         mid.appendChild(dur);
+        mid.appendChild(stepper);
         mid.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
         const rideCost = el(doc, "input");
         rideCost.name = "rideCost";
