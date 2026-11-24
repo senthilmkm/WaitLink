@@ -487,11 +487,15 @@
                 withBusy(page, btn, "Pausing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "suspend" }).then(refresh); });
               }));
             }
-            if (g.status === "pending") {
-              bar.appendChild(pillBtn(page, "Reject", "danger", function (_e, btn) {
-                withBusy(page, btn, "Removing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "reject" }).then(refresh); });
-              }));
-            }
+            const removeLabel = g.status === "pending" ? "Reject" : "Delete";
+            bar.appendChild(pillBtn(page, removeLabel, "danger", function () {
+              askConfirm(page, removeLabel + " group?", (g.name || g.groupId) + " (?" + "g=" + g.groupId + ") will be removed from the platform.", removeLabel, function () {
+                return api.reviewGroup({ groupId: g.groupId, decision: "reject" }).then(function () {
+                  if (activeGroupId === g.groupId) activeGroupId = "default";
+                  return refresh();
+                });
+              });
+            }));
           }
           card.appendChild(bar);
           listNode.appendChild(card);
