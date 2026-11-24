@@ -619,7 +619,7 @@
         const wrap = el(doc, "div", "wrap");
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
-        copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool - " + (groupMeta.name || "Its-OK")));
+        copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool - Group Name : " + (groupMeta.name || "Its-OK")));
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
         if (!groupMeta.groupId || groupMeta.groupId === "default") {
