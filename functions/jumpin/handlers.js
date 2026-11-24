@@ -15,17 +15,20 @@ function call(db, name, data, auth, now) {
   if (name === "carpoolCompleteTrip") return service.completeTrip(db, body, now);
   if (name === "carpoolSendManageLink") return service.sendManageLink(db, body, now);
   if (name === "carpoolPostMessage") return service.postMessage(db, body, now);
-  if (name === "carpoolListPending") return service.listAdmin(db, email, now);
+  if (name === "carpoolListPending") return service.listAdmin(db, email, now, body.groupId);
   if (name === "carpoolReviewRide") return service.reviewRide(db, email, body, now);
-  if (name === "carpoolAdminCancelTrip") return service.adminCancelTrip(db, email, body.rideId, now);
+  if (name === "carpoolAdminCancelTrip") return service.adminCancelTrip(db, email, body.rideId, now, body.groupId);
   if (name === "carpoolAdminSetPosting") return service.setPosting(db, email, body, now);
   if (name === "carpoolAdminSetMembers") return service.setMembers(db, email, body, now);
   if (name === "carpoolAdminSaveConfig") return service.saveAdminConfig(db, email, body, now);
   if (name === "carpoolAdminPurge") return service.purgeData(db, email, body, now);
   if (name === "carpoolAdminBroadcast") return service.broadcast(db, email, body, now);
+  if (name === "carpoolCreateGroup") return service.createGroup(db, email, body, now);
+  if (name === "carpoolListGroups") return service.listGroups(db, email, now);
+  if (name === "carpoolReviewGroup") return service.reviewGroup(db, email, body, now);
   if (name === "carpoolCompleteTrips") return service.completeDue(db, now);
   if (name === "carpoolRetainTrips") return service.retainTrips(db, now);
-  if (name === "carpoolMarkOptOut") return service.markOptOut(db, body.phone, now);
+  if (name === "carpoolMarkOptOut") return service.markOptOut(db, body.phone, now, body.groupId);
   return Promise.resolve({ ok: false, error: "Unknown request." });
 }
 

@@ -377,6 +377,21 @@ service cloud.firestore {
     match /carpool_private/{document=**} {
       allow read, write: if false;
     }
+    match /carpool_groups/{groupId} {
+      allow get: if true;
+      allow list, write: if false;
+      match /public_rides/{rideId} {
+        allow get: if true;
+        allow list: if resource.data.status == "open";
+        allow write: if false;
+      }
+      match /{sub=**} {
+        allow read, write: if false;
+      }
+    }
+    match /carpool_platform/{docId} {
+      allow read, write: if false;
+    }
 
     // Default deny all other collections
     match /{document=**} {

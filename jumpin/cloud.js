@@ -66,8 +66,22 @@
     (ride.riders || []).forEach(function (row) { storage.removeItem(seatKey(row.reservationId)); });
   }
 
-  function publicRideUrl(rideId) {
-    return "https://waitlink.app?s=jumpin&view=ride&ride=" + rideId;
+  function normalizeGroup(raw) {
+    const s = String(raw == null ? "" : raw).trim().toLowerCase();
+    if (!s || s === "default") return "default";
+    return /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(s) ? s : "default";
+  }
+
+  function activeGroupId(win) {
+    const search = win && win.location ? win.location.search : "";
+    const params = new URLSearchParams(search || "");
+    return normalizeGroup(params.get("g"));
+  }
+
+  function publicRideUrl(rideId, groupId) {
+    const gid = normalizeGroup(groupId);
+    const gSuffix = gid !== "default" ? "&g=" + encodeURIComponent(gid) : "";
+    return "https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + rideId;
   }
 
   function failure(name) {
@@ -149,57 +163,88 @@
     }
   }
 
-  function ridesQuery(firebase) {
-    return firebase.firestore().collection("carpool_public").doc("root").collection("rides").where("status", "==", "open");
+  function ridesCollection(firebase, groupId) {
+    const gid = normalizeGroup(groupId);
+    if (gid === "default") return firebase.firestore().collection("carpool_public").doc("root").collection("rides");
+    return firebase.firestore().collection("carpool_groups").doc(gid).collection("public_rides");
   }
 
-  function watchBoard(win, onChange) {
+  function watchBoard(win, onChange, groupId) {
     const firebase = ensureFirebase(win);
     if (!firebase || !firebase.firestore) return function () {};
     try {
-    return ridesQuery(firebase).onSnapshot(function (snap) {
-      const now = Date.now();
-      const rides = [];
-      snap.forEach(function (doc) {
-        const ride = doc.data();
-        if (ride && ride.departAt > now) rides.push(ride);
-      });
-      rides.sort(function (a, b) { return a.departAt - b.departAt; });
-      onChange(rides.slice(0, 50));
-    }, function () { onChange([]); });
+      return ridesCollection(firebase, groupId).where("status", "==", "open").onSnapshot(function (snap) {
+        const now = Date.now();
+        const rides = [];
+        snap.forEach(function (doc) {
+          const ride = doc.data();
+          if (ride && ride.departAt > now) rides.push(ride);
+        });
+        rides.sort(function (a, b) { return a.departAt - b.departAt; });
+        onChange(rides.slice(0, 50));
+      }, function () { onChange([]); });
     } catch (err) {
       try { onChange([]); } catch (ignore) { /* keep the screen that already drew */ }
       return function () {};
     }
   }
 
-  function watchRide(win, rideId, onChange) {
+  function watchRide(win, rideId, onChange, groupId) {
     const firebase = ensureFirebase(win);
     if (!firebase || !firebase.firestore || !rideId) return function () {};
-    return firebase.firestore().collection("carpool_public").doc("root").collection("rides").doc(rideId).onSnapshot(function (snap) {
+    return ridesCollection(firebase, groupId).doc(rideId).onSnapshot(function (snap) {
       onChange(snap.exists ? snap.data() : null);
     }, function () { onChange(null); });
   }
 
-  function watchSupportNote(win, onNote) {
+  function watchGroup(win, onMeta, groupId) {
     const firebase = ensureFirebase(win);
     if (!firebase || !firebase.firestore) return function () {};
-    return firebase.firestore().doc("settings/carpool_config").onSnapshot(function (snap) {
+    const gid = normalizeGroup(groupId);
+    if (gid === "default") {
+      return firebase.firestore().doc("settings/carpool_config").onSnapshot(function (snap) {
+        const data = snap.exists ? snap.data() : null;
+        onMeta({
+          groupId: "default",
+          name: "",
+          status: "active",
+          enabled: !data || data.enabled !== false,
+          supportNote: (data && typeof data.supportNote === "string") ? data.supportNote : ""
+        });
+      }, function () { onMeta({ groupId: "default", name: "", status: "active", enabled: true, supportNote: "" }); });
+    }
+    return firebase.firestore().collection("carpool_groups").doc(gid).onSnapshot(function (snap) {
       const data = snap.exists ? snap.data() : null;
-      onNote((data && typeof data.supportNote === "string") ? data.supportNote : "");
-    }, function () { onNote(""); });
+      if (!data) {
+        onMeta({ groupId: gid, name: gid, status: "missing", enabled: false, supportNote: "" });
+        return;
+      }
+      onMeta({
+        groupId: gid,
+        name: data.name || gid,
+        status: data.status || "pending",
+        enabled: data.enabled === true,
+        supportNote: typeof data.supportNote === "string" ? data.supportNote : ""
+      });
+    }, function () { onMeta({ groupId: gid, name: gid, status: "pending", enabled: false, supportNote: "" }); });
+  }
+
+  function watchSupportNote(win, onNote, groupId) {
+    return watchGroup(win, function (meta) { onNote((meta && meta.supportNote) || ""); }, groupId);
   }
 
   function attach(win) {
     let storage = null;
     try { storage = win.localStorage; } catch (err) { storage = null; }
+    const gid = activeGroupId(win);
     const keys = { post: "", reserve: "" };
     const ready = Promise.race([
       prepareAppCheck(win),
       new Promise(function (resolve) { setTimeout(resolve, 1500); })
     ]);
     function call(name, data) {
-      return ready.then(function () { return callNamed(win, name, data); });
+      const payload = Object.assign({ groupId: gid }, data || {});
+      return ready.then(function () { return callNamed(win, name, payload); });
     }
     function once(slot) {
       if (!keys[slot]) keys[slot] = "idem_" + Date.now() + "_" + Math.random().toString(16).slice(2);
@@ -249,17 +294,22 @@
       postMessage: function (rideId, secret, text) {
         return call("carpoolPostMessage", { rideId: rideId, secret: secret, text: text });
       },
-      listAdmin: function () { return call("carpoolListPending", {}); },
-      review: function (rideId, decision) { return call("carpoolReviewRide", { rideId: rideId, decision: decision }); },
-      adminCancel: function (rideId) { return call("carpoolAdminCancelTrip", { rideId: rideId }); },
+      listAdmin: function (groupId) { return call("carpoolListPending", groupId ? { groupId: groupId } : {}); },
+      review: function (rideId, decision, groupId) { return call("carpoolReviewRide", { rideId: rideId, decision: decision, groupId: groupId || gid }); },
+      adminCancel: function (rideId, groupId) { return call("carpoolAdminCancelTrip", { rideId: rideId, groupId: groupId || gid }); },
       setPosting: function (body) { return call("carpoolAdminSetPosting", body); },
       setMembers: function (body) { return call("carpoolAdminSetMembers", body); },
       saveAdminConfig: function (body) { return call("carpoolAdminSaveConfig", body); },
       purge: function (body) { return call("carpoolAdminPurge", body); },
       broadcast: function (body) { return call("carpoolAdminBroadcast", body); },
-      watchBoard: function (onChange) { return watchBoard(win, onChange); },
-      watchRide: function (rideId, onChange) { return watchRide(win, rideId, onChange); },
-      watchSupportNote: function (onNote) { return watchSupportNote(win, onNote); },
+      createGroup: function (body) { return call("carpoolCreateGroup", body); },
+      listGroups: function () { return call("carpoolListGroups", {}); },
+      reviewGroup: function (body) { return call("carpoolReviewGroup", body); },
+      groupId: gid,
+      watchBoard: function (onChange) { return watchBoard(win, onChange, gid); },
+      watchRide: function (rideId, onChange) { return watchRide(win, rideId, onChange, gid); },
+      watchGroup: function (onMeta) { return watchGroup(win, onMeta, gid); },
+      watchSupportNote: function (onNote) { return watchSupportNote(win, onNote, gid); },
       tripSecret: function (rideId) { return tripSecret(storage, rideId); },
       seatSecretFor: function (ride) { return seatSecretFor(storage, ride); },
       seatInfoFor: function (ride) {
@@ -273,7 +323,7 @@
       saveTrip: function (rideId, secret) { saveTrip(storage, rideId, secret); },
       saveSeat: function (reservationId, secret) { saveSeat(storage, reservationId, secret); },
       forget: function (ride) { forget(storage, ride); },
-      publicRideUrl: publicRideUrl,
+      publicRideUrl: function (rideId) { return publicRideUrl(rideId, gid); },
       prepareAppCheck: function () { return prepareAppCheck(win); }
     };
   }

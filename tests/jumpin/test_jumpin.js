@@ -859,6 +859,121 @@ it("covers fallback branches in the shell and the rules", function () {
   assert.strictEqual(admPager2.children[2].children[1].textContent, "2 / 2");
 });
 
+it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS URLs", async function () {
+  assert.strictEqual(core.normalizeGroupId(""), "default");
+  assert.strictEqual(core.normalizeGroupId("Ballantyne"), "ballantyne");
+  assert.strictEqual(core.normalizeGroupId("admin"), "");
+  assert.ok(core.groupSlugError("a"));
+  assert.strictEqual(core.groupSlugError("ballantyne"), "");
+
+  const db = service.createMemoryDb(seed());
+  assert.strictEqual((await service.createGroup(db, "", { name: "X", groupId: "x12" }, NOW)).ok, false);
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "", groupId: "ballantyne" }, NOW)).field, "name");
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Bad", groupId: "admin" }, NOW)).field, "groupId");
+  assert.strictEqual((await service.listGroups(db, "", NOW)).ok, false);
+  assert.strictEqual((await service.reviewGroup(db, "org@example.com", { groupId: "ballantyne", decision: "approve" }, NOW)).ok, false);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "default", decision: "approve" }, NOW)).ok, false);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "bad" }, NOW)).ok, false);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "missing-grp", decision: "approve" }, NOW)).ok, false);
+
+  const created = await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne", supportNote: "Zelle:org@example.com", membersOnly: false }, NOW);
+  assert.strictEqual(created.ok, true);
+  assert.strictEqual(created.group.status, "pending");
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Second", groupId: "second-grp" }, NOW)).error, "You already have a group waiting for approval.");
+  assert.strictEqual((await service.createGroup(db, "other@example.com", { name: "Dup", groupId: "ballantyne" }, NOW)).field, "groupId");
+  assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is waiting for approval.");
+  assert.strictEqual((await service.postRide(db, postInput({ groupId: "no-such-group" }), NOW)).error, "This community group was not found.");
+
+  const approved = await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "approve" }, NOW);
+  assert.strictEqual(approved.ok, true);
+  assert.strictEqual(approved.status, "active");
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "cap", dailySmsCap: 150 }, NOW)).dailySmsCap, 150);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "suspend" }, NOW)).status, "suspended");
+  assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is currently paused.");
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "approve" }, NOW)).status, "active");
+
+  const rejectReq = await service.createGroup(db, "temp@example.com", { name: "Temp", groupId: "temp-grp" }, NOW);
+  assert.strictEqual(rejectReq.ok, true);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "temp-grp", decision: "reject" }, NOW)).decision, "reject");
+
+  const posted = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2 }), NOW);
+  assert.strictEqual(posted.ok, true);
+  assert.ok(posted.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  const reserved = await service.reserveSeat(db, { groupId: "ballantyne", rideId: posted.rideId, name: "Sam", phone: "5559876543", seats: 1, idempotencyKey: "bg1" }, NOW + 1000);
+  assert.strictEqual(reserved.ok, true);
+  assert.ok(reserved.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok((await service.sendManageLink(db, { groupId: "ballantyne", rideId: posted.rideId, phone: "5552345678", role: "driver" }, NOW + 2000)).ok);
+  assert.ok((await service.updateSeat(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret, seats: 2 }, NOW + 2100)).ok);
+  assert.ok((await service.postMessage(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret, text: "On my way" }, NOW + 2200)).outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok((await service.cancelSeat(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret }, NOW + 2300)).ok);
+  assert.ok((await service.cancelTrip(db, { groupId: "ballantyne", rideId: posted.rideId, secret: posted.secret }, NOW + 2400)).ok);
+  const posted2 = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2, idempotencyKey: "p2" }), NOW + 2500);
+  assert.strictEqual(posted2.ok, true);
+  assert.ok(service.manageUrl("trip", "r1", "s1", "r1", "ballantyne").indexOf("&g=ballantyne") !== -1);
+  assert.strictEqual(service.manageUrl("trip", "r1", "s1", "r1", "default").indexOf("&g="), -1);
+
+  const savedCfg = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", groupName: "Ballantyne HOA", enabled: true, adminEmails: "org@example.com", dailySmsCap: 999 }, NOW);
+  assert.strictEqual(savedCfg.ok, true);
+  assert.strictEqual(savedCfg.config.dailySmsCap, 150);
+
+  const orgList = await service.listGroups(db, "org@example.com", NOW);
+  assert.strictEqual(orgList.groups.length, 1);
+  assert.strictEqual(orgList.groups[0].name, "Ballantyne HOA");
+  const superList = await service.listGroups(db, service.SUPERADMIN_EMAIL, NOW);
+  assert.ok(superList.isSuperAdmin && superList.groups.length >= 2);
+  const defAdmin = await service.listAdmin(db, service.SUPERADMIN_EMAIL, NOW, "default");
+  assert.strictEqual(defAdmin.upcoming.length, 0);
+  const bAdmin = await service.listAdmin(db, "org@example.com", NOW, "ballantyne");
+  assert.strictEqual(bAdmin.upcoming.length, 1);
+
+  const handlers = require("../../jumpin/handlers.js");
+  assert.strictEqual((await handlers.call(db, "carpoolCreateGroup", { name: "SuperGrp", groupId: "super-grp" }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).group.status, "active");
+  assert.strictEqual((await handlers.call(db, "carpoolListGroups", {}, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).ok, true);
+  assert.strictEqual((await handlers.call(db, "carpoolReviewGroup", { groupId: "super-grp", decision: "cap", dailySmsCap: 200 }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).ok, true);
+
+  await service.completeDue(db, NOW + 6 * core.HOUR_MS, "ballantyne");
+  await service.completeDue(db, NOW + 6 * core.HOUR_MS);
+  await service.retainTrips(db, NOW + 10 * core.DAY_MS);
+
+  await service.createGroup(db, "org@example.com", { name: "B2", groupId: "bal-two" }, NOW);
+  await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "bal-two", decision: "approve" }, NOW);
+  await service.createGroup(db, "org@example.com", { name: "B3", groupId: "bal-three" }, NOW);
+  await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "bal-three", decision: "approve" }, NOW);
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "B4", groupId: "bal-four" }, NOW)).error, "Group limit reached (max 3 per account).");
+
+  for (let i = 0; i < 50; i++) {
+    await service.createGroup(db, "flood" + i + "@example.com", { name: "Flood " + i, groupId: "flood-" + i }, NOW);
+  }
+  assert.strictEqual((await service.createGroup(db, "floodx@example.com", { name: "Flood X", groupId: "flood-x" }, NOW)).error, "Too many pending requests right now. Please try again later.");
+
+  await service.setMembers(db, "org@example.com", { groupId: "ballantyne", name: "Alex", phone: "5552345678" }, NOW);
+  await service.setPosting(db, "org@example.com", { groupId: "ballantyne", phone: "5551110000", name: "Spam", blocked: true }, NOW);
+  await service.broadcast(db, "org@example.com", { groupId: "ballantyne", scope: "all", text: "Hi neighbors", confirm: false }, NOW);
+  await service.markOptOut(db, "5559876543", NOW, "ballantyne");
+  await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "past", confirm: true }, NOW);
+  assert.strictEqual((await service.createGroup(db, "org2@example.com")).field, "name");
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL)).ok, false);
+  assert.strictEqual((await service.listGroups(db, "nobody@example.com")).groups.length, 0);
+  await service.reviewRide(db, "org@example.com", { groupId: "ballantyne", rideId: posted2.rideId, decision: "approve" }, NOW);
+  await service.adminCancelTrip(db, "org@example.com", posted2.rideId, NOW, "ballantyne");
+  await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, adminEmails: "org@example.com", dailySmsCap: 100 });
+  const emptyDb = service.createMemoryDb({});
+  await service.completeDue(emptyDb, NOW);
+  await service.retainTrips(emptyDb, NOW);
+  await service.createGroup(emptyDb, service.SUPERADMIN_EMAIL, { name: "First", groupId: "first-grp", contactEmail: "x@y.com" });
+  await service.reviewGroup(emptyDb, service.SUPERADMIN_EMAIL, { groupId: "first-grp", decision: "cap", dailySmsCap: 50 });
+  const metaLessDb = service.createMemoryDb({ "carpool_platform/groups_index": { groups: [{ groupId: "ghost", name: "Ghost", status: "pending" }] } });
+  await service.reviewGroup(metaLessDb, service.SUPERADMIN_EMAIL, { groupId: "ghost", decision: "cap" });
+  await service.reviewGroup(metaLessDb, service.SUPERADMIN_EMAIL, { groupId: "ghost", decision: "approve" });
+  await service.reviewGroup(metaLessDb, service.SUPERADMIN_EMAIL, { groupId: "ghost", decision: "suspend" });
+  await service.listGroups(emptyDb, service.SUPERADMIN_EMAIL);
+  const cappedDb = service.createMemoryDb(Object.assign(seed(), { "carpool_platform/config": { platformDailySmsCap: 0, dailySmsDay: core.utcDay(NOW), dailySmsSent: 0 } }));
+  const cappedPost = await service.postRide(cappedDb, postInput(), NOW);
+  assert.strictEqual(cappedPost.textSent, false);
+  await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
+  await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
+});
+
 it("draws the board when Firestore cannot start", function () {
   const cloud = require("../../jumpin/cloud.js");
   const win = fakeWindow();

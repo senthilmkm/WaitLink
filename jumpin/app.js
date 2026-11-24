@@ -203,6 +203,7 @@
     let state = Object.assign(ui.blank(), { platform: platform, rides: cloud ? [] : loadRides(secrets) });
     let stopRide = function () { };
     let supportNote = "";
+    let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
     let boardQuery = "";
     let boardDateFilter = "all";
     let boardPage = 1;
@@ -582,7 +583,7 @@
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
       const top = el(doc, "header");
       top.id = "jumpin-top";
-      if (state.mode === "board") brandBar(doc, top);
+      if (state.mode === "board") brandBar(doc, top, groupMeta);
       else {
         const back = el(doc, "button", "textish back-btn", "Back");
         on(back, "click", function () {
@@ -593,7 +594,7 @@
           draw();
         });
         top.appendChild(back);
-        brandBar(doc, top);
+        brandBar(doc, top, groupMeta);
       }
       const mid = el(doc, "main");
       mid.id = "jumpin-mid";
@@ -608,11 +609,18 @@
         const wrap = el(doc, "div", "wrap");
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
-        copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
+        copy.appendChild(el(doc, "span", "hero-eyebrow", groupMeta.name || "Community Carpool"));
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
         hero.appendChild(copy);
         wrap.appendChild(hero);
+        if (groupMeta.status && groupMeta.status !== "active") {
+          const notice = el(doc, "div", "empty");
+          notice.style.marginBottom = "14px";
+          notice.appendChild(el(doc, "p", "route", groupMeta.status === "pending" ? "Waiting for approval" : (groupMeta.status === "suspended" ? "Group paused" : "Group not found")));
+          notice.appendChild(el(doc, "p", "muted", groupMeta.status === "pending" ? "This community group is waiting for platform approval before rides can be posted." : "Check the group link with your community organizer."));
+          wrap.appendChild(notice);
+        }
         const rides = state.rides || [];
         const list = el(doc, "div", "board");
         const pager = el(doc, "div", "pager");
@@ -1050,7 +1058,8 @@
             sendMessage(box ? box.value : "");
             return;
           } else if (label === "Share on WhatsApp" && state.link) {
-            const waUrl = "https://wa.me/?text=" + encodeURIComponent("JumpIn carpool: " + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
+            const groupLabel = groupMeta.name ? groupMeta.name + " carpool: " : "JumpIn carpool: ";
+            const waUrl = "https://wa.me/?text=" + encodeURIComponent(groupLabel + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
             if (win.open) win.open(waUrl, "_blank", "noopener,noreferrer");
           } else if (label === "Copy link") {
             const clip = win.navigator && win.navigator.clipboard;
@@ -1060,7 +1069,7 @@
           }
           draw();
         });
-        if (state.busy) button.disabled = true;
+        if (state.busy || (state.mode === "board" && groupMeta.status && groupMeta.status !== "active")) button.disabled = true;
         button.className = state.mode === "board" ? "cta" : "";
         if (state.mode === "board" && hero) hero.appendChild(button);
         else bottom.appendChild(button);
@@ -1109,7 +1118,13 @@
         }) || function () { };
       } catch (err) { stop = function () { }; }
       cleanups.push(stop);
-      if (cloud.watchSupportNote) {
+      if (cloud.watchGroup) {
+        cleanups.push(cloud.watchGroup(function (meta) {
+          groupMeta = meta || groupMeta;
+          supportNote = (meta && meta.supportNote) || "";
+          if (state.mode === "board" || state.mode === "posted" || state.mode === "reserved") draw();
+        }));
+      } else if (cloud.watchSupportNote) {
         cleanups.push(cloud.watchSupportNote(function (note) {
           supportNote = note || "";
           if (state.mode === "board" || state.mode === "posted" || state.mode === "reserved") draw();
@@ -1151,16 +1166,18 @@
     return { getState: function () { return state; }, setState: function (next) { state = next; draw(); }, root: rootNode };
   }
 
-  function brandBar(doc, top) {
+  function brandBar(doc, top, meta) {
+    const gid = meta && meta.groupId && meta.groupId !== "default" ? meta.groupId : "";
+    const homeHref = "https://waitlink.app/?s=jumpin" + (gid ? "&g=" + encodeURIComponent(gid) : "");
     const bar = el(doc, "div", "bar");
     const link = el(doc, "a", "brand");
-    link.href = "https://waitlink.app/?s=jumpin";
+    link.href = homeHref;
     link.appendChild(el(doc, "span", "mark", "⏳"));
     link.appendChild(el(doc, "span", "", "WaitLink"));
     const nav = el(doc, "nav");
-    nav.appendChild(el(doc, "span", "product", "JumpIn"));
+    nav.appendChild(el(doc, "span", "product", (meta && meta.name) ? "JumpIn · " + meta.name : "JumpIn"));
     const rides = el(doc, "a", "", "Rides");
-    rides.href = "https://waitlink.app/?s=jumpin";
+    rides.href = homeHref;
     nav.appendChild(rides);
     bar.appendChild(link);
     bar.appendChild(nav);

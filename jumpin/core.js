@@ -461,6 +461,23 @@
     return /Android/i.test(String(ua || "")) ? "android" : "ios";
   }
 
+  const RESERVED_GROUPS = { all: 1, admin: 1, root: 1, platform: 1, api: 1, settings: 1, default: 1 };
+
+  function normalizeGroupId(raw) {
+    const s = String(raw == null ? "" : raw).trim().toLowerCase();
+    if (!s || s === "default") return "default";
+    if (!/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(s) || RESERVED_GROUPS[s]) return "";
+    return s;
+  }
+
+  function groupSlugError(raw) {
+    const s = String(raw == null ? "" : raw).trim().toLowerCase();
+    if (!s || s === "default" || !/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(s) || RESERVED_GROUPS[s]) {
+      return "Use 3–32 lowercase letters, numbers, or hyphens.";
+    }
+    return "";
+  }
+
   function recoveryPhrase() {
     return "If this number is on this ride, we sent a text.";
   }
@@ -468,6 +485,8 @@
   return {
     DAY_MS: DAY_MS,
     IDEMPOTENCY_MS: IDEMPOTENCY_MS,
+    normalizeGroupId: normalizeGroupId,
+    groupSlugError: groupSlugError,
     stripTags: stripTags,
     collapse: collapse,
     normalizePhone: normalizePhone,

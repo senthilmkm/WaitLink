@@ -303,7 +303,7 @@ async function run() {
     assert.ok(appSrc.indexOf("name = \"durationMinutes\"") !== -1 || appSrc.indexOf("dur.name = \"durationMinutes\"") !== -1);
     const fbJson = JSON.parse(fs.readFileSync(path.join(__dirname, "../../firebase.json"), "utf8"));
     const rewrites = (fbJson.hosting && fbJson.hosting.rewrites) || [];
-    ["carpoolPostRide", "carpoolReserveSeat", "carpoolUpdateSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolCompleteTrip", "carpoolSendManageLink", "carpoolPostMessage"].forEach(function (fnName) {
+    ["carpoolPostRide", "carpoolReserveSeat", "carpoolUpdateSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolCompleteTrip", "carpoolSendManageLink", "carpoolPostMessage", "carpoolCreateGroup", "carpoolListGroups", "carpoolReviewGroup"].forEach(function (fnName) {
       assert.ok(rewrites.some(function (r) { return r.source === "/api/" + fnName && r.function && r.function.functionId === fnName; }), "Missing firebase.json rewrite for " + fnName);
     });
   });
@@ -317,7 +317,7 @@ async function run() {
     assert.ok(appSrc.indexOf("shortTripId") !== -1 && appSrc.indexOf("Trip ID: ") !== -1);
     assert.ok(appSrc.indexOf("hero-eyebrow") !== -1 && appSrc.indexOf("card-foot") !== -1 && appSrc.indexOf("info-grid") !== -1 && appSrc.indexOf("mini-av") !== -1 && appSrc.indexOf("post-head") !== -1);
     assert.ok(appSrc.indexOf("matchesDateFilter") !== -1 && appSrc.indexOf("PAGE_SIZE = 12") !== -1 && appSrc.indexOf("pager-edge") !== -1 && appSrc.indexOf("Show all rides") !== -1);
-    assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1 && adminSrc.indexOf("admin-pager") !== -1);
+    assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1 && adminSrc.indexOf("admin-pager") !== -1 && adminSrc.indexOf("jumpin-group-select") !== -1);
     const termsSrc = fs.readFileSync(path.join(__dirname, "../../jumpin-terms.html"), "utf8");
     assert.ok(termsSrc.indexOf("message and data rates may apply") !== -1 && termsSrc.indexOf("offline directly between the driver and riders") !== -1);
   });

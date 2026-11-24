@@ -141,7 +141,9 @@
         <h1>Community Carpool Console</h1>
         <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
       </div>
-      <div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
+        <button type="button" class="admin-btn primary" id="jumpin-copy-board-link" hidden>Copy Board Link</button>
         <button type="button" class="filled" id="jumpin-signin">Sign in</button>
         <button type="button" class="admin-btn" id="jumpin-signout" hidden>Sign out</button>
       </div>
@@ -152,6 +154,7 @@
       <button type="button" class="admin-tab" id="jumpin-tab-btn-settings">Settings</button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-blocked">Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-cleanup">Cleanup</button>
+      <button type="button" class="admin-tab" id="jumpin-tab-btn-groups">Groups<span class="admin-count" id="jumpin-groups-count"></span></button>
     </nav>
     <div id="jumpin-tab-trips">
       <section>
@@ -295,6 +298,30 @@
             <div class="admin-actions"><button type="button" class="admin-btn danger" style="margin-left:0;" id="jumpin-purge-all">Preview &amp; Full Reset</button></div>
           </div>
         </div>
+      </section>
+    </div>
+    <div id="jumpin-tab-groups" hidden>
+      <section>
+        <h2>Create Neighborhood Group</h2>
+        <p class="quiet" style="margin-bottom:12px;">Create an isolated JumpIn carpool board for your neighborhood, school, or community. New organizer requests start pending until platform approval.</p>
+        <div class="admin-settings-grid">
+          <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"></label>
+          <label>Group URL Slug<input id="jumpin-group-slug" type="text" maxlength="32" placeholder="e.g. ballantyne"></label>
+          <label>Contact Email<input id="jumpin-group-email" type="email" placeholder="organizer@email.com"></label>
+          <label>Support / Tip Handle (optional)<input id="jumpin-group-support" type="text" maxlength="80" placeholder="Zelle:organizer@email.com"></label>
+          <label>Members Only
+            <select id="jumpin-group-members-only">
+              <option value="yes">Yes (recommended)</option>
+              <option value="no">No (open to visitors)</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
+      </section>
+      <section>
+        <h2>Manage Groups</h2>
+        <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
+        <div id="jumpin-groups-list" class="admin-list quiet"></div>
       </section>
     </div>
     <div class="admin-modal" id="jumpin-detail-modal" hidden>

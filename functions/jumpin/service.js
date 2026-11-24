@@ -72,8 +72,73 @@ function createMemoryDb(seed) {
   };
 }
 
-async function loadConfig(tx, now) {
-  const stored = await tx.get("settings/carpool_config");
+function gidOf(input) {
+  const g = core.normalizeGroupId(input && input.groupId);
+  return g || "default";
+}
+
+function pathsFor(gid) {
+  const g = gid || "default";
+  if (g === "default") {
+    return {
+      groupId: "default",
+      config: "settings/carpool_config",
+      groupMeta: "carpool_groups/default",
+      broadcastIndex: "carpool_private/broadcast_index",
+      memberIndex: "carpool_private/member_index",
+      blockIndex: "carpool_private/block_index",
+      limitIndex: "carpool_private/limit_index",
+      audience: function (id) { return "carpool_private/audience/" + id; },
+      phone: function (e164) { return "carpool_private/phones/" + core.phoneHash16(e164); },
+      block: function (hash) { return "carpool_private/blocks/" + hash; },
+      ridePrivate: function (id) { return "carpool_private/rides/" + id; },
+      ridePublic: function (id) { return "carpool_public/rides/" + id; },
+      reservation: function (rideId, e164) { return "carpool_private/reservations/" + rideId + "_" + core.phoneHash16(e164); },
+      limit: function (key) { return "carpool_private/limits/" + key; }
+    };
+  }
+  const base = "carpool_groups/" + g;
+  return {
+    groupId: g,
+    config: base + "/private/config",
+    groupMeta: base,
+    broadcastIndex: base + "/private/broadcast_index",
+    memberIndex: base + "/private/member_index",
+    blockIndex: base + "/private/block_index",
+    limitIndex: base + "/private/limit_index",
+    audience: function (id) { return base + "/audience/" + id; },
+    phone: function (e164) { return base + "/phones/" + core.phoneHash16(e164); },
+    block: function (hash) { return base + "/blocks/" + hash; },
+    ridePrivate: function (id) { return base + "/rides/" + id; },
+    ridePublic: function (id) { return base + "/public_rides/" + id; },
+    reservation: function (rideId, e164) { return base + "/reservations/" + rideId + "_" + core.phoneHash16(e164); },
+    limit: function (key) { return base + "/limits/" + key; }
+  };
+}
+
+async function groupAccessError(tx, p) {
+  if (p.groupId === "default") return "";
+  const meta = await tx.get(p.groupMeta);
+  if (!meta) return "This community group was not found.";
+  if (meta.status === "pending") return "This community group is waiting for approval.";
+  if (meta.status === "suspended") return "This community group is currently paused.";
+  return "";
+}
+
+async function loadPlatformConfig(tx, now) {
+  const stored = await tx.get("carpool_platform/config") || {};
+  const cap = Number.isInteger(Number(stored.platformDailySmsCap)) ? Math.max(0, Number(stored.platformDailySmsCap)) : 2000;
+  const budget = core.smsBudget({ dailySmsCap: cap, dailySmsDay: stored.dailySmsDay, dailySmsSent: stored.dailySmsSent }, now);
+  return { platformDailySmsCap: cap, dailySmsDay: budget.day, dailySmsSent: budget.sent };
+}
+
+function canSendBoth(config, platform, now) {
+  return core.canSend(config, now) && (!platform || platform.dailySmsSent < platform.platformDailySmsCap);
+}
+
+async function loadConfig(tx, now, p) {
+  const path = p ? p.config : "settings/carpool_config";
+  const stored = await tx.get(path);
   const config = core.clampConfig(stored || {});
   const budget = core.smsBudget(config, now);
   config.dailySmsDay = budget.day;
@@ -81,13 +146,15 @@ async function loadConfig(tx, now) {
   return config;
 }
 
-function bumpSms(config) {
+function bumpSms(config, platform) {
   config.dailySmsSent += 1;
+  if (platform) platform.dailySmsSent += 1;
   return config;
 }
 
-function saveConfig(tx, config) {
-  tx.set("settings/carpool_config", {
+function saveConfig(tx, config, p, platform) {
+  const path = p ? p.config : "settings/carpool_config";
+  tx.set(path, {
     enabled: config.enabled,
     requireRideApproval: config.requireRideApproval,
     membersOnly: config.membersOnly === true,
@@ -106,6 +173,7 @@ function saveConfig(tx, config) {
     maxSmsPerRecord: config.maxSmsPerRecord,
     resendCooldownSec: config.resendCooldownSec
   });
+  if (platform) tx.set("carpool_platform/config", platform);
 }
 
 function queueText(outbox, to, body, triggerType) {
@@ -119,8 +187,9 @@ function withOutbox(result, texts) {
   return result;
 }
 
-async function rememberRide(tx, ride, riders) {
-  const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+async function rememberRide(tx, ride, riders, p) {
+  const idxPath = p ? p.broadcastIndex : "carpool_private/broadcast_index";
+  const index = await tx.get(idxPath) || { rides: [], audience: [] };
   const summary = {
     rideId: ride.rideId,
     status: ride.status,
@@ -140,20 +209,21 @@ async function rememberRide(tx, ride, riders) {
   };
   index.rides = arr(index.rides).filter(function (row) { return row.rideId !== ride.rideId; });
   index.rides.push(summary);
-  tx.set("carpool_private/broadcast_index", index);
+  tx.set(idxPath, index);
 }
 
-async function rememberAudience(tx, e164, optOut) {
-  const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+async function rememberAudience(tx, e164, optOut, p) {
+  const idxPath = p ? p.broadcastIndex : "carpool_private/broadcast_index";
+  const index = await tx.get(idxPath) || { rides: [], audience: [] };
   const audience = arr(index.audience).filter(function (row) { return row.phoneE164 !== e164; });
   audience.push({ phoneE164: e164, smsOptOut: optOut === true });
   index.audience = audience;
-  tx.set("carpool_private/broadcast_index", index);
+  tx.set(idxPath, index);
 }
 
-async function touchAudience(tx, e164, name, role, now) {
+async function touchAudience(tx, e164, name, role, now, p) {
   const id = core.phoneHash16(e164);
-  const key = "carpool_private/audience/" + id;
+  const key = p ? p.audience(id) : ("carpool_private/audience/" + id);
   const prev = await tx.get(key) || { roles: [], smsOptOut: false };
   const roles = prev.roles.slice();
   if (roles.indexOf(role) === -1) roles.push(role);
@@ -166,22 +236,16 @@ async function touchAudience(tx, e164, name, role, now) {
     updatedAt: now
   };
   tx.set(key, next);
-  await rememberAudience(tx, e164, next.smsOptOut);
+  await rememberAudience(tx, e164, next.smsOptOut, p);
 }
-
-function phoneKey(e164) { return "carpool_private/phones/" + core.phoneHash16(e164); }
-function blockKey(e164) { return "carpool_private/blocks/" + core.phoneHash16(e164); }
-function ridePrivate(id) { return "carpool_private/rides/" + id; }
-function ridePublic(id) { return "carpool_public/rides/" + id; }
-function reservationKey(rideId, e164) { return "carpool_private/reservations/" + rideId + "_" + core.phoneHash16(e164); }
 
 function activeRiders(list) {
   return arr(list).filter(function (row) { return row.status === "active"; });
 }
 
-async function memberError(tx, config, e164) {
+async function memberError(tx, config, e164, p) {
   if (!config.membersOnly) return "";
-  const pack = await tx.get("carpool_private/member_index") || { members: [] };
+  const pack = await tx.get(p ? p.memberIndex : "carpool_private/member_index") || { members: [] };
   const hash = core.phoneHash16(e164);
   if (arr(pack.members).some(function (m) { return m.phoneHash === hash; })) return "";
   return "JumpIn is for approved community members only. Please contact the administrator at " + config.contactEmail + " to be added.";
@@ -197,16 +261,20 @@ function postRide(db, input, now, rng) {
     return Promise.resolve({ ok: false, field: "time", error: "Choose a later time." });
   }
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
-    if (await tx.get(blockKey(fields.phone))) return { ok: false, error: "You can't post a ride right now." };
-    const notMember = await memberError(tx, config, fields.phone);
+    if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "You can't post a ride right now." };
+    const notMember = await memberError(tx, config, fields.phone, p);
     if (notMember) return { ok: false, field: "phone", error: notMember };
-    const phone = await tx.get(phoneKey(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
+    const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     const today = core.postsToday(phone, now);
     if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You already posted " + config.maxPostsPerPhonePerDay + " trips today." };
     const rideId = core.randomId("ride_", rng);
@@ -240,24 +308,24 @@ function postRide(db, input, now, rng) {
     const message = core.systemMessage("Trip posted.", now, 1);
     const pub = core.publicRide(ride, [], [message]);
     pub.updatedAt = now;
-    const sent = core.canSend(config, now);
+    const sent = canSendBoth(config, platform, now);
     if (sent) {
       ride.smsSent = 1;
-      bumpSms(config);
+      bumpSms(config, platform);
       const body = status === "pending"
-        ? "JumpIn trip is waiting for approval. Manage: " + manageUrl("trip", rideId, secret)
-        : "JumpIn trip posted. Manage: " + manageUrl("trip", rideId, secret);
+        ? "JumpIn trip is waiting for approval. Manage: " + manageUrl("trip", rideId, secret, rideId, p.groupId)
+        : "JumpIn trip posted. Manage: " + manageUrl("trip", rideId, secret, rideId, p.groupId);
       queueText(texts, fields.phone, body, "CARPOOL_DRIVER_LINK");
     }
     phone.postsDay = core.utcDay(now);
     phone.postsToday = today + 1;
     phone.updatedAt = now;
-    tx.set(ridePrivate(rideId), ride);
-    tx.set(ridePublic(rideId), pub);
-    tx.set(phoneKey(fields.phone), phone);
-    await touchAudience(tx, fields.phone, fields.name, "driver", now);
-    await rememberRide(tx, ride, []);
-    saveConfig(tx, config);
+    tx.set(p.ridePrivate(rideId), ride);
+    tx.set(p.ridePublic(rideId), pub);
+    tx.set(p.phone(fields.phone), phone);
+    await touchAudience(tx, fields.phone, fields.name, "driver", now, p);
+    await rememberRide(tx, ride, [], p);
+    saveConfig(tx, config, p, sent ? platform : null);
     return {
       ok: true,
       rideId: rideId,
@@ -277,10 +345,14 @@ function reserveSeat(db, input, now, rng) {
   if (checked.error) return Promise.resolve({ ok: false, field: checked.field, error: checked.error });
   const fields = checked.value;
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride) return { ok: false, error: "This ride is not available." };
     if (ride.status === "cancelled") return { ok: false, error: "This trip was cancelled." };
     if (ride.status === "rejected") return { ok: false, error: "This trip was not approved." };
@@ -296,13 +368,13 @@ function reserveSeat(db, input, now, rng) {
           : (ride.seatsLeft === 1 ? "Only 1 seat is left." : "Only " + ride.seatsLeft + " seats are left.")
       };
     }
-    const notMember = await memberError(tx, config, fields.phone);
+    const notMember = await memberError(tx, config, fields.phone, p);
     if (notMember) return { ok: false, field: "phone", error: notMember };
-    const phone = await tx.get(phoneKey(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
+    const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     if (core.activeReservations(phone) >= config.maxActiveReservationsPerPhone) {
       return { ok: false, error: "You already have " + config.maxActiveReservationsPerPhone + " upcoming seats." };
     }
-    const key = reservationKey(ride.rideId, fields.phone);
+    const key = p.reservation(ride.rideId, fields.phone);
     const existing = await tx.get(key);
     if (existing && existing.status === "active") {
       const sameKey = input.idempotencyKey && existing.idempotencyKey === input.idempotencyKey;
@@ -334,34 +406,34 @@ function reserveSeat(db, input, now, rng) {
     if (ride.activeReservationDocIds.indexOf(key) === -1) ride.activeReservationDocIds.push(key);
     phone.activeReservations = core.activeReservations(phone) + 1;
     phone.updatedAt = now;
-    const pub = await tx.get(ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
+    const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
     pub.seatsLeft = ride.seatsLeft;
     pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, dropoff: fields.dropoff || "", status: "active" }]);
     const reserveMsg = requested === 1 ? (fields.name + " reserved a seat.") : (fields.name + " reserved " + requested + " seats.");
     pub.messages = arr(pub.messages).concat([core.systemMessage(reserveMsg, now, pub.messages.length + 1)]);
     pub.updatedAt = now;
     pub.status = ride.status;
-    const sent = core.canSend(config, now);
+    const sent = canSendBoth(config, platform, now);
     if (sent) {
       reservation.smsSent = 1;
-      bumpSms(config);
+      bumpSms(config, platform);
       const when = core.formatWhen(ride.departAt, ride.timeZone);
       const seatWord = requested === 1 ? "a seat" : (requested + " seats");
-      queueText(texts, fields.phone, "You have " + seatWord + ". " + when + ", " + ride.from + " to " + ride.to + ". Manage: " + manageUrl("seat", reservationId, secret, ride.rideId), "CARPOOL_RIDER_LINK");
+      queueText(texts, fields.phone, "You have " + seatWord + ". " + when + ", " + ride.from + " to " + ride.to + ". Manage: " + manageUrl("seat", reservationId, secret, ride.rideId, p.groupId), "CARPOOL_RIDER_LINK");
     }
     tx.set(key, reservation);
-    tx.set(ridePrivate(ride.rideId), ride);
-    tx.set(ridePublic(ride.rideId), pub);
-    tx.set(phoneKey(fields.phone), phone);
-    await touchAudience(tx, fields.phone, fields.name, "rider", now);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    tx.set(p.phone(fields.phone), phone);
+    await touchAudience(tx, fields.phone, fields.name, "rider", now, p);
     const riderRows = [];
     for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
       const docId = ride.activeReservationDocIds[i];
       const row = docId === key ? reservation : await tx.get(docId);
       if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
     }
-    await rememberRide(tx, ride, riderRows);
-    saveConfig(tx, config);
+    await rememberRide(tx, ride, riderRows, p);
+    saveConfig(tx, config, p, sent ? platform : null);
     return {
       ok: true,
       reservationId: reservationId,
@@ -387,12 +459,15 @@ function updateSeat(db, input, now) {
     return Promise.resolve({ ok: false, error: "Choose seats from 1 to 6." });
   }
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, now);
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const key = await findReservationKey(tx, input);
+    const key = await findReservationKey(tx, input, p);
     const reservation = key ? await tx.get(key) : null;
     if (!reservation || !assertSecret(input.secret, reservation.tokenHash)) return { ok: false, error: GENERIC_LINK };
-    const ride = await tx.get(ridePrivate(reservation.rideId));
+    const ride = await tx.get(p.ridePrivate(reservation.rideId));
     if (!ride || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
     if (ride.status !== "open" || reservation.status !== "active") return { ok: false, error: GENERIC_LINK };
     const oldSeats = Number(reservation.seats) || 1;
@@ -406,7 +481,7 @@ function updateSeat(db, input, now) {
           : (ride.seatsLeft === 1 ? "Only 1 more seat is left." : "Only " + ride.seatsLeft + " more seats are left.")
       };
     }
-    const pub = await tx.get(ridePublic(ride.rideId));
+    const pub = await tx.get(p.ridePublic(ride.rideId));
     const riderRows = [];
     reservation.seats = seats;
     ride.seatsLeft -= delta;
@@ -424,23 +499,26 @@ function updateSeat(db, input, now) {
       const word = seats === 1 ? "1 seat." : (seats + " seats.");
       pub.messages = arr(pub.messages).concat([core.systemMessage(reservation.name + " updated to " + word, now, arr(pub.messages).length + 1)]);
       pub.updatedAt = now;
-      tx.set(ridePublic(ride.rideId), pub);
+      tx.set(p.ridePublic(ride.rideId), pub);
     }
     tx.set(key, reservation);
-    tx.set(ridePrivate(ride.rideId), ride);
-    await rememberRide(tx, ride, riderRows);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    await rememberRide(tx, ride, riderRows, p);
     return { ok: true, seats: seats };
   });
 }
 
 function cancelSeat(db, input, now) {
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, now);
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const key = await findReservationKey(tx, input);
+    const key = await findReservationKey(tx, input, p);
     const reservation = key ? await tx.get(key) : null;
     if (!reservation || !assertSecret(input.secret, reservation.tokenHash)) return { ok: false, error: GENERIC_LINK };
-    const ride = await tx.get(ridePrivate(reservation.rideId));
+    const ride = await tx.get(p.ridePrivate(reservation.rideId));
     if (!ride || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
     if (ride.status === "cancelled" || reservation.status === "cancelled") return { ok: true, already: true };
     if (ride.status !== "open" && ride.status !== "pending") return { ok: false, error: GENERIC_LINK };
@@ -448,9 +526,9 @@ function cancelSeat(db, input, now) {
     reservation.cancelledAt = now;
     reservation.idempotencySecret = "";
     ride.seatsLeft += (Number(reservation.seats) || 1);
-    const phone = await tx.get(phoneKey(reservation.phoneE164)) || { activeReservations: 0 };
+    const phone = await tx.get(p.phone(reservation.phoneE164)) || { activeReservations: 0 };
     phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
-    const pub = await tx.get(ridePublic(ride.rideId));
+    const pub = await tx.get(p.ridePublic(ride.rideId));
     if (pub) {
       pub.seatsLeft = ride.seatsLeft;
       pub.riders = arr(pub.riders).map(function (row) {
@@ -459,30 +537,30 @@ function cancelSeat(db, input, now) {
       }).filter(function (row) { return row.status === "active"; });
       pub.messages = arr(pub.messages).concat([core.systemMessage(reservation.name + " cancelled.", now, arr(pub.messages).length + 1)]);
       pub.updatedAt = now;
-      tx.set(ridePublic(ride.rideId), pub);
+      tx.set(p.ridePublic(ride.rideId), pub);
     }
     tx.set(key, reservation);
-    tx.set(ridePrivate(ride.rideId), ride);
-    tx.set(phoneKey(reservation.phoneE164), phone);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.phone(reservation.phoneE164), phone);
     const riderRows = [];
     for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
       const docId = ride.activeReservationDocIds[i];
       const row = docId === key ? reservation : await tx.get(docId);
       if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
     }
-    await rememberRide(tx, ride, riderRows);
+    await rememberRide(tx, ride, riderRows, p);
     return { ok: true };
   });
 }
 
-async function findReservationKey(tx, input) {
+async function findReservationKey(tx, input, p) {
   if (input.reservationDocId) return input.reservationDocId;
   if (input.rideId && input.phone) {
     const phone = core.normalizePhone(input.phone);
-    return reservationKey(input.rideId, phone.ok ? phone.e164 : input.phone);
+    return p.reservation(input.rideId, phone.ok ? phone.e164 : input.phone);
   }
   if (input.rideId && input.secret) {
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     const keys = arr(ride && ride.activeReservationDocIds);
     for (let i = 0; i < keys.length; i++) {
       const row = await tx.get(keys[i]);
@@ -494,16 +572,20 @@ async function findReservationKey(tx, input) {
 
 function completeTrip(db, input, now) {
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (ride.status === "completed") return { ok: true, already: true, texts: [] };
     if (ride.status !== "open") return { ok: false, error: GENERIC_LINK };
     if (ride.departAt > now) return { ok: false, error: "You can complete this trip after it departs." };
-    const pub = await tx.get(ridePublic(ride.rideId));
-    const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+    const pub = await tx.get(p.ridePublic(ride.rideId));
+    const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const phones = [];
     if (!ride.thankYouSentAt && config.postRideThankYouSms && config.supportNote) {
       if (ride.driverPhoneE164) phones.push(ride.driverPhoneE164);
@@ -518,10 +600,10 @@ function completeTrip(db, input, now) {
     if (phones.length) {
       ride.thankYouSentAt = now;
       const body = "Hope your JumpIn ride (" + ride.from + " to " + ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
-      phones.forEach(function (p) {
-        if (core.canSend(config, now)) {
-          bumpSms(config);
-          queueText(texts, p, body, "CARPOOL_THANKYOU");
+      phones.forEach(function (ph) {
+        if (canSendBoth(config, platform, now)) {
+          bumpSms(config, platform);
+          queueText(texts, ph, body, "CARPOOL_THANKYOU");
         }
       });
     }
@@ -529,15 +611,15 @@ function completeTrip(db, input, now) {
       pub.status = "completed";
       pub.messages = arr(pub.messages).concat([core.systemMessage("Trip completed.", now, arr(pub.messages).length + 1)]);
       pub.updatedAt = now;
-      tx.set(ridePublic(ride.rideId), pub);
+      tx.set(p.ridePublic(ride.rideId), pub);
     }
-    tx.set(ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePrivate(ride.rideId), ride);
     const rides = arr(index.rides);
     rides.forEach(function (row) {
       if (row.rideId === ride.rideId) row.status = "completed";
     });
-    tx.set("carpool_private/broadcast_index", { rides: rides, audience: arr(index.audience) });
-    if (texts.length) saveConfig(tx, config);
+    tx.set(p.broadcastIndex, { rides: rides, audience: arr(index.audience) });
+    if (texts.length) saveConfig(tx, config, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
@@ -546,25 +628,29 @@ function completeTrip(db, input, now) {
 
 function cancelTrip(db, input, now) {
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (completionDeadline(ride) <= now) return { ok: false, error: "This trip has already left." };
     if (ride.status !== "open" && ride.status !== "pending") {
       if (ride.status === "cancelled") return { ok: true, already: true };
       return { ok: false, error: GENERIC_LINK };
     }
-    await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", false);
+    await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", false, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
   });
 }
 
-async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
-  const pub = await tx.get(ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
+async function releaseRide(tx, ride, now, outbox, config, systemText, admin, p, platform) {
+  const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
   const keys = arr(ride.activeReservationDocIds);
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
@@ -572,12 +658,12 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
     if (!reservation || reservation.status !== "active") continue;
     reservation.status = "cancelled";
     reservation.cancelledAt = now;
-    const phone = await tx.get(phoneKey(reservation.phoneE164)) || { activeReservations: 0 };
+    const phone = await tx.get(p.phone(reservation.phoneE164)) || { activeReservations: 0 };
     phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
-    tx.set(phoneKey(reservation.phoneE164), phone);
+    tx.set(p.phone(reservation.phoneE164), phone);
     tx.set(key, reservation);
-    if (core.canSend(config, now)) {
-      bumpSms(config);
+    if (canSendBoth(config, platform, now)) {
+      bumpSms(config, platform);
       const when = core.formatWhen(ride.departAt, ride.timeZone);
       const body = admin
         ? "A JumpIn admin cancelled this trip. " + when + ", " + ride.from + " to " + ride.to + "."
@@ -585,8 +671,8 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
       queueText(outbox, reservation.phoneE164, body, "CARPOOL_TRIP_CANCELLED");
     }
   }
-  if (admin && core.canSend(config, now)) {
-    bumpSms(config);
+  if (admin && canSendBoth(config, platform, now)) {
+    bumpSms(config, platform);
     const when = core.formatWhen(ride.departAt, ride.timeZone);
     queueText(outbox, ride.driverPhoneE164, "A JumpIn admin cancelled this trip. " + when + ", " + ride.from + " to " + ride.to + ".", "CARPOOL_TRIP_CANCELLED");
   }
@@ -598,10 +684,10 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin) {
   pub.riders = [];
   pub.messages = arr(pub.messages).concat([core.systemMessage(systemText, now, arr(pub.messages).length + 1)]);
   pub.updatedAt = now;
-  tx.set(ridePrivate(ride.rideId), ride);
-  tx.set(ridePublic(ride.rideId), pub);
-  await rememberRide(tx, ride, []);
-  saveConfig(tx, config);
+  tx.set(p.ridePrivate(ride.rideId), ride);
+  tx.set(p.ridePublic(ride.rideId), pub);
+  await rememberRide(tx, ride, [], p);
+  saveConfig(tx, config, p, outbox.length ? platform : null);
 }
 
 const MESSAGE_GRACE_MS = 60 * 60 * 1000;
@@ -616,10 +702,14 @@ function postMessage(db, input, now) {
   const checked = core.messageError(input.text);
   if (checked.error) return Promise.resolve({ ok: false, error: checked.error });
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || ride.status !== "open" || completionDeadline(ride) <= now) return { ok: false, error: GENERIC_LINK };
     let authorName = "";
     let authorRole = "";
@@ -639,7 +729,7 @@ function postMessage(db, input, now) {
       authorRole = "driver";
     }
     if (!authorRole) return { ok: false, error: GENERIC_LINK };
-    const pub = await tx.get(ridePublic(ride.rideId));
+    const pub = await tx.get(p.ridePublic(ride.rideId));
     if (!pub) return { ok: false, error: GENERIC_LINK };
     const messages = arr(pub.messages);
     if (messages.length >= config.maxMessagesPerRide) return { ok: false, error: "This trip thread is full." };
@@ -654,15 +744,16 @@ function postMessage(db, input, now) {
     pub.messages = messages;
     pub.updatedAt = now;
     const targets = authorRole === "driver" ? riderPhones : [ride.driverPhoneE164];
-    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app?s=jumpin&view=ride&ride=" + ride.rideId;
+    const gSuffix = p.groupId !== "default" ? "&g=" + encodeURIComponent(p.groupId) : "";
+    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + ride.rideId;
     for (let i = 0; i < targets.length; i++) {
-      if (targets[i] && core.canSend(config, now)) {
-        bumpSms(config);
+      if (targets[i] && canSendBoth(config, platform, now)) {
+        bumpSms(config, platform);
         queueText(texts, targets[i], noteBody, "CARPOOL_MESSAGE");
       }
     }
-    tx.set(ridePublic(ride.rideId), pub);
-    saveConfig(tx, config);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
@@ -673,19 +764,23 @@ function sendManageLink(db, input, now, rng) {
   const phone = core.normalizePhone(input.phone);
   if (!phone.ok) return Promise.resolve({ ok: false, field: "phone", error: phone.error, phrase: core.recoveryPhrase() });
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: true, phrase: core.recoveryPhrase() };
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: true, phrase: core.recoveryPhrase() };
-    const limitId = "carpool_private/limits/" + core.phoneHash16(input.ip || "unknown") + "_" + core.utcDay(now) + "T" + new Date(now).getUTCHours();
+    const limitId = p.limit(core.phoneHash16(input.ip || "unknown") + "_" + core.utcDay(now) + "T" + new Date(now).getUTCHours());
     const limit = await tx.get(limitId) || { recoveryCalls: 0, expiresAt: now + core.DAY_MS };
     if (limit.recoveryCalls >= 10) return { ok: true, phrase: core.recoveryPhrase() };
     limit.recoveryCalls += 1;
     limit.expiresAt = limit.expiresAt || now + core.DAY_MS;
     tx.set(limitId, limit);
-    const limitIndex = await tx.get("carpool_private/limit_index") || { keys: [] };
+    const limitIndex = await tx.get(p.limitIndex) || { keys: [] };
     if (limitIndex.keys.indexOf(limitId) === -1) limitIndex.keys.push(limitId);
-    tx.set("carpool_private/limit_index", limitIndex);
-    const ride = await tx.get(ridePrivate(input.rideId));
+    tx.set(p.limitIndex, limitIndex);
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || (ride.status !== "open" && ride.status !== "pending") || completionDeadline(ride) <= now) return { ok: true, phrase: core.recoveryPhrase() };
     let target = null;
     let kind = "";
@@ -693,7 +788,7 @@ function sendManageLink(db, input, now, rng) {
       target = ride;
       kind = "trip";
     } else if (input.role === "rider") {
-      const reservation = await tx.get(reservationKey(ride.rideId, phone.e164));
+      const reservation = await tx.get(p.reservation(ride.rideId, phone.e164));
       if (reservation && reservation.status === "active") {
         target = reservation;
         kind = "seat";
@@ -704,7 +799,7 @@ function sendManageLink(db, input, now, rng) {
     if (target.tokenIssuedAt && now - target.tokenIssuedAt < config.resendCooldownSec * 1000 && target.smsSent > 0) {
       return { ok: true, phrase: core.recoveryPhrase() };
     }
-    if (!core.canSend(config, now)) return { ok: true, phrase: core.recoveryPhrase() };
+    if (!canSendBoth(config, platform, now)) return { ok: true, phrase: core.recoveryPhrase() };
     const secret = core.randomSecret(rng);
     const hashed = core.hashSecret(secret);
     if (kind === "trip") target.driverTokenHash = hashed;
@@ -712,20 +807,21 @@ function sendManageLink(db, input, now, rng) {
     target.tokenIssuedAt = now;
     target.smsSent = (target.smsSent || 0) + 1;
     target.idempotencySecret = "";
-    bumpSms(config);
-    queueText(texts, phone.e164, "New JumpIn link: " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId), "CARPOOL_DRIVER_LINK");
-    if (kind === "trip") tx.set(ridePrivate(ride.rideId), target);
-    else tx.set(reservationKey(ride.rideId, phone.e164), target);
-    saveConfig(tx, config);
+    bumpSms(config, platform);
+    queueText(texts, phone.e164, "New JumpIn link: " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId, p.groupId), "CARPOOL_DRIVER_LINK");
+    if (kind === "trip") tx.set(p.ridePrivate(ride.rideId), target);
+    else tx.set(p.reservation(ride.rideId, phone.e164), target);
+    saveConfig(tx, config, p, platform);
     return { ok: true, phrase: core.recoveryPhrase(), texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
   });
 }
 
-function manageUrl(kind, id, secret, rideId) {
-  if (kind === "trip") return "https://waitlink.app?s=jumpin&view=trip&ride=" + id + "&k=" + secret;
-  return "https://waitlink.app?s=jumpin&view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
+function manageUrl(kind, id, secret, rideId, groupId) {
+  const gSuffix = groupId && groupId !== "default" ? "&g=" + encodeURIComponent(groupId) : "";
+  if (kind === "trip") return "https://waitlink.app?s=jumpin" + gSuffix + "&view=trip&ride=" + id + "&k=" + secret;
+  return "https://waitlink.app?s=jumpin" + gSuffix + "&view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
 }
 
 function requireAdmin(email, config) {
@@ -738,51 +834,56 @@ function requireAdmin(email, config) {
 function reviewRide(db, email, input, now) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const ride = await tx.get(ridePrivate(input.rideId));
+    const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || ride.status !== "pending") return { ok: true, already: true, texts: texts };
-    const pub = await tx.get(ridePublic(ride.rideId));
+    const pub = await tx.get(p.ridePublic(ride.rideId));
     if (!pub) return { ok: false, error: "This ride is not available." };
     if (input.decision === "approve") {
       ride.status = "open";
       pub.status = "open";
       pub.updatedAt = now;
-      if (core.canSend(config, now)) {
-        bumpSms(config);
-        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip is on the board. Share: https://waitlink.app?s=jumpin&view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
+      if (canSendBoth(config, platform, now)) {
+        bumpSms(config, platform);
+        const gSuffix = p.groupId !== "default" ? "&g=" + encodeURIComponent(p.groupId) : "";
+        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip is on the board. Share: https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
       }
     } else if (input.decision === "decline") {
       ride.status = "rejected";
       pub.status = "rejected";
       pub.updatedAt = now;
-      if (core.canSend(config, now)) {
-        bumpSms(config);
+      if (canSendBoth(config, platform, now)) {
+        bumpSms(config, platform);
         queueText(texts, ride.driverPhoneE164, "Your JumpIn trip was not approved.", "CARPOOL_DRIVER_LINK");
       }
     } else return { ok: false, error: "Enter a decision." };
-    tx.set(ridePrivate(ride.rideId), ride);
-    tx.set(ridePublic(ride.rideId), pub);
-    await rememberRide(tx, ride, []);
-    saveConfig(tx, config);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    await rememberRide(tx, ride, [], p);
+    saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
   });
 }
 
-function adminCancelTrip(db, email, rideId, now) {
+function adminCancelTrip(db, email, rideId, now, groupId) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf({ groupId: groupId }));
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const ride = await tx.get(ridePrivate(rideId));
+    const ride = await tx.get(p.ridePrivate(rideId));
     if (!ride) return { ok: false, error: "This ride is not available." };
     if (ride.status === "cancelled") return { ok: true, already: true, texts: texts };
     if (ride.status !== "open" && ride.status !== "pending") return { ok: false, error: "This trip can no longer be cancelled." };
-    await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", true);
+    await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", true, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
@@ -792,19 +893,20 @@ function adminCancelTrip(db, email, rideId, now) {
 function setPosting(db, email, input, now) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, now || Date.now());
+    const p = pathsFor(gidOf(input));
+    const config = await loadConfig(tx, now || Date.now(), p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
     if (input.phoneHash && input.blocked === false) {
-      const index = await tx.get("carpool_private/block_index") || { blocks: [] };
+      const index = await tx.get(p.blockIndex) || { blocks: [] };
       index.blocks = arr(index.blocks).filter(function (row) { return row.phoneHash !== input.phoneHash; });
-      tx.del("carpool_private/blocks/" + input.phoneHash);
-      tx.set("carpool_private/block_index", index);
+      tx.del(p.block(input.phoneHash));
+      tx.set(p.blockIndex, index);
       return { ok: true };
     }
     let e164 = "";
     let name = "";
     if (input.rideId) {
-      const ride = await tx.get(ridePrivate(input.rideId));
+      const ride = await tx.get(p.ridePrivate(input.rideId));
       if (!ride) return { ok: false, error: "This ride is not available." };
       e164 = ride.driverPhoneE164;
       name = ride.driverName;
@@ -814,33 +916,35 @@ function setPosting(db, email, input, now) {
       e164 = phone.e164;
       name = core.collapse(input.name || "");
     }
-    const key = blockKey(e164);
     const hash = core.phoneHash16(e164);
-    const index = await tx.get("carpool_private/block_index") || { blocks: [] };
+    const key = p.block(hash);
+    const index = await tx.get(p.blockIndex) || { blocks: [] };
     index.blocks = arr(index.blocks).filter(function (row) { return row.phoneHash !== hash; });
     if (input.blocked) {
       const entry = { phoneHash: hash, driverName: name, phoneLast4: core.last4(e164), blockedAt: now };
       tx.set(key, entry);
       index.blocks.push(entry);
     } else tx.del(key);
-    tx.set("carpool_private/block_index", index);
+    tx.set(p.blockIndex, index);
     return { ok: true, phoneLast4: core.last4(e164) };
   });
 }
 
-function listAdmin(db, email, now) {
+function listAdmin(db, email, now, groupId) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, now || Date.now());
+    const p = pathsFor(gidOf({ groupId: groupId }));
+    const config = await loadConfig(tx, now || Date.now(), p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
-    const blocks = await tx.get("carpool_private/block_index") || { blocks: [] };
-    const memberPack = await tx.get("carpool_private/member_index") || { members: [] };
+    const meta = p.groupId === "default" ? null : await tx.get(p.groupMeta);
+    const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+    const blocks = await tx.get(p.blockIndex) || { blocks: [] };
+    const memberPack = await tx.get(p.memberIndex) || { members: [] };
     const clock = now || Date.now();
     const allRides = arr(pack.rides);
     const pubs = {};
     for (let i = 0; i < allRides.length; i++) {
-      pubs[allRides[i].rideId] = await tx.get(ridePublic(allRides[i].rideId));
+      pubs[allRides[i].rideId] = await tx.get(p.ridePublic(allRides[i].rideId));
     }
     function card(ride) {
       const pub = pubs[ride.rideId] || {};
@@ -868,6 +972,8 @@ function listAdmin(db, email, now) {
     }
     return {
       ok: true,
+      groupId: p.groupId,
+      group: meta,
       config: config,
       pending: allRides.filter(function (ride) { return ride.status === "pending"; }).map(card),
       upcoming: allRides.filter(function (ride) { return ride.status === "open" && ride.departAt > clock; }).map(card),
@@ -921,17 +1027,19 @@ function broadcast(db, email, input, now) {
   if (scope !== "all" && scope !== "upcoming" && scope !== "trip") return Promise.resolve({ ok: false, error: "Choose who receives the text." });
   if (scope === "trip" && !input.rideId) return Promise.resolve({ ok: false, error: "Choose a trip." });
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, now);
+    const p = pathsFor(gidOf(input));
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
+    const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const phones = broadcastPlan(pack, scope, input.rideId, now);
-    const left = core.smsBudget(config, now).left;
+    const left = Math.min(core.smsBudget(config, now).left, Math.max(0, platform.platformDailySmsCap - platform.dailySmsSent));
     if (!input.confirm) return { ok: true, count: phones.length, left: left, confirm: false };
     if (phones.length > left) return { ok: false, error: "This would text " + phones.length + " people and " + left + " texts are left today.", count: phones.length, left: left };
-    phones.forEach(function (e164) {
-      bumpSms(config);
+    phones.forEach(function () {
+      bumpSms(config, platform);
     });
-    saveConfig(tx, config);
+    saveConfig(tx, config, p, phones.length ? platform : null);
     return { ok: true, count: phones.length, phones: phones, body: "JumpIn: " + text.value };
   }).then(function (result) {
     if (result.phones) {
@@ -944,124 +1052,157 @@ function broadcast(db, email, input, now) {
   });
 }
 
-function completeDue(db, now) {
+async function completeDueGroup(tx, p, now, texts, platform) {
+  const config = await loadConfig(tx, now, p);
+  const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+  const rides = arr(index.rides);
+  const due = [];
+  for (let i = 0; i < rides.length; i++) {
+    const row = rides[i];
+    const ride = await tx.get(p.ridePrivate(row.rideId));
+    if (!ride) continue;
+    if ((ride.status === "open" || ride.status === "pending") && completionDeadline(ride) <= now) {
+      const pub = await tx.get(p.ridePublic(ride.rideId));
+      const riderPhones = [];
+      const keys = arr(ride.activeReservationDocIds);
+      for (let k = 0; k < keys.length; k++) {
+        const res = await tx.get(keys[k]);
+        if (res && res.status === "active" && res.phoneE164 && riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
+      }
+      const hasRiders = ride.status === "open" && riderPhones.length > 0;
+      const phones = [];
+      if (hasRiders && !ride.thankYouSentAt && config.enabled && config.postRideThankYouSms && config.supportNote) {
+        if (ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.push(ride.driverPhoneE164);
+        riderPhones.forEach(function (ph) { if (phones.indexOf(ph) === -1) phones.push(ph); });
+      }
+      due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders });
+    }
+  }
+  let groupSent = 0;
+  due.forEach(function (item) {
+    if (item.hasRiders) {
+      item.ride.status = "completed";
+      item.ride.completedAt = now;
+      item.row.status = "completed";
+    } else {
+      item.ride.status = "cancelled";
+      item.ride.cancelledAt = now;
+      item.ride.seatsLeft = 0;
+      item.row.status = "cancelled";
+    }
+    if (item.phones.length) {
+      item.ride.thankYouSentAt = now;
+      const body = "Hope your JumpIn ride (" + item.ride.from + " to " + item.ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
+      item.phones.forEach(function (ph) {
+        if (canSendBoth(config, platform, now)) {
+          bumpSms(config, platform);
+          groupSent += 1;
+          queueText(texts, ph, body, "CARPOOL_THANKYOU");
+        }
+      });
+    }
+    if (item.pub) {
+      item.pub.status = item.hasRiders ? "completed" : "cancelled";
+      if (!item.hasRiders) {
+        item.pub.seatsLeft = 0;
+        item.pub.messages = arr(item.pub.messages).concat([core.systemMessage("Trip cancelled — no passengers joined.", now, arr(item.pub.messages).length + 1)]);
+      }
+      item.pub.updatedAt = now;
+      tx.set(p.ridePublic(item.ride.rideId), item.pub);
+    }
+    tx.set(p.ridePrivate(item.ride.rideId), item.ride);
+  });
+  if (groupSent) saveConfig(tx, config, p, platform);
+  if (due.length) tx.set(p.broadcastIndex, index);
+  return due.length;
+}
+
+function completeDue(db, now, groupId) {
   return db.runTransaction(async function (tx) {
     const texts = freshTexts();
-    const config = await loadConfig(tx, now);
-    const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
-    const rides = arr(index.rides);
-    const due = [];
-    for (let i = 0; i < rides.length; i++) {
-      const row = rides[i];
-      const ride = await tx.get(ridePrivate(row.rideId));
-      if (!ride) continue;
-      if ((ride.status === "open" || ride.status === "pending") && completionDeadline(ride) <= now) {
-        const pub = await tx.get(ridePublic(ride.rideId));
-        const riderPhones = [];
-        const keys = arr(ride.activeReservationDocIds);
-        for (let k = 0; k < keys.length; k++) {
-          const res = await tx.get(keys[k]);
-          if (res && res.status === "active" && res.phoneE164 && riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
+    const platform = await loadPlatformConfig(tx, now);
+    let total = 0;
+    if (groupId) {
+      total += await completeDueGroup(tx, pathsFor(gidOf({ groupId: groupId })), now, texts, platform);
+    } else {
+      total += await completeDueGroup(tx, pathsFor("default"), now, texts, platform);
+      const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+      const groups = arr(gi.groups);
+      for (let i = 0; i < groups.length; i++) {
+        if (groups[i] && groups[i].groupId && groups[i].status === "active") {
+          total += await completeDueGroup(tx, pathsFor(groups[i].groupId), now, texts, platform);
         }
-        const hasRiders = ride.status === "open" && riderPhones.length > 0;
-        const phones = [];
-        if (hasRiders && !ride.thankYouSentAt && config.enabled && config.postRideThankYouSms && config.supportNote) {
-          if (ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.push(ride.driverPhoneE164);
-          riderPhones.forEach(function (p) { if (phones.indexOf(p) === -1) phones.push(p); });
-        }
-        due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders });
       }
     }
-    due.forEach(function (item) {
-      if (item.hasRiders) {
-        item.ride.status = "completed";
-        item.ride.completedAt = now;
-        item.row.status = "completed";
-      } else {
-        item.ride.status = "cancelled";
-        item.ride.cancelledAt = now;
-        item.ride.seatsLeft = 0;
-        item.row.status = "cancelled";
-      }
-      if (item.phones.length) {
-        item.ride.thankYouSentAt = now;
-        const body = "Hope your JumpIn ride (" + item.ride.from + " to " + item.ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
-        item.phones.forEach(function (p) {
-          if (core.canSend(config, now)) {
-            bumpSms(config);
-            queueText(texts, p, body, "CARPOOL_THANKYOU");
-          }
-        });
-      }
-      if (item.pub) {
-        item.pub.status = item.hasRiders ? "completed" : "cancelled";
-        if (!item.hasRiders) {
-          item.pub.seatsLeft = 0;
-          item.pub.messages = arr(item.pub.messages).concat([core.systemMessage("Trip cancelled — no passengers joined.", now, arr(item.pub.messages).length + 1)]);
-        }
-        item.pub.updatedAt = now;
-        tx.set(ridePublic(item.ride.rideId), item.pub);
-      }
-      tx.set(ridePrivate(item.ride.rideId), item.ride);
-    });
-    if (texts.length) saveConfig(tx, config);
-    tx.set("carpool_private/broadcast_index", index);
-    return { ok: true, completed: due.length, texts: texts };
+    return { ok: true, completed: total, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
   });
 }
 
-function retainTrips(db, now) {
+async function retainTripsGroup(tx, p, now) {
+  const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+  const kept = [];
+  const rides = arr(index.rides);
+  for (let i = 0; i < rides.length; i++) {
+    const row = rides[i];
+    const ride = await tx.get(p.ridePrivate(row.rideId));
+    const pub = await tx.get(p.ridePublic(row.rideId));
+    const endedAt = ride ? (ride.completedAt || ride.cancelledAt || 0) : 0;
+    const ended = ride && (ride.status === "completed" || ride.status === "cancelled" || ride.status === "rejected");
+    if (ride && ended && endedAt && now - endedAt >= 7 * core.DAY_MS) {
+      const keys = arr(ride.activeReservationDocIds);
+      for (let k = 0; k < keys.length; k++) tx.del(keys[k]);
+      tx.del(p.ridePrivate(row.rideId));
+      tx.set(p.ridePublic(row.rideId), { rideId: row.rideId, status: "missing", purgedAt: now, departAt: row.departAt });
+      kept.push({ rideId: row.rideId, status: "missing", purgedAt: now, departAt: row.departAt });
+      continue;
+    }
+    if (!ride && pub && pub.purgedAt && now - pub.purgedAt >= 30 * core.DAY_MS) {
+      tx.del(p.ridePublic(row.rideId));
+      continue;
+    }
+    kept.push(row);
+  }
+  index.rides = kept;
+  tx.set(p.broadcastIndex, index);
+  const limits = await tx.get(p.limitIndex) || { keys: [] };
+  const live = [];
+  for (let i = 0; i < arr(limits.keys).length; i++) {
+    const doc = await tx.get(limits.keys[i]);
+    if (!doc || (doc.expiresAt && doc.expiresAt <= now)) tx.del(limits.keys[i]);
+    else live.push(limits.keys[i]);
+  }
+  tx.set(p.limitIndex, { keys: live });
+  return { kept: kept.length, audience: arr(index.audience).length };
+}
+
+function retainTrips(db, now, groupId) {
   return db.runTransaction(async function (tx) {
-    const index = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
-    const kept = [];
-    const rides = arr(index.rides);
-    for (let i = 0; i < rides.length; i++) {
-      const row = rides[i];
-      const ride = await tx.get(ridePrivate(row.rideId));
-      const pub = await tx.get(ridePublic(row.rideId));
-      const endedAt = ride ? (ride.completedAt || ride.cancelledAt || 0) : 0;
-      const ended = ride && (ride.status === "completed" || ride.status === "cancelled" || ride.status === "rejected");
-      if (ride && ended && endedAt && now - endedAt >= 7 * core.DAY_MS) {
-        const keys = arr(ride.activeReservationDocIds);
-        for (let k = 0; k < keys.length; k++) tx.del(keys[k]);
-        tx.del(ridePrivate(row.rideId));
-        tx.set(ridePublic(row.rideId), { rideId: row.rideId, status: "missing", purgedAt: now, departAt: row.departAt });
-        kept.push({ rideId: row.rideId, status: "missing", purgedAt: now, departAt: row.departAt });
-        continue;
+    const def = await retainTripsGroup(tx, pathsFor(groupId ? gidOf({ groupId: groupId }) : "default"), now);
+    if (!groupId) {
+      const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+      const groups = arr(gi.groups);
+      for (let i = 0; i < groups.length; i++) {
+        if (groups[i] && groups[i].groupId) await retainTripsGroup(tx, pathsFor(groups[i].groupId), now);
       }
-      if (!ride && pub && pub.purgedAt && now - pub.purgedAt >= 30 * core.DAY_MS) {
-        tx.del(ridePublic(row.rideId));
-        continue;
-      }
-      kept.push(row);
     }
-    index.rides = kept;
-    tx.set("carpool_private/broadcast_index", index);
-    const limits = await tx.get("carpool_private/limit_index") || { keys: [] };
-    const live = [];
-    for (let i = 0; i < arr(limits.keys).length; i++) {
-      const doc = await tx.get(limits.keys[i]);
-      if (!doc || (doc.expiresAt && doc.expiresAt <= now)) tx.del(limits.keys[i]);
-      else live.push(limits.keys[i]);
-    }
-    tx.set("carpool_private/limit_index", { keys: live });
-    return { ok: true, kept: kept.length, audience: arr(index.audience).length };
+    return { ok: true, kept: def.kept, audience: def.audience };
   });
 }
 
-function markOptOut(db, phone, now) {
+function markOptOut(db, phone, now, groupId) {
   const parsed = core.normalizePhone(phone);
   if (!parsed.ok) return Promise.resolve({ ok: false, error: parsed.error });
   return db.runTransaction(async function (tx) {
-    const key = "carpool_private/audience/" + core.phoneHash16(parsed.e164);
+    const p = pathsFor(gidOf({ groupId: groupId }));
+    const key = p.audience(core.phoneHash16(parsed.e164));
     const prev = await tx.get(key) || { roles: [], displayName: "", phoneLast4: core.last4(parsed.e164) };
     prev.phoneE164 = parsed.e164;
     prev.smsOptOut = true;
     prev.updatedAt = now;
     tx.set(key, prev);
-    await rememberAudience(tx, parsed.e164, true);
+    await rememberAudience(tx, parsed.e164, true, p);
     return { ok: true };
   });
 }
@@ -1071,13 +1212,14 @@ function setMembers(db, email, input, now) {
   const body = input || {};
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, clock);
+    const p = pathsFor(gidOf(body));
+    const config = await loadConfig(tx, clock, p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const pack = await tx.get("carpool_private/member_index") || { members: [] };
+    const pack = await tx.get(p.memberIndex) || { members: [] };
     let list = arr(pack.members).slice();
     if (body.removePhoneHash) {
       list = list.filter(function (m) { return m.phoneHash !== body.removePhoneHash; });
-      tx.set("carpool_private/member_index", { members: list });
+      tx.set(p.memberIndex, { members: list });
       return { ok: true, count: list.length };
     }
     const lines = body.bulk ? String(body.bulk).split(/\r?\n|;/).map(function (l) { return l.trim(); }).filter(Boolean) : [String(body.name || "") + "," + String(body.phone || "")];
@@ -1104,20 +1246,42 @@ function setMembers(db, email, input, now) {
       list.push(entry);
       added += 1;
     }
-    tx.set("carpool_private/member_index", { members: list });
+    tx.set(p.memberIndex, { members: list });
     return { ok: true, added: added, skipped: skipped, count: list.length };
   });
 }
 
 function saveAdminConfig(db, email, input, now) {
-  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const cleanEmail = core.cleanEmail(email);
+  if (!cleanEmail) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
-    const prev = await loadConfig(tx, now || Date.now());
-    if (!requireAdmin(email, prev)) return { ok: false, error: "This page is not available." };
+    const p = pathsFor(gidOf(input));
+    const prev = await loadConfig(tx, now || Date.now(), p);
+    if (!requireAdmin(cleanEmail, prev)) return { ok: false, error: "This page is not available." };
     const next = core.clampConfig(input);
+    if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default" && next.dailySmsCap > prev.dailySmsCap) {
+      next.dailySmsCap = prev.dailySmsCap;
+    }
     next.dailySmsSent = prev.dailySmsSent;
     next.dailySmsDay = prev.dailySmsDay;
-    saveConfig(tx, next);
+    saveConfig(tx, next, p);
+    if (p.groupId !== "default") {
+      const meta = await tx.get(p.groupMeta);
+      if (meta) {
+        const nextName = core.collapse(core.stripTags(input && input.groupName ? input.groupName : meta.name)).slice(0, 50) || meta.name;
+        meta.name = nextName;
+        meta.supportNote = next.supportNote;
+        meta.enabled = next.enabled;
+        meta.updatedAt = now || Date.now();
+        tx.set(p.groupMeta, meta);
+        const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+        gi.groups = arr(gi.groups).map(function (g) {
+          if (g.groupId !== p.groupId) return g;
+          return Object.assign({}, g, { name: nextName, supportNote: next.supportNote, enabled: next.enabled, adminEmails: next.adminEmails, contactEmail: next.contactEmail, dailySmsCap: next.dailySmsCap });
+        });
+        tx.set("carpool_platform/groups_index", gi);
+      }
+    }
     return { ok: true, config: next };
   });
 }
@@ -1131,12 +1295,13 @@ function purgeData(db, email, input, now) {
   }
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
-    const config = await loadConfig(tx, clock);
+    const p = pathsFor(gidOf(body));
+    const config = await loadConfig(tx, clock, p);
     if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
-    const pack = await tx.get("carpool_private/broadcast_index") || { rides: [], audience: [] };
-    const limits = await tx.get("carpool_private/limit_index") || { keys: [] };
-    const blocks = await tx.get("carpool_private/block_index") || { blocks: [] };
-    const members = await tx.get("carpool_private/member_index") || { members: [] };
+    const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+    const limits = await tx.get(p.limitIndex) || { keys: [] };
+    const blocks = await tx.get(p.blockIndex) || { blocks: [] };
+    const members = await tx.get(p.memberIndex) || { members: [] };
     const allRides = arr(pack.rides);
     const isPastOrClosed = function (r) {
       return r.status === "completed" || r.status === "cancelled" || r.status === "rejected" || (r.status === "open" && r.departAt + MESSAGE_GRACE_MS <= clock);
@@ -1144,7 +1309,7 @@ function purgeData(db, email, input, now) {
     const targetRides = scope === "past" ? allRides.filter(isPastOrClosed) : (scope === "trips" || scope === "all" ? allRides : []);
     const resKeys = [];
     for (let i = 0; i < targetRides.length; i++) {
-      const priv = await tx.get(ridePrivate(targetRides[i].rideId));
+      const priv = await tx.get(p.ridePrivate(targetRides[i].rideId));
       if (priv) arr(priv.activeReservationDocIds).forEach(function (k) { resKeys.push(k); });
     }
     const counts = {
@@ -1156,31 +1321,174 @@ function purgeData(db, email, input, now) {
     };
     if (!body.confirm) return { ok: true, confirm: false, scope: scope, counts: counts };
     targetRides.forEach(function (r) {
-      tx.del(ridePrivate(r.rideId));
-      tx.del(ridePublic(r.rideId));
+      tx.del(p.ridePrivate(r.rideId));
+      tx.del(p.ridePublic(r.rideId));
     });
     resKeys.forEach(function (k) { tx.del(k); });
     if (scope === "past") {
       const dropIds = targetRides.map(function (r) { return r.rideId; });
-      tx.set("carpool_private/broadcast_index", {
+      tx.set(p.broadcastIndex, {
         rides: allRides.filter(function (r) { return dropIds.indexOf(r.rideId) === -1; }),
         audience: arr(pack.audience)
       });
     } else if (scope === "trips") {
       arr(limits.keys).forEach(function (k) { tx.del(k); });
-      tx.set("carpool_private/limit_index", { keys: [] });
-      tx.set("carpool_private/broadcast_index", { rides: [], audience: arr(pack.audience) });
+      tx.set(p.limitIndex, { keys: [] });
+      tx.set(p.broadcastIndex, { rides: [], audience: arr(pack.audience) });
     } else if (scope === "audience") {
-      tx.set("carpool_private/broadcast_index", { rides: allRides, audience: [] });
+      tx.set(p.broadcastIndex, { rides: allRides, audience: [] });
     } else {
       arr(limits.keys).forEach(function (k) { tx.del(k); });
-      arr(blocks.blocks).forEach(function (b) { tx.del("carpool_private/blocks/" + b.phoneHash); });
-      tx.set("carpool_private/limit_index", { keys: [] });
-      tx.set("carpool_private/block_index", { blocks: [] });
-      tx.set("carpool_private/member_index", { members: [] });
-      tx.set("carpool_private/broadcast_index", { rides: [], audience: [] });
+      arr(blocks.blocks).forEach(function (b) { tx.del(p.block(b.phoneHash)); });
+      tx.set(p.limitIndex, { keys: [] });
+      tx.set(p.blockIndex, { blocks: [] });
+      tx.set(p.memberIndex, { members: [] });
+      tx.set(p.broadcastIndex, { rides: [], audience: [] });
     }
     return { ok: true, confirm: true, scope: scope, deleted: counts };
+  });
+}
+
+function createGroup(db, email, input, now) {
+  const caller = core.cleanEmail(email);
+  if (!caller) return Promise.resolve({ ok: false, error: "Sign in with Google first." });
+  const body = input || {};
+  const name = core.collapse(core.stripTags(body.name || "")).slice(0, 50);
+  if (!name) return Promise.resolve({ ok: false, field: "name", error: "Enter a group name." });
+  const slugErr = core.groupSlugError(body.groupId);
+  if (slugErr) return Promise.resolve({ ok: false, field: "groupId", error: slugErr });
+  const gid = core.normalizeGroupId(body.groupId);
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gid);
+    const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+    const groups = arr(gi.groups);
+    const isSuper = caller === SUPERADMIN_EMAIL;
+    if (!isSuper) {
+      if (groups.filter(function (g) { return g.status === "pending"; }).length >= 50) {
+        return { ok: false, error: "Too many pending requests right now. Please try again later." };
+      }
+      if (groups.some(function (g) { return g.createdBy === caller && g.status === "pending"; })) {
+        return { ok: false, error: "You already have a group waiting for approval." };
+      }
+      if (groups.filter(function (g) { return g.createdBy === caller; }).length >= 3) {
+        return { ok: false, error: "Group limit reached (max 3 per account)." };
+      }
+    }
+    if (await tx.get(p.groupMeta) || groups.some(function (g) { return g.groupId === gid; })) {
+      return { ok: false, field: "groupId", error: "That group link is already taken. Try another." };
+    }
+    const status = isSuper ? "active" : "pending";
+    const enabled = isSuper;
+    const cap = isSuper ? 100 : 0;
+    const cfg = core.clampConfig({
+      enabled: enabled,
+      membersOnly: body.membersOnly !== false,
+      contactEmail: core.cleanEmail(body.contactEmail) || caller,
+      supportNote: core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80),
+      adminEmails: [caller],
+      dailySmsCap: cap
+    });
+    const meta = {
+      groupId: gid,
+      name: name,
+      status: status,
+      enabled: enabled,
+      supportNote: cfg.supportNote,
+      updatedAt: clock
+    };
+    const entry = {
+      groupId: gid,
+      name: name,
+      status: status,
+      enabled: enabled,
+      adminEmails: cfg.adminEmails,
+      contactEmail: cfg.contactEmail,
+      supportNote: cfg.supportNote,
+      dailySmsCap: cap,
+      createdAt: clock,
+      createdBy: caller
+    };
+    tx.set(p.groupMeta, meta);
+    saveConfig(tx, cfg, p);
+    gi.groups = groups.concat([entry]);
+    tx.set("carpool_platform/groups_index", gi);
+    return { ok: true, group: entry };
+  });
+}
+
+function listGroups(db, email, now) {
+  const caller = core.cleanEmail(email);
+  if (!caller) return Promise.resolve({ ok: false, error: "Sign in with Google first." });
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const isSuper = caller === SUPERADMIN_EMAIL;
+    const platform = await loadPlatformConfig(tx, clock);
+    const defCfg = await loadConfig(tx, clock, pathsFor("default"));
+    const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+    const list = [];
+    if (requireAdmin(caller, defCfg)) {
+      list.push({
+        groupId: "default",
+        name: "Default Community",
+        status: "active",
+        enabled: defCfg.enabled,
+        adminEmails: defCfg.adminEmails,
+        contactEmail: defCfg.contactEmail,
+        supportNote: defCfg.supportNote,
+        dailySmsCap: defCfg.dailySmsCap,
+        dailySmsSent: defCfg.dailySmsSent
+      });
+    }
+    arr(gi.groups).forEach(function (g) {
+      if (isSuper || arr(g.adminEmails).indexOf(caller) !== -1) list.push(g);
+    });
+    return { ok: true, isSuperAdmin: isSuper, platform: platform, groups: list };
+  });
+}
+
+function reviewGroup(db, email, input, now) {
+  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const body = input || {};
+  const gid = core.normalizeGroupId(body.groupId);
+  if (!gid || gid === "default") return Promise.resolve({ ok: false, error: "Choose a group." });
+  const decision = body.decision;
+  if (decision !== "approve" && decision !== "suspend" && decision !== "cap" && decision !== "reject") {
+    return Promise.resolve({ ok: false, error: "Enter a decision." });
+  }
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gid);
+    const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+    const meta = await tx.get(p.groupMeta);
+    const cfg = await loadConfig(tx, clock, p);
+    const exists = meta || arr(gi.groups).some(function (g) { return g.groupId === gid; });
+    if (!exists) return { ok: false, error: "Group not found." };
+    if (decision === "reject") {
+      tx.del(p.groupMeta);
+      tx.del(p.config);
+      gi.groups = arr(gi.groups).filter(function (g) { return g.groupId !== gid; });
+      tx.set("carpool_platform/groups_index", gi);
+      return { ok: true, decision: "reject", groupId: gid };
+    }
+    if (decision === "approve") {
+      cfg.enabled = true;
+      cfg.dailySmsCap = Math.max(100, Number(body.dailySmsCap || cfg.dailySmsCap || 100));
+    } else if (decision === "suspend") {
+      cfg.enabled = false;
+    } else {
+      cfg.dailySmsCap = Math.max(0, Math.min(2000, Math.round(Number(body.dailySmsCap) || 0)));
+    }
+    const nextStatus = decision === "suspend" ? "suspended" : (decision === "approve" ? "active" : (meta && meta.status) || "active");
+    const nextMeta = Object.assign({}, meta || { groupId: gid, name: gid }, { status: nextStatus, enabled: cfg.enabled, updatedAt: clock });
+    tx.set(p.groupMeta, nextMeta);
+    saveConfig(tx, cfg, p);
+    gi.groups = arr(gi.groups).map(function (g) {
+      if (g.groupId !== gid) return g;
+      return Object.assign({}, g, { status: nextStatus, enabled: cfg.enabled, dailySmsCap: cfg.dailySmsCap });
+    });
+    tx.set("carpool_platform/groups_index", gi);
+    return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap };
   });
 }
 
@@ -1208,5 +1516,8 @@ module.exports = {
   completeDue: completeDue,
   retainTrips: retainTrips,
   markOptOut: markOptOut,
-  manageUrl: manageUrl
+  manageUrl: manageUrl,
+  createGroup: createGroup,
+  listGroups: listGroups,
+  reviewGroup: reviewGroup
 };

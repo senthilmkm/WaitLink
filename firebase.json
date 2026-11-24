@@ -148,6 +148,18 @@
         "function": { "functionId": "carpoolAdminBroadcast", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolCreateGroup",
+        "function": { "functionId": "carpoolCreateGroup", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolListGroups",
+        "function": { "functionId": "carpoolListGroups", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolReviewGroup",
+        "function": { "functionId": "carpoolReviewGroup", "region": "us-central1" }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

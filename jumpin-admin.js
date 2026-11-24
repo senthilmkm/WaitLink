@@ -403,11 +403,88 @@
         if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "center" });
         if (box && box.focus) box.focus();
       }
+      let activeGroupId = (function () {
+        try {
+          const p = new URLSearchParams((win.location && win.location.search) || "");
+          return p.get("g") || "default";
+        } catch (err) { return "default"; }
+      })();
+      let groupsData = { isSuperAdmin: false, groups: [], platform: null };
+      const groupSelect = page.getElementById("jumpin-group-select");
+      const copyBoardBtn = page.getElementById("jumpin-copy-board-link");
+      function switchTab(name) {
+        ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
+          const b = page.getElementById("jumpin-tab-btn-" + other);
+          const p = page.getElementById("jumpin-tab-" + other);
+          if (b) b.className = "admin-tab" + (other === name ? " active" : "");
+          if (p) p.hidden = other !== name;
+        });
+      }
+      function paintGroups() {
+        const listNode = page.getElementById("jumpin-groups-list");
+        const countNode = page.getElementById("jumpin-groups-count");
+        const platNode = page.getElementById("jumpin-platform-sms");
+        const groups = groupsData.groups || [];
+        const pendingCount = groups.filter(function (g) { return g.status === "pending"; }).length;
+        if (countNode) countNode.textContent = pendingCount ? String(pendingCount) : (groups.length ? String(groups.length) : "");
+        if (platNode && groupsData.platform) {
+          platNode.textContent = "Platform SMS today: " + (groupsData.platform.dailySmsSent || 0) + " / " + (groupsData.platform.platformDailySmsCap || 2000);
+        }
+        if (groupSelect) {
+          groupSelect.textContent = "";
+          groups.forEach(function (g) {
+            const opt = el(page, "option", "", g.name + " (" + g.groupId + ")");
+            opt.value = g.groupId;
+            if (g.groupId === activeGroupId) opt.selected = true;
+            groupSelect.appendChild(opt);
+          });
+          groupSelect.hidden = !groups.length;
+        }
+        if (copyBoardBtn) copyBoardBtn.hidden = !groups.length;
+        if (!listNode) return;
+        listNode.textContent = "";
+        if (!groups.length) {
+          listNode.appendChild(page.createTextNode("No groups yet. Request your neighborhood group above."));
+          return;
+        }
+        groups.forEach(function (g) {
+          const card = el(page, "div", "admin-card");
+          const top = el(page, "div", "admin-card-top");
+          top.appendChild(el(page, "div", "admin-route", (g.name || g.groupId) + " (?" + "g=" + g.groupId + ")"));
+          top.appendChild(el(page, "span", "admin-badge", g.status || "active"));
+          card.appendChild(top);
+          card.appendChild(el(page, "div", "admin-meta muted", "Contact: " + (g.contactEmail || "—") + " · Cap: " + (g.dailySmsCap != null ? g.dailySmsCap : 0) + " texts/day"));
+          const bar = el(page, "div", "admin-actions");
+          bar.appendChild(pillBtn(page, "Open", g.groupId === activeGroupId ? "primary" : "", function () {
+            activeGroupId = g.groupId;
+            switchTab("trips");
+            refresh();
+          }));
+          if (groupsData.isSuperAdmin && g.groupId !== "default" && api && api.reviewGroup) {
+            if (g.status !== "active") {
+              bar.appendChild(pillBtn(page, "Approve", "primary", function (_e, btn) {
+                withBusy(page, btn, "Approving…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "approve" }).then(refresh); });
+              }));
+            } else {
+              bar.appendChild(pillBtn(page, "Suspend", "warn", function (_e, btn) {
+                withBusy(page, btn, "Pausing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "suspend" }).then(refresh); });
+              }));
+            }
+            if (g.status === "pending") {
+              bar.appendChild(pillBtn(page, "Reject", "danger", function (_e, btn) {
+                withBusy(page, btn, "Removing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "reject" }).then(refresh); });
+              }));
+            }
+          }
+          card.appendChild(bar);
+          listNode.appendChild(card);
+        });
+      }
       cloud = api ? {
-        review: api.review,
-        adminCancel: api.adminCancel,
-        setPosting: api.setPosting,
-        setMembers: api.setMembers,
+        review: function (rideId, decision) { return api.review(rideId, decision, activeGroupId); },
+        adminCancel: function (rideId) { return api.adminCancel(rideId, activeGroupId); },
+        setPosting: function (body) { return api.setPosting(Object.assign({ groupId: activeGroupId }, body || {})); },
+        setMembers: function (body) { return api.setMembers(Object.assign({ groupId: activeGroupId }, body || {})); },
         chooseTrip: function (ride) {
           showSelectedTrip(ride, false);
           setScopeHighlight("trip");
@@ -423,16 +500,27 @@
       } : null;
       function refresh() {
         if (!api) return Promise.resolve();
-        return api.listAdmin().then(function (result) {
-          if (!result || result.ok === false) {
-            state = admin.reduce(state, { type: "fail", error: (result && result.error) || "This page is not available." });
-            lists = {};
-          } else {
-            lists = result;
-            state = admin.reduce(state, { type: "clear" });
-            applyConfig(page, result.config || {});
+        const groupWait = api.listGroups ? api.listGroups().then(function (gr) {
+          if (gr && gr.ok) {
+            groupsData = gr;
+            const ids = (gr.groups || []).map(function (g) { return g.groupId; });
+            if (ids.length && ids.indexOf(activeGroupId) === -1) activeGroupId = ids[0];
+            if (!ids.length) switchTab("groups");
+            paintGroups();
           }
-          paint();
+        }) : Promise.resolve();
+        return groupWait.then(function () {
+          return api.listAdmin(activeGroupId).then(function (result) {
+            if (!result || result.ok === false) {
+              state = admin.reduce(state, { type: "fail", error: (result && result.error) || "This page is not available." });
+              lists = {};
+            } else {
+              lists = result;
+              state = admin.reduce(state, { type: "clear" });
+              applyConfig(page, result.config || {});
+            }
+            paint();
+          });
         });
       }
       function preview(scope) {
@@ -440,7 +528,7 @@
         const note = page.getElementById("jumpin-selected-trip");
         if (note) note.hidden = scope !== "trip" || !note.textContent;
         const textValue = page.getElementById("jumpin-announce").value;
-        return api.broadcast({ scope: scope, text: textValue, confirm: false, rideId: chosenRide }).then(function (result) {
+        return api.broadcast({ scope: scope, text: textValue, confirm: false, rideId: chosenRide, groupId: activeGroupId }).then(function (result) {
           if (!result || result.ok === false) state = admin.reduce(state, { type: "fail", error: result && result.error });
           else state = admin.reduce(state, { type: "preview", scope: scope, count: result.count, left: result.left });
           paint();
@@ -465,15 +553,48 @@
         state = admin.reduce(state, { type: "clear" });
         paint();
       });
-      ["trips", "members", "settings", "blocked", "cleanup"].forEach(function (name) {
+      ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (name) {
         const btn = page.getElementById("jumpin-tab-btn-" + name);
         if (!btn) return;
-        btn.addEventListener("click", function () {
-          ["trips", "members", "settings", "blocked", "cleanup"].forEach(function (other) {
-            const b = page.getElementById("jumpin-tab-btn-" + other);
-            const p = page.getElementById("jumpin-tab-" + other);
-            if (b) b.className = "admin-tab" + (other === name ? " active" : "");
-            if (p) p.hidden = other !== name;
+        btn.addEventListener("click", function () { switchTab(name); });
+      });
+      if (groupSelect) groupSelect.addEventListener("change", function () {
+        activeGroupId = groupSelect.value || "default";
+        refresh();
+      });
+      if (copyBoardBtn) copyBoardBtn.addEventListener("click", function () {
+        const url = "https://waitlink.app/?s=jumpin" + (activeGroupId && activeGroupId !== "default" ? "&g=" + encodeURIComponent(activeGroupId) : "");
+        const clip = win.navigator && win.navigator.clipboard;
+        if (clip && clip.writeText) clip.writeText(url);
+        copyBoardBtn.textContent = "Copied!";
+      });
+      const grpName = page.getElementById("jumpin-group-name");
+      const grpSlug = page.getElementById("jumpin-group-slug");
+      if (grpName && grpSlug) grpName.addEventListener("input", function () {
+        if (!grpSlug.dataset || !grpSlug.dataset.edited) {
+          grpSlug.value = String(grpName.value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+        }
+      });
+      if (grpSlug) grpSlug.addEventListener("input", function () { if (grpSlug.dataset) grpSlug.dataset.edited = "1"; });
+      const grpCreate = page.getElementById("jumpin-group-create");
+      if (grpCreate && api && api.createGroup) grpCreate.addEventListener("click", function () {
+        const payload = {
+          name: grpName ? grpName.value : "",
+          groupId: grpSlug ? grpSlug.value : "",
+          contactEmail: (page.getElementById("jumpin-group-email") || {}).value || "",
+          supportNote: (page.getElementById("jumpin-group-support") || {}).value || "",
+          membersOnly: ((page.getElementById("jumpin-group-members-only") || {}).value || "yes") === "yes"
+        };
+        withBusy(page, grpCreate, "Creating…", function () {
+          return api.createGroup(payload).then(function (res) {
+            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not create group." });
+            else {
+              activeGroupId = res.group && res.group.groupId ? res.group.groupId : activeGroupId;
+              state = admin.reduce(state, { type: "clear" });
+              text(page.getElementById("jumpin-admin-status"), res.group && res.group.status === "pending" ? "Group requested — waiting for platform approval." : "Group created and active.");
+              return refresh();
+            }
+            paint();
           });
         });
       });
@@ -525,13 +646,13 @@
         }
       });
       const save = page.getElementById("jumpin-save");
-      if (save) save.addEventListener("click", function () { withBusy(page, save, "Saving…", function () { return saveSettings(firebase, page, api, refresh); }); });
+      if (save) save.addEventListener("click", function () { withBusy(page, save, "Saving…", function () { return saveSettings(firebase, page, api, refresh, activeGroupId); }); });
       const addMember = page.getElementById("jumpin-member-add");
       if (addMember && api && api.setMembers) addMember.addEventListener("click", function () {
         const nameNode = page.getElementById("jumpin-member-name");
         const phoneNode = page.getElementById("jumpin-member-phone");
         withBusy(page, addMember, "Adding…", function () {
-          return api.setMembers({ name: nameNode ? nameNode.value : "", phone: phoneNode ? phoneNode.value : "" }).then(function (res) {
+          return api.setMembers({ groupId: activeGroupId, name: nameNode ? nameNode.value : "", phone: phoneNode ? phoneNode.value : "" }).then(function (res) {
             if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not add member." });
             else {
               if (nameNode) nameNode.value = "";
@@ -547,7 +668,7 @@
       if (importMembers && api && api.setMembers) importMembers.addEventListener("click", function () {
         const bulkNode = page.getElementById("jumpin-member-bulk");
         withBusy(page, importMembers, "Importing…", function () {
-          return api.setMembers({ bulk: bulkNode ? bulkNode.value : "" }).then(function (res) {
+          return api.setMembers({ groupId: activeGroupId, bulk: bulkNode ? bulkNode.value : "" }).then(function (res) {
             if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not import members." });
             else {
               if (bulkNode) bulkNode.value = "";
@@ -571,7 +692,7 @@
         if (!btn || !api || !api.purge) return;
         btn.addEventListener("click", function () {
           withBusy(page, btn, "Checking…", function () {
-            return api.purge({ scope: spec[1], confirm: false }).then(function (res) {
+            return api.purge({ groupId: activeGroupId, scope: spec[1], confirm: false }).then(function (res) {
               if (!res || res.ok === false) {
                 state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not preview cleanup." });
                 paint();
@@ -590,7 +711,7 @@
                 return;
               }
               askConfirm(page, spec[2], "This will permanently delete: " + summary + ".", "Delete now", function () {
-                return api.purge({ scope: spec[1], confirm: true }).then(function (done) {
+                return api.purge({ groupId: activeGroupId, scope: spec[1], confirm: true }).then(function (done) {
                   if (!done || done.ok === false) state = admin.reduce(state, { type: "fail", error: (done && done.error) || "Cleanup failed." });
                   else {
                     state = admin.reduce(state, { type: "clear" });
@@ -612,7 +733,7 @@
       if (send) send.addEventListener("click", function () {
         const textValue = page.getElementById("jumpin-announce").value;
         withBusy(page, send, "Sending…", function () {
-          return api.broadcast({ scope: state.pendingConfirm, text: textValue, confirm: true, rideId: chosenRide }).then(function (result) {
+          return api.broadcast({ groupId: activeGroupId, scope: state.pendingConfirm, text: textValue, confirm: true, rideId: chosenRide }).then(function (result) {
             if (!result || result.ok === false) state = admin.reduce(state, { type: "fail", error: result && result.error });
             else state = admin.reduce(state, { type: "sent", count: result.count });
             paint();
@@ -654,7 +775,7 @@
     });
   }
 
-  function saveSettings(firebase, doc, api, onSaved) {
+  function saveSettings(firebase, doc, api, onSaved, groupId) {
     const membersNode = doc.getElementById("jumpin-members-only");
     const contactNode = doc.getElementById("jumpin-contact-email");
     const supportNode = doc.getElementById("jumpin-support-note");
@@ -686,6 +807,7 @@
     if (api && api.saveAdminConfig) {
       checked.value.supportNote = String(fields.supportNote || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
       checked.value.postRideThankYouSms = fields.postRideThankYouSms === true;
+      checked.value.groupId = groupId || "default";
       return api.saveAdminConfig(checked.value).then(function (res) {
         if (!res || res.ok === false) {
           if (error) error.textContent = (res && res.error) || "This page is not available.";
