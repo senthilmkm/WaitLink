@@ -412,7 +412,9 @@
       let groupsData = { isSuperAdmin: false, groups: [], platform: null };
       const groupSelect = page.getElementById("jumpin-group-select");
       const copyBoardBtn = page.getElementById("jumpin-copy-board-link");
+      let activeTab = "trips";
       function switchTab(name) {
+        if (name) activeTab = name;
         ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
           const b = page.getElementById("jumpin-tab-btn-" + other);
           const p = page.getElementById("jumpin-tab-" + other);
@@ -423,7 +425,7 @@
       (function () {
         try {
           const t = (new URLSearchParams((win.location && win.location.search) || "").get("tab") || "").toLowerCase();
-          if (["trips", "members", "settings", "blocked", "cleanup", "groups"].indexOf(t) !== -1) switchTab(t);
+          if (["trips", "members", "settings", "blocked", "cleanup", "groups"].indexOf(t) !== -1) activeTab = t;
         } catch (err) { /* keep default tab */ }
       })();
       function paintGroups() {
@@ -641,11 +643,18 @@
       });
       firebase.auth().onAuthStateChanged(function (user) {
         const button = page.getElementById("jumpin-signin");
+        const tabsBar = page.getElementById("jumpin-admin-tabs");
         if (button) button.hidden = !!user;
         if (signOut) signOut.hidden = !user;
+        if (tabsBar) tabsBar.hidden = !user;
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with the JumpIn admin account.");
-        if (user) refresh();
-        else {
+        if (user) {
+          switchTab(activeTab);
+          refresh();
+        } else {
+          switchTab("");
+          if (groupSelect) groupSelect.hidden = true;
+          if (copyBoardBtn) copyBoardBtn.hidden = true;
           showSelectedTrip(null);
           lists = {};
           state = admin.reduce(state, { type: "clear" });
