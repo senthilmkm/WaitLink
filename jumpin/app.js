@@ -58,12 +58,12 @@
       "html:has(body.jumpin-on),body.jumpin-on{display:block !important;height:auto;min-height:100%;background:var(--bg-dark,#f1f5f9);color:var(--text-main,#090d16)}",
       "body.jumpin-on{margin:0;overflow:auto}",
       "body.jumpin-on > *:not(#jumpin-root){display:none !important}",
-      "#jumpin-root{display:flex;flex-direction:column;width:100%;max-width:100vw;overflow-x:hidden;min-height:100%;background:var(--bg-dark,#f1f5f9);color:var(--text-main,#090d16);font-family:var(--font-family-body,Inter,-apple-system,BlinkMacSystemFont,sans-serif);font-size:16px;line-height:1.5}",
+      "#jumpin-root{display:flex;flex-direction:column;width:100%;max-width:100vw;overflow-x:hidden;min-height:100%;background:radial-gradient(circle at top right,#ecfeff 0%,#f8fafc 45%,#f1f5f9 100%);color:var(--text-main,#090d16);font-family:var(--font-family-body,Inter,-apple-system,BlinkMacSystemFont,sans-serif);font-size:16px;line-height:1.5}",
       "#jumpin-root.portal{min-height:100dvh}",
       "#jumpin-root *{box-sizing:border-box}",
       "#jumpin-root a{color:inherit;text-decoration:none}",
       "#jumpin-top,#jumpin-bottom{flex:0 0 auto}",
-      "#jumpin-top{position:sticky;top:0;z-index:2;width:100%;background:var(--bg-card,#fff);border-bottom:1px solid var(--border-color,#cbd5e1)}",
+      "#jumpin-top{position:sticky;top:0;z-index:20;width:100%;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(15,23,42,.03)}",
       "#jumpin-top .bar{width:min(1040px,100%);margin:0 auto;display:flex;align-items:center;gap:16px;min-height:64px;padding:12px 24px calc(12px + env(safe-area-inset-top))}",
       "#jumpin-top .brand{display:flex;align-items:center;gap:8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-weight:700;font-size:18px}",
       "#jumpin-top .mark{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:rgba(8,145,178,.12)}",
@@ -79,7 +79,7 @@
       "#jumpin-root.app-screen #jumpin-mid{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:24px 20px 28px;overflow:visible}",
       "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:640px;margin:24px auto;padding:28px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
       "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
-      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:30px 32px;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 58%,#e0f2fe 100%);border:1px solid #bae6fd;border-radius:var(--radius-lg,20px);box-shadow:0 12px 30px rgba(8,145,178,.09)}",
+      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:28px 32px;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 58%,#e0f2fe 100%);border:1px solid #bae6fd;border-top:3px solid var(--primary,#0891b2);border-radius:var(--radius-lg,20px);box-shadow:0 12px 30px rgba(8,145,178,.09)}",
       "#jumpin-mid .hero-eyebrow{display:inline-block;padding:4px 10px;margin:0 0 10px;border-radius:999px;background:rgba(8,145,178,.12);color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
       "#jumpin-mid .hero .copy{flex:1 1 260px;min-width:0}",
       "#jumpin-mid h1{margin:0 0 8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:36px;line-height:1.15;letter-spacing:-0.03em}",
@@ -87,7 +87,8 @@
       "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
       "@media (min-width:1040px){#jumpin-mid .board{grid-template-columns:repeat(3,minmax(0,1fr))}}",
-      "#jumpin-mid .empty{grid-column:1 / -1;padding:22px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px)}",
+      "#jumpin-mid .empty{grid-column:1 / -1;padding:32px 24px;text-align:center;background:var(--bg-card,#fff);border:1px dashed #cbd5e1;border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,.03)}",
+      "#jumpin-mid .empty-icon{display:inline-grid;place-items:center;width:44px;height:44px;margin:0 auto 10px;border-radius:12px;background:#ecfeff;border:1px solid #a5f3fc;font-size:20px}",
       "#jumpin-mid .empty .route{margin:0 0 4px}",
       "#jumpin-bottom{width:100%;padding:0 16px calc(16px + env(safe-area-inset-bottom))}",
       "#jumpin-root.portal #jumpin-bottom{margin-top:auto;padding:0;background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
@@ -97,7 +98,8 @@
       "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
       "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(24px + env(safe-area-inset-bottom));background:transparent;border-top:0}",
       "@media (min-width:701px){#jumpin-root.app-screen #jumpin-mid{padding:36px 24px 20px}#jumpin-root.app-screen #jumpin-bottom{position:static;margin-top:0;padding:8px 24px 32px;background:transparent;border-top:0}}",
-      "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:var(--primary,#0891b2);color:#fff;font-size:17px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .15s,filter .15s}",
+      "#jumpin-mid .hero button:hover,#jumpin-bottom button:hover{filter:brightness(1.05)}",
       "#jumpin-root.app-screen #jumpin-bottom button{display:block;width:100%;max-width:640px;margin:0 auto}",
       "#jumpin-bottom button:disabled,#jumpin-root .textish:disabled{opacity:.55;cursor:not-allowed}",
       "body.jumpin-android #jumpin-bottom button,body.jumpin-android #jumpin-mid .hero button{border-radius:var(--radius-lg,20px)}",
@@ -112,7 +114,7 @@
       "#jumpin-mid .confirm .muted{margin:4px 0;font-size:15px}",
       "#jumpin-mid .confirm .link-row{margin:6px 0 10px}",
       "#jumpin-mid .confirm .action-row{margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0)}",
-      "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;text-align:left;min-height:44px;padding:18px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:0 4px 12px rgba(15,23,42,.05);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}",
+      "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;text-align:left;min-height:44px;padding:18px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,.05);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}",
       "#jumpin-mid .row:hover{border-color:var(--primary,#0891b2);box-shadow:0 8px 20px rgba(8,145,178,.12);transform:translateY(-1px)}",
       "#jumpin-mid .row.role-driver{border-left:4px solid #4f46e5;background:linear-gradient(180deg,#ffffff 0%,#f8faff 100%)}",
       "#jumpin-mid .row.role-rider{border-left:4px solid #059669;background:linear-gradient(180deg,#ffffff 0%,#f4fbf8 100%)}",
@@ -155,7 +157,7 @@
       "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
       "#jumpin-mid .filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}",
       "#jumpin-mid .filter-chip{flex:0 0 auto;min-height:36px;padding:6px 14px;border-radius:999px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--text-muted,#1e293b);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
-      "#jumpin-mid .filter-chip.active{background:var(--primary,#0891b2);color:#fff;border-color:var(--primary,#0891b2)}",
+      "#jumpin-mid .filter-chip.active{background:var(--primary,#0891b2);color:#fff;border-color:var(--primary,#0891b2);box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-mid .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 0 6px;flex-wrap:wrap}",
       "#jumpin-mid .pager-btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:14px;font-weight:700;cursor:pointer}",
       "#jumpin-mid .pager-btn:disabled{opacity:.45;cursor:not-allowed;color:var(--text-muted,#64748b)}",
@@ -648,11 +650,12 @@
           if (!shown.length) {
             const empty = el(doc, "div", "empty");
             const filtered = !!(q || boardDateFilter !== "all");
+            empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
             empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
             empty.appendChild(el(doc, "p", "muted", filtered ? "Try another date or clear the filter." : "Post one trip and it will show up here."));
             if (filtered) {
               const resetBtn = el(doc, "button", "textish", "Show all rides");
-              resetBtn.style.marginTop = "10px";
+              resetBtn.style.marginTop = "12px";
               on(resetBtn, "click", function () {
                 boardQuery = "";
                 boardDateFilter = "all";
@@ -695,7 +698,12 @@
             if (ride.rideCost > 0) right.appendChild(el(doc, "span", "cost-tag", core.formatCost(ride.rideCost) + "/seat"));
             foot.appendChild(right);
             row.appendChild(foot);
-            on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
+            on(row, "click", function () {
+              if (!cloud) return;
+              row.disabled = true;
+              right.appendChild(el(doc, "span", "jumpin-spin dark"));
+              openRide(ride.rideId || ride.id);
+            });
             list.appendChild(row);
           });
           if (totalPages > 1) {
