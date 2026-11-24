@@ -1,7 +1,7 @@
 # JumpIn Multi-Neighborhood Group System — UX & Technical Design
 
 **Document:** `docs/CARPOOL_JUMPIN_MULTI_GROUP_DESIGN.md`  
-**Status:** Proposed Architecture (Hybrid: Self-Serve Request + 1-Click SuperAdmin Approval)  
+**Status:** Finalized (Approved Architecture — Ready for Implementation)  
 **Scope:** Multi-tenant neighborhood carpool groups for `WaitLink JumpIn`
 
 ---
@@ -138,7 +138,7 @@ match /carpool_platform/{docId} {
 ```
 
 ### 4.3 Backward Compatibility for `"default"`
-- During rollout, keep reading/migrating `settings/carpool_config` & `carpool_public/root/rides` into `carpool_groups/default/...` via a one-time idempotent migration script (or keep `"default"` mapped in `service.js` until migrated, then cut over cleanly).
+- When `groupId === "default"` (omitted `?g=`), `service.js`, `cloud.js`, and `jumpin-admin.js` continue reading/writing the existing `settings/carpool_config`, `carpool_public/root/rides`, and `carpool_private/*` paths directly. Only newly created groups (`groupId !== "default"`) use `carpool_groups/{groupId}/...`, ensuring zero migration risk for live trips, active SMS links, and existing settings.
 
 ---
 
