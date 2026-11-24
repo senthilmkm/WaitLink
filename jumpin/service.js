@@ -1448,7 +1448,7 @@ function listGroups(db, email, now) {
     if (requireAdmin(caller, defCfg)) {
       list.push({
         groupId: "default",
-        name: "Default Community",
+        name: "Its-OK",
         status: "active",
         enabled: defCfg.enabled,
         adminEmails: defCfg.adminEmails,

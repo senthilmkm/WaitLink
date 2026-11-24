@@ -206,12 +206,12 @@
         const data = snap.exists ? snap.data() : null;
         onMeta({
           groupId: "default",
-          name: "",
+          name: "Its-OK",
           status: "active",
           enabled: !data || data.enabled !== false,
           supportNote: (data && typeof data.supportNote === "string") ? data.supportNote : ""
         });
-      }, function () { onMeta({ groupId: "default", name: "", status: "active", enabled: true, supportNote: "" }); });
+      }, function () { onMeta({ groupId: "default", name: "Its-OK", status: "active", enabled: true, supportNote: "" }); });
     }
     return firebase.firestore().collection("carpool_groups").doc(gid).onSnapshot(function (snap) {
       const data = snap.exists ? snap.data() : null;
