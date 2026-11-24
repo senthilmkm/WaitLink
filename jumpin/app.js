@@ -83,6 +83,8 @@
       "#jumpin-mid .hero-eyebrow{display:inline-block;padding:4px 10px;margin:0 0 10px;border-radius:999px;background:rgba(8,145,178,.12);color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
       "#jumpin-mid .hero .copy{flex:1 1 260px;min-width:0}",
       "#jumpin-mid h1{margin:0 0 8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:36px;line-height:1.15;letter-spacing:-0.03em}",
+      "#jumpin-mid .hero-org{margin:10px 0 0;font-size:13px;color:#475569}",
+      "#jumpin-mid .hero-org a{color:var(--primary,#0891b2);font-weight:700;text-decoration:underline;text-underline-offset:2px}",
       "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer;box-shadow:0 6px 18px rgba(8,145,178,.24)}",
       "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
@@ -620,6 +622,13 @@
         copy.appendChild(el(doc, "span", "hero-eyebrow", groupMeta.name || "Community Carpool"));
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
+        if (!groupMeta.groupId || groupMeta.groupId === "default") {
+          const orgLine = el(doc, "p", "hero-org", "Want a private board for your neighborhood? ");
+          const orgLink = el(doc, "a", "", "Start a Group →");
+          orgLink.href = "/jumpin-admin.html?tab=groups";
+          orgLine.appendChild(orgLink);
+          copy.appendChild(orgLine);
+        }
         hero.appendChild(copy);
         wrap.appendChild(hero);
         if (groupMeta.status && groupMeta.status !== "active") {
