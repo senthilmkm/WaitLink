@@ -296,8 +296,8 @@
       }
       return list;
     });
-    fillTrips(doc, doc.getElementById("jumpin-past"), doc.getElementById("jumpin-past-count"), filterBy(lists && lists.past), function () {
-      return "Completed";
+    fillTrips(doc, doc.getElementById("jumpin-past"), doc.getElementById("jumpin-past-count"), filterBy(lists && lists.past), function (ride) {
+      return ride.status === "open" ? "In progress" : "Completed";
     }, function (ride) { return [detailsAct(ride)]; });
     fillTrips(doc, doc.getElementById("jumpin-cancelled"), doc.getElementById("jumpin-cancelled-count"), filterBy(lists && lists.cancelled), function (ride) {
       return ride.status === "rejected" ? "Declined" : "Cancelled";
