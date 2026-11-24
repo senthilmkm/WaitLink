@@ -334,6 +334,11 @@
       const memN = (lists.members || []).length;
       const audN = lists.audienceCount || 0;
       text(doc.getElementById("jumpin-cleanup-summary"), "Upcoming: " + upN + " · Waiting: " + waitN + " · Past/Cancelled: " + oldN + " · Members: " + memN + " · Audience: " + audN);
+      text(doc.getElementById("jumpin-stat-upcoming"), String(upN));
+      text(doc.getElementById("jumpin-stat-waiting"), String(waitN));
+      if (lists.settings) {
+        text(doc.getElementById("jumpin-stat-sms"), (lists.settings.dailySmsSent || 0) + " / " + (lists.settings.dailySmsCap || 200));
+      }
     }
   }
 
@@ -448,6 +453,8 @@
           });
           groupSelect.hidden = !groups.length;
         }
+        const activeGrp = groups.find(function (g) { return g.groupId === activeGroupId; });
+        text(page.getElementById("jumpin-stat-group"), activeGrp ? activeGrp.name : activeGroupId);
         if (copyBoardBtn) copyBoardBtn.hidden = !groups.length;
         if (!listNode) return;
         listNode.textContent = "";
@@ -645,13 +652,15 @@
         const button = page.getElementById("jumpin-signin");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
         const signedOutInfo = page.getElementById("jumpin-signedout-info");
+        const summaryStrip = page.getElementById("jumpin-summary-strip");
         const navGuide = page.getElementById("jumpin-nav-guide");
         if (button) button.hidden = !!user;
         if (signOut) signOut.hidden = !user;
         if (tabsBar) tabsBar.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
+        if (summaryStrip) summaryStrip.hidden = !user;
         if (navGuide) navGuide.hidden = !(user && String(user.email || "").toLowerCase() === "senthil930@gmail.com");
-        text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with the JumpIn admin account.");
+        text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with Google to manage your group or request a new neighborhood board.");
         if (user) {
           switchTab(activeTab);
           refresh();

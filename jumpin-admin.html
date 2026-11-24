@@ -133,6 +133,15 @@
     .admin-feature { background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); }
     .admin-feature-title { font-family: Outfit, Inter, sans-serif; font-size: 15px; font-weight: 700; color: var(--text-main); margin: 0 0 4px; }
     .admin-feature-desc { font-size: 13px; color: #475569; margin: 0; line-height: 1.45; }
+    .admin-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 14px; }
+    .admin-step { display: flex; align-items: flex-start; gap: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 15px 16px; }
+    .admin-step-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px; background: #ecfeff; color: var(--primary-dark); border: 1px solid #a5f3fc; font-family: Outfit, Inter, sans-serif; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+    .admin-callout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 16px 20px; border-radius: 14px; background: linear-gradient(135deg, #ecfeff 0%, #f0f9ff 100%); border: 1px solid #bae6fd; }
+    .admin-callout a.admin-btn.primary { text-decoration: none; display: inline-flex; align-items: center; }
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 14px; }
+    .admin-stat { background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03); }
+    .admin-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+    .admin-stat-val { font-family: Outfit, Inter, sans-serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
@@ -153,7 +162,7 @@
     <div class="admin-header">
       <div>
         <h1>Community Carpool Console</h1>
-        <p class="lead" id="jumpin-admin-status">Sign in with the JumpIn admin account.</p>
+        <p class="lead" id="jumpin-admin-status">Sign in with Google to manage your group or request a new neighborhood board.</p>
       </div>
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
         <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
@@ -162,19 +171,57 @@
         <button type="button" class="admin-btn" id="jumpin-signout" hidden>Sign out</button>
       </div>
     </div>
-    <div id="jumpin-signedout-info" class="admin-signin-card">
-      <div class="admin-feature">
-        <p class="admin-feature-title">Trips &amp; Broadcasts</p>
-        <p class="admin-feature-desc">Review upcoming, waiting, past, and cancelled rides, inspect passengers, or send SMS announcements.</p>
+    <div id="jumpin-signedout-info">
+      <div class="admin-signin-card">
+        <div class="admin-feature">
+          <p class="admin-feature-title">Trips &amp; Broadcasts</p>
+          <p class="admin-feature-desc">Review upcoming, waiting, past, and cancelled rides, inspect passengers, or send SMS announcements.</p>
+        </div>
+        <div class="admin-feature">
+          <p class="admin-feature-title">Members &amp; Safety</p>
+          <p class="admin-feature-desc">Manage approved community phone numbers, enforce daily SMS caps, and review blocked posters.</p>
+        </div>
+        <div class="admin-feature">
+          <p class="admin-feature-title">Neighborhood Groups</p>
+          <p class="admin-feature-desc">Create isolated community carpool boards, copy shareable board links, and configure group settings.</p>
+        </div>
       </div>
-      <div class="admin-feature">
-        <p class="admin-feature-title">Members &amp; Safety</p>
-        <p class="admin-feature-desc">Manage approved community phone numbers, enforce daily SMS caps, and review blocked posters.</p>
+      <div class="admin-steps" aria-label="How it works">
+        <div class="admin-step">
+          <span class="admin-step-num">1</span>
+          <div>
+            <p class="admin-feature-title">Sign in with Google</p>
+            <p class="admin-feature-desc">Organizers and admins sign in using their Google account above.</p>
+          </div>
+        </div>
+        <div class="admin-step">
+          <span class="admin-step-num">2</span>
+          <div>
+            <p class="admin-feature-title">Request or Open Your Group</p>
+            <p class="admin-feature-desc">Create a neighborhood board (e.g. <code>?g=ballantyne</code>) or manage your existing group.</p>
+          </div>
+        </div>
+        <div class="admin-step">
+          <span class="admin-step-num">3</span>
+          <div>
+            <p class="admin-feature-title">Share Your Board Link</p>
+            <p class="admin-feature-desc">Copy your private link and share it with neighbors via WhatsApp or email.</p>
+          </div>
+        </div>
       </div>
-      <div class="admin-feature">
-        <p class="admin-feature-title">Neighborhood Groups</p>
-        <p class="admin-feature-desc">Create isolated community carpool boards, copy shareable board links, and configure group settings.</p>
+      <div class="admin-callout">
+        <div>
+          <p class="admin-feature-title">Looking to post a ride or grab a seat?</p>
+          <p class="admin-feature-desc">Drivers and riders don&rsquo;t need to sign in here &mdash; go straight to the live Rides Board.</p>
+        </div>
+        <a class="admin-btn primary" href="https://waitlink.app/?s=jumpin">Open Rides Board</a>
       </div>
+    </div>
+    <div id="jumpin-summary-strip" class="admin-stats" hidden>
+      <div class="admin-stat"><div class="admin-stat-label">Active Group</div><div class="admin-stat-val" id="jumpin-stat-group">Default</div></div>
+      <div class="admin-stat"><div class="admin-stat-label">Upcoming Trips</div><div class="admin-stat-val" id="jumpin-stat-upcoming">0</div></div>
+      <div class="admin-stat"><div class="admin-stat-label">Waiting Approval</div><div class="admin-stat-val" id="jumpin-stat-waiting">0</div></div>
+      <div class="admin-stat"><div class="admin-stat-label">SMS Today</div><div class="admin-stat-val" id="jumpin-stat-sms">0</div></div>
     </div>
     <nav class="admin-tabs" id="jumpin-admin-tabs" aria-label="Admin sections" hidden>
       <button type="button" class="admin-tab active" id="jumpin-tab-btn-trips">Trips</button>
