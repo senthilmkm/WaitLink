@@ -1050,6 +1050,39 @@ it("shows the confirmation screen after a saved post and the field error on a ba
     return row.children[0].children[1].children.map(function (p) { return p.textContent; });
   });
   assert.deepStrictEqual(pills, [["Your trip", "Open"], ["Seat booked", "Last seat"], ["Full"]]);
+
+  const nowTs = Date.now();
+  const pagedRides = [];
+  for (let i = 0; i < 15; i++) {
+    pagedRides.push({
+      rideId: "r_pg_" + i,
+      from: "City" + i,
+      to: "Dest" + i,
+      seatsLeft: 2,
+      departAt: i === 0 ? nowTs + 60000 : (i === 1 ? nowTs + core.DAY_MS : (i === 2 ? nowTs + 3 * core.DAY_MS : 0)),
+      when: "Soon"
+    });
+  }
+  addMount.setState(Object.assign(ui.blank(), { mode: "board", rides: pagedRides }));
+  const boardNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; });
+  const pagerNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "pager"; });
+  boardNode.scrollIntoView = function () {};
+  assert.strictEqual(boardNode.children.length, 12);
+  assert.ok(pagerNode.children.some(function (c) { return c.textContent === "Page 1 of 2"; }));
+  pagerNode.children.find(function (c) { return c.textContent === "Next ›"; })._listeners[0]();
+  assert.strictEqual(boardNode.children.length, 3);
+  assert.ok(pagerNode.children.some(function (c) { return c.textContent === "Page 2 of 2"; }));
+  const toolsNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board-tools"; });
+  const filterChips = toolsNode.children[0].children;
+  filterChips[1]._listeners[0](); // Today
+  filterChips[2]._listeners[0](); // Tomorrow
+  filterChips[3]._listeners[0](); // This week
+  const latestTools = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board-tools"; });
+  const searchInp = latestTools.children[1];
+  searchInp.value = "NoSuchRoute";
+  searchInp._listeners[0]();
+  const emptyBox = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children[0];
+  emptyBox.children.find(function (c) { return c.textContent === "Show all rides"; })._listeners[0]();
   view.destroy();
 });
 

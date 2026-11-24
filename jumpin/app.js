@@ -151,7 +151,17 @@
       "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}",
       "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;min-height:36px;cursor:pointer}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
-      "#jumpin-root .board-search{width:100%;max-width:420px;min-height:42px;margin:0 0 14px;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
+      "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
+      "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
+      "#jumpin-mid .filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}",
+      "#jumpin-mid .filter-chip{flex:0 0 auto;min-height:36px;padding:6px 14px;border-radius:999px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--text-muted,#1e293b);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
+      "#jumpin-mid .filter-chip.active{background:var(--primary,#0891b2);color:#fff;border-color:var(--primary,#0891b2)}",
+      "#jumpin-mid .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 0 6px;flex-wrap:wrap}",
+      "#jumpin-mid .pager-btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:14px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .pager-btn:disabled{opacity:.45;cursor:not-allowed;color:var(--text-muted,#64748b)}",
+      "#jumpin-mid .pager-info{font-size:14px;font-weight:600;color:var(--text-muted,#475569);padding:0 6px;white-space:nowrap}",
+      "@media (max-width:700px){#jumpin-root .board-search{max-width:100%}#jumpin-mid .filter-row{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}#jumpin-mid .filter-row::-webkit-scrollbar{display:none}}",
+      "@media (max-width:519px){#jumpin-mid .pager-edge{display:none}}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
       "#jumpin-mid .reserve-head{margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0);font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:17px;font-weight:700;color:var(--text-main,#090d16)}",
@@ -194,6 +204,9 @@
     let stopRide = function () { };
     let supportNote = "";
     let boardQuery = "";
+    let boardDateFilter = "all";
+    let boardPage = 1;
+    const PAGE_SIZE = 12;
 
     function loadProfile() {
       if (!secrets || !secrets.getItem) return { name: "", phone: "" };
@@ -602,20 +615,52 @@
         wrap.appendChild(hero);
         const rides = state.rides || [];
         const list = el(doc, "div", "board");
+        const pager = el(doc, "div", "pager");
+        function matchesDateFilter(ride, filter, nowMs) {
+          if (filter === "all") return true;
+          const ts = Number(ride.departAt || 0);
+          if (!ts) return false;
+          const d = new Date(nowMs);
+          const startToday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+          const startTomorrow = startToday + core.DAY_MS;
+          if (filter === "today") return ts >= startToday && ts < startTomorrow;
+          if (filter === "tomorrow") return ts >= startTomorrow && ts < startTomorrow + core.DAY_MS;
+          return ts >= startToday && ts < startToday + 7 * core.DAY_MS;
+        }
         function paintBoard() {
           list.textContent = "";
+          pager.textContent = "";
           const q = boardQuery.trim().toLowerCase();
-          const shown = q ? rides.filter(function (ride) {
+          const nowMs = Date.now();
+          const shown = rides.filter(function (ride) {
+            if (!matchesDateFilter(ride, boardDateFilter, nowMs)) return false;
+            if (!q) return true;
             return [ride.from, ride.to, ride.driverName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
-          }) : rides;
+          });
           if (!shown.length) {
             const empty = el(doc, "div", "empty");
-            empty.appendChild(el(doc, "p", "route", q ? "No matching rides" : "No rides yet"));
-            empty.appendChild(el(doc, "p", "muted", q ? "Try another route or clear the search." : "Post one trip and it will show up here."));
+            const filtered = !!(q || boardDateFilter !== "all");
+            empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
+            empty.appendChild(el(doc, "p", "muted", filtered ? "Try another date or clear the filter." : "Post one trip and it will show up here."));
+            if (filtered) {
+              const resetBtn = el(doc, "button", "textish", "Show all rides");
+              resetBtn.style.marginTop = "10px";
+              on(resetBtn, "click", function () {
+                boardQuery = "";
+                boardDateFilter = "all";
+                boardPage = 1;
+                draw();
+              });
+              empty.appendChild(resetBtn);
+            }
             list.appendChild(empty);
             return;
           }
-          shown.forEach(function (ride) {
+          const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+          if (boardPage > totalPages) boardPage = totalPages;
+          const start = (boardPage - 1) * PAGE_SIZE;
+          const pageItems = shown.slice(start, start + PAGE_SIZE);
+          pageItems.forEach(function (ride) {
             const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
             const row = el(doc, "button", "row" + (myRole ? " role-" + myRole : ""));
             const head = el(doc, "div", "row-head");
@@ -645,18 +690,53 @@
             on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
             list.appendChild(row);
           });
+          if (totalPages > 1) {
+            function addPageBtn(label, targetPage, disabled, edge) {
+              const btn = el(doc, "button", "pager-btn" + (edge ? " pager-edge" : ""), label);
+              btn.type = "button";
+              if (disabled) btn.disabled = true;
+              on(btn, "click", function () {
+                boardPage = targetPage;
+                paintBoard();
+                if (list.scrollIntoView) list.scrollIntoView({ behavior: "smooth", block: "start" });
+              });
+              pager.appendChild(btn);
+            }
+            addPageBtn("First", 1, boardPage <= 1, true);
+            addPageBtn("‹ Prev", Math.max(1, boardPage - 1), boardPage <= 1, false);
+            pager.appendChild(el(doc, "span", "pager-info", "Page " + boardPage + " of " + totalPages));
+            addPageBtn("Next ›", Math.min(totalPages, boardPage + 1), boardPage >= totalPages, false);
+            addPageBtn("Last", totalPages, boardPage >= totalPages, true);
+          }
         }
-        if (rides.length >= 5) {
-          const search = el(doc, "input", "board-search");
-          search.type = "search";
-          search.placeholder = "Search route or city…";
-          search.value = boardQuery;
-          search.setAttribute("aria-label", "Search rides");
-          on(search, "input", function () { boardQuery = search.value || ""; paintBoard(); });
-          wrap.appendChild(search);
+        if (rides.length) {
+          const tools = el(doc, "div", "board-tools");
+          const filterRow = el(doc, "div", "filter-row");
+          [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]].forEach(function (spec) {
+            const chip = el(doc, "button", "filter-chip" + (boardDateFilter === spec[0] ? " active" : ""), spec[1]);
+            chip.type = "button";
+            on(chip, "click", function () {
+              boardDateFilter = spec[0];
+              boardPage = 1;
+              draw();
+            });
+            filterRow.appendChild(chip);
+          });
+          tools.appendChild(filterRow);
+          if (rides.length >= 5) {
+            const search = el(doc, "input", "board-search");
+            search.type = "search";
+            search.placeholder = "Search route or city…";
+            search.value = boardQuery;
+            search.setAttribute("aria-label", "Search rides");
+            on(search, "input", function () { boardQuery = search.value || ""; boardPage = 1; paintBoard(); });
+            tools.appendChild(search);
+          }
+          wrap.appendChild(tools);
         }
         paintBoard();
         wrap.appendChild(list);
+        wrap.appendChild(pager);
         mid.appendChild(wrap);
       } else if (state.mode === "post") {
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
