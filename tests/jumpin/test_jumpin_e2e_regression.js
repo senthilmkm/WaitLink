@@ -322,6 +322,44 @@ async function run() {
     assert.ok(termsSrc.indexOf("message and data rates may apply") !== -1 && termsSrc.indexOf("offline directly between the driver and riders") !== -1);
   });
 
+  await check("10. Multi-Group Admin Governance, Header Gating & Home Polish Regression", async function () {
+    const superAuth = { token: { email: service.SUPERADMIN_EMAIL } };
+    const created = await handlers.call(db, "carpoolCreateGroup", {
+      name: "Ballantyne",
+      groupId: "ballantyne",
+      contactEmail: "org@example.com",
+      membersOnly: true
+    }, { token: { email: "org@example.com" } }, NOW + 8000);
+    assert.strictEqual(created.ok, true);
+    assert.strictEqual(created.group.status, "pending");
+
+    const approved = await handlers.call(db, "carpoolReviewGroup", { groupId: "ballantyne", decision: "approve" }, superAuth, NOW + 8100);
+    assert.strictEqual(approved.ok, true);
+    assert.strictEqual(approved.status, "active");
+
+    const paused = await handlers.call(db, "carpoolReviewGroup", { groupId: "ballantyne", decision: "suspend" }, superAuth, NOW + 8200);
+    assert.strictEqual(paused.ok, true);
+    assert.strictEqual(paused.status, "suspended");
+
+    const deleted = await handlers.call(db, "carpoolReviewGroup", { groupId: "ballantyne", decision: "reject" }, superAuth, NOW + 8300);
+    assert.strictEqual(deleted.ok, true);
+    assert.strictEqual(deleted.decision, "reject");
+    const listAfter = await handlers.call(db, "carpoolListGroups", {}, superAuth, NOW + 8400);
+    assert.strictEqual((listAfter.groups || []).some(function (g) { return g.groupId === "ballantyne"; }), false);
+
+    const adminHtml = fs.readFileSync(path.join(__dirname, "../../jumpin-admin.html"), "utf8");
+    const adminJs = fs.readFileSync(path.join(__dirname, "../../jumpin-admin.js"), "utf8");
+    const appSrc = fs.readFileSync(path.join(__dirname, "../../jumpin/app.js"), "utf8");
+    const guideHtml = fs.readFileSync(path.join(__dirname, "../../jumpin-guide.html"), "utf8");
+    assert.ok(adminHtml.indexOf("[hidden] { display: none !important; }") !== -1);
+    assert.ok(adminHtml.indexOf("id=\"jumpin-nav-guide\" hidden") !== -1);
+    assert.ok(adminHtml.indexOf("id=\"jumpin-signedout-info\"") !== -1 && adminHtml.indexOf("id=\"jumpin-summary-strip\"") !== -1);
+    assert.ok(adminJs.indexOf("groupsData.isSuperAdmin") !== -1 && adminJs.indexOf("senthil930@gmail.com") === -1);
+    assert.ok(adminJs.indexOf("askConfirm(page, removeLabel + \" group?\"") !== -1);
+    assert.ok(appSrc.indexOf("Start a Group") !== -1 && appSrc.indexOf("Offer a ride") !== -1 && appSrc.indexOf("while (cleanups.length) cleanups.pop()()") !== -1);
+    assert.ok(guideHtml.indexOf("?tab=groups") !== -1);
+  });
+
   console.log("\n📊 RESULTS: " + passed + " PASSED, 0 FAILED\n");
 }
 
