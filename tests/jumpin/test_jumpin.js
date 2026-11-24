@@ -900,6 +900,10 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const posted = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2 }), NOW);
   assert.strictEqual(posted.ok, true);
   assert.ok(posted.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, membersOnly: true, adminEmails: "org@example.com", dailySmsCap: 150 }, NOW);
+  const nonMemberGroupPost = await service.postRide(db, postInput({ groupId: "ballantyne", phone: "5550009999", idempotencyKey: "nm-1" }), NOW);
+  assert.ok(nonMemberGroupPost.error.indexOf("approved community members only") !== -1);
+  await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, membersOnly: false, adminEmails: "org@example.com", dailySmsCap: 150 }, NOW);
   const reserved = await service.reserveSeat(db, { groupId: "ballantyne", rideId: posted.rideId, name: "Sam", phone: "5559876543", seats: 1, idempotencyKey: "bg1" }, NOW + 1000);
   assert.strictEqual(reserved.ok, true);
   assert.ok(reserved.outbox[0].body.indexOf("&g=ballantyne") !== -1);

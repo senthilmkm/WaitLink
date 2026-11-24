@@ -417,6 +417,14 @@
       let groupsData = { isSuperAdmin: false, groups: [], platform: null };
       const groupSelect = page.getElementById("jumpin-group-select");
       const copyBoardBtn = page.getElementById("jumpin-copy-board-link");
+      function boardUrlFor(gid) {
+        return "https://waitlink.app/?s=jumpin" + (gid && gid !== "default" ? "&g=" + encodeURIComponent(gid) : "");
+      }
+      function copyUrl(url, btn) {
+        const clip = win.navigator && win.navigator.clipboard;
+        if (clip && clip.writeText) clip.writeText(url);
+        if (btn) btn.textContent = "Copied!";
+      }
       let activeTab = "trips";
       function switchTab(name) {
         if (name) activeTab = name;
@@ -482,13 +490,16 @@
           top.appendChild(el(page, "div", "admin-route", (g.name || g.groupId) + " (?" + "g=" + g.groupId + ")"));
           top.appendChild(el(page, "span", "admin-badge", g.status || "active"));
           card.appendChild(top);
+          const shareUrl = boardUrlFor(g.groupId);
           card.appendChild(el(page, "div", "admin-meta muted", "Contact: " + (g.contactEmail || "—") + " · Cap: " + (g.dailySmsCap != null ? g.dailySmsCap : 0) + " texts/day"));
+          card.appendChild(el(page, "div", "admin-meta muted", "Share link: " + shareUrl));
           const bar = el(page, "div", "admin-actions");
           bar.appendChild(pillBtn(page, "Open", g.groupId === activeGroupId ? "primary" : "", function () {
             activeGroupId = g.groupId;
             switchTab("trips");
             refresh();
           }));
+          bar.appendChild(pillBtn(page, "Copy Link", "", function (_e, btn) { copyUrl(shareUrl, btn); }));
           if (groupsData.isSuperAdmin && g.groupId !== "default" && api && api.reviewGroup) {
             if (g.status !== "active") {
               bar.appendChild(pillBtn(page, "Approve", "primary", function (_e, btn) {
@@ -598,10 +609,7 @@
         refresh();
       });
       if (copyBoardBtn) copyBoardBtn.addEventListener("click", function () {
-        const url = "https://waitlink.app/?s=jumpin" + (activeGroupId && activeGroupId !== "default" ? "&g=" + encodeURIComponent(activeGroupId) : "");
-        const clip = win.navigator && win.navigator.clipboard;
-        if (clip && clip.writeText) clip.writeText(url);
-        copyBoardBtn.textContent = "Copied!";
+        copyUrl(boardUrlFor(activeGroupId), copyBoardBtn);
       });
       const grpName = page.getElementById("jumpin-group-name");
       const grpSlug = page.getElementById("jumpin-group-slug");

@@ -258,7 +258,9 @@ async function memberError(tx, config, e164, p) {
   const pack = await tx.get(p ? p.memberIndex : "carpool_private/member_index") || { members: [] };
   const hash = core.phoneHash16(e164);
   if (arr(pack.members).some(function (m) { return m.phoneHash === hash; })) return "";
-  return "JumpIn is for approved community members only. Please contact the administrator at " + config.contactEmail + " to be added.";
+  const base = "JumpIn is for approved community members only. Please contact the administrator at " + config.contactEmail + " to be added.";
+  if (!p || p.groupId === "default") return base + " If your neighborhood uses its own group, open the ?g=... link from your organizer.";
+  return base;
 }
 
 function postRide(db, input, now, rng) {
