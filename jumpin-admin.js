@@ -645,10 +645,12 @@
         const button = page.getElementById("jumpin-signin");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
         const signedOutInfo = page.getElementById("jumpin-signedout-info");
+        const navGuide = page.getElementById("jumpin-nav-guide");
         if (button) button.hidden = !!user;
         if (signOut) signOut.hidden = !user;
         if (tabsBar) tabsBar.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
+        if (navGuide) navGuide.hidden = !(user && String(user.email || "").toLowerCase() === "senthil930@gmail.com");
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with the JumpIn admin account.");
         if (user) {
           switchTab(activeTab);
