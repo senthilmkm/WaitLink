@@ -315,6 +315,7 @@ async function run() {
     assert.ok(appSrc.indexOf("form-open") !== -1 && appSrc.indexOf("keepFocusedVisible") !== -1 && appSrc.indexOf("padding-bottom:42vh") !== -1);
     assert.ok(appSrc.indexOf("status-pill") !== -1 && appSrc.indexOf("Your trip") !== -1 && appSrc.indexOf("Seat booked") !== -1 && appSrc.indexOf("Last seat") !== -1);
     assert.ok(appSrc.indexOf("shortTripId") !== -1 && appSrc.indexOf("Trip ID: ") !== -1);
+    assert.ok(appSrc.indexOf("hero-eyebrow") !== -1 && appSrc.indexOf("card-foot") !== -1 && appSrc.indexOf("info-grid") !== -1 && appSrc.indexOf("mini-av") !== -1 && appSrc.indexOf("post-head") !== -1);
     assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1);
   });
 

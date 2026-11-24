@@ -1042,7 +1042,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
     mode: "board",
     rides: [
       { rideId: "r_open", from: "A", to: "B", seatsLeft: 3, when: "Soon" },
-      { rideId: "r_last", from: "C", to: "D", seatsLeft: 1, when: "Soon" },
+      { rideId: "r_last", from: "C", to: "D", seatsLeft: 1, when: "Soon", driverName: "Alex", rideCost: 12 },
       { rideId: "r_full", from: "E", to: "F", seatsLeft: 0, when: "Soon" }
     ]
   }));

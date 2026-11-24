@@ -79,10 +79,11 @@
       "#jumpin-root.app-screen #jumpin-mid{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:24px 20px 28px;overflow:visible}",
       "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:640px;margin:24px auto;padding:28px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
       "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
-      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:30px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.06)}",
+      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:30px 32px;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 58%,#e0f2fe 100%);border:1px solid #bae6fd;border-radius:var(--radius-lg,20px);box-shadow:0 12px 30px rgba(8,145,178,.09)}",
+      "#jumpin-mid .hero-eyebrow{display:inline-block;padding:4px 10px;margin:0 0 10px;border-radius:999px;background:rgba(8,145,178,.12);color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
       "#jumpin-mid .hero .copy{flex:1 1 260px;min-width:0}",
       "#jumpin-mid h1{margin:0 0 8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:36px;line-height:1.15;letter-spacing:-0.03em}",
-      "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer}",
+      "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer;box-shadow:0 6px 18px rgba(8,145,178,.24)}",
       "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
       "@media (min-width:1040px){#jumpin-mid .board{grid-template-columns:repeat(3,minmax(0,1fr))}}",
@@ -112,6 +113,19 @@
       "#jumpin-mid .confirm .action-row{margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;text-align:left;min-height:44px;padding:18px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:0 4px 12px rgba(15,23,42,.05);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}",
       "#jumpin-mid .row:hover{border-color:var(--primary,#0891b2);box-shadow:0 8px 20px rgba(8,145,178,.12);transform:translateY(-1px)}",
+      "#jumpin-mid .row.role-driver{border-left:4px solid #4f46e5;background:linear-gradient(180deg,#ffffff 0%,#f8faff 100%)}",
+      "#jumpin-mid .row.role-rider{border-left:4px solid #059669;background:linear-gradient(180deg,#ffffff 0%,#f4fbf8 100%)}",
+      "#jumpin-mid .card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;width:100%;margin-top:6px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:13px;color:var(--text-muted,#334155)}",
+      "#jumpin-mid .foot-driver{display:inline-flex;align-items:center;gap:7px;font-weight:600;min-width:0}",
+      "#jumpin-mid .foot-right{display:inline-flex;align-items:center;gap:8px;font-weight:600;margin-left:auto}",
+      "#jumpin-mid .cost-tag{padding:2px 8px;border-radius:999px;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;font-weight:700;font-size:12px}",
+      "#jumpin-mid .mini-av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:rgba(8,145,178,.14);color:#0e7490;font-size:12px;font-weight:700;flex-shrink:0}",
+      "#jumpin-mid .info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 14px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px}",
+      "#jumpin-mid .info-tile{min-width:0}",
+      "#jumpin-mid .info-k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin:0 0 2px}",
+      "#jumpin-mid .info-v{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
+      "#jumpin-mid .post-head{margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0}",
+      "#jumpin-mid .post-head h1{font-size:26px;margin:0}",
       "#jumpin-mid .row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%}",
       "#jumpin-mid .pill-group{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 0 auto}",
       "#jumpin-mid .status-pill{flex:0 0 auto;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.3;border:1px solid transparent}",
@@ -126,7 +140,7 @@
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:18px 16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px;margin:14px 0 6px;padding-top:14px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
       "@media (max-width:480px){#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
-      "@media (max-width:360px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}}",
+      "@media (max-width:360px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}#jumpin-mid .info-grid{grid-template-columns:1fr}}",
       "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
       "#jumpin-sheet p{margin:0 0 12px;font-weight:600}",
       "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
@@ -314,24 +328,37 @@
       if (current.notice) card.appendChild(el(doc, "h1", "", current.notice));
       card.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
       const whenText = (current.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
-      card.appendChild(el(doc, "p", "muted", whenText));
-      if (ride.seatsLeft != null) {
-        card.appendChild(el(doc, "p", "muted", seatsLabel(ride.seatsLeft)));
+      const grid = el(doc, "div", "info-grid");
+      function addTile(k, v) {
+        const tile = el(doc, "div", "info-tile");
+        tile.appendChild(el(doc, "div", "info-k", k));
+        tile.appendChild(el(doc, "div", "info-v", v));
+        grid.appendChild(tile);
       }
-      if (ride.rideCost > 0) {
-        card.appendChild(el(doc, "p", "muted", "Ride cost: " + core.formatCost(ride.rideCost) + " / seat (paid directly to driver)"));
-      }
-      if (ride.note) card.appendChild(el(doc, "p", "muted", ride.note));
-      if (ride.driverName) card.appendChild(el(doc, "p", "muted", "Driver: " + ride.driverName));
+      addTile("Departure", whenText);
+      if (ride.seatsLeft != null) addTile("Availability", seatsLabel(ride.seatsLeft));
+      if (ride.rideCost > 0) addTile("Ride cost", core.formatCost(ride.rideCost) + " / seat (direct)");
       const tripCode = shortTripId(ride.rideId);
-      if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
+      if (tripCode) addTile("Trip ID", tripCode);
+      if (ride.note) addTile("Pickup / Note", ride.note);
+      card.appendChild(grid);
+      if (ride.driverName) {
+        const dRow = el(doc, "div", "rider-row");
+        dRow.appendChild(el(doc, "span", "mini-av", ride.driverName.charAt(0).toUpperCase()));
+        dRow.appendChild(el(doc, "span", "", "Driver: " + ride.driverName));
+        card.appendChild(dRow);
+      }
       if (ride.riders && ride.riders.length) {
         const totalReserved = ride.riders.reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
         card.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
         ride.riders.forEach(function (rider) {
           const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : "";
           const dropSuffix = rider.dropoff ? " · Drop off: " + rider.dropoff : "";
-          card.appendChild(el(doc, "div", "rider-row", (rider.name || "Passenger") + seatSuffix + dropSuffix));
+          const rName = rider.name || "Passenger";
+          const rRow = el(doc, "div", "rider-row");
+          rRow.appendChild(el(doc, "span", "mini-av", rName.charAt(0).toUpperCase()));
+          rRow.appendChild(el(doc, "span", "", rName + seatSuffix + dropSuffix));
+          card.appendChild(rRow);
         });
       }
       if (ride.messages && ride.messages.length) {
@@ -567,6 +594,7 @@
         const wrap = el(doc, "div", "wrap");
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
+        copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No payment."));
         hero.appendChild(copy);
@@ -587,11 +615,11 @@
             return;
           }
           shown.forEach(function (ride) {
-            const row = el(doc, "button", "row");
+            const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
+            const row = el(doc, "button", "row" + (myRole ? " role-" + myRole : ""));
             const head = el(doc, "div", "row-head");
             head.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
             const pills = el(doc, "span", "pill-group");
-            const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
             if (myRole === "driver" || myRole === "rider") {
               pills.appendChild(el(doc, "span", "status-pill " + myRole, myRole === "driver" ? "Your trip" : "Seat booked"));
             }
@@ -601,8 +629,18 @@
             pills.appendChild(el(doc, "span", "status-pill " + pillKind, pillText));
             head.appendChild(pills);
             row.appendChild(head);
-            const costPart = ride.rideCost > 0 ? " · " + core.formatCost(ride.rideCost) + "/seat" : "";
-            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "") + " · " + (ride.seats || seatsLabel(ride.seatsLeft)) + costPart));
+            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "")));
+            const foot = el(doc, "div", "card-foot");
+            const dName = ride.driverName || "Driver";
+            const dWrap = el(doc, "span", "foot-driver");
+            dWrap.appendChild(el(doc, "span", "mini-av", dName.charAt(0).toUpperCase()));
+            dWrap.appendChild(el(doc, "span", "", dName));
+            foot.appendChild(dWrap);
+            const right = el(doc, "span", "foot-right");
+            right.appendChild(el(doc, "span", "", ride.seats || seatsLabel(ride.seatsLeft)));
+            if (ride.rideCost > 0) right.appendChild(el(doc, "span", "cost-tag", core.formatCost(ride.rideCost) + "/seat"));
+            foot.appendChild(right);
+            row.appendChild(foot);
             on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
             list.appendChild(row);
           });
@@ -621,6 +659,10 @@
         mid.appendChild(wrap);
       } else if (state.mode === "post") {
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
+        const postHead = el(doc, "div", "post-head");
+        postHead.appendChild(el(doc, "span", "hero-eyebrow", "New Trip"));
+        postHead.appendChild(el(doc, "h1", "", "Post a ride"));
+        mid.appendChild(postHead);
         const fields = [
           ["name", "Your name", "text", "Alex"],
           ["phone", "Phone", "tel", "555 234 5678"],
