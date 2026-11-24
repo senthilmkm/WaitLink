@@ -68,11 +68,17 @@
       .saas-top-inner { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
       main { padding: 16px 12px 28px; }
       section, .admin-header { padding: 16px; border-radius: 14px; }
-      .admin-tabs { width: 100%; }
-      .admin-tab { flex: 1 1 auto; text-align: center; padding: 6px 10px; font-size: 13px; }
+      .admin-tabs { width: 100%; box-sizing: border-box; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .admin-tabs::-webkit-scrollbar, .admin-filter-row::-webkit-scrollbar { display: none; }
+      .admin-tab { flex: 0 0 auto; white-space: nowrap; text-align: center; padding: 6px 12px; font-size: 13px; }
+      .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .admin-filter-row { display: flex; flex-wrap: nowrap; gap: 6px; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+      .admin-filter-row .admin-btn { flex: 0 0 auto; }
+      .admin-toolbar input { flex: 1 1 0; min-width: 0; }
       .saas-foot-inner { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); }
       .saas-foot-inner .spacer { margin-left: 0; width: 100%; }
     }
+    .admin-filter-row { display: contents; }
     .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
     .admin-toolbar input { flex: 1 1 200px; min-height: 38px; margin-top: 0; font-size: 14px; }
     .admin-count { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #cbd5e1; color: var(--text-main); font-size: 12px; font-weight: 700; vertical-align: middle; }
@@ -234,10 +240,12 @@
     <div id="jumpin-tab-trips" hidden>
       <section>
         <div class="admin-toolbar">
-          <button type="button" class="admin-btn primary" id="jumpin-filter-upcoming">Upcoming<span class="admin-count" id="jumpin-upcoming-count"></span></button>
-          <button type="button" class="admin-btn" id="jumpin-filter-pending">Waiting<span class="admin-count" id="jumpin-pending-count"></span></button>
-          <button type="button" class="admin-btn" id="jumpin-filter-past">Past<span class="admin-count" id="jumpin-past-count"></span></button>
-          <button type="button" class="admin-btn" id="jumpin-filter-cancelled">Cancelled<span class="admin-count" id="jumpin-cancelled-count"></span></button>
+          <div class="admin-filter-row">
+            <button type="button" class="admin-btn primary" id="jumpin-filter-upcoming">Upcoming<span class="admin-count" id="jumpin-upcoming-count"></span></button>
+            <button type="button" class="admin-btn" id="jumpin-filter-pending">Waiting<span class="admin-count" id="jumpin-pending-count"></span></button>
+            <button type="button" class="admin-btn" id="jumpin-filter-past">Past<span class="admin-count" id="jumpin-past-count"></span></button>
+            <button type="button" class="admin-btn" id="jumpin-filter-cancelled">Cancelled<span class="admin-count" id="jumpin-cancelled-count"></span></button>
+          </div>
           <input id="jumpin-search" type="search" placeholder="Search route, driver, or last 4" aria-label="Search trips">
           <button type="button" class="admin-btn" id="jumpin-open-broadcast">Broadcast</button>
         </div>
