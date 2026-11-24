@@ -456,6 +456,8 @@
         const activeGrp = groups.find(function (g) { return g.groupId === activeGroupId; });
         text(page.getElementById("jumpin-stat-group"), activeGrp ? activeGrp.name : activeGroupId);
         if (copyBoardBtn) copyBoardBtn.hidden = !groups.length;
+        const navGuide = page.getElementById("jumpin-nav-guide");
+        if (navGuide) navGuide.hidden = !groupsData.isSuperAdmin;
         if (!listNode) return;
         listNode.textContent = "";
         if (!groups.length) {
@@ -659,12 +661,13 @@
         if (tabsBar) tabsBar.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
         if (summaryStrip) summaryStrip.hidden = !user;
-        if (navGuide) navGuide.hidden = !(user && String(user.email || "").toLowerCase() === "senthil930@gmail.com");
+        if (navGuide && !user) navGuide.hidden = true;
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with Google to manage your group or request a new neighborhood board.");
         if (user) {
           switchTab(activeTab);
           refresh();
         } else {
+          groupsData = { isSuperAdmin: false, groups: [], platform: null };
           switchTab("");
           if (groupSelect) groupSelect.hidden = true;
           if (copyBoardBtn) copyBoardBtn.hidden = true;
