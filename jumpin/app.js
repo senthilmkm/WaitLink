@@ -206,6 +206,7 @@
     let stopRide = function () { };
     let supportNote = "";
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
+    let platformNotice = { platformEnabled: true, maintenanceMessage: "" };
     let boardQuery = "";
     let boardDateFilter = "all";
     let boardPage = 1;
@@ -622,6 +623,13 @@
           notice.appendChild(el(doc, "p", "route", groupMeta.status === "pending" ? "Waiting for approval" : (groupMeta.status === "suspended" ? "Group paused" : "Group not found")));
           notice.appendChild(el(doc, "p", "muted", groupMeta.status === "pending" ? "This community group is waiting for platform approval before rides can be posted." : "Check the group link with your community organizer."));
           wrap.appendChild(notice);
+        }
+        if (platformNotice.platformEnabled === false || platformNotice.maintenanceMessage) {
+          const banner = el(doc, "div", "support-card");
+          banner.style.margin = "0 0 14px";
+          banner.appendChild(el(doc, "p", "support-title", platformNotice.platformEnabled === false ? "Maintenance Mode" : "Platform Notice"));
+          banner.appendChild(el(doc, "p", "support-sub", platformNotice.maintenanceMessage || "JumpIn is temporarily paused for maintenance."));
+          wrap.appendChild(banner);
         }
         const rides = state.rides || [];
         const list = el(doc, "div", "board");
@@ -1141,6 +1149,12 @@
         cleanups.push(cloud.watchSupportNote(function (note) {
           supportNote = note || "";
           if (state.mode === "board" || state.mode === "posted" || state.mode === "reserved") draw();
+        }));
+      }
+      if (cloud.watchPlatformNotice) {
+        cleanups.push(cloud.watchPlatformNotice(function (notice) {
+          platformNotice = notice || { platformEnabled: true, maintenanceMessage: "" };
+          if (state.mode === "board") draw();
         }));
       }
       const params = new URLSearchParams((win.location && win.location.search) || "");

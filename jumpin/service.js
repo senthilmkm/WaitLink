@@ -130,7 +130,16 @@ async function loadPlatformConfig(tx, now) {
   const stored = await tx.get("carpool_platform/config") || {};
   const cap = Number.isInteger(Number(stored.platformDailySmsCap)) ? Math.max(0, Number(stored.platformDailySmsCap)) : 2000;
   const budget = core.smsBudget({ dailySmsCap: cap, dailySmsDay: stored.dailySmsDay, dailySmsSent: stored.dailySmsSent }, now);
-  return { platformDailySmsCap: cap, dailySmsDay: budget.day, dailySmsSent: budget.sent };
+  const supportNote = core.collapse(core.stripTags(stored.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE;
+  const maintenanceMessage = core.collapse(core.stripTags(stored.maintenanceMessage || "")).slice(0, 200);
+  return {
+    platformEnabled: stored.platformEnabled !== false,
+    maintenanceMessage: maintenanceMessage,
+    platformSupportNote: supportNote,
+    platformDailySmsCap: cap,
+    dailySmsDay: budget.day,
+    dailySmsSent: budget.sent
+  };
 }
 
 function canSendBoth(config, platform, now) {
@@ -267,6 +276,7 @@ function postRide(db, input, now, rng) {
     if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
@@ -351,6 +361,7 @@ function reserveSeat(db, input, now, rng) {
     if (gErr) return { ok: false, error: gErr };
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
@@ -1257,12 +1268,13 @@ function saveAdminConfig(db, email, input, now) {
   if (!cleanEmail) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf(input));
+    const platform = await loadPlatformConfig(tx, now || Date.now());
     const prev = await loadConfig(tx, now || Date.now(), p);
     if (!requireAdmin(cleanEmail, prev)) return { ok: false, error: "This page is not available." };
     const next = core.clampConfig(input);
     if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default") {
       if (next.dailySmsCap > prev.dailySmsCap) next.dailySmsCap = prev.dailySmsCap;
-      next.supportNote = prev.supportNote || PLATFORM_SUPPORT_NOTE;
+      next.supportNote = prev.supportNote || platform.platformSupportNote;
     }
     next.dailySmsSent = prev.dailySmsSent;
     next.dailySmsDay = prev.dailySmsDay;
@@ -1380,10 +1392,11 @@ function createGroup(db, email, input, now) {
     if (await tx.get(p.groupMeta) || groups.some(function (g) { return g.groupId === gid; })) {
       return { ok: false, field: "groupId", error: "That group link is already taken. Try another." };
     }
+    const platform = await loadPlatformConfig(tx, clock);
     const status = isSuper ? "active" : "pending";
     const enabled = isSuper;
     const cap = isSuper ? 100 : 0;
-    const supportNote = isSuper ? (core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE) : PLATFORM_SUPPORT_NOTE;
+    const supportNote = isSuper ? (core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80) || platform.platformSupportNote) : platform.platformSupportNote;
     const cfg = core.clampConfig({
       enabled: enabled,
       membersOnly: body.membersOnly !== false,
@@ -1495,6 +1508,36 @@ function reviewGroup(db, email, input, now) {
   });
 }
 
+function savePlatformConfig(db, email, input, now) {
+  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const body = input || {};
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const prev = await loadPlatformConfig(tx, clock);
+    const nextCap = body.platformDailySmsCap != null ? Math.max(0, Math.min(10000, Math.round(Number(body.platformDailySmsCap) || 0))) : prev.platformDailySmsCap;
+    const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
+    const nextBanner = body.maintenanceMessage !== undefined ? core.collapse(core.stripTags(body.maintenanceMessage || "")).slice(0, 200) : prev.maintenanceMessage;
+    const nextSupport = body.platformSupportNote !== undefined
+      ? (core.collapse(core.stripTags(body.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE)
+      : prev.platformSupportNote;
+    const next = {
+      platformEnabled: nextEnabled,
+      maintenanceMessage: nextBanner,
+      platformSupportNote: nextSupport,
+      platformDailySmsCap: nextCap,
+      dailySmsDay: prev.dailySmsDay,
+      dailySmsSent: prev.dailySmsSent
+    };
+    tx.set("carpool_platform/config", next);
+    tx.set("carpool_platform/public_notice", {
+      platformEnabled: nextEnabled,
+      maintenanceMessage: nextBanner,
+      updatedAt: clock
+    });
+    return { ok: true, platform: next };
+  });
+}
+
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
   GENERIC_LINK: GENERIC_LINK,
@@ -1522,5 +1565,6 @@ module.exports = {
   manageUrl: manageUrl,
   createGroup: createGroup,
   listGroups: listGroups,
-  reviewGroup: reviewGroup
+  reviewGroup: reviewGroup,
+  savePlatformConfig: savePlatformConfig
 };

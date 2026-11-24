@@ -357,6 +357,8 @@ async function run() {
     assert.ok(adminJs.indexOf("groupsData.isSuperAdmin") !== -1 && adminJs.indexOf("senthil930@gmail.com") === -1);
     assert.ok(adminJs.indexOf("askConfirm(page, removeLabel + \" group?\"") !== -1);
     assert.ok(appSrc.indexOf("Start a Group") !== -1 && appSrc.indexOf("Offer a ride") !== -1 && appSrc.indexOf("while (cleanups.length) cleanups.pop()()") !== -1);
+    assert.ok(appSrc.indexOf("watchPlatformNotice") !== -1 && appSrc.indexOf("Maintenance Mode") !== -1);
+    assert.ok(adminHtml.indexOf("id=\"jumpin-platform-settings\"") !== -1 && adminJs.indexOf("savePlatformConfig") !== -1);
     assert.ok(guideHtml.indexOf("?tab=groups") !== -1);
   });
 

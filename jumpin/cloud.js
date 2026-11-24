@@ -233,6 +233,18 @@
     return watchGroup(win, function (meta) { onNote((meta && meta.supportNote) || ""); }, groupId);
   }
 
+  function watchPlatformNotice(win, onNotice) {
+    const firebase = ensureFirebase(win);
+    if (!firebase || !firebase.firestore) return function () {};
+    return firebase.firestore().doc("carpool_platform/public_notice").onSnapshot(function (snap) {
+      const data = snap.exists ? snap.data() : null;
+      onNotice({
+        platformEnabled: !data || data.platformEnabled !== false,
+        maintenanceMessage: (data && typeof data.maintenanceMessage === "string") ? data.maintenanceMessage : ""
+      });
+    }, function () { onNotice({ platformEnabled: true, maintenanceMessage: "" }); });
+  }
+
   function attach(win) {
     let storage = null;
     try { storage = win.localStorage; } catch (err) { storage = null; }
@@ -305,11 +317,13 @@
       createGroup: function (body) { return call("carpoolCreateGroup", body); },
       listGroups: function () { return call("carpoolListGroups", {}); },
       reviewGroup: function (body) { return call("carpoolReviewGroup", body); },
+      savePlatformConfig: function (body) { return call("carpoolAdminSavePlatformConfig", body); },
       groupId: gid,
       watchBoard: function (onChange) { return watchBoard(win, onChange, gid); },
       watchRide: function (rideId, onChange) { return watchRide(win, rideId, onChange, gid); },
       watchGroup: function (onMeta) { return watchGroup(win, onMeta, gid); },
       watchSupportNote: function (onNote) { return watchSupportNote(win, onNote, gid); },
+      watchPlatformNotice: function (onNotice) { return watchPlatformNotice(win, onNotice); },
       tripSecret: function (rideId) { return tripSecret(storage, rideId); },
       seatSecretFor: function (ride) { return seatSecretFor(storage, ride); },
       seatInfoFor: function (ride) {

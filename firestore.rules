@@ -390,7 +390,8 @@ service cloud.firestore {
       }
     }
     match /carpool_platform/{docId} {
-      allow read, write: if false;
+      allow read: if docId == "public_notice";
+      allow write: if false;
     }
 
     // Default deny all other collections

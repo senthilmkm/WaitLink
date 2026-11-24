@@ -972,6 +972,25 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const cappedDb = service.createMemoryDb(Object.assign(seed(), { "carpool_platform/config": { platformDailySmsCap: 0, dailySmsDay: core.utcDay(NOW), dailySmsSent: 0 } }));
   const cappedPost = await service.postRide(cappedDb, postInput(), NOW);
   assert.strictEqual(cappedPost.textSent, false);
+
+  assert.strictEqual((await service.savePlatformConfig(db, "nobody@example.com", { platformEnabled: false }, NOW)).ok, false);
+  const platSaved = await handlers.call(db, "carpoolAdminSavePlatformConfig", {
+    platformEnabled: false,
+    platformDailySmsCap: 1500,
+    platformSupportNote: "Venmo:@jumpin-help",
+    maintenanceMessage: "Scheduled maintenance tonight"
+  }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW);
+  assert.strictEqual(platSaved.ok, true);
+  assert.strictEqual(platSaved.platform.platformEnabled, false);
+  assert.strictEqual((await service.postRide(db, postInput(), NOW)).error, "Scheduled maintenance tonight");
+  assert.strictEqual((await service.reserveSeat(db, { rideId: posted2.rideId, name: "Sam", phone: "5559876543" }, NOW)).error, "Scheduled maintenance tonight");
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { maintenanceMessage: "", platformSupportNote: "" }, NOW);
+  assert.strictEqual((await service.postRide(db, postInput(), NOW)).error, "JumpIn is temporarily paused for maintenance.");
+  assert.strictEqual((await service.reserveSeat(db, { rideId: posted2.rideId, name: "Sam", phone: "5559876543" }, NOW)).error, "JumpIn is temporarily paused for maintenance.");
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformDailySmsCap: 0 });
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL);
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformEnabled: true, maintenanceMessage: "", platformDailySmsCap: 2000 }, NOW);
+
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
 });

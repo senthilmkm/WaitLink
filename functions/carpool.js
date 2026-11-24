@@ -122,6 +122,7 @@ exports.carpoolAdminBroadcast = staffCall("carpoolAdminBroadcast");
 exports.carpoolCreateGroup = staffCall("carpoolCreateGroup");
 exports.carpoolListGroups = staffCall("carpoolListGroups");
 exports.carpoolReviewGroup = staffCall("carpoolReviewGroup");
+exports.carpoolAdminSavePlatformConfig = staffCall("carpoolAdminSavePlatformConfig");
 exports.carpoolCompleteTrips = onSchedule("every 5 minutes", async function () {
   const db = database();
   const result = await handlers.call(db, "carpoolCompleteTrips", {}, null, Date.now());

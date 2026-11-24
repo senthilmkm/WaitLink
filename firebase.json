@@ -160,6 +160,10 @@
         "function": { "functionId": "carpoolReviewGroup", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolAdminSavePlatformConfig",
+        "function": { "functionId": "carpoolAdminSavePlatformConfig", "region": "us-central1" }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

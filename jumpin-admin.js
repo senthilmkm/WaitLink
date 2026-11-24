@@ -443,6 +443,18 @@
         if (platNode && groupsData.platform) {
           platNode.textContent = "Platform SMS today: " + (groupsData.platform.dailySmsSent || 0) + " / " + (groupsData.platform.platformDailySmsCap || 2000);
         }
+        const platCard = page.getElementById("jumpin-platform-settings");
+        if (platCard) platCard.hidden = !groupsData.isSuperAdmin;
+        if (groupsData.isSuperAdmin && groupsData.platform) {
+          const pEn = page.getElementById("jumpin-plat-enabled");
+          const pCap = page.getElementById("jumpin-plat-cap");
+          const pSup = page.getElementById("jumpin-plat-support");
+          const pBan = page.getElementById("jumpin-plat-banner");
+          if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
+          if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
+          if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
+          if (pBan) pBan.value = groupsData.platform.maintenanceMessage || "";
+        }
         if (groupSelect) {
           groupSelect.textContent = "";
           groups.forEach(function (g) {
@@ -683,6 +695,29 @@
       });
       const save = page.getElementById("jumpin-save");
       if (save) save.addEventListener("click", function () { withBusy(page, save, "Saving…", function () { return saveSettings(firebase, page, api, refresh, activeGroupId); }); });
+      const platSave = page.getElementById("jumpin-plat-save");
+      if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
+        const pEn = page.getElementById("jumpin-plat-enabled");
+        const pCap = page.getElementById("jumpin-plat-cap");
+        const pSup = page.getElementById("jumpin-plat-support");
+        const pBan = page.getElementById("jumpin-plat-banner");
+        withBusy(page, platSave, "Saving…", function () {
+          return api.savePlatformConfig({
+            platformEnabled: !pEn || pEn.value !== "no",
+            platformDailySmsCap: pCap ? Number(pCap.value || 0) : 2000,
+            platformSupportNote: pSup ? pSup.value : "",
+            maintenanceMessage: pBan ? pBan.value : ""
+          }).then(function (res) {
+            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not save platform settings." });
+            else {
+              state = admin.reduce(state, { type: "clear" });
+              text(page.getElementById("jumpin-admin-status"), "Platform settings saved.");
+              return refresh();
+            }
+            paint();
+          });
+        });
+      });
       const addMember = page.getElementById("jumpin-member-add");
       if (addMember && api && api.setMembers) addMember.addEventListener("click", function () {
         const nameNode = page.getElementById("jumpin-member-name");

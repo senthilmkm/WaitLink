@@ -392,6 +392,22 @@
         </div>
         <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
       </section>
+      <section id="jumpin-platform-settings" hidden>
+        <h2>Platform Settings</h2>
+        <p class="quiet" style="margin-bottom:12px;">Global controls across all JumpIn community groups (Platform Admin only).</p>
+        <div class="admin-settings-grid">
+          <label>Platform is open
+            <select id="jumpin-plat-enabled" aria-label="Platform is open">
+              <option value="yes">Yes (accepting rides &amp; seats)</option>
+              <option value="no">No (maintenance pause)</option>
+            </select>
+          </label>
+          <label>Platform Daily SMS Cap<input id="jumpin-plat-cap" inputmode="numeric" value="2000"></label>
+          <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
+          <label>Home Maintenance / Banner Message (optional)<input id="jumpin-plat-banner" type="text" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></label>
+        </div>
+        <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
+      </section>
       <section>
         <h2>Manage Groups</h2>
         <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
