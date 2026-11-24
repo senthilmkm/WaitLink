@@ -308,6 +308,16 @@ async function run() {
     });
   });
 
+  await check("9. UI Enhancements Regression: two-step reserve, non-sticky form focus, status/role pills, and short Trip ID", function () {
+    const appSrc = fs.readFileSync(path.join(__dirname, "../../jumpin/app.js"), "utf8");
+    const adminSrc = fs.readFileSync(path.join(__dirname, "../../jumpin-admin.js"), "utf8");
+    assert.ok(appSrc.indexOf("reserveOpen: false") !== -1 && appSrc.indexOf("Reserve your seat") !== -1 && appSrc.indexOf("reserveDraft") !== -1);
+    assert.ok(appSrc.indexOf("form-open") !== -1 && appSrc.indexOf("keepFocusedVisible") !== -1 && appSrc.indexOf("padding-bottom:42vh") !== -1);
+    assert.ok(appSrc.indexOf("status-pill") !== -1 && appSrc.indexOf("Your trip") !== -1 && appSrc.indexOf("Seat booked") !== -1 && appSrc.indexOf("Last seat") !== -1);
+    assert.ok(appSrc.indexOf("shortTripId") !== -1 && appSrc.indexOf("Trip ID: ") !== -1);
+    assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1);
+  });
+
   console.log("\n📊 RESULTS: " + passed + " PASSED, 0 FAILED\n");
 }
 
