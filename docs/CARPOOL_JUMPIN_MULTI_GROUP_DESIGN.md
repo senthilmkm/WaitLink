@@ -61,7 +61,7 @@ flowchart LR
    - Note: While `pending`, they can already pre-load their **Members** list and configure **Settings**, while public ride posting & SMS remain paused until SuperAdmin approval.
 
 ### 3.2 Platform SuperAdmin Flow
-1. SuperAdmin (`senthil930@gmail.com`) sees a **Platform Groups** tab in `jumpin-admin.html` with a pending count badge.
+1. SuperAdmin (`senthil930@gmail.com`) sees a **Groups** tab (`jumpin-admin.html?tab=platform`) with a pending count badge.
 2. Each group card/row displays:
    - Group Name & slug (`ballantyne`)
    - Organizer email & contact email
@@ -69,8 +69,10 @@ flowchart LR
    - Today's SMS used / Daily Cap (e.g., `14 / 100`) and active rides count
 3. Actions:
    - **Approve** (1-click, sets `status: "active"`, `enabled: true`, `dailySmsCap: 100`)
-   - **Edit Cap** (adjust `dailySmsCap`, e.g., `50`, `100`, `250`)
+   - **Reject & Delete** (1-click cleanup for unwanted `pending` requests)
+   - **Edit Cap** (adjust `dailySmsCap`, e.g., `50`, `100`, `250`; only SuperAdmin can raise a group's cap above its approved limit)
    - **Suspend / Re-enable** (pauses group posting & SMS immediately if abused)
+   - **Manage Any Group's Admins:** Because `SUPERADMIN_EMAIL` has admin access to every group, SuperAdmin can select any group and add/remove additional admin emails under **Settings → `Admin sign-in emails`** (synced atomically to `carpool_platform/groups_index`).
 
 ### 3.3 Driver & Rider Flow (Per Neighborhood)
 - **Header:** Displays `WaitLink · <Group Name>` (e.g., `WaitLink · Ballantyne Neighbors`) so residents always know which group they are in.
@@ -196,9 +198,14 @@ Add `/api/carpoolCreateGroup`, `/api/carpoolListGroups`, and `/api/carpoolReview
 
 ## 7. Race Conditions & Guardrails
 
-1. **Slug Collision on Creation:** `carpoolCreateGroup` reads `carpool_groups/{groupId}` inside `db.runTransaction`. If it already exists, it returns `{ ok: false, field: "groupId", error: "That group link is already taken. Try another." }`.
-2. **Global SMS Budget Protection:** Both `carpool_groups/{groupId}/private/config` and `carpool_platform/config` track `dailySmsDay` / `dailySmsSent`. Every SMS-sending transaction checks **both** caps before queuing any message.
-3. **Config Sync Consistency:** `carpoolAdminSaveConfig` and `carpoolReviewGroup` update both `carpool_groups/{groupId}/private/config`, `carpool_groups/{groupId}`, and `carpool_platform/groups_index` inside the same atomic transaction.
+1. **Self-Serve Anti-Spam Limits (`carpoolCreateGroup`):**
+   - Requires authenticated Google Sign-In (`Firebase Auth`).
+   - Non-SuperAdmin accounts are capped at **1 `pending` group** and **3 groups total** (SuperAdmin `senthil930@gmail.com` is exempt and can create groups directly as `active`).
+   - Global pending queue cap (e.g., max `50` unreviewed pending requests) prevents coordinated spam floods, and SuperAdmin can **Reject & Delete** unwanted pending entries in 1 click.
+2. **Slug Collision on Creation:** `carpoolCreateGroup` reads `carpool_groups/{groupId}` inside `db.runTransaction`. If it already exists, it returns `{ ok: false, field: "groupId", error: "That group link is already taken. Try another." }`.
+3. **Global SMS Budget Protection:** Both `carpool_groups/{groupId}/private/config` and `carpool_platform/config` track `dailySmsDay` / `dailySmsSent`. Every SMS-sending transaction checks **both** caps before queuing any message, and only SuperAdmin can raise a group's `dailySmsCap`.
+4. **Config & Admin Sync Consistency:** `carpoolAdminSaveConfig` and `carpoolReviewGroup` update `carpool_groups/{groupId}/private/config`, `carpool_groups/{groupId}`, and `carpool_platform/groups_index` (including `adminEmails`) inside the same atomic transaction.
+5. **Zero-Breakage `"default"` Routing:** Keeping `groupId === "default"` mapped to existing `carpool_public/root/rides`, `carpool_private/*`, and `settings/carpool_config` preserves 100% of live trips, SMS links, and admin settings with zero migration risk.
 
 ---
 
