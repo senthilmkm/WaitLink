@@ -653,17 +653,22 @@
             empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
             empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
             empty.appendChild(el(doc, "p", "muted", filtered ? "Try another date or clear the filter." : "Post one trip and it will show up here."));
-            if (filtered) {
-              const resetBtn = el(doc, "button", "textish", "Show all rides");
-              resetBtn.style.marginTop = "12px";
-              on(resetBtn, "click", function () {
+            const emptyBtn = el(doc, "button", "textish", filtered ? "Show all rides" : "Offer a ride");
+            emptyBtn.style.marginTop = "12px";
+            on(emptyBtn, "click", function () {
+              if (filtered) {
                 boardQuery = "";
                 boardDateFilter = "all";
                 boardPage = 1;
                 draw();
-              });
-              empty.appendChild(resetBtn);
-            }
+              } else {
+                const kept = state.rides || [];
+                state = ui.reduce(state, { type: "post" });
+                state.rides = kept;
+                draw();
+              }
+            });
+            empty.appendChild(emptyBtn);
             list.appendChild(empty);
             return;
           }
@@ -1187,6 +1192,9 @@
     const rides = el(doc, "a", "", "Rides");
     rides.href = homeHref;
     nav.appendChild(rides);
+    const startGroup = el(doc, "a", "", "Start a Group");
+    startGroup.href = "/jumpin-admin.html?tab=groups";
+    nav.appendChild(startGroup);
     bar.appendChild(link);
     bar.appendChild(nav);
     top.appendChild(bar);
