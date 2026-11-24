@@ -71,19 +71,21 @@
       "#jumpin-top nav{margin-left:auto;display:flex;align-items:center;gap:16px}",
       "#jumpin-top nav a{color:var(--text-muted,#1e293b);font-weight:600}",
       "#jumpin-top .title{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px}",
-      "#jumpin-root.app-screen{width:100%;background:var(--bg-dark,#f1f5f9)}",
+      "#jumpin-root.app-screen{width:100%;height:auto !important;min-height:100dvh;overflow:visible !important;background:var(--bg-dark,#f1f5f9)}",
       "#jumpin-root.app-screen #jumpin-top{display:flex;align-items:center;gap:12px;width:100%;padding:0 16px;background:var(--bg-card,#fff);border-bottom:1px solid var(--border-color,#cbd5e1)}",
       "#jumpin-root.app-screen #jumpin-top .bar{flex:1;padding:12px 0;min-height:56px}",
       "#jumpin-root.app-screen #jumpin-top .back-btn{flex-shrink:0}",
       "#jumpin-mid{flex:1 1 auto;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}",
-      "#jumpin-root.app-screen #jumpin-mid{width:100%;max-width:520px;margin:0 auto;padding:18px 16px 20px}",
-      "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:520px;margin:18px auto;padding:24px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
-      "#jumpin-mid .wrap{width:min(1040px,100%);margin:0 auto;padding:28px 24px 12px}",
-      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 20px;padding:28px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
+      "#jumpin-root.app-screen #jumpin-mid{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:24px 20px 28px;overflow:visible}",
+      "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:640px;margin:24px auto;padding:28px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
+      "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
+      "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:30px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.06)}",
       "#jumpin-mid .hero .copy{flex:1 1 260px;min-width:0}",
       "#jumpin-mid h1{margin:0 0 8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:36px;line-height:1.15;letter-spacing:-0.03em}",
-      "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 22px}",
-      "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:12px}",
+      "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer}",
+      "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
+      "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
+      "@media (min-width:1040px){#jumpin-mid .board{grid-template-columns:repeat(3,minmax(0,1fr))}}",
       "#jumpin-mid .empty{grid-column:1 / -1;padding:22px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px)}",
       "#jumpin-mid .empty .route{margin:0 0 4px}",
       "#jumpin-bottom{width:100%;padding:0 16px calc(16px + env(safe-area-inset-bottom))}",
@@ -91,40 +93,61 @@
       "#jumpin-root .site-foot{width:min(1040px,100%);margin:0 auto;padding:16px 24px calc(16px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;color:var(--text-muted,#1e293b);font-size:14px}",
       "#jumpin-root .site-foot a{color:var(--primary,#0891b2);font-weight:600}",
       "#jumpin-root .site-foot .spacer{margin-left:auto}",
-      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:12px 16px 0;background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
-      "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:var(--primary,#0891b2);color:#fff;font-size:17px;font-weight:700}",
-      "#jumpin-root.app-screen #jumpin-bottom button{display:block;width:100%;max-width:520px;margin:0 auto}",
+      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
+      "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(24px + env(safe-area-inset-bottom));background:transparent;border-top:0}",
+      "@media (min-width:701px){#jumpin-root.app-screen #jumpin-mid{padding:36px 24px 20px}#jumpin-root.app-screen #jumpin-bottom{position:static;margin-top:0;padding:8px 24px 32px;background:transparent;border-top:0}}",
+      "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:var(--primary,#0891b2);color:#fff;font-size:17px;font-weight:700;cursor:pointer}",
+      "#jumpin-root.app-screen #jumpin-bottom button{display:block;width:100%;max-width:640px;margin:0 auto}",
+      "#jumpin-bottom button:disabled,#jumpin-root .textish:disabled{opacity:.55;cursor:not-allowed}",
       "body.jumpin-android #jumpin-bottom button,body.jumpin-android #jumpin-mid .hero button{border-radius:var(--radius-lg,20px)}",
       "#jumpin-mid .lbl{display:block;margin:0 0 6px;color:var(--text-muted,#1e293b);font-size:14px;font-weight:600}",
-      "#jumpin-mid input,#jumpin-mid select{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 14px;padding:0 12px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
-      "#jumpin-mid .confirm{padding:24px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
-      "#jumpin-mid .confirm h1{font-size:28px}",
-      "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;min-height:44px;padding:16px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:var(--shadow-card,0 4px 10px rgba(0,0,0,.06))}",
+      "#jumpin-mid input,#jumpin-mid select{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 14px;padding:0 12px;scroll-margin-top:88px;scroll-margin-bottom:120px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
+      "#jumpin-mid .confirm{padding:32px 36px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
+      "#jumpin-mid .confirm-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;margin:0 0 12px;border-radius:999px;background:rgba(8,145,178,.1);color:var(--primary,#0891b2);font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
+      "#jumpin-mid .confirm-badge.pending{background:#fef3c7;color:#92400e}",
+      "#jumpin-mid .confirm h1{font-size:28px;margin:0 0 4px}",
+      "#jumpin-mid .confirm .route{margin:16px 0 6px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0);font-size:20px}",
+      "#jumpin-mid .confirm .muted{margin:4px 0;font-size:15px}",
+      "#jumpin-mid .confirm .link-row{margin:6px 0 10px}",
+      "#jumpin-mid .confirm .action-row{margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0)}",
+      "#jumpin-mid .row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;text-align:left;min-height:44px;padding:18px;margin:0;background:var(--bg-card,#fff);color:inherit;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-md,14px);box-shadow:0 4px 12px rgba(15,23,42,.05);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}",
+      "#jumpin-mid .row:hover{border-color:var(--primary,#0891b2);box-shadow:0 8px 20px rgba(8,145,178,.12);transform:translateY(-1px)}",
+      "#jumpin-mid .row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%}",
+      "#jumpin-mid .pill-group{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 0 auto}",
+      "#jumpin-mid .status-pill{flex:0 0 auto;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.3;border:1px solid transparent}",
+      "#jumpin-mid .status-pill.open{background:rgba(8,145,178,.1);color:var(--primary,#0891b2);border-color:rgba(8,145,178,.22)}",
+      "#jumpin-mid .status-pill.last{background:#fffbeb;color:#b45309;border-color:#fde68a}",
+      "#jumpin-mid .status-pill.full{background:#fef2f2;color:#be123c;border-color:#fecdd3}",
+      "#jumpin-mid .status-pill.driver{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}",
+      "#jumpin-mid .status-pill.rider{background:#ecfdf5;color:#047857;border-color:#a7f3d0}",
       "#jumpin-mid .route{font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:18px;font-weight:700;overflow-wrap:anywhere;word-break:break-word}",
       "#jumpin-mid .meta,#jumpin-mid .muted{color:var(--text-muted,#1e293b);font-size:14px;margin:0;overflow-wrap:anywhere}",
       "#jumpin-mid .hint{color:var(--text-muted,#1e293b);font-size:14px;margin:8px 0 0}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
-      "@media (max-width:700px){#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:12px 12px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:16px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
-      "@media (max-width:380px){#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 auto;justify-content:center;text-align:center}}",
+      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:18px 16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px;margin:14px 0 6px;padding-top:14px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
+      "@media (max-width:480px){#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
+      "@media (max-width:360px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}}",
       "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
       "#jumpin-sheet p{margin:0 0 12px;font-weight:600}",
       "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
-      "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}",
-      "#jumpin-root .action-row select{width:auto;min-width:68px;margin:0;min-height:40px}",
-      "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}",
-      "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;min-height:32px;cursor:pointer}",
+      "#jumpin-sheet button{min-height:44px;margin:6px 10px 0 0}",
+      "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:center}",
+      "#jumpin-root .action-row select{width:auto;min-width:76px;margin:0;min-height:44px}",
+      "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}",
+      "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;min-height:36px;cursor:pointer}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:420px;min-height:42px;margin:0 0 14px;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
+      "#jumpin-mid .reserve-head{margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0);font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:17px;font-weight:700;color:var(--text-main,#090d16)}",
       "#jumpin-root .rider-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin-bottom:6px;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:10px;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
       "#jumpin-root .msg-row{padding:8px 12px;margin-bottom:6px;background:rgba(8,145,178,.06);border-radius:10px;font-size:14px;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
-      "#jumpin-root .textish{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:10px;padding:0 14px;font-size:14px;font-weight:600;min-height:40px;cursor:pointer}",
+      "#jumpin-root .textish{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:10px;padding:0 16px;font-size:14px;font-weight:600;min-height:44px;cursor:pointer}",
       "#jumpin-root .textish:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
-      "#jumpin-root .linkish{display:block;background:transparent;color:var(--primary,#0891b2);border:0;padding:4px 0;font-size:14px;font-weight:600;text-align:left;cursor:pointer}",
+      "#jumpin-root .linkish{display:block;background:transparent;color:var(--primary,#0891b2);border:0;padding:6px 0;font-size:14px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-root .linkish:hover{text-decoration:underline}",
-      "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:0;font-size:16px;font-weight:700;min-height:44px;cursor:pointer;margin-left:12px}",
-      "#jumpin-sheet button.confirm-primary{background:var(--primary,#0891b2);color:#fff;border:0;border-radius:10px;padding:0 16px;font-size:15px;font-weight:700;min-height:40px;cursor:pointer;margin-left:10px}",
+      "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:1px solid #fecdd3;border-radius:10px;padding:0 16px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer}",
+      "#jumpin-sheet button.confirm-primary{background:var(--primary,#0891b2);color:#fff;border:0;border-radius:10px;padding:0 18px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer}",
       "@keyframes jumpin-spin{to{transform:rotate(360deg)}}",
       ".jumpin-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:jumpin-spin .7s linear infinite;vertical-align:middle;margin-right:8px}",
       ".jumpin-spin.dark{border-color:rgba(8,145,178,.25);border-top-color:var(--primary,#0891b2)}",
@@ -195,6 +218,7 @@
             rides: kept,
             ride: ride,
             seatsLeft: ride.seatsLeft,
+            seatsText: seatsLabel(ride.seatsLeft),
             route: ride.from + " → " + ride.to,
             when: whenOf(ride),
             link: cloud.publicRideUrl(ride.rideId)
@@ -203,11 +227,11 @@
         } else {
           const prevNotice = state.notice;
           const role = cloud.roleFor(ride);
-          const autoReserve = !role && ride.status === "open" && ride.seatsLeft > 0 && (!ride.departAt || Date.now() < ride.departAt) && !state.recovery && state.mode !== "reserved";
           state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: role }), {
             rides: kept,
             ride: ride,
-            reserveOpen: autoReserve,
+            reserveOpen: false,
+            reserveDraft: null,
             route: ride.from + " → " + ride.to,
             when: whenOf(ride),
             link: cloud.publicRideUrl(ride.rideId),
@@ -294,14 +318,20 @@
       if (ride.seatsLeft != null) {
         card.appendChild(el(doc, "p", "muted", seatsLabel(ride.seatsLeft)));
       }
+      if (ride.rideCost > 0) {
+        card.appendChild(el(doc, "p", "muted", "Ride cost: " + core.formatCost(ride.rideCost) + " / seat (paid directly to driver)"));
+      }
       if (ride.note) card.appendChild(el(doc, "p", "muted", ride.note));
       if (ride.driverName) card.appendChild(el(doc, "p", "muted", "Driver: " + ride.driverName));
+      const tripCode = shortTripId(ride.rideId);
+      if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
       if (ride.riders && ride.riders.length) {
         const totalReserved = ride.riders.reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
         card.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
         ride.riders.forEach(function (rider) {
           const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : "";
-          card.appendChild(el(doc, "div", "rider-row", (rider.name || "Passenger") + seatSuffix));
+          const dropSuffix = rider.dropoff ? " · Drop off: " + rider.dropoff : "";
+          card.appendChild(el(doc, "div", "rider-row", (rider.name || "Passenger") + seatSuffix + dropSuffix));
         });
       }
       if (ride.messages && ride.messages.length) {
@@ -321,34 +351,44 @@
       if (current.status === "open" && ride.seatsLeft === 0) card.appendChild(el(doc, "p", "route", "Full"));
       if (current.reserveOpen) {
         const saved = current.role === "driver" ? { name: "", phone: "" } : loadProfile();
+        const draft = current.reserveDraft || {};
+        card.appendChild(el(doc, "div", "reserve-head", current.role === "driver" ? "Add a passenger" : "Reserve your seat"));
         card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger name" : "Your name"));
         const name = el(doc, "input");
         name.name = "name";
-        if (saved.name) name.value = saved.name;
+        name.value = draft.name != null ? draft.name : (saved.name || "");
         card.appendChild(name);
         card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone" : "Phone"));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
-        if (saved.phone) phone.value = saved.phone;
+        phone.value = draft.phone != null ? draft.phone : (saved.phone || "");
         card.appendChild(phone);
         if ((Number(ride.seatsLeft) || 1) > 1) {
           card.appendChild(el(doc, "label", "lbl", "Seats"));
           const seatSel = el(doc, "select");
           seatSel.name = "seats";
           const maxPick = Math.min(6, Number(ride.seatsLeft) || 1);
+          const pickedSeats = Number(draft.seats || 1);
           for (let s = 1; s <= maxPick; s++) {
             const opt = el(doc, "option", "", String(s));
             opt.value = String(s);
-            if (s === 1) opt.selected = true;
+            if (s === pickedSeats) opt.selected = true;
             seatSel.appendChild(opt);
           }
           card.appendChild(seatSel);
         }
+        card.appendChild(el(doc, "label", "lbl", "Drop off location, optional"));
+        const dropoff = el(doc, "input");
+        dropoff.name = "dropoff";
+        dropoff.type = "text";
+        dropoff.placeholder = "e.g. University City";
+        if (draft.dropoff) dropoff.value = draft.dropoff;
+        card.appendChild(dropoff);
         card.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage their seat, and JumpIn notices."));
         if (current.error) card.appendChild(el(doc, "p", "error", current.error));
         const cancelForm = el(doc, "button", "textish", "Cancel");
-        on(cancelForm, "click", function () { state = ui.reduce(state, { type: "reserve-close" }); draw(); });
+        on(cancelForm, "click", function () { state = Object.assign(ui.reduce(state, { type: "reserve-close" }), { reserveDraft: null }); draw(); });
         const formActions = el(doc, "div", "action-row");
         formActions.appendChild(cancelForm);
         card.appendChild(formActions);
@@ -497,7 +537,8 @@
 
     function draw() {
       rootNode.textContent = "";
-      rootNode.className = state.mode === "board" ? "portal" : "app-screen";
+      const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
+      rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
       const top = el(doc, "header");
       top.id = "jumpin-top";
       if (state.mode === "board") brandBar(doc, top);
@@ -516,6 +557,9 @@
       const mid = el(doc, "main");
       mid.id = "jumpin-mid";
       if (state.mode === "post") mid.className = "post-card";
+      on(mid, "focusin", function (e) {
+        keepFocusedVisible(e && e.target);
+      });
       const bottom = el(doc, "footer");
       bottom.id = "jumpin-bottom";
       let hero = null;
@@ -533,7 +577,7 @@
           list.textContent = "";
           const q = boardQuery.trim().toLowerCase();
           const shown = q ? rides.filter(function (ride) {
-            return [ride.from, ride.to, ride.driverName].join(" ").toLowerCase().indexOf(q) !== -1;
+            return [ride.from, ride.to, ride.driverName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
           }) : rides;
           if (!shown.length) {
             const empty = el(doc, "div", "empty");
@@ -544,8 +588,21 @@
           }
           shown.forEach(function (ride) {
             const row = el(doc, "button", "row");
-            row.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
-            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "") + " · " + (ride.seats || seatsLabel(ride.seatsLeft))));
+            const head = el(doc, "div", "row-head");
+            head.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
+            const pills = el(doc, "span", "pill-group");
+            const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
+            if (myRole === "driver" || myRole === "rider") {
+              pills.appendChild(el(doc, "span", "status-pill " + myRole, myRole === "driver" ? "Your trip" : "Seat booked"));
+            }
+            const left = ride.seatsLeft == null ? 2 : Number(ride.seatsLeft);
+            const pillKind = left === 0 ? "full" : (left === 1 ? "last" : "open");
+            const pillText = left === 0 ? "Full" : (left === 1 ? "Last seat" : "Open");
+            pills.appendChild(el(doc, "span", "status-pill " + pillKind, pillText));
+            head.appendChild(pills);
+            row.appendChild(head);
+            const costPart = ride.rideCost > 0 ? " · " + core.formatCost(ride.rideCost) + "/seat" : "";
+            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "") + " · " + (ride.seats || seatsLabel(ride.seatsLeft)) + costPart));
             on(row, "click", function () { if (cloud) openRide(ride.rideId || ride.id); });
             list.appendChild(row);
           });
@@ -634,6 +691,18 @@
           dur.appendChild(option);
         });
         mid.appendChild(dur);
+        mid.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
+        const rideCost = el(doc, "input");
+        rideCost.name = "rideCost";
+        rideCost.type = "number";
+        rideCost.min = "0";
+        rideCost.max = "500";
+        rideCost.step = "0.01";
+        rideCost.inputMode = "decimal";
+        rideCost.placeholder = "Free (or e.g. 5)";
+        if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
+        mid.appendChild(rideCost);
+        if (state.error && state.field === "rideCost") mid.appendChild(el(doc, "p", "error", state.error));
         mid.appendChild(el(doc, "label", "lbl", "Note, optional"));
         const note = el(doc, "input");
         note.name = "note";
@@ -644,11 +713,15 @@
         mid.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
       } else if (state.mode === "posted") {
         const card = el(doc, "section", "confirm");
+        card.appendChild(el(doc, "span", "confirm-badge" + (state.status === "pending" ? " pending" : ""), state.status === "pending" ? "Pending approval" : "✓ Trip live"));
         card.appendChild(el(doc, "h1", "", state.notice || "Trip posted."));
         card.appendChild(el(doc, "p", "route", state.route || ""));
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
+        const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
+        if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
         if (state.link) {
+          card.appendChild(el(doc, "p", "section-lbl", "Share trip link"));
           const linkRow = el(doc, "div", "link-row");
           const link = el(doc, "input");
           link.readOnly = true;
@@ -679,10 +752,13 @@
         mid.appendChild(card);
       } else if (state.mode === "reserved") {
         const card = el(doc, "section", "confirm");
+        card.appendChild(el(doc, "span", "confirm-badge", "✓ Seat confirmed"));
         card.appendChild(el(doc, "h1", "", state.notice || "You have a seat."));
         card.appendChild(el(doc, "p", "route", state.route || ""));
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
+        const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
+        if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
         else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : (state.bookedSeats > 1 ? "We texted you a link to manage your seats." : "We texted you a link to manage your seat.")));
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
@@ -718,6 +794,7 @@
       if (label === "Post") label = "Post ride";
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
+      if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
@@ -769,31 +846,39 @@
               return;
             } else state = rememberRide(win, secrets, state, values, when.departAt);
           } else if (label === "Reserve a seat" && !state.reserveOpen) {
-            state = ui.reduce(state, { type: "reserve-open" });
+            state = Object.assign(ui.reduce(state, { type: "reserve-open" }), { reserveDraft: null });
           } else if ((label === "Confirm seat" || label === "Confirm passenger") && cloud && state.ride) {
             const values = {};
             mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
             const errors = core.reserveErrors(values);
-            if (errors.error) state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
-            else {
+            if (errors.error) {
+              state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+              state.reserveDraft = values;
+            } else {
               const wasDriver = state.role === "driver";
               state.busy = true;
+              state.reserveDraft = values;
               draw();
               cloud.reserveSeat(state.ride.rideId, values, { skipSaveSeat: wasDriver }).then(function (result) {
                 state.busy = false;
                 if (!result || result.ok === false) {
                   state = ui.reduce(state, { type: "fail", error: (result && result.error) || "Could not reserve. Check the connection and try again." });
+                  state.reserveDraft = values;
                 } else {
                   if (!wasDriver) saveProfile(values.name, values.phone);
                   const bookedSeats = Number(values.seats || 1);
+                  const existingRiders = state.ride.riders || [];
+                  const alreadyListed = result.reservationId && existingRiders.some(function (r) { return r.reservationId === result.reservationId; });
+                  const nextSeatsLeft = result.seatsLeft != null ? Number(result.seatsLeft) : Math.max(0, Number(state.ride.seatsLeft || 1) - bookedSeats);
                   const ride = Object.assign({}, state.ride, {
-                    seatsLeft: Math.max(0, Number(state.ride.seatsLeft || 1) - bookedSeats),
-                    riders: (state.ride.riders || []).concat([{ reservationId: result.reservationId, name: values.name, seats: bookedSeats, status: "active" }])
+                    seatsLeft: nextSeatsLeft,
+                    riders: alreadyListed ? existingRiders : existingRiders.concat([{ reservationId: result.reservationId, name: values.name, seats: bookedSeats, dropoff: values.dropoff || "", status: "active" }])
                   });
                   state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: wasDriver ? "driver" : "rider" }), {
                     mode: "reserved",
                     ride: ride,
                     rides: state.rides || [],
+                    reserveDraft: null,
                     route: (ride.from || "") + " → " + (ride.to || ""),
                     when: state.when,
                     seatsText: seatsLabel(ride.seatsLeft),
@@ -894,7 +979,7 @@
         stop = cloud.watchBoard(function (rides) {
           try {
             state.rides = (rides || []).map(function (ride) {
-              return { rideId: ride.rideId, from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), departAt: ride.departAt, note: ride.note || "", driverName: ride.driverName || "" };
+              return { rideId: ride.rideId, from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "" };
             });
             if (state.mode === "board") draw();
           } catch (err) { /* leave the board that is already on screen */ }
@@ -924,8 +1009,19 @@
       }
     }
 
+    function shortTripId(id) {
+      const s = String(id || "").replace(/^ride_/, "");
+      return s ? "#" + s.slice(-6).toUpperCase() : "";
+    }
+
+    function keepFocusedVisible(target) {
+      if (target && (target.tagName === "INPUT" || target.tagName === "SELECT") && target.scrollIntoView) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
     on(win, "resize", function () { applyShell(win, rootNode, state.mode); });
-    if (win.visualViewport) on(win.visualViewport, "resize", function () { applyShell(win, rootNode, state.mode); });
+    if (win.visualViewport) on(win.visualViewport, "resize", function () { applyShell(win, rootNode, state.mode); keepFocusedVisible(doc.activeElement); });
     if (win.visualViewport) on(win.visualViewport, "scroll", function () { applyShell(win, rootNode, state.mode); });
     draw();
     connectCloud();

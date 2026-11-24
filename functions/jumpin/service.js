@@ -229,6 +229,7 @@ function postRide(db, input, now, rng) {
       timeZone: input.timeZone,
       seatsTotal: fields.seats,
       seatsLeft: fields.seats,
+      rideCost: fields.rideCost || 0,
       note: fields.note,
       smsSent: 0,
       activeReservationDocIds: [],
@@ -318,6 +319,7 @@ function reserveSeat(db, input, now, rng) {
       name: fields.name,
       phoneE164: fields.phone,
       seats: requested,
+      dropoff: fields.dropoff || "",
       status: "active",
       tokenHash: core.hashSecret(secret),
       tokenIssuedAt: now,
@@ -334,7 +336,7 @@ function reserveSeat(db, input, now, rng) {
     phone.updatedAt = now;
     const pub = await tx.get(ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
     pub.seatsLeft = ride.seatsLeft;
-    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, status: "active" }]);
+    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, dropoff: fields.dropoff || "", status: "active" }]);
     const reserveMsg = requested === 1 ? (fields.name + " reserved a seat.") : (fields.name + " reserved " + requested + " seats.");
     pub.messages = arr(pub.messages).concat([core.systemMessage(reserveMsg, now, pub.messages.length + 1)]);
     pub.updatedAt = now;
@@ -364,6 +366,7 @@ function reserveSeat(db, input, now, rng) {
       ok: true,
       reservationId: reservationId,
       secret: secret,
+      seatsLeft: ride.seatsLeft,
       textSent: sent,
       texts: texts,
       error: sent ? "" : "Seat saved on this browser. Text could not be sent right now."
@@ -415,7 +418,7 @@ function updateSeat(db, input, now) {
     if (pub) {
       pub.seatsLeft = ride.seatsLeft;
       pub.riders = arr(pub.riders).map(function (row) {
-        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, status: "active" };
+        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, dropoff: reservation.dropoff || row.dropoff || "", status: "active" };
         return row;
       });
       const word = seats === 1 ? "1 seat." : (seats + " seats.");

@@ -221,6 +221,7 @@
           name: values.name,
           phone: values.phone,
           seats: Number(values.seats || 1),
+          dropoff: values.dropoff || "",
           idempotencyKey: once("reserve")
         }).then(function (result) {
           if (result && result.ok && result.secret) {

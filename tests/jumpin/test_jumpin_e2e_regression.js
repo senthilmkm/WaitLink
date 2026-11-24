@@ -66,6 +66,7 @@ async function run() {
       timeZone: TZ,
       seats: 3,
       durationMinutes: 180,
+      rideCost: 5,
       note: "Blue sedan",
       idempotencyKey: "e2e-post-1"
     }, null, NOW);
@@ -80,6 +81,7 @@ async function run() {
     const pub = db.snapshot()["carpool_public/rides/" + rideId];
     assert.strictEqual(priv.durationMinutes, 180);
     assert.strictEqual(pub.durationMinutes, 180);
+    assert.strictEqual(pub.rideCost, 5);
     assert.strictEqual(pub.seatsLeft, 3);
     departAt = priv.departAt;
   });
@@ -93,6 +95,7 @@ async function run() {
       idempotencyKey: "e2e-r1"
     }, null, NOW + 1000);
     assert.strictEqual(r1.ok, true);
+    assert.strictEqual(r1.seatsLeft, 2);
     assert.strictEqual(r1.textSent, true);
     assert.strictEqual(r1.outbox.length, 1);
     assert.strictEqual(r1.outbox[0].triggerType, "CARPOOL_RIDER_LINK");
@@ -104,6 +107,7 @@ async function run() {
       name: "Pat Family",
       phone: "5552002002",
       seats: 2,
+      dropoff: "University City",
       idempotencyKey: "e2e-r2"
     }, null, NOW + 2000);
     assert.strictEqual(r2.ok, true);
@@ -115,6 +119,7 @@ async function run() {
     assert.strictEqual(pub.seatsLeft, 0);
     assert.strictEqual(pub.riders.length, 2);
     assert.strictEqual(pub.riders[1].seats, 2);
+    assert.strictEqual(pub.riders[1].dropoff, "University City");
 
     // Rider 2 decreases seats (2 -> 1), then increases (1 -> 2), and cannot exceed remaining seats
     const dec = await handlers.call(db, "carpoolUpdateSeat", { rideId: rideId, secret: rider2Secret, seats: 1 }, null, NOW + 2200);

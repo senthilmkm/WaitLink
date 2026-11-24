@@ -55,6 +55,11 @@
     return count + (count === 1 ? " seat" : " seats") + (suffix ? " " + suffix : "");
   }
 
+  function shortTripId(id) {
+    const s = String(id || "").replace(/^ride_/, "");
+    return s ? "#" + s.slice(-6).toUpperCase() : "";
+  }
+
   function formatWhen(departAt) {
     if (!departAt) return "";
     return new Date(departAt).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -68,7 +73,8 @@
     if (badgeText) top.appendChild(el(doc, "span", "admin-badge", badgeText));
     card.appendChild(top);
     const when = formatWhen(ride.departAt);
-    if (when) card.appendChild(el(doc, "div", "admin-meta", when));
+    const code = shortTripId(ride.rideId);
+    if (when || code) card.appendChild(el(doc, "div", "admin-meta", [code ? "Trip ID: " + code : "", when].filter(Boolean).join(" · ")));
     const who = [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
     if (who) card.appendChild(el(doc, "div", "admin-meta muted", who));
     const paxCount = (ride.riders && ride.riders.length) || 0;
@@ -99,7 +105,8 @@
       const route = ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId;
       const tdRoute = doc.createElement("td");
       tdRoute.appendChild(el(doc, "div", "admin-route", route));
-      if (ride.note) tdRoute.appendChild(el(doc, "div", "admin-meta muted", ride.note));
+      const rowCode = shortTripId(ride.rideId);
+      if (rowCode || ride.note) tdRoute.appendChild(el(doc, "div", "admin-meta muted", [rowCode ? "Trip ID: " + rowCode : "", ride.note || ""].filter(Boolean).join(" · ")));
       tr.appendChild(tdRoute);
       tr.appendChild(el(doc, "td", "", formatWhen(ride.departAt) || "—"));
       const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");

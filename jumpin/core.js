@@ -278,7 +278,12 @@
     if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720) {
       return { field: "durationMinutes", error: "Choose an estimated trip duration." };
     }
-    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, seats: seats, durationMinutes: durationMinutes } };
+    const rawCost = String(fields.rideCost == null ? "" : fields.rideCost).replace(/^\s*\$/, "").trim();
+    const rideCost = rawCost === "" ? 0 : Math.round(Number(rawCost) * 100) / 100;
+    if (!Number.isFinite(rideCost) || rideCost < 0 || rideCost > 500) {
+      return { field: "rideCost", error: "Enter a dollar amount from 0 to 500." };
+    }
+    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, seats: seats, durationMinutes: durationMinutes, rideCost: rideCost } };
   }
 
   function reserveErrors(fields) {
@@ -289,7 +294,9 @@
     const rawSeats = fields.seats;
     const seats = rawSeats == null || rawSeats === "" ? 1 : Number(rawSeats);
     if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
-    return { value: { name: name.value, phone: phone.e164, seats: seats } };
+    const dropoff = noteValue(fields.dropoff);
+    if (dropoff.error) return { field: "dropoff", error: dropoff.error };
+    return { value: { name: name.value, phone: phone.e164, seats: seats, dropoff: dropoff.value } };
   }
 
   function partsInZone(utcMs, timeZone) {
@@ -361,6 +368,12 @@
     return hrs.toFixed(1) + " hrs";
   }
 
+  function formatCost(cost) {
+    const n = Number(cost);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    return "$" + (Number.isInteger(n) ? String(n) : n.toFixed(2));
+  }
+
   function formatWhen(utcMs, timeZone) {
     const fmt = new Intl.DateTimeFormat("en-US", {
       timeZone: timeZone,
@@ -417,6 +430,7 @@
       timeZone: ride.timeZone,
       seatsTotal: ride.seatsTotal,
       seatsLeft: ride.seatsLeft,
+      rideCost: Number(ride.rideCost) || 0,
       note: ride.note,
       driverName: ride.driverName,
       riders: riders || [],
@@ -436,9 +450,9 @@
     if (model.mode === "board") return "Post a ride";
     if (model.status === "pending") return null;
     if (model.status === "rejected" || model.status === "cancelled" || model.status === "completed" || model.status === "missing") return null;
+    if (model.reserveOpen) return "Reserve a seat";
     if (model.role === "driver") return "Copy link";
     if (model.role === "rider") return "Send";
-    if (model.reserveOpen) return "Reserve a seat";
     if (model.seatsLeft > 0 && model.status === "open") return "Reserve a seat";
     return null;
   }
@@ -475,6 +489,7 @@
     zonedToUtc: zonedToUtc,
     departureError: departureError,
     formatDuration: formatDuration,
+    formatCost: formatCost,
     formatWhen: formatWhen,
     partsInZone: partsInZone,
     utcDay: utcDay,
