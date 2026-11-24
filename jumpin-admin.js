@@ -420,6 +420,12 @@
           if (p) p.hidden = other !== name;
         });
       }
+      (function () {
+        try {
+          const t = (new URLSearchParams((win.location && win.location.search) || "").get("tab") || "").toLowerCase();
+          if (["trips", "members", "settings", "blocked", "cleanup", "groups"].indexOf(t) !== -1) switchTab(t);
+        } catch (err) { /* keep default tab */ }
+      })();
       function paintGroups() {
         const listNode = page.getElementById("jumpin-groups-list");
         const countNode = page.getElementById("jumpin-groups-count");
@@ -518,6 +524,8 @@
               lists = result;
               state = admin.reduce(state, { type: "clear" });
               applyConfig(page, result.config || {});
+              const supInput = page.getElementById("jumpin-support-note");
+              if (supInput) supInput.disabled = !groupsData.isSuperAdmin && activeGroupId !== "default";
             }
             paint();
           });
@@ -582,7 +590,6 @@
           name: grpName ? grpName.value : "",
           groupId: grpSlug ? grpSlug.value : "",
           contactEmail: (page.getElementById("jumpin-group-email") || {}).value || "",
-          supportNote: (page.getElementById("jumpin-group-support") || {}).value || "",
           membersOnly: ((page.getElementById("jumpin-group-members-only") || {}).value || "yes") === "yes"
         };
         withBusy(page, grpCreate, "Creating…", function () {

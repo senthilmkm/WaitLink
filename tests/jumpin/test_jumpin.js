@@ -879,6 +879,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const created = await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne", supportNote: "Zelle:org@example.com", membersOnly: false }, NOW);
   assert.strictEqual(created.ok, true);
   assert.strictEqual(created.group.status, "pending");
+  assert.strictEqual(created.group.supportNote, "Zelle:senthil930@gmail.com");
   assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Second", groupId: "second-grp" }, NOW)).error, "You already have a group waiting for approval.");
   assert.strictEqual((await service.createGroup(db, "other@example.com", { name: "Dup", groupId: "ballantyne" }, NOW)).field, "groupId");
   assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is waiting for approval.");
@@ -912,9 +913,10 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.ok(service.manageUrl("trip", "r1", "s1", "r1", "ballantyne").indexOf("&g=ballantyne") !== -1);
   assert.strictEqual(service.manageUrl("trip", "r1", "s1", "r1", "default").indexOf("&g="), -1);
 
-  const savedCfg = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", groupName: "Ballantyne HOA", enabled: true, adminEmails: "org@example.com", dailySmsCap: 999 }, NOW);
+  const savedCfg = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", groupName: "Ballantyne HOA", enabled: true, adminEmails: "org@example.com", supportNote: "Zelle:hijack@example.com", dailySmsCap: 999 }, NOW);
   assert.strictEqual(savedCfg.ok, true);
   assert.strictEqual(savedCfg.config.dailySmsCap, 150);
+  assert.strictEqual(savedCfg.config.supportNote, "Zelle:senthil930@gmail.com");
 
   const orgList = await service.listGroups(db, "org@example.com", NOW);
   assert.strictEqual(orgList.groups.length, 1);

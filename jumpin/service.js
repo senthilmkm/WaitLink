@@ -6,6 +6,7 @@ const core = require("./core.js");
 
 const GENERIC_LINK = "This link no longer works. Request a new text from the ride page.";
 const SUPERADMIN_EMAIL = "senthil930@gmail.com";
+const PLATFORM_SUPPORT_NOTE = "Zelle:senthil930@gmail.com";
 
 function clone(value) {
   return value == null ? null : JSON.parse(JSON.stringify(value));
@@ -1259,8 +1260,9 @@ function saveAdminConfig(db, email, input, now) {
     const prev = await loadConfig(tx, now || Date.now(), p);
     if (!requireAdmin(cleanEmail, prev)) return { ok: false, error: "This page is not available." };
     const next = core.clampConfig(input);
-    if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default" && next.dailySmsCap > prev.dailySmsCap) {
-      next.dailySmsCap = prev.dailySmsCap;
+    if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default") {
+      if (next.dailySmsCap > prev.dailySmsCap) next.dailySmsCap = prev.dailySmsCap;
+      next.supportNote = prev.supportNote || PLATFORM_SUPPORT_NOTE;
     }
     next.dailySmsSent = prev.dailySmsSent;
     next.dailySmsDay = prev.dailySmsDay;
@@ -1381,11 +1383,12 @@ function createGroup(db, email, input, now) {
     const status = isSuper ? "active" : "pending";
     const enabled = isSuper;
     const cap = isSuper ? 100 : 0;
+    const supportNote = isSuper ? (core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE) : PLATFORM_SUPPORT_NOTE;
     const cfg = core.clampConfig({
       enabled: enabled,
       membersOnly: body.membersOnly !== false,
       contactEmail: core.cleanEmail(body.contactEmail) || caller,
-      supportNote: core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80),
+      supportNote: supportNote,
       adminEmails: [caller],
       dailySmsCap: cap
     });
