@@ -596,7 +596,7 @@
         const copy = el(doc, "div", "copy");
         copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
-        copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No payment."));
+        copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
         hero.appendChild(copy);
         wrap.appendChild(hero);
         const rides = state.rides || [];
