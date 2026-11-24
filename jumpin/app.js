@@ -1154,7 +1154,7 @@
   function brandBar(doc, top) {
     const bar = el(doc, "div", "bar");
     const link = el(doc, "a", "brand");
-    link.href = "https://waitlink.app/";
+    link.href = "https://waitlink.app/?s=jumpin";
     link.appendChild(el(doc, "span", "mark", "⏳"));
     link.appendChild(el(doc, "span", "", "WaitLink"));
     const nav = el(doc, "nav");
