@@ -644,9 +644,11 @@
       firebase.auth().onAuthStateChanged(function (user) {
         const button = page.getElementById("jumpin-signin");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
+        const signedOutInfo = page.getElementById("jumpin-signedout-info");
         if (button) button.hidden = !!user;
         if (signOut) signOut.hidden = !user;
         if (tabsBar) tabsBar.hidden = !user;
+        if (signedOutInfo) signedOutInfo.hidden = !!user;
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with the JumpIn admin account.");
         if (user) {
           switchTab(activeTab);
