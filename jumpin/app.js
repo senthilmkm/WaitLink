@@ -622,10 +622,10 @@
           if (!ts) return false;
           const d = new Date(nowMs);
           const startToday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-          const startTomorrow = startToday + core.DAY_MS;
+          const startTomorrow = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
           if (filter === "today") return ts >= startToday && ts < startTomorrow;
-          if (filter === "tomorrow") return ts >= startTomorrow && ts < startTomorrow + core.DAY_MS;
-          return ts >= startToday && ts < startToday + 7 * core.DAY_MS;
+          if (filter === "tomorrow") return ts >= startTomorrow && ts < new Date(d.getFullYear(), d.getMonth(), d.getDate() + 2).getTime();
+          return ts >= startToday && ts < new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
         }
         function paintBoard() {
           list.textContent = "";

@@ -188,6 +188,9 @@
     modal.hidden = false;
   }
 
+  const ADMIN_PAGE_SIZE = 12;
+  const pageByBox = {};
+
   function fillTrips(doc, node, countNode, rows, badgeOf, actionsOf) {
     if (countNode) countNode.textContent = rows.length ? String(rows.length) : "";
     if (!node) return;
@@ -196,10 +199,37 @@
       node.appendChild(doc.createTextNode("None"));
       return;
     }
-    node.appendChild(buildRideTable(doc, rows, badgeOf, actionsOf));
+    const boxKey = node.id || "trips";
+    const totalPages = Math.max(1, Math.ceil(rows.length / ADMIN_PAGE_SIZE));
+    const page = Math.min(pageByBox[boxKey] || 1, totalPages);
+    pageByBox[boxKey] = page;
+    const slice = rows.slice((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE);
+    node.appendChild(buildRideTable(doc, slice, badgeOf, actionsOf));
     const cards = el(doc, "div", "admin-cards");
-    rows.forEach(function (ride) { cards.appendChild(buildRideCard(doc, ride, badgeOf(ride), actionsOf(ride))); });
+    slice.forEach(function (ride) { cards.appendChild(buildRideCard(doc, ride, badgeOf(ride), actionsOf(ride))); });
     node.appendChild(cards);
+    if (totalPages > 1) {
+      const pager = el(doc, "div", "admin-pager");
+      function addBtn(label, target, disabled, edge) {
+        const btn = el(doc, "button", "admin-pager-btn" + (edge ? " admin-pager-edge" : ""), label);
+        btn.type = "button";
+        if (disabled) btn.disabled = true;
+        btn.addEventListener("click", function () {
+          pageByBox[boxKey] = target;
+          fillTrips(doc, node, countNode, rows, badgeOf, actionsOf);
+        });
+        pager.appendChild(btn);
+      }
+      addBtn("First", 1, page <= 1, true);
+      addBtn("‹ Prev", Math.max(1, page - 1), page <= 1, false);
+      const info = el(doc, "span", "admin-pager-info");
+      info.appendChild(el(doc, "span", "admin-pager-long", "Page " + page + " of " + totalPages));
+      info.appendChild(el(doc, "span", "admin-pager-short", page + " / " + totalPages));
+      pager.appendChild(info);
+      addBtn("Next ›", Math.min(totalPages, page + 1), page >= totalPages, false);
+      addBtn("Last", totalPages, page >= totalPages, true);
+      node.appendChild(pager);
+    }
   }
 
   function fill(doc, node, countNode, rows, make) {
@@ -215,7 +245,7 @@
 
   function matchesQuery(ride, q) {
     if (!q) return true;
-    const parts = [ride.from, ride.to, ride.driverName, ride.phoneLast4, ride.note].concat((ride.riders || []).map(function (r) { return r.name + " " + (r.phoneLast4 || ""); }));
+    const parts = [ride.from, ride.to, ride.driverName, ride.phoneLast4, ride.note, shortTripId(ride.rideId)].concat((ride.riders || []).map(function (r) { return r.name + " " + (r.phoneLast4 || ""); }));
     return parts.join(" ").toLowerCase().indexOf(q) !== -1;
   }
 

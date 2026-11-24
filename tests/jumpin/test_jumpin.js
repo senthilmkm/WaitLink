@@ -846,6 +846,17 @@ it("covers fallback branches in the shell and the rules", function () {
   page.render(adminWin.document, adminState.reduce(adminState.blank(), { type: "preview", scope: "all", count: 1, left: 2 }), {});
   assert.strictEqual(adminWin.document.getElementById("jumpin-send").hidden, false);
   page.render(adminWin.document, adminState.blank(), {});
+  const manyUpcoming = Array.from({ length: 14 }, function (_x, i) {
+    return { rideId: "ride_adm_" + i, from: "A" + i, to: "B" + i, seatsLeft: 2, departAt: Date.now() + 60000 };
+  });
+  page.render(adminWin.document, adminState.blank(), { upcoming: manyUpcoming });
+  const admBox = adminWin.document.getElementById("jumpin-upcoming");
+  const admPager = admBox.children.find(function (c) { return c.className === "admin-pager"; });
+  assert.ok(admPager);
+  admPager.children.find(function (c) { return c.textContent === "Next ›"; })._listeners[0]();
+  const admPager2 = admBox.children.find(function (c) { return c.className === "admin-pager"; });
+  assert.strictEqual(admPager2.children[2].children[0].textContent, "Page 2 of 2");
+  assert.strictEqual(admPager2.children[2].children[1].textContent, "2 / 2");
 });
 
 it("draws the board when Firestore cannot start", function () {

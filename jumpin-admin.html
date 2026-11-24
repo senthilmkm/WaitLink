@@ -87,6 +87,15 @@
     .admin-table .admin-actions { margin-top: 0; flex-wrap: nowrap; }
     .admin-card { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; transition: border-color .15s, box-shadow .15s; }
     .admin-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(8,145,178,.08); }
+    .admin-pager { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+    .admin-pager-btn { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border-color); background: #ffffff; color: var(--primary); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .admin-pager-btn:disabled { opacity: .45; cursor: not-allowed; color: #64748b; }
+    .admin-pager-info { font-size: 14px; font-weight: 600; color: #475569; padding: 0 6px; white-space: nowrap; }
+    .admin-pager-short { display: none; }
+    @media (max-width: 519px) {
+      .admin-pager-edge, .admin-pager-long { display: none; }
+      .admin-pager-short { display: inline; }
+    }
     .admin-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
     .admin-route { font-weight: 700; font-size: 15px; color: var(--text-main); line-height: 1.3; }
     .admin-badge { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 12px; font-weight: 700; white-space: nowrap; }

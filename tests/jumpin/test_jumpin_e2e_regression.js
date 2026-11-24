@@ -317,7 +317,9 @@ async function run() {
     assert.ok(appSrc.indexOf("shortTripId") !== -1 && appSrc.indexOf("Trip ID: ") !== -1);
     assert.ok(appSrc.indexOf("hero-eyebrow") !== -1 && appSrc.indexOf("card-foot") !== -1 && appSrc.indexOf("info-grid") !== -1 && appSrc.indexOf("mini-av") !== -1 && appSrc.indexOf("post-head") !== -1);
     assert.ok(appSrc.indexOf("matchesDateFilter") !== -1 && appSrc.indexOf("PAGE_SIZE = 12") !== -1 && appSrc.indexOf("pager-edge") !== -1 && appSrc.indexOf("Show all rides") !== -1);
-    assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1);
+    assert.ok(adminSrc.indexOf("shortTripId") !== -1 && adminSrc.indexOf("Trip ID: ") !== -1 && adminSrc.indexOf("admin-pager") !== -1);
+    const termsSrc = fs.readFileSync(path.join(__dirname, "../../jumpin-terms.html"), "utf8");
+    assert.ok(termsSrc.indexOf("message and data rates may apply") !== -1 && termsSrc.indexOf("offline directly between the driver and riders") !== -1);
   });
 
   console.log("\n📊 RESULTS: " + passed + " PASSED, 0 FAILED\n");
