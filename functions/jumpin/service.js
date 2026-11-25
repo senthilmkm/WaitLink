@@ -146,6 +146,7 @@ async function loadPlatformConfig(tx, now) {
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
     platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
+    superAdminEmails: core.cleanAdminEmails(stored.superAdminEmails),
     platformAdminPhone: parsedPhone.ok ? parsedPhone.e164 : PLATFORM_ADMIN_PHONE,
     platformDailySmsCap: cap,
     dailySmsDay: budget.day,
@@ -858,10 +859,17 @@ function manageUrl(kind, id, secret, rideId, groupId) {
   return "https://waitlink.app?s=jumpin" + gSuffix + "&view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
 }
 
-function requireAdmin(email, config) {
+function isSuperAdminEmail(email, platform) {
   const clean = core.cleanEmail(email);
   if (!clean) return false;
   if (clean === SUPERADMIN_EMAIL) return true;
+  return !!(platform && Array.isArray(platform.superAdminEmails) && platform.superAdminEmails.indexOf(clean) !== -1);
+}
+
+function requireAdmin(email, config, platform) {
+  const clean = core.cleanEmail(email);
+  if (!clean) return false;
+  if (isSuperAdminEmail(clean, platform)) return true;
   return !!(config && Array.isArray(config.adminEmails) && config.adminEmails.indexOf(clean) !== -1);
 }
 
@@ -872,7 +880,7 @@ function reviewRide(db, email, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || ride.status !== "pending") return { ok: true, already: true, texts: texts };
     const pub = await tx.get(p.ridePublic(ride.rideId));
@@ -912,7 +920,7 @@ function adminCancelTrip(db, email, rideId, now, groupId) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const ride = await tx.get(p.ridePrivate(rideId));
     if (!ride) return { ok: false, error: "This ride is not available." };
     if (ride.status === "cancelled") return { ok: true, already: true, texts: texts };
@@ -928,8 +936,9 @@ function setPosting(db, email, input, now) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf(input));
+    const platform = await loadPlatformConfig(tx, now || Date.now());
     const config = await loadConfig(tx, now || Date.now(), p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     if (input.phoneHash && input.blocked === false) {
       const index = await tx.get(p.blockIndex) || { blocks: [] };
       index.blocks = arr(index.blocks).filter(function (row) { return row.phoneHash !== input.phoneHash; });
@@ -968,8 +977,9 @@ function listAdmin(db, email, now, groupId) {
   if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf({ groupId: groupId }));
+    const platform = await loadPlatformConfig(tx, now || Date.now());
     const config = await loadConfig(tx, now || Date.now(), p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const meta = p.groupId === "default" ? null : await tx.get(p.groupMeta);
     const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const blocks = await tx.get(p.blockIndex) || { blocks: [] };
@@ -1064,7 +1074,7 @@ function broadcast(db, email, input, now) {
     const p = pathsFor(gidOf(input));
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const phones = broadcastPlan(pack, scope, input.rideId, now);
     const left = Math.min(core.smsBudget(config, now).left, Math.max(0, platform.platformDailySmsCap - platform.dailySmsSent));
@@ -1268,8 +1278,9 @@ function setMembers(db, email, input, now) {
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf(body));
+    const platform = await loadPlatformConfig(tx, clock);
     const config = await loadConfig(tx, clock, p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get(p.memberIndex) || { members: [] };
     let list = arr(pack.members).slice();
     if (body.removePhoneHash) {
@@ -1314,10 +1325,10 @@ function saveAdminConfig(db, email, input, now) {
     const p = pathsFor(gidOf(input));
     const platform = await loadPlatformConfig(tx, now || Date.now());
     const prev = await loadConfig(tx, now || Date.now(), p);
-    if (!requireAdmin(cleanEmail, prev)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(cleanEmail, prev, platform)) return { ok: false, error: "This page is not available." };
     const next = core.clampConfig(input, { groupId: p.groupId });
     if (p.groupId !== "default" && !next.adminEmails.length) next.adminEmails = prev.adminEmails.length ? prev.adminEmails : [cleanEmail];
-    if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default") {
+    if (!isSuperAdminEmail(cleanEmail, platform) && p.groupId !== "default") {
       if (next.dailySmsCap > prev.dailySmsCap) next.dailySmsCap = prev.dailySmsCap;
       next.supportNote = prev.supportNote || platform.platformSupportNote;
     }
@@ -1355,8 +1366,9 @@ function purgeData(db, email, input, now) {
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf(body));
+    const platform = await loadPlatformConfig(tx, clock);
     const config = await loadConfig(tx, clock, p);
-    if (!requireAdmin(email, config)) return { ok: false, error: "This page is not available." };
+    if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const limits = await tx.get(p.limitIndex) || { keys: [] };
     const blocks = await tx.get(p.blockIndex) || { blocks: [] };
@@ -1422,9 +1434,10 @@ function createGroup(db, email, input, now) {
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gid);
+    const platform = await loadPlatformConfig(tx, clock);
     const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
     const groups = arr(gi.groups);
-    const isSuper = caller === SUPERADMIN_EMAIL;
+    const isSuper = isSuperAdminEmail(caller, platform);
     if (!isSuper) {
       if (groups.filter(function (g) { return g.status === "pending"; }).length >= 50) {
         return { ok: false, error: "Too many pending requests right now. Please try again later." };
@@ -1439,7 +1452,6 @@ function createGroup(db, email, input, now) {
     if (await tx.get(p.groupMeta) || groups.some(function (g) { return g.groupId === gid; })) {
       return { ok: false, field: "groupId", error: "That group link is already taken. Try another." };
     }
-    const platform = await loadPlatformConfig(tx, clock);
     const status = isSuper ? "active" : "pending";
     const enabled = isSuper;
     const cap = isSuper ? 100 : 0;
@@ -1497,12 +1509,12 @@ function listGroups(db, email, now) {
   if (!caller) return Promise.resolve({ ok: false, error: "Sign in with Google first." });
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
-    const isSuper = caller === SUPERADMIN_EMAIL;
     const platform = await loadPlatformConfig(tx, clock);
+    const isSuper = isSuperAdminEmail(caller, platform);
     const defCfg = await loadConfig(tx, clock, pathsFor("default"));
     const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
     const list = [];
-    if (requireAdmin(caller, defCfg)) {
+    if (requireAdmin(caller, defCfg, platform)) {
       list.push({
         groupId: "default",
         name: "Its-OK",
@@ -1523,7 +1535,7 @@ function listGroups(db, email, now) {
 }
 
 function reviewGroup(db, email, input, now) {
-  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   const body = input || {};
   const gid = core.normalizeGroupId(body.groupId);
   if (!gid || gid === "default") return Promise.resolve({ ok: false, error: "Choose a group." });
@@ -1533,6 +1545,8 @@ function reviewGroup(db, email, input, now) {
   }
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
+    const platform = await loadPlatformConfig(tx, clock);
+    if (!isSuperAdminEmail(email, platform)) return { ok: false, error: "This page is not available." };
     const p = pathsFor(gid);
     const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
     const meta = await tx.get(p.groupMeta);
@@ -1588,11 +1602,12 @@ function reviewGroup(db, email, input, now) {
 }
 
 function savePlatformConfig(db, email, input, now) {
-  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   const body = input || {};
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const prev = await loadPlatformConfig(tx, clock);
+    if (!isSuperAdminEmail(email, prev)) return { ok: false, error: "This page is not available." };
     const nextCap = body.platformDailySmsCap != null ? Math.max(0, Math.min(10000, Math.round(Number(body.platformDailySmsCap) || 0))) : prev.platformDailySmsCap;
     const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
     const nextIos = body.iosThemeEnabled !== undefined ? body.iosThemeEnabled === true : prev.iosThemeEnabled;
@@ -1603,6 +1618,9 @@ function savePlatformConfig(db, email, input, now) {
     const nextAdminEmail = body.platformAdminEmail !== undefined
       ? (core.cleanEmail(body.platformAdminEmail) || prev.platformAdminEmail)
       : prev.platformAdminEmail;
+    const nextSuperAdmins = body.superAdminEmails !== undefined
+      ? core.cleanAdminEmails(body.superAdminEmails)
+      : prev.superAdminEmails;
     let nextAdminPhone = prev.platformAdminPhone;
     if (body.platformAdminPhone !== undefined && String(body.platformAdminPhone).trim()) {
       const parsed = core.normalizePhone(body.platformAdminPhone);
@@ -1623,6 +1641,7 @@ function savePlatformConfig(db, email, input, now) {
       maintenanceMessage: nextBanner,
       platformSupportNote: nextSupport,
       platformAdminEmail: nextAdminEmail,
+      superAdminEmails: nextSuperAdmins,
       platformAdminPhone: nextAdminPhone,
       platformDailySmsCap: nextCap,
       dailySmsDay: prev.dailySmsDay,
@@ -1646,7 +1665,7 @@ function savePlatformConfig(db, email, input, now) {
 }
 
 function searchMembers(db, email, input, now) {
-  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  if (!core.cleanEmail(email)) return Promise.resolve({ ok: false, error: "This page is not available." });
   const body = input || {};
   const query = core.collapse(core.stripTags(String(body.query || ""))).slice(0, 60);
   if (!query) return Promise.resolve({ ok: false, error: "Enter a name, phone number, or last 4 digits." });
@@ -1658,6 +1677,7 @@ function searchMembers(db, email, input, now) {
   const nameQuery = query.toLowerCase();
   return db.runTransaction(async function (tx) {
     const platform = await loadPlatformConfig(tx, clock);
+    if (!isSuperAdminEmail(email, platform)) return { ok: false, error: "This page is not available." };
     const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
     const groupIds = ["default"];
     arr(gi.groups).forEach(function (g) {

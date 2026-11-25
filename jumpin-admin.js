@@ -488,6 +488,7 @@
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
+          const pSuper = page.getElementById("jumpin-plat-super-emails");
           const pEmail = page.getElementById("jumpin-plat-email");
           const pPhone = page.getElementById("jumpin-plat-phone");
           const pSup = page.getElementById("jumpin-plat-support");
@@ -499,6 +500,7 @@
           const fIos = page.getElementById("jumpin-feat-ios");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
+          if (pSuper) pSuper.value = (groupsData.platform.superAdminEmails || []).join(", ");
           if (pEmail) pEmail.value = groupsData.platform.platformAdminEmail || "";
           if (pPhone) pPhone.value = (groupsData.platform.platformAdminPhone || "").replace(/^\+1/, "");
           if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
@@ -898,6 +900,7 @@
       if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
         const pEn = page.getElementById("jumpin-plat-enabled");
         const pCap = page.getElementById("jumpin-plat-cap");
+        const pSuper = page.getElementById("jumpin-plat-super-emails");
         const pEmail = page.getElementById("jumpin-plat-email");
         const pPhone = page.getElementById("jumpin-plat-phone");
         const pSup = page.getElementById("jumpin-plat-support");
@@ -911,6 +914,7 @@
             platformEnabled: !pEn || pEn.value !== "no",
             platformDailySmsCap: pCap ? Number(pCap.value || 0) : 2000,
             platformAdminEmail: pEmail ? pEmail.value : "",
+            superAdminEmails: pSuper ? pSuper.value : undefined,
             platformAdminPhone: pPhone ? pPhone.value : "",
             platformSupportNote: pSup ? pSup.value : "",
             maintenanceMessage: pBan ? pBan.value : "",

@@ -451,8 +451,10 @@
               </select>
             </label>
             <label>Platform Daily SMS Cap<input id="jumpin-plat-cap" inputmode="numeric" value="2000"></label>
-            <label>Platform Admin Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
-            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">Notification email only — SuperAdmin sign-in stays locked to the primary admin account.</p>
+            <label class="admin-full-span">Platform Admin Sign-in Emails (comma-separated)<input id="jumpin-plat-super-emails" type="text" placeholder="senthil930@gmail.com, co-admin@email.com"></label>
+            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">These Google accounts can sign in as Platform Admin and manage all groups. Primary owner (senthil930@gmail.com) cannot be removed.</p>
+            <label>Platform Contact Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
+            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">Notification &amp; support contact email only — does not grant Platform Admin sign-in access.</p>
             <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
             <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
             <label class="admin-full-span">Home Maintenance / Banner Message (optional, max 200 chars)<textarea id="jumpin-plat-banner" rows="2" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></textarea></label>

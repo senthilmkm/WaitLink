@@ -1070,6 +1070,20 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const legacyRes = await service.searchMembers(legacyDb, service.SUPERADMIN_EMAIL, { query: "Legacy" }, NOW);
   assert.strictEqual(legacyRes.results[0].phone, "•••• 9999");
 
+  const coAdminSaved = await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, {
+    superAdminEmails: "co-admin@example.com",
+    platformAdminEmail: "contact-only@example.com"
+  }, NOW);
+  assert.deepStrictEqual(coAdminSaved.platform.superAdminEmails, ["senthil930@gmail.com", "co-admin@example.com"]);
+  assert.strictEqual((await service.listGroups(db, "co-admin@example.com", NOW)).isSuperAdmin, true);
+  assert.strictEqual((await service.listGroups(db, "contact-only@example.com", NOW)).isSuperAdmin, false);
+  assert.strictEqual((await service.searchMembers(db, "co-admin@example.com", { query: "Priya" }, NOW)).ok, true);
+  assert.strictEqual((await service.savePlatformConfig(db, "co-admin@example.com", { superAdminEmails: "" }, NOW)).platform.superAdminEmails[0], "senthil930@gmail.com");
+  assert.strictEqual((await service.searchMembers(db, "co-admin@example.com", { query: "Priya" }, NOW)).ok, false);
+  assert.strictEqual((await service.searchMembers(db, "", { query: "Priya" }, NOW)).ok, false);
+  assert.strictEqual((await service.reviewGroup(db, "", { groupId: "ballantyne", decision: "approve" }, NOW)).ok, false);
+  assert.strictEqual((await service.savePlatformConfig(db, "", { platformEnabled: true }, NOW)).ok, false);
+
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
 });
