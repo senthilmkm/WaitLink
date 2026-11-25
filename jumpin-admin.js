@@ -1074,14 +1074,23 @@
         pageByBox["jumpin-members"] = 1;
         paint();
       });
+      const allMembersBtn = page.getElementById("jumpin-member-all-btn");
       const adminsBtn = page.getElementById("jumpin-member-admins-btn");
-      if (adminsBtn) adminsBtn.addEventListener("click", function () {
-        showAdminsOnly = !showAdminsOnly;
-        adminsBtn.className = "admin-btn" + (showAdminsOnly ? " primary" : "");
-        adminsBtn.setAttribute("aria-pressed", showAdminsOnly ? "true" : "false");
+      function setMemberFilterMode(adminsOnly) {
+        showAdminsOnly = !!adminsOnly;
+        if (allMembersBtn) {
+          allMembersBtn.className = "admin-btn" + (showAdminsOnly ? "" : " primary");
+          allMembersBtn.setAttribute("aria-pressed", showAdminsOnly ? "false" : "true");
+        }
+        if (adminsBtn) {
+          adminsBtn.className = "admin-btn" + (showAdminsOnly ? " primary" : "");
+          adminsBtn.setAttribute("aria-pressed", showAdminsOnly ? "true" : "false");
+        }
         pageByBox["jumpin-members"] = 1;
         paint();
-      });
+      }
+      if (allMembersBtn) allMembersBtn.addEventListener("click", function () { setMemberFilterMode(false); });
+      if (adminsBtn) adminsBtn.addEventListener("click", function () { setMemberFilterMode(!showAdminsOnly); });
       const editModal = page.getElementById("jumpin-edit-member-modal");
       const editCancel = page.getElementById("jumpin-edit-member-cancel");
       const editSave = page.getElementById("jumpin-edit-member-save");
