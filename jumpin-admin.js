@@ -174,6 +174,7 @@
   }
 
   let pendingConfirmFn = null;
+  let editingMemberHash = "";
 
   function askConfirm(doc, title, message, confirmLabel, onConfirm) {
     const modal = doc.getElementById("jumpin-confirm-modal");
@@ -188,8 +189,48 @@
     modal.hidden = false;
   }
 
+  function openEditMemberModal(doc, member) {
+    const modal = doc.getElementById("jumpin-edit-member-modal");
+    if (!modal || !member) return;
+    editingMemberHash = member.phoneHash || "";
+    const nameIn = doc.getElementById("jumpin-edit-member-name");
+    const phoneIn = doc.getElementById("jumpin-edit-member-phone");
+    const errNode = doc.getElementById("jumpin-edit-member-error");
+    if (nameIn) nameIn.value = member.name || "";
+    if (phoneIn) phoneIn.value = member.phoneE164 ? String(member.phoneE164).replace(/^\+1/, "") : "";
+    if (errNode) {
+      errNode.textContent = "";
+      errNode.hidden = true;
+    }
+    modal.hidden = false;
+  }
+
   const ADMIN_PAGE_SIZE = 12;
   const pageByBox = {};
+
+  function appendPager(doc, node, boxKey, totalPages, page, onPage) {
+    if (totalPages <= 1) return;
+    const pager = el(doc, "div", "admin-pager");
+    function addBtn(label, target, disabled, edge) {
+      const btn = el(doc, "button", "admin-pager-btn" + (edge ? " admin-pager-edge" : ""), label);
+      btn.type = "button";
+      if (disabled) btn.disabled = true;
+      btn.addEventListener("click", function () {
+        pageByBox[boxKey] = target;
+        onPage();
+      });
+      pager.appendChild(btn);
+    }
+    addBtn("First", 1, page <= 1, true);
+    addBtn("‹ Prev", Math.max(1, page - 1), page <= 1, false);
+    const info = el(doc, "span", "admin-pager-info");
+    info.appendChild(el(doc, "span", "admin-pager-long", "Page " + page + " of " + totalPages));
+    info.appendChild(el(doc, "span", "admin-pager-short", page + " / " + totalPages));
+    pager.appendChild(info);
+    addBtn("Next ›", Math.min(totalPages, page + 1), page >= totalPages, false);
+    addBtn("Last", totalPages, page >= totalPages, true);
+    node.appendChild(pager);
+  }
 
   function fillTrips(doc, node, countNode, rows, badgeOf, actionsOf) {
     if (countNode) countNode.textContent = rows.length ? String(rows.length) : "";
@@ -208,28 +249,9 @@
     const cards = el(doc, "div", "admin-cards");
     slice.forEach(function (ride) { cards.appendChild(buildRideCard(doc, ride, badgeOf(ride), actionsOf(ride))); });
     node.appendChild(cards);
-    if (totalPages > 1) {
-      const pager = el(doc, "div", "admin-pager");
-      function addBtn(label, target, disabled, edge) {
-        const btn = el(doc, "button", "admin-pager-btn" + (edge ? " admin-pager-edge" : ""), label);
-        btn.type = "button";
-        if (disabled) btn.disabled = true;
-        btn.addEventListener("click", function () {
-          pageByBox[boxKey] = target;
-          fillTrips(doc, node, countNode, rows, badgeOf, actionsOf);
-        });
-        pager.appendChild(btn);
-      }
-      addBtn("First", 1, page <= 1, true);
-      addBtn("‹ Prev", Math.max(1, page - 1), page <= 1, false);
-      const info = el(doc, "span", "admin-pager-info");
-      info.appendChild(el(doc, "span", "admin-pager-long", "Page " + page + " of " + totalPages));
-      info.appendChild(el(doc, "span", "admin-pager-short", page + " / " + totalPages));
-      pager.appendChild(info);
-      addBtn("Next ›", Math.min(totalPages, page + 1), page >= totalPages, false);
-      addBtn("Last", totalPages, page >= totalPages, true);
-      node.appendChild(pager);
-    }
+    appendPager(doc, node, boxKey, totalPages, page, function () {
+      fillTrips(doc, node, countNode, rows, badgeOf, actionsOf);
+    });
   }
 
   function fill(doc, node, countNode, rows, make) {
@@ -315,18 +337,32 @@
     text(doc.getElementById("jumpin-members-count"), allMembers.length ? String(allMembers.length) : "");
     const modeBadge = doc.getElementById("jumpin-members-mode");
     if (modeBadge && lists && lists.config) modeBadge.textContent = lists.config.membersOnly ? "Members only" : "Open to all";
-    fill(doc, doc.getElementById("jumpin-members"), null, shownMembers, function (m) {
+    const membersBox = doc.getElementById("jumpin-members");
+    const mTotalPages = Math.max(1, Math.ceil(shownMembers.length / ADMIN_PAGE_SIZE));
+    const mPage = Math.min(pageByBox["jumpin-members"] || 1, mTotalPages);
+    pageByBox["jumpin-members"] = mPage;
+    const pagedMembers = shownMembers.slice((mPage - 1) * ADMIN_PAGE_SIZE, mPage * ADMIN_PAGE_SIZE);
+    fill(doc, membersBox, null, pagedMembers, function (m) {
       const row = el(doc, "div", "admin-subrow");
       row.appendChild(el(doc, "span", "", (m.name || "Member") + " · ····" + (m.phoneLast4 || "")));
       if (cloud && cloud.setMembers) {
-        row.appendChild(pillBtn(doc, "Remove", "danger", function () {
+        const btns = el(doc, "div", "admin-actions");
+        btns.style.marginTop = "0";
+        btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, m); }));
+        btns.appendChild(pillBtn(doc, "Remove", "danger", function () {
           askConfirm(doc, "Remove member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will no longer be on the community list.", "Remove", function () {
             return cloud.setMembers({ removePhoneHash: m.phoneHash }).then(cloud.refresh);
           });
         }));
+        row.appendChild(btns);
       }
       return row;
     });
+    if (membersBox && shownMembers.length) {
+      appendPager(doc, membersBox, "jumpin-members", mTotalPages, mPage, function () {
+        render(doc, state, lists, cloud);
+      });
+    }
     if (lists && lists.ok) {
       const upN = (lists.upcoming || []).length;
       const waitN = (lists.pending || []).length;
@@ -974,7 +1010,40 @@
         });
       });
       const memberSearch = page.getElementById("jumpin-member-search");
-      if (memberSearch) memberSearch.addEventListener("input", paint);
+      if (memberSearch) memberSearch.addEventListener("input", function () {
+        pageByBox["jumpin-members"] = 1;
+        paint();
+      });
+      const editModal = page.getElementById("jumpin-edit-member-modal");
+      const editCancel = page.getElementById("jumpin-edit-member-cancel");
+      const editSave = page.getElementById("jumpin-edit-member-save");
+      if (editCancel && editModal) editCancel.addEventListener("click", function () { editModal.hidden = true; });
+      if (editModal) editModal.addEventListener("click", function (ev) { if (ev.target === editModal) editModal.hidden = true; });
+      if (editSave && api && api.setMembers) editSave.addEventListener("click", function () {
+        const nameIn = page.getElementById("jumpin-edit-member-name");
+        const phoneIn = page.getElementById("jumpin-edit-member-phone");
+        const errNode = page.getElementById("jumpin-edit-member-error");
+        withBusy(page, editSave, "Saving…", function () {
+          return api.setMembers({
+            groupId: activeGroupId,
+            editPhoneHash: editingMemberHash,
+            name: nameIn ? nameIn.value : "",
+            phone: phoneIn ? phoneIn.value : ""
+          }).then(function (res) {
+            if (!res || res.ok === false) {
+              if (errNode) {
+                errNode.textContent = (res && res.error) || "Could not update member.";
+                errNode.hidden = false;
+              }
+              return;
+            }
+            if (editModal) editModal.hidden = true;
+            state = admin.reduce(state, { type: "clear" });
+            paint();
+            return refresh();
+          });
+        });
+      });
       [
         ["jumpin-purge-past", "past", "Clean Past & Cancelled Trips?"],
         ["jumpin-purge-trips", "trips", "Wipe ALL Trips?"],

@@ -659,6 +659,10 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   const memberListed = await service.listAdmin(memberDb, "co@example.com", NOW);
   assert.strictEqual(memberListed.members.length, 3);
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { removePhoneHash: memberListed.members[2].phoneHash }, NOW)).count, 2);
+  assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: "missing_hash", name: "X" }, NOW)).ok, false);
+  assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sammy", phone: "12" }, NOW)).ok, false);
+  assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sammy" }, NOW)).count, 2);
+  assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sam", phone: "5559876543" }, NOW)).count, 2);
   const nonMemberPost = await service.postRide(memberDb, postInput({ phone: "5554445555", idempotencyKey: "nm-p" }), NOW);
   assert.strictEqual(nonMemberPost.ok, false);
   assert.ok(nonMemberPost.error.indexOf("community@example.com") !== -1);

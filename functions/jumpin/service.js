@@ -1288,6 +1288,33 @@ function setMembers(db, email, input, now) {
       tx.set(p.memberIndex, { members: list });
       return { ok: true, count: list.length };
     }
+    if (body.editPhoneHash) {
+      const existing = list.find(function (m) { return m.phoneHash === body.editPhoneHash; });
+      if (!existing) return { ok: false, error: "Member not found." };
+      const nextName = String(body.name || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Member";
+      const rawPhone = body.phone != null ? String(body.phone).trim() : "";
+      let nextHash = existing.phoneHash;
+      let nextLast4 = existing.phoneLast4;
+      let nextE164 = existing.phoneE164;
+      if (rawPhone) {
+        const parsed = core.normalizePhone(rawPhone);
+        if (!parsed.ok) return { ok: false, error: parsed.error };
+        nextHash = core.phoneHash16(parsed.e164);
+        nextLast4 = core.last4(parsed.e164);
+        nextE164 = parsed.e164;
+      }
+      const updated = {
+        phoneHash: nextHash,
+        phoneLast4: nextLast4,
+        phoneE164: nextE164,
+        name: nextName,
+        addedAt: existing.addedAt || clock
+      };
+      list = list.filter(function (m) { return m.phoneHash !== body.editPhoneHash && m.phoneHash !== nextHash; });
+      list.push(updated);
+      tx.set(p.memberIndex, { members: list });
+      return { ok: true, count: list.length };
+    }
     const lines = body.bulk ? String(body.bulk).split(/\r?\n|;/).map(function (l) { return l.trim(); }).filter(Boolean) : [String(body.name || "") + "," + String(body.phone || "")];
     let added = 0;
     let skipped = 0;

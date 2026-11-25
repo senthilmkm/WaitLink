@@ -573,6 +573,19 @@
         </div>
       </div>
     </div>
+    <div class="admin-modal" id="jumpin-edit-member-modal" hidden>
+      <div class="admin-modal-card" style="width: min(420px, 100%);">
+        <div class="admin-route">Edit member</div>
+        <p class="quiet" style="margin-top: 4px;">Update this member's name or US/Canada mobile number.</p>
+        <label style="margin-top: 12px;">Name<input id="jumpin-edit-member-name" type="text" maxlength="40" placeholder="Alex"></label>
+        <label>Phone<input id="jumpin-edit-member-phone" type="tel" placeholder="555 234 5678"></label>
+        <p class="error" id="jumpin-edit-member-error" hidden></p>
+        <div class="admin-actions" style="margin-top: 16px; justify-content: flex-end;">
+          <button type="button" class="admin-btn" id="jumpin-edit-member-cancel">Cancel</button>
+          <button type="button" class="admin-btn primary" id="jumpin-edit-member-save" style="margin-left: 0;">Save changes</button>
+        </div>
+      </div>
+    </div>
     <p class="error" id="jumpin-error"></p>
   </main>
   <footer class="saas-foot">
@@ -587,9 +600,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125b"></script>
-  <script src="/jumpin/cloud.js?v=20261125b"></script>
-  <script src="/jumpin/admin-state.js?v=20261125b"></script>
-  <script src="/jumpin-admin.js?v=20261125b"></script>
+  <script src="/jumpin/core.js?v=20261125c"></script>
+  <script src="/jumpin/cloud.js?v=20261125c"></script>
+  <script src="/jumpin/admin-state.js?v=20261125c"></script>
+  <script src="/jumpin-admin.js?v=20261125c"></script>
 </body>
 </html>
