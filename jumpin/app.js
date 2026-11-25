@@ -181,7 +181,10 @@
       "#jumpin-root .linkish{display:block;background:transparent;color:var(--primary,#0891b2);border:0;padding:6px 0;font-size:14px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-root .linkish:hover{text-decoration:underline}",
       "#jumpin-root button.danger{background:transparent;color:var(--accent-rose,#be123c);border:1px solid #fecdd3;border-radius:10px;padding:0 16px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer}",
-      "#jumpin-sheet button.confirm-primary{background:var(--primary,#0891b2);color:#fff;border:0;border-radius:10px;padding:0 18px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer}",
+      "#jumpin-sheet button.confirm-primary,#jumpin-sheet a.confirm-primary{display:inline-flex;align-items:center;justify-content:center;background:var(--primary,#0891b2);color:#fff;border:0;border-radius:10px;padding:0 18px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer;text-decoration:none}",
+      "#jumpin-sheet ul.member-list{margin:8px 0 14px;padding-left:18px;font-size:14px;color:var(--text-muted,#334155);line-height:1.5}",
+      "#jumpin-sheet ul.member-list li{margin:4px 0}",
+      "#jumpin-sheet a.mail-link{color:var(--primary,#0891b2);font-weight:700;text-decoration:underline}",
       "@keyframes jumpin-spin{to{transform:rotate(360deg)}}",
       ".jumpin-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:jumpin-spin .7s linear infinite;vertical-align:middle;margin-right:8px}",
       ".jumpin-spin.dark{border-color:rgba(8,145,178,.25);border-top-color:var(--primary,#0891b2)}",
@@ -214,6 +217,15 @@
     let supportNote = "";
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
     let platformNotice = { platformEnabled: true, maintenanceMessage: "" };
+    let memberModal = null;
+    function openMemberModal(result) {
+      if (!result || !result.memberDenied) return;
+      memberModal = {
+        groupName: groupMeta.name || "Its-OK",
+        contactEmail: result.contactEmail || groupMeta.contactEmail || "",
+        isDefault: !groupMeta.groupId || groupMeta.groupId === "default"
+      };
+    }
     let boardQuery = "";
     let boardDateFilter = "all";
     let boardPage = 1;
@@ -344,6 +356,40 @@
         draw();
       });
       sheet.appendChild(yes);
+      return sheet;
+    }
+
+    function memberSheet(doc) {
+      const sheet = el(doc, "div");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("role", "dialog");
+      sheet.setAttribute("aria-modal", "true");
+      sheet.appendChild(el(doc, "p", "", "Members-Only Community \u2014 " + memberModal.groupName));
+      sheet.appendChild(el(doc, "p", "muted", "Only approved members of " + memberModal.groupName + " can post rides or reserve seats on this board."));
+      const ul = el(doc, "ul", "member-list");
+      const liJoin = el(doc, "li", "", "Want to join " + memberModal.groupName + "? Reach out to the organizer");
+      if (memberModal.contactEmail) {
+        liJoin.appendChild(doc.createTextNode(" at "));
+        const mail = el(doc, "a", "mail-link", memberModal.contactEmail);
+        mail.href = "mailto:" + memberModal.contactEmail;
+        liJoin.appendChild(mail);
+      }
+      liJoin.appendChild(doc.createTextNode(" to get added."));
+      ul.appendChild(liJoin);
+      if (memberModal.isDefault) {
+        ul.appendChild(el(doc, "li", "", "Belong to a different neighborhood group? Open the private ?g= link shared by your organizer."));
+      }
+      ul.appendChild(el(doc, "li", "", "Organizing your own neighborhood? Start a new private group below."));
+      sheet.appendChild(ul);
+      const row = el(doc, "div", "action-row");
+      const start = el(doc, "a", "confirm-primary", "Start a Group");
+      start.href = "/jumpin-admin.html?tab=groups";
+      const closeBtn = el(doc, "button", "textish", "Close");
+      closeBtn.type = "button";
+      on(closeBtn, "click", function () { memberModal = null; draw(); });
+      row.appendChild(start);
+      row.appendChild(closeBtn);
+      sheet.appendChild(row);
       return sheet;
     }
 
@@ -1011,6 +1057,7 @@
                   state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
                   state.draft = values;
                   state.rides = state.rides || [];
+                  openMemberModal(result);
                 } else {
                   saveProfile(values.name, values.phone);
                   state = postedFromServer(state, result, values, when.departAt);
@@ -1043,6 +1090,7 @@
                 if (!result || result.ok === false) {
                   state = ui.reduce(state, { type: "fail", error: (result && result.error) || "Could not reserve. Check the connection and try again." });
                   state.reserveDraft = values;
+                  openMemberModal(result);
                 } else {
                   if (!wasDriver) saveProfile(values.name, values.phone);
                   const bookedSeats = Number(values.seats || 1);
@@ -1127,6 +1175,7 @@
       rootNode.appendChild(mid);
       rootNode.appendChild(bottom);
       if (state.sheet || (state.busy && state.busyAction === "sheet")) rootNode.appendChild(confirmSheet(doc));
+      else if (memberModal) rootNode.appendChild(memberSheet(doc));
       applyShell(win, rootNode, state.mode);
       const bad = rootNode.querySelector && rootNode.querySelector(".error");
       if (bad && bad.scrollIntoView) bad.scrollIntoView({ block: "center" });

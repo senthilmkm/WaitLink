@@ -286,7 +286,7 @@ function postRide(db, input, now, rng) {
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
     if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "You can't post a ride right now." };
     const notMember = await memberError(tx, config, fields.phone, p);
-    if (notMember) return { ok: false, field: "phone", error: notMember };
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
     const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     const today = core.postsToday(phone, now);
     if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You already posted " + config.maxPostsPerPhonePerDay + " trips today." };
@@ -383,7 +383,7 @@ function reserveSeat(db, input, now, rng) {
       };
     }
     const notMember = await memberError(tx, config, fields.phone, p);
-    if (notMember) return { ok: false, field: "phone", error: notMember };
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
     const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     if (core.activeReservations(phone) >= config.maxActiveReservationsPerPhone) {
       return { ok: false, error: "You already have " + config.maxActiveReservationsPerPhone + " upcoming seats." };
