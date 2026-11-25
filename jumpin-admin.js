@@ -578,6 +578,9 @@
                 });
               });
             }));
+            const pBadge = el(page, "span", "admin-plat-badge", "🔒 Platform Only");
+            pBadge.title = "Hidden from group admins — only Platform Admins can approve, suspend, or remove groups.";
+            bar.appendChild(pBadge);
           }
           card.appendChild(bar);
           listNode.appendChild(card);
@@ -623,6 +626,8 @@
               applyConfig(page, result.config || {});
               const supWrap = page.getElementById("jumpin-support-note-wrap");
               if (supWrap) supWrap.hidden = !groupsData.isSuperAdmin && activeGroupId !== "default";
+              const supBadge = page.getElementById("jumpin-support-plat-badge");
+              if (supBadge) supBadge.hidden = !(groupsData.isSuperAdmin && activeGroupId !== "default");
               const supInput = page.getElementById("jumpin-support-note");
               if (supInput) supInput.disabled = !groupsData.isSuperAdmin && activeGroupId !== "default";
             }
