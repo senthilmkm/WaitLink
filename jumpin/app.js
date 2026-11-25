@@ -158,6 +158,9 @@
       "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:center}",
       "#jumpin-root .action-row select{width:auto;min-width:76px;margin:0;min-height:44px}",
       "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}",
+      "#jumpin-root .hero-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}",
+      "#jumpin-root .hero-badges .hero-eyebrow{margin:0}",
+      "#jumpin-root .hero-group-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.01em;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;min-height:36px;cursor:pointer}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
@@ -666,7 +669,7 @@
 
     function draw() {
       syncIosTheme();
-      doc.title = (groupMeta && groupMeta.name) ? ("JumpIn — " + groupMeta.name) : "JumpIn — Community Carpool";
+      doc.title = (groupMeta && groupMeta.groupId && groupMeta.groupId !== "default" && groupMeta.name) ? ("JumpIn — " + groupMeta.name) : "JumpIn — Community Carpool";
       rootNode.textContent = "";
       const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
@@ -698,7 +701,10 @@
         const wrap = el(doc, "div", "wrap");
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
-        copy.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool - Group Name : " + (groupMeta.name || "Its-OK")));
+        const badges = el(doc, "div", "hero-badges");
+        badges.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
+        badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
+        copy.appendChild(badges);
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
         if (!groupMeta.groupId || groupMeta.groupId === "default") {
@@ -1323,7 +1329,6 @@
     link.href = homeHref;
     link.appendChild(el(doc, "span", "mark", "🚗"));
     link.appendChild(el(doc, "span", "", "JumpIn"));
-    if (meta && meta.name) link.appendChild(el(doc, "span", "product", meta.name));
     const nav = el(doc, "nav");
     const rides = el(doc, "a", "", "Rides");
     rides.href = homeHref;
