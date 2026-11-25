@@ -363,7 +363,7 @@ async function run() {
     assert.ok(appSrc.indexOf("watchPlatformNotice") !== -1 && appSrc.indexOf("Maintenance Mode") !== -1);
     assert.ok(appSrc.indexOf("function memberSheet") !== -1 && appSrc.indexOf("Members-Only Community") !== -1);
     assert.ok(appSrc.indexOf("body.jumpin-ios") !== -1 && appSrc.indexOf("syncIosTheme") !== -1);
-    assert.ok(adminHtml.indexOf("id=\"jumpin-platform-settings\"") !== -1 && adminHtml.indexOf("id=\"jumpin-feature-config\"") !== -1 && adminJs.indexOf("savePlatformConfig") !== -1);
+    assert.ok(adminHtml.indexOf("id=\"jumpin-plat-open\"") !== -1 && adminHtml.indexOf("id=\"jumpin-platform-view\"") !== -1 && adminHtml.indexOf("id=\"jumpin-plat-tab-general\"") !== -1 && adminHtml.indexOf("id=\"jumpin-plat-tab-features\"") !== -1 && adminJs.indexOf("savePlatformConfig") !== -1);
     assert.ok(guideHtml.indexOf("?tab=groups") !== -1);
   });
 

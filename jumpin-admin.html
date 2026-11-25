@@ -189,6 +189,7 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
         <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
         <button type="button" class="admin-btn primary" id="jumpin-copy-board-link" hidden>Copy Board Link</button>
+        <button type="button" class="admin-btn" id="jumpin-plat-open" hidden>Platform Settings</button>
         <button type="button" class="filled" id="jumpin-signin">Sign in</button>
         <button type="button" class="admin-btn" id="jumpin-signout" hidden>Sign out</button>
       </div>
@@ -419,10 +420,28 @@
           <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
         </details>
       </section>
-      <section id="jumpin-platform-settings" hidden>
+      <section>
         <details class="admin-collapse">
-          <summary>Platform Settings</summary>
-          <p class="quiet" style="margin-bottom:12px;">Global controls across all JumpIn community groups (Platform Admin only).</p>
+          <summary>Manage Groups</summary>
+          <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
+          <div id="jumpin-groups-list" class="admin-list quiet"></div>
+        </details>
+      </section>
+    </div>
+    <div id="jumpin-platform-view" hidden>
+      <section>
+        <div class="admin-card-top" style="align-items:center;margin-bottom:10px;">
+          <div>
+            <h2 style="margin:0 0 2px;">Platform Settings</h2>
+            <p class="quiet">Global controls across all JumpIn community groups (Platform Admin only).</p>
+          </div>
+          <button type="button" class="admin-btn" id="jumpin-plat-back">← Back to Console</button>
+        </div>
+        <nav class="admin-tabs" aria-label="Platform settings sections" style="margin-bottom:16px;">
+          <button type="button" class="admin-tab active" id="jumpin-plat-tab-btn-general">Settings</button>
+          <button type="button" class="admin-tab" id="jumpin-plat-tab-btn-features">Feature Config</button>
+        </nav>
+        <div id="jumpin-plat-tab-general">
           <div class="admin-settings-grid">
             <label>Platform is open
               <select id="jumpin-plat-enabled" aria-label="Platform is open">
@@ -432,7 +451,7 @@
             </label>
             <label>Platform Daily SMS Cap<input id="jumpin-plat-cap" inputmode="numeric" value="2000"></label>
             <label>Platform Admin Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
-          <p class="admin-note muted">Notification email only — SuperAdmin sign-in stays locked to the primary admin account.</p>
+            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">Notification email only — SuperAdmin sign-in stays locked to the primary admin account.</p>
             <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
             <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
             <label class="admin-full-span">Home Maintenance / Banner Message (optional, max 200 chars)<textarea id="jumpin-plat-banner" rows="2" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></textarea></label>
@@ -483,11 +502,8 @@
             </div>
           </div>
           <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
-        </details>
-      </section>
-      <section id="jumpin-feature-config" hidden>
-        <details class="admin-collapse">
-          <summary>Feature Config</summary>
+        </div>
+        <div id="jumpin-plat-tab-features" hidden>
           <p class="quiet" style="margin-bottom:12px;">Toggle experimental or UI features across JumpIn (Platform Admin only).</p>
           <div class="admin-settings-grid">
             <label>JumpIn Home Page iOS Theme
@@ -498,14 +514,7 @@
             </label>
           </div>
           <button type="button" class="filled" id="jumpin-feat-save">Save Feature Config</button>
-        </details>
-      </section>
-      <section>
-        <details class="admin-collapse">
-          <summary>Manage Groups</summary>
-          <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
-          <div id="jumpin-groups-list" class="admin-list quiet"></div>
-        </details>
+        </div>
       </section>
     </div>
     <div class="admin-modal" id="jumpin-detail-modal" hidden>

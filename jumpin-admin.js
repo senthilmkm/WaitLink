@@ -426,8 +426,39 @@
         if (btn) btn.textContent = "Copied!";
       }
       let activeTab = "trips";
+      let platformViewOpen = false;
+      function showPlatformView(open) {
+        platformViewOpen = !!open;
+        const pv = page.getElementById("jumpin-platform-view");
+        const pBtn = page.getElementById("jumpin-plat-open");
+        const strip = page.getElementById("jumpin-summary-strip");
+        const tabsBar = page.getElementById("jumpin-admin-tabs");
+        if (pv) pv.hidden = !platformViewOpen;
+        if (pBtn) pBtn.className = "admin-btn" + (platformViewOpen ? " primary" : "");
+        if (platformViewOpen) {
+          if (strip) strip.hidden = true;
+          if (tabsBar) tabsBar.hidden = true;
+          ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
+            const p = page.getElementById("jumpin-tab-" + other);
+            if (p) p.hidden = true;
+          });
+        } else {
+          if (strip) strip.hidden = false;
+          if (tabsBar) tabsBar.hidden = false;
+          switchTab(activeTab);
+        }
+      }
+      function switchPlatTab(sub) {
+        ["general", "features"].forEach(function (k) {
+          const b = page.getElementById("jumpin-plat-tab-btn-" + k);
+          const p = page.getElementById("jumpin-plat-tab-" + k);
+          if (b) b.className = "admin-tab" + (k === sub ? " active" : "");
+          if (p) p.hidden = k !== sub;
+        });
+      }
       function switchTab(name) {
         if (name) activeTab = name;
+        if (platformViewOpen) return;
         ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
           const b = page.getElementById("jumpin-tab-btn-" + other);
           const p = page.getElementById("jumpin-tab-" + other);
@@ -451,10 +482,9 @@
         if (platNode && groupsData.platform) {
           platNode.textContent = "Platform SMS today: " + (groupsData.platform.dailySmsSent || 0) + " / " + (groupsData.platform.platformDailySmsCap || 2000);
         }
-        const platCard = page.getElementById("jumpin-platform-settings");
-        if (platCard) platCard.hidden = !groupsData.isSuperAdmin;
-        const featCard = page.getElementById("jumpin-feature-config");
-        if (featCard) featCard.hidden = !groupsData.isSuperAdmin;
+        const platOpenBtn = page.getElementById("jumpin-plat-open");
+        if (platOpenBtn) platOpenBtn.hidden = !groupsData.isSuperAdmin;
+        if (!groupsData.isSuperAdmin && platformViewOpen) showPlatformView(false);
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
@@ -612,7 +642,20 @@
         firebase.auth().signInWithPopup(provider).then(refresh);
       });
       const signOut = page.getElementById("jumpin-signout");
-      if (signOut) signOut.addEventListener("click", function () { firebase.auth().signOut(); });
+      if (signOut) signOut.addEventListener("click", function () {
+        if (platformViewOpen) showPlatformView(false);
+        const platOpenBtn = page.getElementById("jumpin-plat-open");
+        if (platOpenBtn) platOpenBtn.hidden = true;
+        firebase.auth().signOut();
+      });
+      const platOpen = page.getElementById("jumpin-plat-open");
+      if (platOpen) platOpen.addEventListener("click", function () { showPlatformView(true); });
+      const platBack = page.getElementById("jumpin-plat-back");
+      if (platBack) platBack.addEventListener("click", function () { showPlatformView(false); });
+      ["general", "features"].forEach(function (k) {
+        const b = page.getElementById("jumpin-plat-tab-btn-" + k);
+        if (b) b.addEventListener("click", function () { switchPlatTab(k); });
+      });
       const openBroadcast = page.getElementById("jumpin-open-broadcast");
       if (openBroadcast) openBroadcast.addEventListener("click", function () {
         showSelectedTrip(null, true);
