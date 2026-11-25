@@ -511,7 +511,12 @@
           if (groupsData.isSuperAdmin && g.groupId !== "default" && api && api.reviewGroup) {
             if (g.status !== "active") {
               bar.appendChild(pillBtn(page, "Approve", "primary", function (_e, btn) {
-                withBusy(page, btn, "Approving…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "approve" }).then(refresh); });
+                withBusy(page, btn, "Approving…", function () {
+                  return api.reviewGroup({ groupId: g.groupId, decision: "approve" }).then(function (res) {
+                    if (res && res.textSent === false) text(page.getElementById("jumpin-admin-status"), "Group approved, but SMS notification could not be sent (SMS cap reached or unavailable).");
+                    return refresh();
+                  });
+                });
               }));
             } else {
               bar.appendChild(pillBtn(page, "Suspend", "warn", function (_e, btn) {
@@ -642,7 +647,8 @@
             else {
               activeGroupId = res.group && res.group.groupId ? res.group.groupId : activeGroupId;
               state = admin.reduce(state, { type: "clear" });
-              text(page.getElementById("jumpin-admin-status"), res.group && res.group.status === "pending" ? "Group requested — waiting for platform approval." : "Group created and active.");
+              const baseStatus = res.group && res.group.status === "pending" ? "Group requested — waiting for platform approval." : "Group created and active.";
+              text(page.getElementById("jumpin-admin-status"), res.textSent === false ? baseStatus + " (SMS notification skipped — daily cap reached or unavailable.)" : baseStatus);
               return refresh();
             }
             paint();

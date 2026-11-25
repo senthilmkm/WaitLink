@@ -423,6 +423,8 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   assert.strictEqual((await service.completeTrip(manualDb, { rideId: "missing", secret: "nope" }, longDepart + 1000)).error, service.GENERIC_LINK);
   await service.cancelTrip(manualDb, { rideId: (await service.postRide(manualDb, postInput({ idempotencyKey: "cancel-then-complete", phone: "5553334444" }), NOW + 50)).rideId, secret: "nope" }, NOW + 60);
   const soloRide = await service.postRide(manualDb, postInput({ idempotencyKey: "solo-1", phone: "5554445555", name: "Solo" }), NOW + 60);
+  const soloDepart = manualDb.snapshot()["carpool_private/rides/" + soloRide.rideId].departAt;
+  assert.strictEqual((await service.completeTrip(manualDb, { rideId: soloRide.rideId, secret: soloRide.secret }, soloDepart + 1000)).error, "No active passengers remain on this trip. Use Cancel trip instead.");
   await service.cancelTrip(manualDb, { rideId: soloRide.rideId, secret: soloRide.secret }, NOW + 70);
   assert.strictEqual((await service.completeTrip(manualDb, { rideId: soloRide.rideId, secret: soloRide.secret }, longDepart + 1000)).error, service.GENERIC_LINK);
   assert.strictEqual(core.reserveErrors({ name: "Sam", phone: "5559876543", seats: 9 }).field, "seats");
@@ -879,6 +881,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne" }, NOW)).field, "contactPhone");
   const created = await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne", contactPhone: "5552345678", supportNote: "Zelle:org@example.com", membersOnly: false }, NOW);
   assert.strictEqual(created.ok, true);
+  assert.strictEqual(created.textSent, true);
   assert.strictEqual(created.group.status, "pending");
   assert.strictEqual(created.group.supportNote, "Zelle:senthil930@gmail.com");
   assert.strictEqual(created.outbox.length, 1);
@@ -891,6 +894,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
 
   const approved = await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "approve" }, NOW);
   assert.strictEqual(approved.ok, true);
+  assert.strictEqual(approved.textSent, true);
   assert.strictEqual(approved.status, "active");
   assert.strictEqual(approved.outbox.length, 1);
   assert.strictEqual(approved.outbox[0].to, "+15552345678");
@@ -903,6 +907,12 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
 
   const rejectReq = await service.createGroup(db, "temp@example.com", { name: "Temp", groupId: "temp-grp", contactPhone: "5552345678" }, NOW);
   assert.strictEqual(rejectReq.ok, true);
+  assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "temp-grp", decision: "reject" }, NOW)).decision, "reject");
+  const reusedReq = await service.createGroup(db, "temp@example.com", { name: "Temp Reused", groupId: "temp-grp", contactPhone: "5552345678", membersOnly: false }, NOW);
+  assert.strictEqual(reusedReq.ok, true);
+  await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "temp-grp", decision: "approve" }, NOW);
+  const tempRide = await service.postRide(db, postInput({ groupId: "temp-grp", idempotencyKey: "temp-ride-1" }), NOW);
+  assert.strictEqual(tempRide.ok, true);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "temp-grp", decision: "reject" }, NOW)).decision, "reject");
 
   const posted = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2 }), NOW);

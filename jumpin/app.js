@@ -863,6 +863,8 @@
           ["time", "Time", "time", ""]
         ];
         const saved = loadProfile();
+        const defaultZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+        const defaultParts = !state.draft ? core.partsInZone(Date.now() + 60 * 60000, defaultZone) : null;
         const postInputs = {};
         fields.forEach(function (spec) {
           mid.appendChild(el(doc, "label", "lbl", spec[1]));
@@ -873,6 +875,8 @@
           input.autocomplete = spec[0] === "phone" ? "tel" : "on";
           if (state.draft && state.draft[spec[0]]) input.value = state.draft[spec[0]];
           else if (!state.draft && (spec[0] === "name" || spec[0] === "phone") && saved[spec[0]]) input.value = saved[spec[0]];
+          else if (defaultParts && spec[0] === "date") input.value = defaultParts.year + "-" + String(defaultParts.month).padStart(2, "0") + "-" + String(defaultParts.day).padStart(2, "0");
+          else if (defaultParts && spec[0] === "time") input.value = String(defaultParts.hour).padStart(2, "0") + ":" + String(defaultParts.minute).padStart(2, "0");
           postInputs[spec[0]] = input;
           mid.appendChild(input);
           if (state.error && state.field === spec[0]) mid.appendChild(el(doc, "p", "error", state.error));
@@ -986,6 +990,7 @@
           card.appendChild(el(doc, "p", "hint", "Send this link to the people riding with you."));
         }
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
+        card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another browser or app."));
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
         if (state.role === "driver" && state.status !== "cancelled") {
@@ -1007,6 +1012,7 @@
         if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
         else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : (state.bookedSeats > 1 ? "We texted you a link to manage your seats." : "We texted you a link to manage your seat.")));
+        card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another browser or app."));
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.role === "rider" && state.ride) {
           const actions = el(doc, "div", "action-row");

@@ -606,14 +606,17 @@ function completeTrip(db, input, now) {
     const pub = await tx.get(p.ridePublic(ride.rideId));
     const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const phones = [];
-    if (!ride.thankYouSentAt && config.postRideThankYouSms && config.supportNote) {
-      if (ride.driverPhoneE164) phones.push(ride.driverPhoneE164);
-      const keys = arr(ride.activeReservationDocIds);
-      for (let k = 0; k < keys.length; k++) {
-        const res = await tx.get(keys[k]);
-        if (res && res.status === "active" && res.phoneE164 && phones.indexOf(res.phoneE164) === -1) phones.push(res.phoneE164);
+    let activeRiderCount = 0;
+    const keys = arr(ride.activeReservationDocIds);
+    for (let k = 0; k < keys.length; k++) {
+      const res = await tx.get(keys[k]);
+      if (res && res.status === "active") {
+        activeRiderCount += 1;
+        if (!ride.thankYouSentAt && config.postRideThankYouSms && config.supportNote && res.phoneE164 && phones.indexOf(res.phoneE164) === -1) phones.push(res.phoneE164);
       }
     }
+    if (!activeRiderCount) return { ok: false, error: "No active passengers remain on this trip. Use Cancel trip instead." };
+    if (phones.length && ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.unshift(ride.driverPhoneE164);
     ride.status = "completed";
     ride.completedAt = now;
     if (phones.length) {
@@ -1445,9 +1448,12 @@ function createGroup(db, email, input, now) {
     }
     tx.set(p.groupMeta, meta);
     saveConfig(tx, cfg, p);
+    tx.set(p.broadcastIndex, { rides: [], audience: [] });
+    tx.set(p.memberIndex, { members: [] });
+    tx.set(p.blockIndex, { blocks: [] });
     gi.groups = groups.concat([entry]);
     tx.set("carpool_platform/groups_index", gi);
-    return { ok: true, group: entry, texts: texts };
+    return { ok: true, group: entry, textSent: isSuper ? true : texts.length > 0, texts: texts };
   }).then(function (result) { return withOutbox(result, result.texts); });
 }
 
@@ -1499,6 +1505,16 @@ function reviewGroup(db, email, input, now) {
     const exists = meta || arr(gi.groups).some(function (g) { return g.groupId === gid; });
     if (!exists) return { ok: false, error: "Group not found." };
     if (decision === "reject") {
+      const idx = await tx.get(p.broadcastIndex) || { rides: [] };
+      arr(idx.rides).forEach(function (r) {
+        if (r && r.rideId) {
+          tx.del(p.ridePublic(r.rideId));
+          tx.del(p.ridePrivate(r.rideId));
+        }
+      });
+      tx.del(p.broadcastIndex);
+      tx.del(p.memberIndex);
+      tx.del(p.blockIndex);
       tx.del(p.groupMeta);
       tx.del(p.config);
       gi.groups = arr(gi.groups).filter(function (g) { return g.groupId !== gid; });
@@ -1531,7 +1547,8 @@ function reviewGroup(db, email, input, now) {
       return Object.assign({}, g, { status: nextStatus, enabled: cfg.enabled, dailySmsCap: cfg.dailySmsCap });
     });
     tx.set("carpool_platform/groups_index", gi);
-    return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap, texts: texts };
+    const orgTextSent = decision !== "approve" || !(meta && meta.contactPhoneE164) || texts.length > 0;
+    return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap, textSent: orgTextSent, texts: texts };
   }).then(function (result) { return withOutbox(result, result.texts); });
 }
 
