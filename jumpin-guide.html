@@ -438,7 +438,7 @@
         <span class="brand-mark">⏳</span>
         <span>WaitLink <span class="accent">JumpIn</span></span>
       </a>
-      <nav class="nav-pills" aria-label="JumpIn Guide Sections">
+      <nav class="nav-pills" id="guide-nav" aria-label="JumpIn Guide Sections" hidden>
         <a href="#definition">What is JumpIn</a>
         <a href="#features">Features</a>
         <a href="#lifecycle">Trip Lifecycle</a>
@@ -449,7 +449,17 @@
     </div>
   </header>
 
-  <main class="container" id="top">
+  <section id="guide-gate" style="max-width:480px;margin:64px auto;padding:28px 24px;background:#fff;border:1px solid #cbd5e1;border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.08);text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+    <h1 style="font-family:Outfit,Inter,sans-serif;font-size:22px;margin:0 0 8px;">Platform Admin Access Only</h1>
+    <p id="guide-gate-msg" style="margin:0 0 18px;color:#475569;font-size:14.5px;">Checking sign-in status…</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button type="button" id="guide-signin" hidden style="min-height:42px;padding:0 18px;border-radius:10px;border:0;background:#0891b2;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Sign in with Google</button>
+      <button type="button" id="guide-signout" hidden style="min-height:42px;padding:0 18px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;font-weight:600;font-size:14px;cursor:pointer;">Sign out</button>
+      <a href="https://waitlink.app/?s=jumpin" style="display:inline-flex;align-items:center;min-height:42px;padding:0 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0891b2;font-weight:600;font-size:14px;text-decoration:none;">Back to Rides</a>
+    </div>
+  </section>
+  <main class="container" id="top" hidden>
     <!-- Hero -->
     <section class="hero">
       <div class="hero-badge">Community Carpool &amp; Seat Sharing</div>
@@ -1028,5 +1038,67 @@
 
     <p class="doc-foot">WaitLink JumpIn — Community Carpool Reference Guide &bull; Built for mobile and desktop browsers</p>
   </main>
+  <script src="/firebase-app-compat.js"></script>
+  <script src="/firebase-auth-compat.js"></script>
+  <script src="/jumpin/core.js?v=20261125j"></script>
+  <script src="/jumpin/cloud.js?v=20261125j"></script>
+  <script>
+    (function () {
+      if (!window.firebase) return;
+      if (!firebase.apps || !firebase.apps.length) {
+        firebase.initializeApp({
+          projectId: "waitlink-app-8821",
+          appId: "1:397413980014:web:6a2265cca9a4b2635e937f",
+          storageBucket: "waitlink-app-8821.firebasestorage.app",
+          apiKey: "AIzaSyCXKhwN-ah8GX8knAipTF8QcPD5iTtODDE",
+          authDomain: "waitlink-app-8821.firebaseapp.com",
+          messagingSenderId: "397413980014"
+        });
+      }
+      var api = window.JumpInCloud ? window.JumpInCloud.attach(window) : null;
+      var gate = document.getElementById("guide-gate");
+      var msg = document.getElementById("guide-gate-msg");
+      var signInBtn = document.getElementById("guide-signin");
+      var signOutBtn = document.getElementById("guide-signout");
+      var mainEl = document.getElementById("top");
+      var navEl = document.getElementById("guide-nav");
+      function setLocked(text, showIn, showOut) {
+        if (mainEl) mainEl.hidden = true;
+        if (navEl) navEl.hidden = true;
+        if (gate) gate.hidden = false;
+        if (msg) msg.textContent = text;
+        if (signInBtn) signInBtn.hidden = !showIn;
+        if (signOutBtn) signOutBtn.hidden = !showOut;
+      }
+      if (signInBtn) signInBtn.addEventListener("click", function () {
+        firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      });
+      if (signOutBtn) signOutBtn.addEventListener("click", function () {
+        firebase.auth().signOut();
+      });
+      firebase.auth().onAuthStateChanged(function (user) {
+        if (!user) {
+          setLocked("Sign in with a Platform Admin Google account to view this guide.", true, false);
+          return;
+        }
+        setLocked("Verifying Platform Admin access…", false, false);
+        if (!api || !api.listGroups) {
+          setLocked("Could not verify Platform Admin access.", false, true);
+          return;
+        }
+        api.listGroups().then(function (gr) {
+          if (gr && gr.ok && gr.isSuperAdmin === true) {
+            if (gate) gate.hidden = true;
+            if (mainEl) mainEl.hidden = false;
+            if (navEl) navEl.hidden = false;
+          } else {
+            setLocked("Access denied — signed in as " + (user.email || "user") + " (Platform Admin only).", false, true);
+          }
+        }, function () {
+          setLocked("Could not verify Platform Admin access. Try signing in again.", false, true);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
