@@ -527,10 +527,11 @@
         recActions.appendChild(cancelRec);
         card.appendChild(recActions);
       }
+      const msgClosed = !!(ride.departAt && Date.now() >= ride.departAt + ((Number(ride.durationMinutes) || 0) * 60000) + 60 * 60000);
       if (!current.reserveOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
         let box = null;
         const hasRiders = !!(ride.riders && ride.riders.length);
-        if (current.status === "open" && (current.role === "rider" || hasRiders)) {
+        if (current.status === "open" && !msgClosed && (current.role === "rider" || hasRiders)) {
           card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Message passengers" : "Message the driver"));
           const quickRow = el(doc, "div", "chip-row");
           ["On my way", "At pickup spot", "5 min late"].forEach(function (phrase) {
@@ -566,9 +567,11 @@
             on(complete, "click", function () { state = ui.reduce(state, { type: "complete-ask" }); draw(); });
             actions.appendChild(complete);
           }
-          const cancel = el(doc, "button", "textish", "Cancel trip");
-          on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
-          actions.appendChild(cancel);
+          if (current.status !== "open" || !msgClosed) {
+            const cancel = el(doc, "button", "textish", "Cancel trip");
+            on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
+            actions.appendChild(cancel);
+          }
         } else if (cloud && cloud.seatSecretFor(ride) && !departed) {
           const myInfo = cloud.seatInfoFor ? cloud.seatInfoFor(ride) : null;
           const mySeats = (myInfo && Number(myInfo.seats)) || 1;
@@ -625,7 +628,7 @@
           actions.appendChild(forget);
         }
         if (actions.children.length) card.appendChild(actions);
-      } else if (!current.reserveOpen && (current.status === "open" || current.status === "pending")) {
+      } else if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
         const recBox = el(doc, "div", "recovery-box");
         const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
         on(seat, "click", function () { state = ui.reduce(state, { type: "recovery", role: "rider" }); draw(); });

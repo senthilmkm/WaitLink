@@ -444,7 +444,7 @@
     return { messageId: "msg_" + now + "_" + n, kind: "system", authorName: "", authorRole: "system", text: text, createdAt: now };
   }
 
-  function filledButton(model) {
+  function filledButton(model, now) {
     if (model.recovery) return "Text me a link";
     if (model.mode === "post") return "Post";
     if (model.mode === "board") return "Post a ride";
@@ -452,8 +452,11 @@
     if (model.status === "rejected" || model.status === "cancelled" || model.status === "completed" || model.status === "missing") return null;
     if (model.reserveOpen) return "Reserve a seat";
     if (model.role === "driver") return "Copy link";
-    if (model.role === "rider") return "Send";
-    if (model.seatsLeft > 0 && model.status === "open") return "Reserve a seat";
+    const clock = now || Date.now();
+    const msgClosed = !!(model.departAt && clock >= model.departAt + ((Number(model.durationMinutes) || 0) * 60000) + 60 * 60000);
+    if (model.role === "rider") return msgClosed ? null : "Send";
+    const departed = !!(model.departAt && clock >= model.departAt);
+    if (model.seatsLeft > 0 && model.status === "open" && !departed) return "Reserve a seat";
     return null;
   }
 

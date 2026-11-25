@@ -289,6 +289,8 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   assert.strictEqual(core.filledButton({ status: "open", role: "driver", reserveOpen: true }), "Reserve a seat");
   assert.strictEqual(core.filledButton({ status: "open", role: "rider" }), "Send");
   assert.strictEqual(core.filledButton({ status: "open", reserveOpen: true, seatsLeft: 0 }), "Reserve a seat");
+  assert.strictEqual(core.filledButton({ status: "open", seatsLeft: 2, departAt: NOW - 1000 }, NOW), null);
+  assert.strictEqual(core.filledButton({ status: "open", role: "rider", departAt: NOW - 3 * 3600000, durationMinutes: 60 }, NOW), null);
   assert.strictEqual(core.filledButton({ status: "open", seatsLeft: 2 }), "Reserve a seat");
   assert.strictEqual(core.filledButton({ status: "open", seatsLeft: 0 }), null);
   const exact = core.partsInZone(NOW, TZ);
