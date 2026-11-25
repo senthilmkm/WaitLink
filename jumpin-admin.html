@@ -120,7 +120,7 @@
     .admin-pair-row label { margin-bottom: 0; }
     @media (max-width: 680px) { .admin-pair-row { grid-template-columns: 1fr; } }
     .admin-label-head { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-main); }
-    .admin-info-btn { width: 18px; height: 18px; padding: 0; border-radius: 999px; border: 1px solid #0284c7; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 800; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .admin-info-btn { width: 18px; height: 18px; min-height: 18px; padding: 0; border-radius: 999px; border: 1px solid #0284c7; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 800; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .admin-info-btn:hover, .admin-info-btn[aria-expanded="true"] { background: #0284c7; color: #ffffff; }
     .admin-info-box { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; font-size: 12px; font-weight: 500; line-height: 1.45; }
     .admin-note { font-size: 13px; color: #334155; margin-top: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; }
@@ -456,7 +456,7 @@
                   </select>
                 </label>
               </div>
-              <div class="admin-info-box" id="jumpin-info-complete" hidden>Runs on a 5-minute Cloud Scheduler heartbeat across all active groups. Closes trips whose departure time + estimated duration has passed: marks trips with riders as Completed and sends a thank-you SMS (when group setting is enabled); cancels trips with 0 riders. Set Off to pause automatic trip closing.</div>
+              <div class="admin-info-box" id="jumpin-info-complete" hidden>Runs across all active groups at the selected Auto-Complete Frequency (5, 10, 15, or 30 minutes). Closes trips whose departure time + estimated duration has passed: marks trips with riders as Completed and sends a thank-you SMS (when group setting is enabled); cancels trips with 0 riders. Set Off to pause automatic trip closing.</div>
             </div>
             <div class="admin-pair-group">
               <div class="admin-pair-row">
@@ -478,7 +478,7 @@
                   </select>
                 </label>
               </div>
-              <div class="admin-info-box" id="jumpin-info-retain" hidden>Runs on a 24-hour Cloud Scheduler heartbeat across all groups. Purges ended trips (completed, cancelled, or rejected) 7 days after completion, removes expired "missing" trip tombstones after 30 days, and cleans up expired rate-limit records. Frequency controls how often the job runs, not the 7-day retention window.</div>
+              <div class="admin-info-box" id="jumpin-info-retain" hidden>Runs across all groups at the selected Auto-Cleanup Frequency (24, 48, or 72 hours). Purges ended trips (completed, cancelled, or rejected) 7 days after completion, removes expired "missing" trip tombstones after 30 days, and cleans up expired rate-limit records. Frequency controls how often the job runs, not the 7-day retention window.</div>
             </div>
           </div>
           <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
