@@ -662,6 +662,8 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: "missing_hash", name: "X" }, NOW)).ok, false);
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sammy", phone: "12" }, NOW)).ok, false);
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sammy" }, NOW)).count, 2);
+  await memberDb.runTransaction(async function (tx) { const d = await tx.get("carpool_private/member_index"); d.members[0].phoneE164 = undefined; tx.set("carpool_private/member_index", d); });
+  assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[0].phoneHash, name: "Alex", isAdmin: true }, NOW)).ok, true);
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { editPhoneHash: memberListed.members[1].phoneHash, name: "Sam", phone: "5559876543", email: "sam@example.com", isAdmin: true }, NOW)).count, 2);
   assert.strictEqual((await service.setMembers(memberDb, "co@example.com", { name: "AdminAlex", phone: "5552345678", email: "alex@example.com", isAdmin: true }, NOW)).count, 2);
   const nonMemberPost = await service.postRide(memberDb, postInput({ phone: "5554445555", idempotencyKey: "nm-p" }), NOW);

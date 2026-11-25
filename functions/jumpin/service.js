@@ -1294,8 +1294,8 @@ function setMembers(db, email, input, now) {
       const nextName = String(body.name || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Member";
       const rawPhone = body.phone != null ? String(body.phone).trim() : "";
       let nextHash = existing.phoneHash;
-      let nextLast4 = existing.phoneLast4;
-      let nextE164 = existing.phoneE164;
+      let nextLast4 = existing.phoneLast4 || "";
+      let nextE164 = existing.phoneE164 || "";
       if (rawPhone) {
         const parsed = core.normalizePhone(rawPhone);
         if (!parsed.ok) return { ok: false, error: parsed.error };
