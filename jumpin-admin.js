@@ -729,6 +729,8 @@
                 tbodyEl.appendChild(tr);
               }
             });
+          }).catch(function () {
+            text(statusEl, "Could not search members right now. Please refresh and try again.");
           });
         });
       }
