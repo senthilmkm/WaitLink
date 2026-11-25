@@ -474,9 +474,15 @@
           if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
           if (pBan) pBan.value = groupsData.platform.maintenanceMessage || "";
           if (pCompEn) pCompEn.value = groupsData.platform.completeTripsEnabled === false ? "off" : "on";
-          if (pCompInt) pCompInt.value = String(groupsData.platform.completeTripsIntervalMinutes || 5);
+          if (pCompInt) {
+            pCompInt.value = String(groupsData.platform.completeTripsIntervalMinutes || 5);
+            pCompInt.disabled = groupsData.platform.completeTripsEnabled === false;
+          }
           if (pRetEn) pRetEn.value = groupsData.platform.retainTripsEnabled === false ? "off" : "on";
-          if (pRetInt) pRetInt.value = String(groupsData.platform.retainTripsIntervalHours || 24);
+          if (pRetInt) {
+            pRetInt.value = String(groupsData.platform.retainTripsIntervalHours || 24);
+            pRetInt.disabled = groupsData.platform.retainTripsEnabled === false;
+          }
           if (fIos) fIos.value = groupsData.platform.iosThemeEnabled ? "on" : "off";
         }
         if (groupSelect) {
@@ -754,6 +760,12 @@
           });
         });
       }
+      const pCompEnBind = page.getElementById("jumpin-plat-complete-enabled");
+      const pCompIntBind = page.getElementById("jumpin-plat-complete-interval");
+      if (pCompEnBind && pCompIntBind) pCompEnBind.addEventListener("change", function () { pCompIntBind.disabled = pCompEnBind.value === "off"; });
+      const pRetEnBind = page.getElementById("jumpin-plat-retain-enabled");
+      const pRetIntBind = page.getElementById("jumpin-plat-retain-interval");
+      if (pRetEnBind && pRetIntBind) pRetEnBind.addEventListener("change", function () { pRetIntBind.disabled = pRetEnBind.value === "off"; });
       const platSave = page.getElementById("jumpin-plat-save");
       if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
         const pEn = page.getElementById("jumpin-plat-enabled");
