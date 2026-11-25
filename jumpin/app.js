@@ -456,7 +456,7 @@
         name.name = "name";
         name.value = draft.name != null ? draft.name : (saved.name || "");
         card.appendChild(name);
-        card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone" : "Phone"));
+        card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone (US/Canada)" : "Phone (US/Canada)"));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
@@ -493,8 +493,8 @@
       }
       if (current.recovery) {
         const recLabel = current.recovery === "driver"
-          ? "Driver phone (used to post this trip)"
-          : "Rider phone (used to reserve your seat)";
+          ? "Driver phone (US/Canada, used to post this trip)"
+          : "Rider phone (US/Canada, used to reserve your seat)";
         card.appendChild(el(doc, "label", "lbl", recLabel));
         const phone = el(doc, "input");
         phone.name = "phone";
@@ -835,7 +835,7 @@
         mid.appendChild(postHead);
         const fields = [
           ["name", "Your name", "text", "Alex"],
-          ["phone", "Phone", "tel", "555 234 5678"],
+          ["phone", "Phone (US/Canada)", "tel", "555 234 5678"],
           ["from", "From", "text", "Library"],
           ["to", "To", "text", "Office"],
           ["date", "Date", "date", ""],
