@@ -148,6 +148,11 @@
     .admin-stat { background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03); }
     .admin-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
     .admin-stat-val { font-family: Outfit, Inter, sans-serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-collapse summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-family: Outfit, Inter, sans-serif; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; color: var(--text-main); user-select: none; }
+    .admin-collapse summary::-webkit-details-marker { display: none; }
+    .admin-collapse summary::after { content: "▸"; font-size: 16px; color: #64748b; transition: transform .15s; }
+    .admin-collapse[open] summary::after { transform: rotate(90deg); color: var(--primary); }
+    .admin-collapse[open] summary { margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -385,57 +390,65 @@
     </div>
     <div id="jumpin-tab-groups" hidden>
       <section>
-        <h2>Create Neighborhood Group</h2>
-        <p class="quiet" style="margin-bottom:12px;">Create an isolated JumpIn carpool board for your neighborhood, school, or community. New organizer requests start pending until platform approval.</p>
-        <div class="admin-settings-grid">
-          <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"></label>
-          <label>Group URL Slug<input id="jumpin-group-slug" type="text" maxlength="32" placeholder="e.g. ballantyne"></label>
-          <label>Contact Email<input id="jumpin-group-email" type="email" placeholder="organizer@email.com"></label>
-          <label>Organizer Phone (required, US/Canada)<input id="jumpin-group-phone" type="tel" placeholder="555 234 5678"></label>
-          <label>Members Only
-            <select id="jumpin-group-members-only">
-              <option value="yes">Yes (recommended)</option>
-              <option value="no">No (open to visitors)</option>
-            </select>
-          </label>
-        </div>
-        <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
+        <details class="admin-collapse">
+          <summary>Create Neighborhood Group</summary>
+          <p class="quiet" style="margin-bottom:12px;">Create an isolated JumpIn carpool board for your neighborhood, school, or community. New organizer requests start pending until platform approval.</p>
+          <div class="admin-settings-grid">
+            <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"></label>
+            <label>Group URL Slug<input id="jumpin-group-slug" type="text" maxlength="32" placeholder="e.g. ballantyne"></label>
+            <label>Contact Email<input id="jumpin-group-email" type="email" placeholder="organizer@email.com"></label>
+            <label>Organizer Phone (required, US/Canada)<input id="jumpin-group-phone" type="tel" placeholder="555 234 5678"></label>
+            <label>Members Only
+              <select id="jumpin-group-members-only">
+                <option value="yes">Yes (recommended)</option>
+                <option value="no">No (open to visitors)</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
+        </details>
       </section>
       <section id="jumpin-platform-settings" hidden>
-        <h2>Platform Settings</h2>
-        <p class="quiet" style="margin-bottom:12px;">Global controls across all JumpIn community groups (Platform Admin only).</p>
-        <div class="admin-settings-grid">
-          <label>Platform is open
-            <select id="jumpin-plat-enabled" aria-label="Platform is open">
-              <option value="yes">Yes (accepting rides &amp; seats)</option>
-              <option value="no">No (maintenance pause)</option>
-            </select>
-          </label>
-          <label>Platform Daily SMS Cap<input id="jumpin-plat-cap" inputmode="numeric" value="2000"></label>
-          <label>Platform Admin Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
-          <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
-          <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
-          <label>Home Maintenance / Banner Message (optional)<input id="jumpin-plat-banner" type="text" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></label>
-        </div>
-        <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
+        <details class="admin-collapse">
+          <summary>Platform Settings</summary>
+          <p class="quiet" style="margin-bottom:12px;">Global controls across all JumpIn community groups (Platform Admin only).</p>
+          <div class="admin-settings-grid">
+            <label>Platform is open
+              <select id="jumpin-plat-enabled" aria-label="Platform is open">
+                <option value="yes">Yes (accepting rides &amp; seats)</option>
+                <option value="no">No (maintenance pause)</option>
+              </select>
+            </label>
+            <label>Platform Daily SMS Cap<input id="jumpin-plat-cap" inputmode="numeric" value="2000"></label>
+            <label>Platform Admin Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
+            <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
+            <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
+            <label>Home Maintenance / Banner Message (optional)<input id="jumpin-plat-banner" type="text" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></label>
+          </div>
+          <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
+        </details>
       </section>
       <section id="jumpin-feature-config" hidden>
-        <h2>Feature Config</h2>
-        <p class="quiet" style="margin-bottom:12px;">Toggle experimental or UI features across JumpIn (Platform Admin only).</p>
-        <div class="admin-settings-grid">
-          <label>JumpIn Home Page iOS Theme
-            <select id="jumpin-feat-ios" aria-label="JumpIn Home Page iOS Theme">
-              <option value="off">Off (Standard theme)</option>
-              <option value="on">On (iOS native app look)</option>
-            </select>
-          </label>
-        </div>
-        <button type="button" class="filled" id="jumpin-feat-save">Save Feature Config</button>
+        <details class="admin-collapse">
+          <summary>Feature Config</summary>
+          <p class="quiet" style="margin-bottom:12px;">Toggle experimental or UI features across JumpIn (Platform Admin only).</p>
+          <div class="admin-settings-grid">
+            <label>JumpIn Home Page iOS Theme
+              <select id="jumpin-feat-ios" aria-label="JumpIn Home Page iOS Theme">
+                <option value="off">Off (Standard theme)</option>
+                <option value="on">On (iOS native app look)</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" class="filled" id="jumpin-feat-save">Save Feature Config</button>
+        </details>
       </section>
       <section>
-        <h2>Manage Groups</h2>
-        <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
-        <div id="jumpin-groups-list" class="admin-list quiet"></div>
+        <details class="admin-collapse">
+          <summary>Manage Groups</summary>
+          <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
+          <div id="jumpin-groups-list" class="admin-list quiet"></div>
+        </details>
       </section>
     </div>
     <div class="admin-modal" id="jumpin-detail-modal" hidden>
