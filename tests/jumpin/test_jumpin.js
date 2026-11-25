@@ -626,11 +626,24 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   assert.strictEqual((await service.reserveSeat(db, { rideId: "missing", name: "Sam", phone: "5559876543", idempotencyKey: "gone" }, NOW)).error, "This ride is not available.");
   const handlers = require("../../jumpin/handlers.js");
   const auth = { token: { email: service.SUPERADMIN_EMAIL } };
-  const names = ["carpoolPostRide", "carpoolReserveSeat", "carpoolUpdateSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolCompleteTrip", "carpoolSendManageLink", "carpoolPostMessage", "carpoolListPending", "carpoolReviewRide", "carpoolAdminCancelTrip", "carpoolAdminSetPosting", "carpoolAdminSetMembers", "carpoolAdminSaveConfig", "carpoolAdminPurge", "carpoolAdminBroadcast", "carpoolCompleteTrips", "carpoolRetainTrips", "carpoolMarkOptOut"];
+  const names = ["carpoolPostRide", "carpoolReserveSeat", "carpoolUpdateSeat", "carpoolCancelSeat", "carpoolCancelTrip", "carpoolCompleteTrip", "carpoolAckRider", "carpoolSendManageLink", "carpoolPostMessage", "carpoolListPending", "carpoolReviewRide", "carpoolAdminCancelTrip", "carpoolAdminSetPosting", "carpoolAdminSetMembers", "carpoolAdminSaveConfig", "carpoolAdminPurge", "carpoolAdminBroadcast", "carpoolCompleteTrips", "carpoolRetainTrips", "carpoolMarkOptOut"];
   for (let i = 0; i < names.length; i++) {
     const result = await handlers.call(db, names[i], { text: "Hello", scope: "all", confirm: false, phone: "5552345678", rideId: posted.rideId }, auth, NOW + 90000);
     assert.ok(result && typeof result.ok === "boolean");
   }
+  const ackDb = service.createMemoryDb(seed());
+  const ackPosted = await service.postRide(ackDb, postInput({ phone: "5552345678", idempotencyKey: "ack-post" }), NOW + 50);
+  const ackRes = await service.reserveSeat(ackDb, { rideId: ackPosted.rideId, name: "AckRider", phone: "5556667777", driverAck: true, idempotencyKey: "ack-r" }, NOW + 100);
+  const ackRes2 = await service.reserveSeat(ackDb, { rideId: ackPosted.rideId, name: "AckRider2", phone: "5556667788", idempotencyKey: "ack-r2" }, NOW + 101);
+  assert.strictEqual(ackRes.ok, true);
+  assert.strictEqual(ackRes2.ok, true);
+  assert.strictEqual((await service.ackRider(ackDb, null, NOW + 150)).ok, false);
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: "bad", reservationId: ackRes.reservationId }, NOW + 150)).ok, false);
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: "missing" }, NOW + 150)).ok, false);
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId, seen: false }, NOW + 150)).driverSeenAt, 0);
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId, seen: true }, NOW + 160)).driverSeenAt, NOW + 160);
+  await ackDb.runTransaction(async function (tx) { const c = await tx.get("settings/carpool_config"); c.enabled = false; tx.set("settings/carpool_config", c); });
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId }, NOW + 170)).ok, false);
   assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, null, NOW)).ok, false);
   assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, {}, NOW)).ok, false);
   const memberDb = service.createMemoryDb(seed());
@@ -1267,13 +1280,25 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   assert.strictEqual(cAttach.seatInfoFor({ riders: [{ reservationId: "r_hit", seats: 2 }] }).seats, 2);
   assert.strictEqual(cAttach.seatInfoFor({ riders: [{ reservationId: "x" }] }), null);
   const addWin = fakeWindow();
+  let ackCalls = [];
   addWin.JumpInCloud = {
     watchBoard: function () { return function () {}; },
+    tripSecret: function () { return "sec_drv"; },
+    ackRider: function (rideId, secret, resId, seen) { ackCalls.push({ rideId: rideId, secret: secret, resId: resId, seen: seen }); return Promise.resolve({ ok: true }); },
     reserveSeat: function () { return Promise.resolve({ ok: true, reservationId: "rsv_dup", seatsLeft: 2, textSent: true }); }
   };
   const addMount = view.mount(addWin);
   const addRide = { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 2, riders: [{ reservationId: "rsv_dup", name: "Sam", seats: 1 }] };
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: addRide, role: "driver" }), { ride: addRide, reserveOpen: true }));
+  const ackBtn1 = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
+  assert.strictEqual(ackBtn1.textContent, "🔔");
+  ackBtn1._listeners[0]();
+  const ackBtn2 = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
+  assert.strictEqual(ackBtn2.textContent, "✓");
+  ackBtn2._listeners[0]();
+  assert.strictEqual(ackCalls.length, 2);
+  assert.strictEqual(ackCalls[0].seen, true);
+  assert.strictEqual(ackCalls[1].seen, false);
   let scrolled = 0;
   addMount.root.children[1]._listeners.forEach(function (fn) {
     fn({ target: { tagName: "INPUT", scrollIntoView: function () { scrolled++; } } });

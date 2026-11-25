@@ -282,6 +282,7 @@
           phone: values.phone,
           seats: Number(values.seats || 1),
           dropoff: values.dropoff || "",
+          driverAck: !!(options && options.skipSaveSeat),
           idempotencyKey: once("reserve")
         }).then(function (result) {
           if (result && result.ok && result.secret) {
@@ -302,6 +303,9 @@
       },
       completeTrip: function (rideId, secret) {
         return call("carpoolCompleteTrip", { rideId: rideId, secret: secret });
+      },
+      ackRider: function (rideId, secret, reservationId, seen) {
+        return call("carpoolAckRider", { rideId: rideId, secret: secret, reservationId: reservationId, seen: seen });
       },
       sendManageLink: function (rideId, phone, role) {
         return call("carpoolSendManageLink", { rideId: rideId, phone: phone, role: role });

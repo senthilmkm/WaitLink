@@ -440,7 +440,7 @@ function reserveSeat(db, input, now, rng) {
     phone.updatedAt = now;
     const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
     pub.seatsLeft = ride.seatsLeft;
-    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, dropoff: fields.dropoff || "", status: "active" }]);
+    pub.riders = activeRiders(pub.riders).concat([{ reservationId: reservationId, name: fields.name, seats: requested, dropoff: fields.dropoff || "", driverSeenAt: input.driverAck === true ? now : 0, status: "active" }]);
     const reserveMsg = requested === 1 ? (fields.name + " reserved a seat.") : (fields.name + " reserved " + requested + " seats.");
     pub.messages = arr(pub.messages).concat([core.systemMessage(reserveMsg, now, pub.messages.length + 1)]);
     pub.updatedAt = now;
@@ -525,7 +525,7 @@ function updateSeat(db, input, now) {
     if (pub) {
       pub.seatsLeft = ride.seatsLeft;
       pub.riders = arr(pub.riders).map(function (row) {
-        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, dropoff: reservation.dropoff || row.dropoff || "", status: "active" };
+        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, dropoff: reservation.dropoff || row.dropoff || "", driverSeenAt: row.driverSeenAt || 0, status: "active" };
         return row;
       });
       const word = seats === 1 ? "1 seat." : (seats + " seats.");
@@ -792,6 +792,36 @@ function postMessage(db, input, now) {
     return { ok: true, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
+  });
+}
+
+function ackRider(db, input, now) {
+  const body = input || {};
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(body));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const config = await loadConfig(tx, clock, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(p.ridePrivate(body.rideId));
+    if (!ride || !assertSecret(body.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
+    const pub = await tx.get(p.ridePublic(ride.rideId));
+    if (!pub) return { ok: false, error: GENERIC_LINK };
+    let found = false;
+    let nextSeen = 0;
+    pub.riders = arr(pub.riders).map(function (row) {
+      if (row.reservationId === body.reservationId && row.status === "active") {
+        found = true;
+        nextSeen = body.seen === false ? 0 : clock;
+        return Object.assign({}, row, { driverSeenAt: nextSeen });
+      }
+      return row;
+    });
+    if (!found) return { ok: false, error: GENERIC_LINK };
+    pub.updatedAt = clock;
+    tx.set(p.ridePublic(ride.rideId), pub);
+    return { ok: true, driverSeenAt: nextSeen };
   });
 }
 
@@ -1818,6 +1848,7 @@ module.exports = {
   cancelSeat: cancelSeat,
   cancelTrip: cancelTrip,
   completeTrip: completeTrip,
+  ackRider: ackRider,
   postMessage: postMessage,
   sendManageLink: sendManageLink,
   reviewRide: reviewRide,
