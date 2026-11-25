@@ -904,6 +904,113 @@
       </div>
     </section>
 
+    <!-- 7. Complete SMS Notification Matrix -->
+    <section class="section" id="sms-matrix">
+      <div class="section-head">
+        <span class="section-icon admin">💬</span>
+        <h2>7. Complete SMS Notification Matrix (Who Gets Texted &amp; When)</h2>
+      </div>
+      <p class="section-sub">Every automated SMS sent across Driver, Rider, New User / Recovery, Group Creation, Admin, and Scheduled flows. All custom-group links automatically include <code>&amp;g=&lt;slug&gt;</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18%">Flow</th>
+              <th style="width:26%">Action / Event</th>
+              <th style="width:22%">SMS Recipient</th>
+              <th style="width:34%">Message Content &amp; Conditions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-open">Driver Flow</span></td>
+              <td>Post a new ride</td>
+              <td><strong>Driver</strong></td>
+              <td>Private manage link (<code>view=trip</code>). Respects daily post cap, blocklist, and Members-Only list.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Driver Flow</span></td>
+              <td>Message passengers</td>
+              <td><strong>All Active Riders</strong></td>
+              <td>Driver's message + trip link (excludes cancelled riders).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Driver Flow</span></td>
+              <td>Complete trip manually</td>
+              <td><strong>Driver &amp; Active Riders</strong></td>
+              <td>Post-ride thank-you + Support / Tip handle (only if <em>Post-ride thank-you text</em> &amp; handle are set).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Driver Flow</span></td>
+              <td>Cancel trip</td>
+              <td><strong>All Active Riders</strong></td>
+              <td>Cancellation notice for the trip.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Rider Flow</span></td>
+              <td>Reserve seat(s)</td>
+              <td><strong>Rider</strong></td>
+              <td>Seat count confirmation + private manage link (<code>view=seat</code>).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Rider Flow</span></td>
+              <td>Message the driver</td>
+              <td><strong>Driver</strong></td>
+              <td>Rider's message + trip link (works pre-departure and mid-trip until <code>depart + duration + 1 hr</code>).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-sms">New User / Recovery</span></td>
+              <td>Request lost manage link (<em>Text me a link</em>)</td>
+              <td><strong>Driver or Rider</strong> (matched on that trip)</td>
+              <td>Fresh private manage link. Subject to per-record limit and resend cooldown; always shows neutral confirmation.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-pending">New User / Non-Member</span></td>
+              <td>Blocked by Members-Only</td>
+              <td><strong>No SMS sent</strong></td>
+              <td>Shows the mobile-responsive <em>Members-Only Community</em> modal with organizer email, <code>?g=</code> tip, and <strong>Start a Group</strong> link.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-active">Group Creation</span></td>
+              <td>Organizer submits new group request</td>
+              <td><strong>Platform Admin</strong> (<code>platformAdminPhone</code>)</td>
+              <td>Group name, <code>?g=&lt;slug&gt;</code>, organizer email, and direct review link (<code>jumpin-admin.html?tab=groups</code>).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-active">Group Creation</span></td>
+              <td>Platform Admin approves group</td>
+              <td><strong>Group Organizer</strong> (<code>contactPhoneE164</code>)</td>
+              <td>Confirmation + shareable group board link (<code>waitlink.app/?s=jumpin&amp;g=&lt;slug&gt;</code>).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-pending">Admin Flow</span></td>
+              <td>Approve or Decline pending ride</td>
+              <td><strong>Driver</strong></td>
+              <td>Public share link (if approved) or not-approved notice (if declined).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Admin Flow</span></td>
+              <td>Admin cancels trip</td>
+              <td><strong>Driver &amp; Active Riders</strong></td>
+              <td>Admin cancellation notice for the trip.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-sms">Admin Flow</span></td>
+              <td>Broadcast announcement</td>
+              <td><strong>Everyone / Upcoming / Selected Trip</strong></td>
+              <td>Custom admin text (skips Twilio <code>21610</code> opted-out contacts and respects daily SMS cap).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">System Scheduler</span></td>
+              <td>Auto-complete after <code>depart + duration + 1 hr</code></td>
+              <td><strong>Driver &amp; Active Riders</strong> (only if 1+ riders joined)</td>
+              <td>Thank-you + tip handle SMS if enabled. If 0 riders joined, trip is auto-cancelled with <strong>0 SMS</strong>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <p class="doc-foot">WaitLink JumpIn — Community Carpool Reference Guide &bull; Built for mobile and desktop browsers</p>
   </main>
 </body>
