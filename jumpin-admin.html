@@ -114,6 +114,10 @@
     .admin-meta { font-size: 13px; color: var(--text-main); line-height: 1.4; }
     .admin-meta.muted { color: #475569; margin-top: 2px; }
     .admin-field { display: flex; flex-direction: column; }
+    .admin-pair-group { grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+    .admin-pair-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .admin-pair-row label { margin-bottom: 0; }
+    @media (max-width: 680px) { .admin-pair-row { grid-template-columns: 1fr; } }
     .admin-label-head { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-main); }
     .admin-info-btn { width: 18px; height: 18px; padding: 0; border-radius: 999px; border: 1px solid #0284c7; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 800; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .admin-info-btn:hover, .admin-info-btn[aria-expanded="true"] { background: #0284c7; color: #ffffff; }
@@ -430,43 +434,51 @@
             <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
             <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
             <label>Home Maintenance / Banner Message (optional)<input id="jumpin-plat-banner" type="text" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></label>
-            <div class="admin-field">
-              <div class="admin-label-head">
-                <label for="jumpin-plat-complete-enabled">Auto-Complete Trips (carpoolCompleteTrips)</label>
-                <button type="button" class="admin-info-btn" data-info-target="jumpin-info-complete" aria-expanded="false" aria-label="Details about Auto-Complete Trips">i</button>
+            <div class="admin-pair-group">
+              <div class="admin-pair-row">
+                <div class="admin-field">
+                  <div class="admin-label-head">
+                    <label for="jumpin-plat-complete-enabled">Auto-Complete Trips (carpoolCompleteTrips)</label>
+                    <button type="button" class="admin-info-btn" data-info-target="jumpin-info-complete" aria-expanded="false" aria-label="Details about Auto-Complete Trips">i</button>
+                  </div>
+                  <select id="jumpin-plat-complete-enabled" aria-label="Auto-Complete Trips">
+                    <option value="on">On (Enabled)</option>
+                    <option value="off">Off (Paused)</option>
+                  </select>
+                </div>
+                <label>Auto-Complete Frequency
+                  <select id="jumpin-plat-complete-interval" aria-label="Auto-Complete Frequency">
+                    <option value="5">Every 5 minutes</option>
+                    <option value="10">Every 10 minutes</option>
+                    <option value="15">Every 15 minutes</option>
+                    <option value="30">Every 30 minutes</option>
+                  </select>
+                </label>
               </div>
-              <select id="jumpin-plat-complete-enabled" aria-label="Auto-Complete Trips">
-                <option value="on">On (Enabled)</option>
-                <option value="off">Off (Paused)</option>
-              </select>
               <div class="admin-info-box" id="jumpin-info-complete" hidden>Runs on a 5-minute Cloud Scheduler heartbeat across all active groups. Closes trips whose departure time + estimated duration has passed: marks trips with riders as Completed and sends a thank-you SMS (when group setting is enabled); cancels trips with 0 riders. Set Off to pause automatic trip closing.</div>
             </div>
-            <label>Auto-Complete Frequency
-              <select id="jumpin-plat-complete-interval" aria-label="Auto-Complete Frequency">
-                <option value="5">Every 5 minutes</option>
-                <option value="10">Every 10 minutes</option>
-                <option value="15">Every 15 minutes</option>
-                <option value="30">Every 30 minutes</option>
-              </select>
-            </label>
-            <div class="admin-field">
-              <div class="admin-label-head">
-                <label for="jumpin-plat-retain-enabled">Auto-Cleanup (carpoolRetainTrips)</label>
-                <button type="button" class="admin-info-btn" data-info-target="jumpin-info-retain" aria-expanded="false" aria-label="Details about Auto-Cleanup">i</button>
+            <div class="admin-pair-group">
+              <div class="admin-pair-row">
+                <div class="admin-field">
+                  <div class="admin-label-head">
+                    <label for="jumpin-plat-retain-enabled">Auto-Cleanup (carpoolRetainTrips)</label>
+                    <button type="button" class="admin-info-btn" data-info-target="jumpin-info-retain" aria-expanded="false" aria-label="Details about Auto-Cleanup">i</button>
+                  </div>
+                  <select id="jumpin-plat-retain-enabled" aria-label="Auto-Cleanup">
+                    <option value="on">On (Enabled)</option>
+                    <option value="off">Off (Paused)</option>
+                  </select>
+                </div>
+                <label>Auto-Cleanup Frequency
+                  <select id="jumpin-plat-retain-interval" aria-label="Auto-Cleanup Frequency">
+                    <option value="24">Every 24 hours</option>
+                    <option value="48">Every 48 hours</option>
+                    <option value="72">Every 72 hours</option>
+                  </select>
+                </label>
               </div>
-              <select id="jumpin-plat-retain-enabled" aria-label="Auto-Cleanup">
-                <option value="on">On (Enabled)</option>
-                <option value="off">Off (Paused)</option>
-              </select>
               <div class="admin-info-box" id="jumpin-info-retain" hidden>Runs on a 24-hour Cloud Scheduler heartbeat across all groups. Purges ended trips (completed, cancelled, or rejected) 7 days after completion, removes expired "missing" trip tombstones after 30 days, and cleans up expired rate-limit records. Frequency controls how often the job runs, not the 7-day retention window.</div>
             </div>
-            <label>Auto-Cleanup Frequency
-              <select id="jumpin-plat-retain-interval" aria-label="Auto-Cleanup Frequency">
-                <option value="24">Every 24 hours</option>
-                <option value="48">Every 48 hours</option>
-                <option value="72">Every 72 hours</option>
-              </select>
-            </label>
           </div>
           <button type="button" class="filled" id="jumpin-plat-save">Save Platform Settings</button>
         </details>
