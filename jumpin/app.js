@@ -160,7 +160,7 @@
       "#jumpin-root .form-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;box-sizing:border-box;align-items:start}",
       "#jumpin-root .form-pair>div{min-width:0;width:100%}",
       "#jumpin-root .form-pair input,#jumpin-root .form-pair select{width:100%;max-width:100%;min-width:0;height:44px;box-sizing:border-box}",
-      "#jumpin-root .form-pair input[type=\"date\"],#jumpin-root .form-pair input[type=\"time\"]{display:flex;align-items:center}",
+      "#jumpin-root .form-pair input[type=\"date\"],#jumpin-root .form-pair input[type=\"time\"]{display:block;width:100%;min-width:0;max-width:100%;height:44px;line-height:42px;-webkit-appearance:none;appearance:none}",
       "#jumpin-root .form-pair .dur-stepper{width:100%;gap:6px}",
       "#jumpin-root .form-pair .dur-btn{min-width:40px;padding:0 10px}",
       "#jumpin-root .form-pair .dur-val{min-width:0;padding:0 6px;font-size:14px}",
