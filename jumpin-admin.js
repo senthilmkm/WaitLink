@@ -621,6 +621,8 @@
               lists = result;
               state = admin.reduce(state, { type: "clear" });
               applyConfig(page, result.config || {});
+              const supWrap = page.getElementById("jumpin-support-note-wrap");
+              if (supWrap) supWrap.hidden = !groupsData.isSuperAdmin && activeGroupId !== "default";
               const supInput = page.getElementById("jumpin-support-note");
               if (supInput) supInput.disabled = !groupsData.isSuperAdmin && activeGroupId !== "default";
             }
