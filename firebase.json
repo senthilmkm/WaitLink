@@ -108,6 +108,10 @@
         "function": { "functionId": "carpoolCompleteTrip", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolAckRider",
+        "function": { "functionId": "carpoolAckRider", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolSendManageLink",
         "function": { "functionId": "carpoolSendManageLink", "region": "us-central1" }
       },

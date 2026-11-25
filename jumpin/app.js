@@ -478,10 +478,20 @@
             ackBtn.setAttribute("title", seen ? "Seen — tap to mark unseen" : "New rider — tap to mark seen");
             ackBtn.setAttribute("aria-label", seen ? (rName + " seen") : ("Mark " + rName + " as seen"));
             on(ackBtn, "click", function () {
-              const nextSeen = !rider.driverSeenAt;
+              const prevSeen = rider.driverSeenAt || 0;
+              const nextSeen = !prevSeen;
               rider.driverSeenAt = nextSeen ? Date.now() : 0;
               draw();
-              cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen);
+              Promise.resolve(cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen)).then(function (res) {
+                if (!res || res.ok === false) {
+                  rider.driverSeenAt = prevSeen;
+                  state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not update rider status." });
+                  draw();
+                }
+              }, function () {
+                rider.driverSeenAt = prevSeen;
+                draw();
+              });
             });
             rRow.appendChild(ackBtn);
           } else {

@@ -1299,6 +1299,14 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   assert.strictEqual(ackCalls.length, 2);
   assert.strictEqual(ackCalls[0].seen, true);
   assert.strictEqual(ackCalls[1].seen, false);
+  addWin.JumpInCloud.ackRider = function () { return Promise.resolve({ ok: false, error: "Ack denied" }); };
+  addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(addMount.getState().error, "Ack denied");
+  addWin.JumpInCloud.ackRider = function () { return Promise.reject(new Error("net")); };
+  addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  addWin.JumpInCloud.ackRider = function (rideId, secret, resId, seen) { ackCalls.push({ rideId: rideId, secret: secret, resId: resId, seen: seen }); return Promise.resolve({ ok: true }); };
   let scrolled = 0;
   addMount.root.children[1]._listeners.forEach(function (fn) {
     fn({ target: { tagName: "INPUT", scrollIntoView: function () { scrolled++; } } });
