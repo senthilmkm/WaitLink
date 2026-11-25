@@ -115,6 +115,7 @@
     .admin-meta { font-size: 13px; color: var(--text-main); line-height: 1.4; }
     .admin-meta.muted { color: #475569; margin-top: 2px; }
     .admin-field { display: flex; flex-direction: column; }
+    .admin-full-span { grid-column: 1 / -1; }
     .admin-pair-group { grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
     .admin-pair-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
     .admin-pair-row label { margin-bottom: 0; }
@@ -434,7 +435,7 @@
           <p class="admin-note muted">Notification email only — SuperAdmin sign-in stays locked to the primary admin account.</p>
             <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
             <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
-            <label>Home Maintenance / Banner Message (optional)<input id="jumpin-plat-banner" type="text" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></label>
+            <label class="admin-full-span">Home Maintenance / Banner Message (optional, max 200 chars)<textarea id="jumpin-plat-banner" rows="2" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></textarea></label>
             <div class="admin-pair-group">
               <div class="admin-pair-row">
                 <div class="admin-field">
