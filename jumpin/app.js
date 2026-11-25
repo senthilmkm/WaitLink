@@ -1158,6 +1158,12 @@
           } else if (label === "Text me a link" && cloud && state.ride) {
             const values = {};
             mid.querySelectorAll("input").forEach(function (input) { values[input.name] = input.value; });
+            const parsed = core.normalizePhone(values.phone);
+            if (!parsed.ok) {
+              state = ui.reduce(state, { type: "fail", field: "phone", error: parsed.error });
+              draw();
+              return;
+            }
             state.busy = true;
             draw();
             cloud.sendManageLink(state.ride.rideId, values.phone, state.recovery === "driver" ? "driver" : "rider").then(function () {
