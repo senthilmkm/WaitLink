@@ -150,6 +150,10 @@
     #jumpin-members .admin-subrow { padding: 8px 12px; }
     #jumpin-members .admin-subrow .admin-actions { gap: 6px; flex-wrap: nowrap; }
     #jumpin-members .admin-subrow .admin-btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+    .admin-member-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .admin-member-name { font-weight: 600; color: var(--text-main); display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .admin-member-meta { font-size: 12px; color: #475569; overflow-wrap: anywhere; }
+    .admin-shield { display: inline-flex; align-items: center; font-size: 13px; line-height: 1; }
     .admin-msg { padding: 8px 10px; border-radius: 8px; background: #f0f9ff; border: 1px solid #bae6fd; font-size: 13px; }
     .admin-msg-head { font-size: 12px; font-weight: 600; color: #0369a1; margin-bottom: 2px; }
     .admin-settings-grid { display: grid; grid-template-columns: 1fr; gap: 0 18px; }
@@ -316,6 +320,7 @@
         <button type="button" class="admin-btn" id="jumpin-member-import">Import list</button>
         <div class="admin-toolbar" style="margin-top: 14px;">
           <input id="jumpin-member-search" type="search" placeholder="Search members by name or last 4" aria-label="Search members">
+          <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🛡️ Group Admins</button>
         </div>
         <div id="jumpin-members" class="quiet admin-list"></div>
       </section>
@@ -585,6 +590,8 @@
         <p class="quiet" style="margin-top: 4px;">Update this member's name or US/Canada mobile number.</p>
         <label style="margin-top: 12px;">Name<input id="jumpin-edit-member-name" type="text" maxlength="40" placeholder="Alex"></label>
         <label>Phone<input id="jumpin-edit-member-phone" type="tel" placeholder="555 234 5678"></label>
+        <label>Email (optional)<input id="jumpin-edit-member-email" type="email" placeholder="alex@email.com"></label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:4px;cursor:pointer;"><input id="jumpin-edit-member-admin" type="checkbox" style="width:auto;min-height:auto;margin:0;"> Group admin</label>
         <p class="error" id="jumpin-edit-member-error" hidden></p>
         <div class="admin-actions" style="margin-top: 16px; justify-content: flex-end;">
           <button type="button" class="admin-btn" id="jumpin-edit-member-cancel">Cancel</button>
@@ -606,9 +613,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125c"></script>
-  <script src="/jumpin/cloud.js?v=20261125c"></script>
-  <script src="/jumpin/admin-state.js?v=20261125c"></script>
-  <script src="/jumpin-admin.js?v=20261125c"></script>
+  <script src="/jumpin/core.js?v=20261125d"></script>
+  <script src="/jumpin/cloud.js?v=20261125d"></script>
+  <script src="/jumpin/admin-state.js?v=20261125d"></script>
+  <script src="/jumpin-admin.js?v=20261125d"></script>
 </body>
 </html>

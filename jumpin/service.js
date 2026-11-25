@@ -1308,6 +1308,8 @@ function setMembers(db, email, input, now) {
         phoneLast4: nextLast4,
         phoneE164: nextE164,
         name: nextName,
+        email: body.email !== undefined ? core.cleanEmail(body.email) : (existing.email || ""),
+        isAdmin: body.isAdmin !== undefined ? (body.isAdmin === true || body.isAdmin === "true") : !!existing.isAdmin,
         addedAt: existing.addedAt || clock
       };
       list = list.filter(function (m) { return m.phoneHash !== body.editPhoneHash && m.phoneHash !== nextHash; });
@@ -1334,6 +1336,8 @@ function setMembers(db, email, input, now) {
         phoneLast4: core.last4(parsed.e164),
         phoneE164: parsed.e164,
         name: rawName.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Member",
+        email: !body.bulk && body.email ? core.cleanEmail(body.email) : "",
+        isAdmin: !body.bulk && (body.isAdmin === true || body.isAdmin === "true"),
         addedAt: clock
       };
       list = list.filter(function (m) { return m.phoneHash !== hash; });

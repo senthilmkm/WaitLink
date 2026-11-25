@@ -175,6 +175,7 @@
 
   let pendingConfirmFn = null;
   let editingMemberHash = "";
+  let showAdminsOnly = false;
 
   function askConfirm(doc, title, message, confirmLabel, onConfirm) {
     const modal = doc.getElementById("jumpin-confirm-modal");
@@ -195,9 +196,13 @@
     editingMemberHash = member.phoneHash || "";
     const nameIn = doc.getElementById("jumpin-edit-member-name");
     const phoneIn = doc.getElementById("jumpin-edit-member-phone");
+    const emailIn = doc.getElementById("jumpin-edit-member-email");
+    const adminIn = doc.getElementById("jumpin-edit-member-admin");
     const errNode = doc.getElementById("jumpin-edit-member-error");
     if (nameIn) nameIn.value = member.name || "";
     if (phoneIn) phoneIn.value = member.phoneE164 ? String(member.phoneE164).replace(/^\+1/, "") : "";
+    if (emailIn) emailIn.value = member.email || "";
+    if (adminIn) adminIn.checked = !!member.isAdmin;
     if (errNode) {
       errNode.textContent = "";
       errNode.hidden = true;
@@ -332,8 +337,47 @@
     });
     const mSearchNode = doc.getElementById("jumpin-member-search");
     const mq = mSearchNode && mSearchNode.value ? mSearchNode.value.trim().toLowerCase() : "";
-    const allMembers = (lists && lists.members) || [];
-    const shownMembers = mq ? allMembers.filter(function (m) { return (String(m.name || "") + " " + String(m.phoneLast4 || "")).toLowerCase().indexOf(mq) !== -1; }) : allMembers;
+    const adminEmails = ((lists && lists.config && lists.config.adminEmails) || []).map(function (e) { return String(e || "").toLowerCase(); }).filter(Boolean);
+    const groupMeta = (lists && lists.group) || null;
+    const groupPhone = (groupMeta && groupMeta.contactPhoneE164) || "";
+    const groupEmail = String((groupMeta && groupMeta.contactEmail) || (lists && lists.config && lists.config.contactEmail) || "").split(",")[0].trim().toLowerCase();
+    function isAdminMember(m) {
+      return !!(m && (m.isAdmin || (m.email && adminEmails.indexOf(String(m.email).toLowerCase()) !== -1) || (groupPhone && m.phoneE164 && m.phoneE164 === groupPhone)));
+    }
+    function memberSort(a, b) {
+      const an = String((a && a.name) || (a && a.email) || "Member");
+      const bn = String((b && b.name) || (b && b.email) || "Member");
+      const cmp = an.localeCompare(bn, undefined, { sensitivity: "base" });
+      return cmp !== 0 ? cmp : String((a && a.phoneLast4) || "").localeCompare(String((b && b.phoneLast4) || ""));
+    }
+    const allMembers = ((lists && lists.members) || []).slice().sort(memberSort);
+    let sourceMembers = allMembers;
+    if (showAdminsOnly) {
+      const adminList = [];
+      const seenEmails = {};
+      allMembers.forEach(function (m) {
+        if (!isAdminMember(m)) return;
+        const em = String(m.email || (groupPhone && m.phoneE164 === groupPhone ? (groupEmail || adminEmails[0] || "") : "")).toLowerCase();
+        if (em) seenEmails[em] = true;
+        adminList.push(Object.assign({}, m, { email: em, _isAdmin: true }));
+      });
+      adminEmails.forEach(function (em) {
+        if (seenEmails[em]) return;
+        seenEmails[em] = true;
+        const isOrg = groupMeta && String(groupMeta.contactEmail || "").toLowerCase().indexOf(em) !== -1;
+        adminList.push({
+          name: (isOrg && groupMeta.contactName) ? groupMeta.contactName : "Group Admin",
+          phoneE164: isOrg ? (groupMeta.contactPhoneE164 || "") : "",
+          phoneLast4: isOrg && groupMeta.contactPhoneE164 ? String(groupMeta.contactPhoneE164).slice(-4) : "",
+          email: em,
+          _isAdmin: true
+        });
+      });
+      sourceMembers = adminList.sort(memberSort);
+    }
+    const shownMembers = mq ? sourceMembers.filter(function (m) {
+      return [m.name, m.phoneLast4, m.phoneE164, m.email].filter(Boolean).join(" ").toLowerCase().indexOf(mq) !== -1;
+    }) : sourceMembers;
     text(doc.getElementById("jumpin-members-count"), allMembers.length ? String(allMembers.length) : "");
     const modeBadge = doc.getElementById("jumpin-members-mode");
     if (modeBadge && lists && lists.config) modeBadge.textContent = lists.config.membersOnly ? "Members only" : "Open to all";
@@ -344,8 +388,24 @@
     const pagedMembers = shownMembers.slice((mPage - 1) * ADMIN_PAGE_SIZE, mPage * ADMIN_PAGE_SIZE);
     fill(doc, membersBox, null, pagedMembers, function (m) {
       const row = el(doc, "div", "admin-subrow");
-      row.appendChild(el(doc, "span", "", (m.name || "Member") + " · ····" + (m.phoneLast4 || "")));
-      if (cloud && cloud.setMembers) {
+      const adminFlag = !!(m._isAdmin || isAdminMember(m));
+      const info = el(doc, "div", "admin-member-info");
+      const nameWrap = el(doc, "div", "admin-member-name");
+      if (adminFlag) {
+        const shield = el(doc, "span", "admin-shield", "🛡️");
+        shield.setAttribute("title", "Group Admin");
+        shield.setAttribute("aria-label", "Group Admin");
+        nameWrap.appendChild(shield);
+      }
+      const phoneLabel = showAdminsOnly ? (m.phoneE164 || (m.phoneLast4 ? "····" + m.phoneLast4 : "")) : (m.phoneLast4 ? "····" + m.phoneLast4 : "");
+      nameWrap.appendChild(doc.createTextNode((m.name || "Member") + (showAdminsOnly ? "" : (phoneLabel ? " · " + phoneLabel : ""))));
+      info.appendChild(nameWrap);
+      if (showAdminsOnly) {
+        const contactParts = [phoneLabel, m.email || ""].filter(Boolean);
+        if (contactParts.length) info.appendChild(el(doc, "div", "admin-member-meta", contactParts.join(" · ")));
+      }
+      row.appendChild(info);
+      if (cloud && cloud.setMembers && m.phoneHash) {
         const btns = el(doc, "div", "admin-actions");
         btns.style.marginTop = "0";
         btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, m); }));
@@ -1014,6 +1074,14 @@
         pageByBox["jumpin-members"] = 1;
         paint();
       });
+      const adminsBtn = page.getElementById("jumpin-member-admins-btn");
+      if (adminsBtn) adminsBtn.addEventListener("click", function () {
+        showAdminsOnly = !showAdminsOnly;
+        adminsBtn.className = "admin-btn" + (showAdminsOnly ? " primary" : "");
+        adminsBtn.setAttribute("aria-pressed", showAdminsOnly ? "true" : "false");
+        pageByBox["jumpin-members"] = 1;
+        paint();
+      });
       const editModal = page.getElementById("jumpin-edit-member-modal");
       const editCancel = page.getElementById("jumpin-edit-member-cancel");
       const editSave = page.getElementById("jumpin-edit-member-save");
@@ -1022,13 +1090,17 @@
       if (editSave && api && api.setMembers) editSave.addEventListener("click", function () {
         const nameIn = page.getElementById("jumpin-edit-member-name");
         const phoneIn = page.getElementById("jumpin-edit-member-phone");
+        const emailIn = page.getElementById("jumpin-edit-member-email");
+        const adminIn = page.getElementById("jumpin-edit-member-admin");
         const errNode = page.getElementById("jumpin-edit-member-error");
         withBusy(page, editSave, "Saving…", function () {
           return api.setMembers({
             groupId: activeGroupId,
             editPhoneHash: editingMemberHash,
             name: nameIn ? nameIn.value : "",
-            phone: phoneIn ? phoneIn.value : ""
+            phone: phoneIn ? phoneIn.value : "",
+            email: emailIn ? emailIn.value : "",
+            isAdmin: !!(adminIn && adminIn.checked)
           }).then(function (res) {
             if (!res || res.ok === false) {
               if (errNode) {
