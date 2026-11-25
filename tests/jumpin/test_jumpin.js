@@ -1314,6 +1314,9 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(addMount.getState().ride.seatsLeft, 2);
   assert.strictEqual(addMount.getState().ride.riders.length, 1);
+  addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] }, role: "" }), { ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] } }));
+  const riderPills = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; }).map(function (r) { return r.children[r.children.length - 1].textContent; });
+  assert.deepStrictEqual(riderPills, ["⏳ Pending", "✓ Confirmed"]);
   addWin.JumpInCloud.roleFor = function (ride) {
     if (ride.rideId === "r_open") return "driver";
     if (ride.rideId === "r_last") return "rider";

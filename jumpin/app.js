@@ -189,9 +189,11 @@
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
       "#jumpin-mid .reserve-head{margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0);font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:17px;font-weight:700;color:var(--text-main,#090d16)}",
       "#jumpin-root .rider-row{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px 12px;margin-bottom:6px;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:10px;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
-      "#jumpin-root .rider-ack-btn{margin-left:auto;flex:0 0 auto;min-width:40px;min-height:36px;padding:0 10px;border-radius:999px;font-size:15px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .12s,background-color .15s}",
-      "#jumpin-root .rider-ack-btn.unseen{background:#fef3c7;border:1px solid #f59e0b;color:#92400e}",
-      "#jumpin-root .rider-ack-btn.seen{background:#dcfce7;border:1px solid #86efac;color:#15803d}",
+      "#jumpin-root .rider-ack-btn,#jumpin-root .rider-ack-pill{margin-left:auto;flex:0 0 auto;padding:0 10px;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}",
+      "#jumpin-root .rider-ack-btn{min-width:40px;min-height:36px;font-size:15px;cursor:pointer;transition:transform .12s,background-color .15s}",
+      "#jumpin-root .rider-ack-pill{min-height:28px;font-size:12px}",
+      "#jumpin-root .rider-ack-btn.unseen,#jumpin-root .rider-ack-pill.unseen{background:#fef3c7;border:1px solid #f59e0b;color:#92400e}",
+      "#jumpin-root .rider-ack-btn.seen,#jumpin-root .rider-ack-pill.seen{background:#dcfce7;border:1px solid #86efac;color:#15803d}",
       "#jumpin-root .msg-row{padding:8px 12px;margin-bottom:6px;background:rgba(8,145,178,.06);border-radius:10px;font-size:14px;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-root .textish{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:10px;padding:0 16px;font-size:14px;font-weight:600;min-height:44px;cursor:pointer}",
       "#jumpin-root .textish:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
@@ -469,8 +471,8 @@
           const rRow = el(doc, "div", "rider-row");
           rRow.appendChild(el(doc, "span", "mini-av", rName.charAt(0).toUpperCase()));
           rRow.appendChild(el(doc, "span", "", rName + seatSuffix + dropSuffix));
+          const seen = !!rider.driverSeenAt;
           if (current.role === "driver" && cloud && cloud.ackRider && rider.reservationId) {
-            const seen = !!rider.driverSeenAt;
             const ackBtn = el(doc, "button", "rider-ack-btn " + (seen ? "seen" : "unseen"), seen ? "✓" : "🔔");
             ackBtn.type = "button";
             ackBtn.setAttribute("title", seen ? "Seen — tap to mark unseen" : "New rider — tap to mark seen");
@@ -482,6 +484,8 @@
               cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen);
             });
             rRow.appendChild(ackBtn);
+          } else {
+            rRow.appendChild(el(doc, "span", "rider-ack-pill " + (seen ? "seen" : "unseen"), seen ? "✓ Confirmed" : "⏳ Pending"));
           }
           card.appendChild(rRow);
         });
