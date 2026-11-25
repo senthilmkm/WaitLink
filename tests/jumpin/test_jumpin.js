@@ -703,7 +703,7 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   tripSheet.children[2]._listeners[0]();
   assert.strictEqual(mounted.getState().pendingAction, "cancel-trip");
   mounted.setState(Object.assign(ui.blank(), { mode: "post" }));
-  const inputs = mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; });
+  const inputs = mounted.root.children[1].querySelectorAll("input");
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const soon = core.partsInZone(Date.now() + 3 * core.DAY_MS, zone);
   const values = {
@@ -720,7 +720,7 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   assert.strictEqual(mounted.getState().notice, "Trip posted.");
   inputs.forEach(function (input) { if (input.name === "date") input.value = "2020-01-01"; });
   mounted.setState(Object.assign(mounted.getState(), { mode: "post", notice: "" }));
-  const again = mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; });
+  const again = mounted.root.children[1].querySelectorAll("input");
   again.forEach(function (input) { input.value = input.name === "date" ? "2020-01-01" : (values[input.name] || ""); });
   mounted.root.children[2].children[0]._listeners[0]();
   assert.ok(mounted.getState().error.indexOf("later time") !== -1);
@@ -1121,7 +1121,7 @@ it("draws the board when Firestore cannot start", function () {
 it("shows the confirmation screen after a saved post and the field error on a bad form", async function () {
   function pad(n) { return String(n).padStart(2, "0"); }
   function fill(mounted, values) {
-    mounted.root.children[1].children.filter(function (child) { return child.tag === "input"; }).forEach(function (input) {
+    mounted.root.children[1].querySelectorAll("input").forEach(function (input) {
       input.value = values[input.name] || "";
     });
   }
@@ -1355,7 +1355,18 @@ function fakeWindow() {
       removeEventListener: function (type, fn) {
         this._listeners = (this._listeners || []).filter(function (item) { return item !== fn; });
       },
-      querySelectorAll: function () { return this.children.filter(function (child) { return child.tag === "input"; }); }
+      querySelectorAll: function (sel) {
+        const want = String(sel || "input").split(",").map(function (s) { return s.trim(); });
+        const found = [];
+        function walk(list) {
+          (list || []).forEach(function (child) {
+            if (want.indexOf(child.tag) !== -1) found.push(child);
+            if (child.children && child.children.length) walk(child.children);
+          });
+        }
+        walk(this.children);
+        return found;
+      }
     };
   }
   const head = node("head");

@@ -156,6 +156,11 @@
       "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
       "#jumpin-sheet button{min-height:44px;margin:6px 10px 0 0}",
       "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:center}",
+      "#jumpin-root .secondary-action-row{margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color,#e2e8f0)}",
+      "#jumpin-root .form-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}",
+      "#jumpin-root .form-pair>div{min-width:0}",
+      "@media (max-width:600px){#jumpin-root .hero{padding:16px 14px;margin-bottom:12px}#jumpin-root .hero h1{font-size:22px;margin:6px 0 4px}}",
+      "@media (max-width:360px){#jumpin-root .form-pair{grid-template-columns:1fr}}",
       "#jumpin-root .action-row select{width:auto;min-width:76px;margin:0;min-height:44px}",
       "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px}",
       "#jumpin-root .hero-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}",
@@ -624,16 +629,18 @@
           on(cancelSeat, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "rider" }); draw(); });
           actions.appendChild(cancelSeat);
         }
+        if (actions.children.length) card.appendChild(actions);
         if (current.role === "driver") {
-          const forget = el(doc, "button", "textish", "Sign out on this device");
+          const secRow = el(doc, "div", "secondary-action-row");
+          const forget = el(doc, "button", "linkish", "Sign out on this device");
           on(forget, "click", function () {
             cloud.forget(ride);
             state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { ride: ride, rides: state.rides || [], when: current.when, link: current.link });
             draw();
           });
-          actions.appendChild(forget);
+          secRow.appendChild(forget);
+          card.appendChild(secRow);
         }
-        if (actions.children.length) card.appendChild(actions);
       } else if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
         const recBox = el(doc, "div", "recovery-box");
         const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
@@ -876,16 +883,14 @@
           ["name", "Your name", "text", "Alex"],
           ["phone", "Phone (US/Canada)", "tel", "555 234 5678"],
           ["from", "From", "text", "Library"],
-          ["to", "To", "text", "Office"],
-          ["date", "Date", "date", ""],
-          ["time", "Time", "time", ""]
+          ["to", "To", "text", "Office"]
         ];
         const saved = loadProfile();
         const defaultZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
         const defaultParts = !state.draft ? core.partsInZone(Date.now() + 60 * 60000, defaultZone) : null;
         const postInputs = {};
-        fields.forEach(function (spec) {
-          mid.appendChild(el(doc, "label", "lbl", spec[1]));
+        function buildPostField(spec, host) {
+          host.appendChild(el(doc, "label", "lbl", spec[1]));
           const input = el(doc, "input");
           input.name = spec[0];
           input.type = spec[2];
@@ -896,9 +901,18 @@
           else if (defaultParts && spec[0] === "date") input.value = defaultParts.year + "-" + String(defaultParts.month).padStart(2, "0") + "-" + String(defaultParts.day).padStart(2, "0");
           else if (defaultParts && spec[0] === "time") input.value = String(defaultParts.hour).padStart(2, "0") + ":" + String(defaultParts.minute).padStart(2, "0");
           postInputs[spec[0]] = input;
-          mid.appendChild(input);
-          if (state.error && state.field === spec[0]) mid.appendChild(el(doc, "p", "error", state.error));
-        });
+          host.appendChild(input);
+          if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
+        }
+        fields.forEach(function (spec) { buildPostField(spec, mid); });
+        const dtPair = el(doc, "div", "form-pair");
+        const dateCol = el(doc, "div");
+        const timeCol = el(doc, "div");
+        buildPostField(["date", "Date", "date", ""], dateCol);
+        buildPostField(["time", "Time", "time", ""], timeCol);
+        dtPair.appendChild(dateCol);
+        dtPair.appendChild(timeCol);
+        mid.appendChild(dtPair);
         const whenChips = el(doc, "div", "chip-row");
         [
           ["Today", 0, true, false],
@@ -918,7 +932,9 @@
           whenChips.appendChild(chip);
         });
         mid.appendChild(whenChips);
-        mid.appendChild(el(doc, "label", "lbl", "Seats"));
+        const capPair = el(doc, "div", "form-pair");
+        const seatsCol = el(doc, "div");
+        seatsCol.appendChild(el(doc, "label", "lbl", "Seats"));
         const seats = el(doc, "select");
         seats.name = "seats";
         for (let n = 1; n <= 6; n++) {
@@ -927,8 +943,9 @@
           if (String(n) === String((state.draft && state.draft.seats) || 3)) option.selected = true;
           seats.appendChild(option);
         }
-        mid.appendChild(seats);
-        mid.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+        seatsCol.appendChild(seats);
+        const durCol = el(doc, "div");
+        durCol.appendChild(el(doc, "label", "lbl", "Estimated duration"));
         const dur = el(doc, "input");
         dur.type = "hidden";
         dur.name = "durationMinutes";
@@ -957,8 +974,11 @@
         stepper.appendChild(minusDur);
         stepper.appendChild(durReadout);
         stepper.appendChild(plusDur);
-        mid.appendChild(dur);
-        mid.appendChild(stepper);
+        durCol.appendChild(dur);
+        durCol.appendChild(stepper);
+        capPair.appendChild(seatsCol);
+        capPair.appendChild(durCol);
+        mid.appendChild(capPair);
         mid.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
         const rideCost = el(doc, "input");
         rideCost.name = "rideCost";
@@ -1005,10 +1025,10 @@
           });
           linkRow.appendChild(copyBtn);
           card.appendChild(linkRow);
-          card.appendChild(el(doc, "p", "hint", "Send this link to the people riding with you."));
+          card.appendChild(el(doc, "p", "hint", "Share this link with riders. Use your texted link if opening from another app."));
         }
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
-        card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another browser or app."));
+        else if (!state.link) card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another app."));
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
         if (state.role === "driver" && state.status !== "cancelled") {
@@ -1028,9 +1048,12 @@
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
         const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
         if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
-        if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
-        else card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : (state.bookedSeats > 1 ? "We texted you a link to manage your seats." : "We texted you a link to manage your seat.")));
-        card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another browser or app."));
+        if (state.smsNote) {
+          card.appendChild(el(doc, "p", "hint", state.smsNote));
+          card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another app."));
+        } else {
+          card.appendChild(el(doc, "p", "hint", state.role === "driver" ? "Passenger added to this trip." : ((state.bookedSeats > 1 ? "We texted your manage link for these seats" : "We texted your manage link for this seat") + " (use it if opening from another app).")));
+        }
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.role === "rider" && state.ride) {
           const actions = el(doc, "div", "action-row");
