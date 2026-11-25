@@ -915,10 +915,11 @@
         <table>
           <thead>
             <tr>
-              <th style="width:18%">Flow</th>
-              <th style="width:26%">Action / Event</th>
-              <th style="width:22%">SMS Recipient</th>
-              <th style="width:34%">Message Content &amp; Conditions</th>
+              <th style="width:14%">Flow</th>
+              <th style="width:21%">Action / Event</th>
+              <th style="width:18%">SMS Recipient</th>
+              <th style="width:26%">Message Content &amp; Conditions</th>
+              <th style="width:21%">Link Expiry / Validity</th>
             </tr>
           </thead>
           <tbody>
@@ -927,84 +928,98 @@
               <td>Post a new ride</td>
               <td><strong>Driver</strong></td>
               <td>Private manage link (<code>view=trip</code>). Respects daily post cap, blocklist, and Members-Only list.</td>
+              <td>Valid until trip is completed/cancelled (or purged 7 days after end). Cancel/message closes at <code>depart + duration + 1 hr</code>; rotated if <em>Text me a link</em> is used.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Driver Flow</span></td>
               <td>Message passengers</td>
               <td><strong>All Active Riders</strong></td>
               <td>Driver's message + trip link (excludes cancelled riders).</td>
+              <td>Public <code>view=ride</code> link: viewable until purged <strong>7 days</strong> after trip ends (tombstone kept 30 days).</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Driver Flow</span></td>
               <td>Complete trip manually</td>
               <td><strong>Driver &amp; Active Riders</strong></td>
               <td>Post-ride thank-you + Support / Tip handle (only if <em>Post-ride thank-you text</em> &amp; handle are set).</td>
+              <td>No link sent (informational SMS only).</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Driver Flow</span></td>
               <td>Cancel trip</td>
               <td><strong>All Active Riders</strong></td>
               <td>Cancellation notice for the trip.</td>
+              <td>No link sent; all driver &amp; rider manage links for the trip stop working immediately.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>
               <td>Reserve seat(s)</td>
               <td><strong>Rider</strong></td>
               <td>Seat count confirmation + private manage link (<code>view=seat</code>).</td>
+              <td>Edit/cancel valid until <strong>departure</strong>; messaging valid until <code>depart + duration + 1 hr</code>. Invalidated if seat is cancelled or rotated via <em>Text me a link</em>.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>
               <td>Message the driver</td>
               <td><strong>Driver</strong></td>
               <td>Rider's message + trip link (works pre-departure and mid-trip until <code>depart + duration + 1 hr</code>).</td>
+              <td>Public <code>view=ride</code> link: viewable until purged <strong>7 days</strong> after trip ends.</td>
             </tr>
             <tr>
               <td><span class="tag tag-sms">New User / Recovery</span></td>
               <td>Request lost manage link (<em>Text me a link</em>)</td>
               <td><strong>Driver or Rider</strong> (matched on that trip)</td>
               <td>Fresh private manage link. Subject to per-record limit and resend cooldown; always shows neutral confirmation.</td>
+              <td>Replaces &amp; invalidates the previous token immediately; follows the same trip/seat lifecycle rules above.</td>
             </tr>
             <tr>
               <td><span class="tag tag-pending">New User / Non-Member</span></td>
               <td>Blocked by Members-Only</td>
               <td><strong>No SMS sent</strong></td>
               <td>Shows the mobile-responsive <em>Members-Only Community</em> modal with organizer email, <code>?g=</code> tip, and <strong>Start a Group</strong> link.</td>
+              <td>N/A (no SMS or token issued).</td>
             </tr>
             <tr>
               <td><span class="tag tag-active">Group Creation</span></td>
               <td>Organizer submits new group request</td>
               <td><strong>Platform Admin</strong> (<code>platformAdminPhone</code>)</td>
               <td>Group name, <code>?g=&lt;slug&gt;</code>, organizer email, and direct review link (<code>jumpin-admin.html?tab=groups</code>).</td>
+              <td>Static admin console link (no expiry; requires SuperAdmin Google sign-in).</td>
             </tr>
             <tr>
               <td><span class="tag tag-active">Group Creation</span></td>
               <td>Platform Admin approves group</td>
               <td><strong>Group Organizer</strong> (<code>contactPhoneE164</code>)</td>
               <td>Confirmation + shareable group board link (<code>waitlink.app/?s=jumpin&amp;g=&lt;slug&gt;</code>).</td>
+              <td>Active as long as the group is <code>active</code> (disabled if suspended or deleted).</td>
             </tr>
             <tr>
               <td><span class="tag tag-pending">Admin Flow</span></td>
               <td>Approve or Decline pending ride</td>
               <td><strong>Driver</strong></td>
               <td>Public share link (if approved) or not-approved notice (if declined).</td>
+              <td>Approved <code>view=ride</code> link valid until purged 7 days after trip ends; declined trips have no active link.</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Admin Flow</span></td>
               <td>Admin cancels trip</td>
               <td><strong>Driver &amp; Active Riders</strong></td>
               <td>Admin cancellation notice for the trip.</td>
+              <td>No link sent; all trip &amp; seat manage links stop working immediately.</td>
             </tr>
             <tr>
               <td><span class="tag tag-sms">Admin Flow</span></td>
               <td>Broadcast announcement</td>
               <td><strong>Everyone / Upcoming / Selected Trip</strong></td>
               <td>Custom admin text (skips Twilio <code>21610</code> opted-out contacts and respects daily SMS cap).</td>
+              <td>If a trip link is included, valid until purged <strong>7 days</strong> after trip ends.</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">System Scheduler</span></td>
               <td>Auto-complete after <code>depart + duration + 1 hr</code></td>
               <td><strong>Driver &amp; Active Riders</strong> (only if 1+ riders joined)</td>
               <td>Thank-you + tip handle SMS if enabled. If 0 riders joined, trip is auto-cancelled with <strong>0 SMS</strong>.</td>
+              <td>No link sent; all manage actions close when trip is marked completed/cancelled.</td>
             </tr>
           </tbody>
         </table>
