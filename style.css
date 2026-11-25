@@ -7697,6 +7697,7 @@ body.pwa-standalone input,
 body.pwa-standalone textarea {
   user-select: text;
   -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* Hide PWA install triggers when already running as an installed standalone app */

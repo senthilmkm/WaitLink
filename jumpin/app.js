@@ -107,6 +107,7 @@
       "body.jumpin-android #jumpin-bottom button,body.jumpin-android #jumpin-mid .hero button{border-radius:var(--radius-lg,20px)}",
       "#jumpin-mid .lbl{display:block;margin:0 0 6px;color:var(--text-muted,#1e293b);font-size:14px;font-weight:600}",
       "#jumpin-mid input,#jumpin-mid select{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 14px;padding:0 12px;scroll-margin-top:88px;scroll-margin-bottom:120px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
+      "#jumpin-root input,#jumpin-root textarea{user-select:text;-webkit-user-select:text;-webkit-touch-callout:default}",
       "#jumpin-mid .confirm{padding:32px 36px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
       "#jumpin-mid .confirm-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;margin:0 0 12px;border-radius:999px;background:rgba(8,145,178,.1);color:var(--primary,#0891b2);font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
       "#jumpin-mid .confirm-badge.pending{background:#fef3c7;color:#92400e}",
@@ -682,6 +683,22 @@
     function draw() {
       syncIosTheme();
       doc.title = (groupMeta && groupMeta.groupId && groupMeta.groupId !== "default" && groupMeta.name) ? ("JumpIn — " + groupMeta.name) : "JumpIn — Community Carpool";
+      let savedFocus = null;
+      const activeEl = doc.activeElement;
+      if (activeEl && rootNode.contains && rootNode.contains(activeEl) && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+        let selStart = null;
+        let selEnd = null;
+        try { selStart = activeEl.selectionStart; selEnd = activeEl.selectionEnd; } catch (err) { /* selection not supported on date/time/number */ }
+        savedFocus = {
+          name: activeEl.name || "",
+          isBoardSearch: !!(activeEl.className && String(activeEl.className).indexOf("board-search") !== -1),
+          value: activeEl.value,
+          selStart: selStart,
+          selEnd: selEnd
+        };
+      }
+      const prevMsgEl = !state.busy && rootNode.querySelector ? rootNode.querySelector("input[name=message]") : null;
+      const unsentMessage = prevMsgEl && prevMsgEl.value ? prevMsgEl.value : "";
       rootNode.textContent = "";
       const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
@@ -1256,6 +1273,26 @@
       if (state.sheet || (state.busy && state.busyAction === "sheet")) rootNode.appendChild(confirmSheet(doc));
       else if (memberModal) rootNode.appendChild(memberSheet(doc));
       applyShell(win, rootNode, state.mode);
+      if (unsentMessage && rootNode.querySelector) {
+        const nextMsgEl = rootNode.querySelector("input[name=message]");
+        if (nextMsgEl && !nextMsgEl.value) nextMsgEl.value = unsentMessage;
+      }
+      if (savedFocus && rootNode.querySelector) {
+        const restoreEl = savedFocus.isBoardSearch
+          ? rootNode.querySelector("input.board-search")
+          : (savedFocus.name ? rootNode.querySelector("input[name=\"" + savedFocus.name + "\"], textarea[name=\"" + savedFocus.name + "\"]") : null);
+        if (restoreEl) {
+          if ((savedFocus.name === "message" || savedFocus.isBoardSearch) && savedFocus.value != null && restoreEl.value !== savedFocus.value) {
+            restoreEl.value = savedFocus.value;
+          }
+          if (restoreEl.focus) {
+            try { restoreEl.focus({ preventScroll: true }); } catch (err) { restoreEl.focus(); }
+          }
+          if (savedFocus.selStart != null && savedFocus.selEnd != null && restoreEl.setSelectionRange) {
+            try { restoreEl.setSelectionRange(savedFocus.selStart, savedFocus.selEnd); } catch (err) { /* ignore non-selectable input types */ }
+          }
+        }
+      }
       const bad = rootNode.querySelector && rootNode.querySelector(".error");
       if (bad && bad.scrollIntoView) bad.scrollIntoView({ block: "center" });
       if (secrets) secrets.setItem("jumpin-ui-mounted", "1");
@@ -1336,9 +1373,15 @@
     }
 
     function keepFocusedVisible(target) {
-      if (target && (target.tagName === "INPUT" || target.tagName === "SELECT") && target.scrollIntoView) {
-        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "SELECT") || !target.scrollIntoView) return;
+      if (typeof target.getBoundingClientRect === "function") {
+        const rect = target.getBoundingClientRect();
+        const vh = (win.visualViewport && win.visualViewport.height) || win.innerHeight || 0;
+        if (vh && rect.top >= 64 && rect.bottom <= vh - 16) return;
+        target.scrollIntoView({ behavior: "auto", block: "nearest" });
+        return;
       }
+      target.scrollIntoView({ behavior: "auto", block: "nearest" });
     }
 
     on(win, "resize", function () { applyShell(win, rootNode, state.mode); });
