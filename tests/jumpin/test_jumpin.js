@@ -876,24 +876,32 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "bad" }, NOW)).ok, false);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "missing-grp", decision: "approve" }, NOW)).ok, false);
 
-  const created = await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne", supportNote: "Zelle:org@example.com", membersOnly: false }, NOW);
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne" }, NOW)).field, "contactPhone");
+  const created = await service.createGroup(db, "org@example.com", { name: "Ballantyne Neighbors", groupId: "ballantyne", contactPhone: "5552345678", supportNote: "Zelle:org@example.com", membersOnly: false }, NOW);
   assert.strictEqual(created.ok, true);
   assert.strictEqual(created.group.status, "pending");
   assert.strictEqual(created.group.supportNote, "Zelle:senthil930@gmail.com");
-  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Second", groupId: "second-grp" }, NOW)).error, "You already have a group waiting for approval.");
-  assert.strictEqual((await service.createGroup(db, "other@example.com", { name: "Dup", groupId: "ballantyne" }, NOW)).field, "groupId");
+  assert.strictEqual(created.outbox.length, 1);
+  assert.strictEqual(created.outbox[0].to, "+19802531359");
+  assert.strictEqual(created.outbox[0].triggerType, "CARPOOL_GROUP_REQUEST");
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "Second", groupId: "second-grp", contactPhone: "5552345678" }, NOW)).error, "You already have a group waiting for approval.");
+  assert.strictEqual((await service.createGroup(db, "other@example.com", { name: "Dup", groupId: "ballantyne", contactPhone: "5552345678" }, NOW)).field, "groupId");
   assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is waiting for approval.");
   assert.strictEqual((await service.postRide(db, postInput({ groupId: "no-such-group" }), NOW)).error, "This community group was not found.");
 
   const approved = await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "approve" }, NOW);
   assert.strictEqual(approved.ok, true);
   assert.strictEqual(approved.status, "active");
+  assert.strictEqual(approved.outbox.length, 1);
+  assert.strictEqual(approved.outbox[0].to, "+15552345678");
+  assert.strictEqual(approved.outbox[0].triggerType, "CARPOOL_GROUP_APPROVED");
+  assert.ok(approved.outbox[0].body.indexOf("&g=ballantyne") !== -1);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "cap", dailySmsCap: 150 }, NOW)).dailySmsCap, 150);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "suspend" }, NOW)).status, "suspended");
   assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is currently paused.");
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "approve" }, NOW)).status, "active");
 
-  const rejectReq = await service.createGroup(db, "temp@example.com", { name: "Temp", groupId: "temp-grp" }, NOW);
+  const rejectReq = await service.createGroup(db, "temp@example.com", { name: "Temp", groupId: "temp-grp", contactPhone: "5552345678" }, NOW);
   assert.strictEqual(rejectReq.ok, true);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "temp-grp", decision: "reject" }, NOW)).decision, "reject");
 
@@ -933,7 +941,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(bAdmin.upcoming.length, 1);
 
   const handlers = require("../../jumpin/handlers.js");
-  assert.strictEqual((await handlers.call(db, "carpoolCreateGroup", { name: "SuperGrp", groupId: "super-grp" }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).group.status, "active");
+  assert.strictEqual((await handlers.call(db, "carpoolCreateGroup", { name: "SuperGrp", groupId: "super-grp", contactPhone: "5552345678" }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).group.status, "active");
   assert.strictEqual((await handlers.call(db, "carpoolListGroups", {}, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).ok, true);
   assert.strictEqual((await handlers.call(db, "carpoolReviewGroup", { groupId: "super-grp", decision: "cap", dailySmsCap: 200 }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW)).ok, true);
 
@@ -941,16 +949,16 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   await service.completeDue(db, NOW + 6 * core.HOUR_MS);
   await service.retainTrips(db, NOW + 10 * core.DAY_MS);
 
-  await service.createGroup(db, "org@example.com", { name: "B2", groupId: "bal-two" }, NOW);
+  await service.createGroup(db, "org@example.com", { name: "B2", groupId: "bal-two", contactPhone: "5552345678" }, NOW);
   await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "bal-two", decision: "approve" }, NOW);
-  await service.createGroup(db, "org@example.com", { name: "B3", groupId: "bal-three" }, NOW);
+  await service.createGroup(db, "org@example.com", { name: "B3", groupId: "bal-three", contactPhone: "5552345678" }, NOW);
   await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "bal-three", decision: "approve" }, NOW);
-  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "B4", groupId: "bal-four" }, NOW)).error, "Group limit reached (max 3 per account).");
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "B4", groupId: "bal-four", contactPhone: "5552345678" }, NOW)).error, "Group limit reached (max 3 per account).");
 
   for (let i = 0; i < 50; i++) {
-    await service.createGroup(db, "flood" + i + "@example.com", { name: "Flood " + i, groupId: "flood-" + i }, NOW);
+    await service.createGroup(db, "flood" + i + "@example.com", { name: "Flood " + i, groupId: "flood-" + i, contactPhone: "5552345678" }, NOW);
   }
-  assert.strictEqual((await service.createGroup(db, "floodx@example.com", { name: "Flood X", groupId: "flood-x" }, NOW)).error, "Too many pending requests right now. Please try again later.");
+  assert.strictEqual((await service.createGroup(db, "floodx@example.com", { name: "Flood X", groupId: "flood-x", contactPhone: "5552345678" }, NOW)).error, "Too many pending requests right now. Please try again later.");
 
   await service.setMembers(db, "org@example.com", { groupId: "ballantyne", name: "Alex", phone: "5552345678" }, NOW);
   await service.setPosting(db, "org@example.com", { groupId: "ballantyne", phone: "5551110000", name: "Spam", blocked: true }, NOW);
@@ -966,7 +974,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const emptyDb = service.createMemoryDb({});
   await service.completeDue(emptyDb, NOW);
   await service.retainTrips(emptyDb, NOW);
-  await service.createGroup(emptyDb, service.SUPERADMIN_EMAIL, { name: "First", groupId: "first-grp", contactEmail: "x@y.com" });
+  await service.createGroup(emptyDb, service.SUPERADMIN_EMAIL, { name: "First", groupId: "first-grp", contactEmail: "x@y.com", contactPhone: "5552345678" });
   await service.reviewGroup(emptyDb, service.SUPERADMIN_EMAIL, { groupId: "first-grp", decision: "cap", dailySmsCap: 50 });
   const metaLessDb = service.createMemoryDb({ "carpool_platform/groups_index": { groups: [{ groupId: "ghost", name: "Ghost", status: "pending" }] } });
   await service.reviewGroup(metaLessDb, service.SUPERADMIN_EMAIL, { groupId: "ghost", decision: "cap" });
@@ -981,10 +989,15 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const platSaved = await handlers.call(db, "carpoolAdminSavePlatformConfig", {
     platformEnabled: false,
     platformDailySmsCap: 1500,
+    platformAdminEmail: "senthil930@gmail.com",
+    platformAdminPhone: "9802531359",
     platformSupportNote: "Venmo:@jumpin-help",
     maintenanceMessage: "Scheduled maintenance tonight"
   }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW);
   assert.strictEqual(platSaved.ok, true);
+  assert.strictEqual(platSaved.platform.platformAdminPhone, "+19802531359");
+  assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformAdminPhone: "bad" }, NOW)).ok, false);
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformAdminEmail: "", platformAdminPhone: "" }, NOW);
   assert.strictEqual(platSaved.platform.platformEnabled, false);
   assert.strictEqual((await service.postRide(db, postInput(), NOW)).error, "Scheduled maintenance tonight");
   assert.strictEqual((await service.reserveSeat(db, { rideId: posted2.rideId, name: "Sam", phone: "5559876543" }, NOW)).error, "Scheduled maintenance tonight");

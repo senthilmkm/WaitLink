@@ -328,14 +328,17 @@ async function run() {
       name: "Ballantyne",
       groupId: "ballantyne",
       contactEmail: "org@example.com",
+      contactPhone: "5552345678",
       membersOnly: true
     }, { token: { email: "org@example.com" } }, NOW + 8000);
     assert.strictEqual(created.ok, true);
     assert.strictEqual(created.group.status, "pending");
+    assert.strictEqual(created.outbox[0].triggerType, "CARPOOL_GROUP_REQUEST");
 
     const approved = await handlers.call(db, "carpoolReviewGroup", { groupId: "ballantyne", decision: "approve" }, superAuth, NOW + 8100);
     assert.strictEqual(approved.ok, true);
     assert.strictEqual(approved.status, "active");
+    assert.strictEqual(approved.outbox[0].triggerType, "CARPOOL_GROUP_APPROVED");
 
     const paused = await handlers.call(db, "carpoolReviewGroup", { groupId: "ballantyne", decision: "suspend" }, superAuth, NOW + 8200);
     assert.strictEqual(paused.ok, true);

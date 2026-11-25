@@ -456,10 +456,14 @@
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
+          const pEmail = page.getElementById("jumpin-plat-email");
+          const pPhone = page.getElementById("jumpin-plat-phone");
           const pSup = page.getElementById("jumpin-plat-support");
           const pBan = page.getElementById("jumpin-plat-banner");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
+          if (pEmail) pEmail.value = groupsData.platform.platformAdminEmail || "";
+          if (pPhone) pPhone.value = (groupsData.platform.platformAdminPhone || "").replace(/^\+1/, "");
           if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
           if (pBan) pBan.value = groupsData.platform.maintenanceMessage || "";
         }
@@ -625,6 +629,7 @@
           name: grpName ? grpName.value : "",
           groupId: grpSlug ? grpSlug.value : "",
           contactEmail: (page.getElementById("jumpin-group-email") || {}).value || "",
+          contactPhone: (page.getElementById("jumpin-group-phone") || {}).value || "",
           membersOnly: ((page.getElementById("jumpin-group-members-only") || {}).value || "yes") === "yes"
         };
         withBusy(page, grpCreate, "Creating…", function () {
@@ -707,12 +712,16 @@
       if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
         const pEn = page.getElementById("jumpin-plat-enabled");
         const pCap = page.getElementById("jumpin-plat-cap");
+        const pEmail = page.getElementById("jumpin-plat-email");
+        const pPhone = page.getElementById("jumpin-plat-phone");
         const pSup = page.getElementById("jumpin-plat-support");
         const pBan = page.getElementById("jumpin-plat-banner");
         withBusy(page, platSave, "Saving…", function () {
           return api.savePlatformConfig({
             platformEnabled: !pEn || pEn.value !== "no",
             platformDailySmsCap: pCap ? Number(pCap.value || 0) : 2000,
+            platformAdminEmail: pEmail ? pEmail.value : "",
+            platformAdminPhone: pPhone ? pPhone.value : "",
             platformSupportNote: pSup ? pSup.value : "",
             maintenanceMessage: pBan ? pBan.value : ""
           }).then(function (res) {

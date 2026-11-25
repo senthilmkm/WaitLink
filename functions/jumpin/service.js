@@ -6,6 +6,7 @@ const core = require("./core.js");
 
 const GENERIC_LINK = "This link no longer works. Request a new text from the ride page.";
 const SUPERADMIN_EMAIL = "senthil930@gmail.com";
+const PLATFORM_ADMIN_PHONE = "+19802531359";
 const PLATFORM_SUPPORT_NOTE = "Zelle:senthil930@gmail.com";
 
 function clone(value) {
@@ -132,10 +133,13 @@ async function loadPlatformConfig(tx, now) {
   const budget = core.smsBudget({ dailySmsCap: cap, dailySmsDay: stored.dailySmsDay, dailySmsSent: stored.dailySmsSent }, now);
   const supportNote = core.collapse(core.stripTags(stored.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE;
   const maintenanceMessage = core.collapse(core.stripTags(stored.maintenanceMessage || "")).slice(0, 200);
+  const parsedPhone = stored.platformAdminPhone ? core.normalizePhone(stored.platformAdminPhone) : { ok: false };
   return {
     platformEnabled: stored.platformEnabled !== false,
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
+    platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
+    platformAdminPhone: parsedPhone.ok ? parsedPhone.e164 : PLATFORM_ADMIN_PHONE,
     platformDailySmsCap: cap,
     dailySmsDay: budget.day,
     dailySmsSent: budget.sent
@@ -1374,6 +1378,8 @@ function createGroup(db, email, input, now) {
   const slugErr = core.groupSlugError(body.groupId);
   if (slugErr) return Promise.resolve({ ok: false, field: "groupId", error: slugErr });
   const gid = core.normalizeGroupId(body.groupId);
+  const parsedPhone = core.normalizePhone(body.contactPhone);
+  if (!parsedPhone.ok) return Promise.resolve({ ok: false, field: "contactPhone", error: parsedPhone.error });
   const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gid);
@@ -1412,6 +1418,8 @@ function createGroup(db, email, input, now) {
       name: name,
       status: status,
       enabled: enabled,
+      contactEmail: cfg.contactEmail,
+      contactPhoneE164: parsedPhone.e164,
       supportNote: cfg.supportNote,
       updatedAt: clock
     };
@@ -1422,17 +1430,24 @@ function createGroup(db, email, input, now) {
       enabled: enabled,
       adminEmails: cfg.adminEmails,
       contactEmail: cfg.contactEmail,
+      contactPhoneLast4: core.last4(parsedPhone.e164),
       supportNote: cfg.supportNote,
       dailySmsCap: cap,
       createdAt: clock,
       createdBy: caller
     };
+    const texts = freshTexts();
+    if (!isSuper && platform.platformAdminPhone && platform.dailySmsSent < platform.platformDailySmsCap) {
+      platform.dailySmsSent += 1;
+      tx.set("carpool_platform/config", platform);
+      queueText(texts, platform.platformAdminPhone, "JumpIn: New group request \"" + name + "\" (?g=" + gid + ") from " + cfg.contactEmail + ". Review: https://waitlink.app/jumpin-admin.html?tab=groups", "CARPOOL_GROUP_REQUEST");
+    }
     tx.set(p.groupMeta, meta);
     saveConfig(tx, cfg, p);
     gi.groups = groups.concat([entry]);
     tx.set("carpool_platform/groups_index", gi);
-    return { ok: true, group: entry };
-  });
+    return { ok: true, group: entry, texts: texts };
+  }).then(function (result) { return withOutbox(result, result.texts); });
 }
 
 function listGroups(db, email, now) {
@@ -1497,6 +1512,15 @@ function reviewGroup(db, email, input, now) {
     } else {
       cfg.dailySmsCap = Math.max(0, Math.min(2000, Math.round(Number(body.dailySmsCap) || 0)));
     }
+    const texts = freshTexts();
+    if (decision === "approve" && meta && meta.contactPhoneE164) {
+      const platform = await loadPlatformConfig(tx, clock);
+      if (platform.dailySmsSent < platform.platformDailySmsCap) {
+        platform.dailySmsSent += 1;
+        tx.set("carpool_platform/config", platform);
+        queueText(texts, meta.contactPhoneE164, "JumpIn: Your group \"" + (meta.name || gid) + "\" is approved! Share this board link with members: https://waitlink.app/?s=jumpin&g=" + encodeURIComponent(gid), "CARPOOL_GROUP_APPROVED");
+      }
+    }
     const nextStatus = decision === "suspend" ? "suspended" : (decision === "approve" ? "active" : (meta && meta.status) || "active");
     const nextMeta = Object.assign({}, meta || { groupId: gid, name: gid }, { status: nextStatus, enabled: cfg.enabled, updatedAt: clock });
     tx.set(p.groupMeta, nextMeta);
@@ -1506,8 +1530,8 @@ function reviewGroup(db, email, input, now) {
       return Object.assign({}, g, { status: nextStatus, enabled: cfg.enabled, dailySmsCap: cfg.dailySmsCap });
     });
     tx.set("carpool_platform/groups_index", gi);
-    return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap };
-  });
+    return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap, texts: texts };
+  }).then(function (result) { return withOutbox(result, result.texts); });
 }
 
 function savePlatformConfig(db, email, input, now) {
@@ -1522,10 +1546,21 @@ function savePlatformConfig(db, email, input, now) {
     const nextSupport = body.platformSupportNote !== undefined
       ? (core.collapse(core.stripTags(body.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE)
       : prev.platformSupportNote;
+    const nextAdminEmail = body.platformAdminEmail !== undefined
+      ? (core.cleanEmail(body.platformAdminEmail) || prev.platformAdminEmail)
+      : prev.platformAdminEmail;
+    let nextAdminPhone = prev.platformAdminPhone;
+    if (body.platformAdminPhone !== undefined && String(body.platformAdminPhone).trim()) {
+      const parsed = core.normalizePhone(body.platformAdminPhone);
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      nextAdminPhone = parsed.e164;
+    }
     const next = {
       platformEnabled: nextEnabled,
       maintenanceMessage: nextBanner,
       platformSupportNote: nextSupport,
+      platformAdminEmail: nextAdminEmail,
+      platformAdminPhone: nextAdminPhone,
       platformDailySmsCap: nextCap,
       dailySmsDay: prev.dailySmsDay,
       dailySmsSent: prev.dailySmsSent
