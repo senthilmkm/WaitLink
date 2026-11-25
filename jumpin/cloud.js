@@ -321,6 +321,7 @@
       listGroups: function () { return call("carpoolListGroups", {}); },
       reviewGroup: function (body) { return call("carpoolReviewGroup", body); },
       savePlatformConfig: function (body) { return call("carpoolAdminSavePlatformConfig", body); },
+      searchMembers: function (body) { return call("carpoolAdminSearchMembers", body); },
       groupId: gid,
       watchBoard: function (onChange) { return watchBoard(win, onChange, gid); },
       watchRide: function (rideId, onChange) { return watchRide(win, rideId, onChange, gid); },

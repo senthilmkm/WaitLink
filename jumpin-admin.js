@@ -449,7 +449,7 @@
         }
       }
       function switchPlatTab(sub) {
-        ["general", "features"].forEach(function (k) {
+        ["general", "features", "members"].forEach(function (k) {
           const b = page.getElementById("jumpin-plat-tab-btn-" + k);
           const p = page.getElementById("jumpin-plat-tab-" + k);
           if (b) b.className = "admin-tab" + (k === sub ? " active" : "");
@@ -652,9 +652,92 @@
       if (platOpen) platOpen.addEventListener("click", function () { showPlatformView(true); });
       const platBack = page.getElementById("jumpin-plat-back");
       if (platBack) platBack.addEventListener("click", function () { showPlatformView(false); });
-      ["general", "features"].forEach(function (k) {
+      ["general", "features", "members"].forEach(function (k) {
         const b = page.getElementById("jumpin-plat-tab-btn-" + k);
         if (b) b.addEventListener("click", function () { switchPlatTab(k); });
+      });
+      const mSearchIn = page.getElementById("jumpin-member-search-input");
+      const mSearchBtn = page.getElementById("jumpin-member-search-btn");
+      function openMemberTripsModal(m) {
+        const modal = page.getElementById("jumpin-detail-modal");
+        if (!modal) return;
+        text(page.getElementById("jumpin-detail-route"), (m.name || "Member") + " (" + (m.phone || "") + ")");
+        text(page.getElementById("jumpin-detail-meta"), "Group: " + (m.groupName || m.groupId) + " (?" + "g=" + m.groupId + ") · Organizer: " + [m.organizerEmail, m.organizerPhone].filter(Boolean).join(" / "));
+        const note = page.getElementById("jumpin-detail-note");
+        if (note) note.hidden = true;
+        const riders = page.getElementById("jumpin-detail-riders");
+        if (riders) {
+          riders.textContent = "";
+          const trips = m.trips || [];
+          if (!trips.length) riders.appendChild(el(page, "div", "admin-meta muted", "No trips or reservations found for this member."));
+          else trips.forEach(function (t) {
+            riders.appendChild(el(page, "div", "admin-detail-row", t.role + " · " + t.from + " → " + t.to + " (" + t.when + ") [" + t.status + "]"));
+          });
+        }
+        const msgs = page.getElementById("jumpin-detail-messages");
+        if (msgs) msgs.textContent = "";
+        modal.hidden = false;
+      }
+      function runMemberSearch() {
+        if (!api || !api.searchMembers) return;
+        const q = mSearchIn ? mSearchIn.value : "";
+        const statusEl = page.getElementById("jumpin-member-search-status");
+        const cardsEl = page.getElementById("jumpin-member-search-cards");
+        const wrapEl = page.getElementById("jumpin-member-search-table-wrap");
+        const tbodyEl = page.getElementById("jumpin-member-search-tbody");
+        withBusy(page, mSearchBtn, "Searching…", function () {
+          return api.searchMembers({ query: q }).then(function (res) {
+            if (!res || res.ok === false) {
+              text(statusEl, (res && res.error) || "Search failed.");
+              if (cardsEl) cardsEl.textContent = "";
+              if (tbodyEl) tbodyEl.textContent = "";
+              if (wrapEl) wrapEl.hidden = true;
+              return;
+            }
+            const list = res.results || [];
+            text(statusEl, list.length ? list.length + " matching member" + (list.length === 1 ? "" : "s") + "." : "No matching members found.");
+            if (cardsEl) cardsEl.textContent = "";
+            if (tbodyEl) tbodyEl.textContent = "";
+            if (wrapEl) wrapEl.hidden = !list.length;
+            list.forEach(function (m) {
+              const orgText = [m.organizerEmail, m.organizerPhone].filter(Boolean).join(" · ") || "—";
+              const grpText = (m.groupName || m.groupId) + " (?" + "g=" + m.groupId + ")";
+              const tripsCount = (m.trips || []).length;
+              if (cardsEl) {
+                const c = el(page, "div", "admin-card");
+                const top = el(page, "div", "admin-card-top");
+                top.appendChild(el(page, "div", "admin-route", m.name));
+                top.appendChild(el(page, "span", "admin-badge", m.phone));
+                c.appendChild(top);
+                c.appendChild(el(page, "div", "admin-meta muted", "Group: " + grpText));
+                c.appendChild(el(page, "div", "admin-meta muted", "Organizer: " + orgText));
+                const act = el(page, "div", "admin-actions");
+                act.appendChild(pillBtn(page, "More (" + tripsCount + " trips)", "", function () { openMemberTripsModal(m); }));
+                c.appendChild(act);
+                cardsEl.appendChild(c);
+              }
+              if (tbodyEl) {
+                const tr = page.createElement("tr");
+                [m.name, m.phone, grpText, orgText].forEach(function (val) {
+                  const td = page.createElement("td");
+                  td.textContent = val;
+                  tr.appendChild(td);
+                });
+                const tdAct = page.createElement("td");
+                tdAct.appendChild(pillBtn(page, "More (" + tripsCount + ")", "", function () { openMemberTripsModal(m); }));
+                tr.appendChild(tdAct);
+                tbodyEl.appendChild(tr);
+              }
+            });
+          });
+        });
+      }
+      if (mSearchBtn) mSearchBtn.addEventListener("click", runMemberSearch);
+      if (mSearchIn) mSearchIn.addEventListener("keydown", function (e) {
+        if (e && e.key === "Enter") {
+          if (e.preventDefault) e.preventDefault();
+          runMemberSearch();
+        }
       });
       const openBroadcast = page.getElementById("jumpin-open-broadcast");
       if (openBroadcast) openBroadcast.addEventListener("click", function () {

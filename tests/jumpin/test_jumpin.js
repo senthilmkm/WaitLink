@@ -1044,6 +1044,29 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(db.snapshot()["carpool_platform/config"].completeTripsIntervalMinutes, 15);
   assert.strictEqual(db.snapshot()["carpool_platform/config"].retainTripsIntervalHours, 48);
 
+  assert.strictEqual((await service.searchMembers(db, "org@example.com", { query: "Sam" }, NOW)).ok, false);
+  assert.strictEqual((await service.searchMembers(db, service.SUPERADMIN_EMAIL)).ok, false);
+  assert.strictEqual((await service.searchMembers(db, service.SUPERADMIN_EMAIL, { query: "   " }, NOW)).ok, false);
+  await service.setMembers(db, service.SUPERADMIN_EMAIL, { groupId: "default", name: "Default Member", phone: "5551112222" }, NOW);
+  assert.strictEqual((await service.searchMembers(db, service.SUPERADMIN_EMAIL, { query: "2222" }, NOW)).results[0].groupId, "default");
+  await service.setMembers(db, "org@example.com", { groupId: "ballantyne", bulk: "Priya Nair,5557778888\nSam,5559876543" }, NOW);
+  const searchRide = await service.postRide(db, postInput({ groupId: "ballantyne", name: "Priya Nair", phone: "5557778888", idempotencyKey: "sr-1" }), NOW);
+  await service.reserveSeat(db, { groupId: "ballantyne", rideId: searchRide.rideId, name: "Sam", phone: "5559876543", seats: 1, idempotencyKey: "sr-res-1" }, NOW + 100);
+  const byName = await handlers.call(db, "carpoolAdminSearchMembers", { query: "Priya" }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW);
+  assert.strictEqual(byName.ok, true);
+  assert.strictEqual(byName.results.length, 1);
+  assert.strictEqual(byName.results[0].phone, "+15557778888");
+  assert.strictEqual(byName.results[0].groupId, "ballantyne");
+  const byPhone = await service.searchMembers(db, service.SUPERADMIN_EMAIL, { query: "555-777-8888" }, NOW);
+  assert.ok(byPhone.results.some(function (r) { return r.groupId === "ballantyne" && r.trips.some(function (t) { return t.role === "Driver"; }); }));
+  const byLast4 = await service.searchMembers(db, service.SUPERADMIN_EMAIL, { query: "6543" }, NOW);
+  assert.ok(byLast4.results.some(function (r) { return r.name === "Sam" && r.trips.some(function (t) { return t.role.indexOf("Rider") === 0; }); }));
+  const legacyDb = service.createMemoryDb({
+    "carpool_private/member_index": { members: [{ phoneHash: "deadbeef", phoneLast4: "9999", name: "Legacy User", addedAt: NOW }] }
+  });
+  const legacyRes = await service.searchMembers(legacyDb, service.SUPERADMIN_EMAIL, { query: "Legacy" }, NOW);
+  assert.strictEqual(legacyRes.results[0].phone, "•••• 9999");
+
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
 });

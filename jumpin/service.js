@@ -1294,6 +1294,7 @@ function setMembers(db, email, input, now) {
       const entry = {
         phoneHash: hash,
         phoneLast4: core.last4(parsed.e164),
+        phoneE164: parsed.e164,
         name: rawName.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 40) || "Member",
         addedAt: clock
       };
@@ -1643,6 +1644,94 @@ function savePlatformConfig(db, email, input, now) {
   });
 }
 
+function searchMembers(db, email, input, now) {
+  if (core.cleanEmail(email) !== SUPERADMIN_EMAIL) return Promise.resolve({ ok: false, error: "This page is not available." });
+  const body = input || {};
+  const query = core.collapse(core.stripTags(String(body.query || ""))).slice(0, 60);
+  if (!query) return Promise.resolve({ ok: false, error: "Enter a name, phone number, or last 4 digits." });
+  const clock = now || Date.now();
+  const digits = query.replace(/\D/g, "");
+  const parsedPhone = core.normalizePhone(query);
+  const targetHash = parsedPhone.ok ? core.phoneHash16(parsedPhone.e164) : "";
+  const isLast4 = digits.length === 4 && !parsedPhone.ok;
+  const nameQuery = query.toLowerCase();
+  return db.runTransaction(async function (tx) {
+    const platform = await loadPlatformConfig(tx, clock);
+    const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
+    const groupIds = ["default"];
+    arr(gi.groups).forEach(function (g) {
+      if (g && g.groupId && groupIds.indexOf(g.groupId) === -1) groupIds.push(g.groupId);
+    });
+    const results = [];
+    for (let gIdx = 0; gIdx < groupIds.length; gIdx++) {
+      const gid = groupIds[gIdx];
+      const p = pathsFor(gid);
+      const meta = gid === "default" ? null : await tx.get(p.groupMeta);
+      const cfg = await loadConfig(tx, clock, p);
+      const mPack = await tx.get(p.memberIndex) || { members: [] };
+      const members = arr(mPack.members);
+      if (!members.length) continue;
+      const bPack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+      const byHash = {};
+      function slot(hash) {
+        if (!byHash[hash]) byHash[hash] = { phoneE164: "", trips: [] };
+        return byHash[hash];
+      }
+      arr(bPack.audience).forEach(function (a) {
+        if (a && a.phoneE164) slot(core.phoneHash16(a.phoneE164)).phoneE164 = a.phoneE164;
+      });
+      const rides = arr(bPack.rides);
+      for (let rIdx = 0; rIdx < rides.length; rIdx++) {
+        const row = rides[rIdx];
+        const ride = row && row.rideId ? await tx.get(p.ridePrivate(row.rideId)) : null;
+        if (!ride) continue;
+        const when = core.formatWhen(ride.departAt, ride.timeZone);
+        const dSlot = slot(core.phoneHash16(ride.driverPhoneE164));
+        dSlot.phoneE164 = ride.driverPhoneE164;
+        dSlot.trips.push({ rideId: ride.rideId, from: ride.from, to: ride.to, when: when, role: "Driver", status: ride.status });
+        const resKeys = arr(ride.activeReservationDocIds);
+        for (let k = 0; k < resKeys.length; k++) {
+          const res = await tx.get(resKeys[k]);
+          if (res && res.phoneE164) {
+            const rSlot = slot(core.phoneHash16(res.phoneE164));
+            rSlot.phoneE164 = res.phoneE164;
+            rSlot.trips.push({
+              rideId: ride.rideId,
+              from: ride.from,
+              to: ride.to,
+              when: when,
+              role: "Rider (" + res.seats + ")",
+              status: ride.status
+            });
+          }
+        }
+      }
+      const groupName = meta ? meta.name : (gid === "default" ? "Its-OK" : gid);
+      const organizerEmail = (meta && meta.contactEmail) || cfg.contactEmail;
+      const organizerPhone = (meta && meta.contactPhoneE164) || platform.platformAdminPhone;
+      members.forEach(function (m) {
+        const hit = (targetHash && m.phoneHash === targetHash) ||
+          (isLast4 && m.phoneLast4 === digits) ||
+          (String(m.name).toLowerCase().indexOf(nameQuery) !== -1);
+        if (!hit) return;
+        const info = byHash[m.phoneHash];
+        results.push({
+          name: m.name,
+          phone: m.phoneE164 || (info && info.phoneE164) || ("•••• " + m.phoneLast4),
+          phoneLast4: m.phoneLast4,
+          groupId: gid,
+          groupName: groupName,
+          organizerEmail: organizerEmail,
+          organizerPhone: organizerPhone,
+          addedAt: m.addedAt,
+          trips: info ? info.trips : []
+        });
+      });
+    }
+    return { ok: true, results: results.slice(0, 100) };
+  });
+}
+
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
   GENERIC_LINK: GENERIC_LINK,
@@ -1671,5 +1760,6 @@ module.exports = {
   createGroup: createGroup,
   listGroups: listGroups,
   reviewGroup: reviewGroup,
-  savePlatformConfig: savePlatformConfig
+  savePlatformConfig: savePlatformConfig,
+  searchMembers: searchMembers
 };

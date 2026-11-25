@@ -440,6 +440,7 @@
         <nav class="admin-tabs" aria-label="Platform settings sections" style="margin-bottom:16px;">
           <button type="button" class="admin-tab active" id="jumpin-plat-tab-btn-general">Settings</button>
           <button type="button" class="admin-tab" id="jumpin-plat-tab-btn-features">Feature Config</button>
+          <button type="button" class="admin-tab" id="jumpin-plat-tab-btn-members">Search Member</button>
         </nav>
         <div id="jumpin-plat-tab-general">
           <div class="admin-settings-grid">
@@ -514,6 +515,29 @@
             </label>
           </div>
           <button type="button" class="filled" id="jumpin-feat-save">Save Feature Config</button>
+        </div>
+        <div id="jumpin-plat-tab-members" hidden>
+          <p class="quiet" style="margin-bottom:12px;">Search approved members across all JumpIn groups by name, full phone, or last 4 digits.</p>
+          <div class="admin-toolbar">
+            <input id="jumpin-member-search-input" type="search" placeholder="Name, 10-digit phone, or last 4 digits" aria-label="Search platform members">
+            <button type="button" class="admin-btn primary" id="jumpin-member-search-btn">Search</button>
+          </div>
+          <p class="quiet" id="jumpin-member-search-status" style="margin-bottom:10px;"></p>
+          <div class="admin-cards" id="jumpin-member-search-cards"></div>
+          <div class="admin-table-wrap" id="jumpin-member-search-table-wrap" hidden>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Phone</th>
+                  <th>Group</th>
+                  <th>Group Organizer</th>
+                  <th>More</th>
+                </tr>
+              </thead>
+              <tbody id="jumpin-member-search-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>

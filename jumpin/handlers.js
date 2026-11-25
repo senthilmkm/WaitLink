@@ -27,6 +27,7 @@ function call(db, name, data, auth, now) {
   if (name === "carpoolListGroups") return service.listGroups(db, email, now);
   if (name === "carpoolReviewGroup") return service.reviewGroup(db, email, body, now);
   if (name === "carpoolAdminSavePlatformConfig") return service.savePlatformConfig(db, email, body, now);
+  if (name === "carpoolAdminSearchMembers") return service.searchMembers(db, email, body, now);
   if (name === "carpoolCompleteTrips") return service.completeDue(db, now);
   if (name === "carpoolRetainTrips") return service.retainTrips(db, now);
   if (name === "carpoolMarkOptOut") return service.markOptOut(db, body.phone, now, body.groupId);
