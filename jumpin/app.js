@@ -364,10 +364,10 @@
       sheet.id = "jumpin-sheet";
       sheet.setAttribute("role", "dialog");
       sheet.setAttribute("aria-modal", "true");
-      sheet.appendChild(el(doc, "p", "", "Members-Only Community \u2014 " + memberModal.groupName));
-      sheet.appendChild(el(doc, "p", "muted", "Only approved members of " + memberModal.groupName + " can post rides or reserve seats on this board."));
+      sheet.appendChild(el(doc, "p", "", "Members-Only Community \u2014 " + memberModal.groupName + " group"));
+      sheet.appendChild(el(doc, "p", "muted", "Only approved members of " + memberModal.groupName + " group can post rides or reserve seats on this board."));
       const ul = el(doc, "ul", "member-list");
-      const liJoin = el(doc, "li", "", "Want to join " + memberModal.groupName + "? Reach out to the organizer");
+      const liJoin = el(doc, "li", "", "Want to join " + memberModal.groupName + " group? Reach out to the organizer");
       if (memberModal.contactEmail) {
         liJoin.appendChild(doc.createTextNode(" at "));
         const mail = el(doc, "a", "mail-link", memberModal.contactEmail);
