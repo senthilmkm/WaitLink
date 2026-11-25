@@ -166,7 +166,7 @@ function canSendBoth(config, platform, now) {
 async function loadConfig(tx, now, p) {
   const path = p ? p.config : "settings/carpool_config";
   const stored = await tx.get(path);
-  const config = core.clampConfig(stored || {});
+  const config = core.clampConfig(stored || {}, { groupId: p ? p.groupId : "default" });
   const budget = core.smsBudget(config, now);
   config.dailySmsDay = budget.day;
   config.dailySmsSent = budget.sent;
@@ -1315,7 +1315,8 @@ function saveAdminConfig(db, email, input, now) {
     const platform = await loadPlatformConfig(tx, now || Date.now());
     const prev = await loadConfig(tx, now || Date.now(), p);
     if (!requireAdmin(cleanEmail, prev)) return { ok: false, error: "This page is not available." };
-    const next = core.clampConfig(input);
+    const next = core.clampConfig(input, { groupId: p.groupId });
+    if (p.groupId !== "default" && !next.adminEmails.length) next.adminEmails = prev.adminEmails.length ? prev.adminEmails : [cleanEmail];
     if (cleanEmail !== SUPERADMIN_EMAIL && p.groupId !== "default") {
       if (next.dailySmsCap > prev.dailySmsCap) next.dailySmsCap = prev.dailySmsCap;
       next.supportNote = prev.supportNote || platform.platformSupportNote;

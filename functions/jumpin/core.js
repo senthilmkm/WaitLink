@@ -145,9 +145,9 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
   }
 
-  function cleanAdminEmails(raw) {
+  function cleanAdminEmails(raw, includeDefault) {
     const list = Array.isArray(raw) ? raw : String(raw || "").split(/[\n,;]+/);
-    const out = ["senthil930@gmail.com"];
+    const out = includeDefault === false ? [] : ["senthil930@gmail.com"];
     list.forEach(function (item) {
       const email = cleanEmail(item);
       if (email && out.indexOf(email) === -1) out.push(email);
@@ -177,9 +177,10 @@
     };
   }
 
-  function clampConfig(input) {
+  function clampConfig(input, options) {
     const base = defaultConfig();
     const src = input || {};
+    const includeDefault = !(options && options.groupId && options.groupId !== "default");
     function int(name, min, max, fallback) {
       const n = Number(src[name]);
       if (!Number.isInteger(n) || n < min || n > max) return fallback;
@@ -189,7 +190,7 @@
       enabled: src.enabled === true,
       requireRideApproval: src.requireRideApproval === true,
       membersOnly: src.membersOnly === true,
-      adminEmails: cleanAdminEmails(src.adminEmails),
+      adminEmails: cleanAdminEmails(src.adminEmails, includeDefault),
       contactEmail: cleanEmail(src.contactEmail) || base.contactEmail,
       supportNote: String(src.supportNote || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120),
       postRideThankYouSms: src.postRideThankYouSms === true,

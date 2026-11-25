@@ -943,6 +943,9 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(savedCfg.ok, true);
   assert.strictEqual(savedCfg.config.dailySmsCap, 150);
   assert.strictEqual(savedCfg.config.supportNote, "Zelle:senthil930@gmail.com");
+  assert.deepStrictEqual(savedCfg.config.adminEmails, ["org@example.com"]);
+  const emptyEmailsSaved = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, adminEmails: "", dailySmsCap: 150 }, NOW);
+  assert.deepStrictEqual(emptyEmailsSaved.config.adminEmails, ["org@example.com"]);
 
   const orgList = await service.listGroups(db, "org@example.com", NOW);
   assert.strictEqual(orgList.groups.length, 1);
