@@ -272,6 +272,11 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   assert.strictEqual(core.configFieldError("nope", 1), null);
   assert.strictEqual(core.clampConfig(null).enabled, false);
   assert.strictEqual(core.clampConfig({ dailySmsCap: 1.5 }).dailySmsCap, 200);
+  assert.deepStrictEqual(core.cleanAdminEmails("x@y.com", true, "def@y.com"), ["def@y.com", "x@y.com"]);
+  assert.deepStrictEqual(core.cleanAdminEmails("x@y.com", true), ["x@y.com"]);
+  assert.deepStrictEqual(core.cleanAdminEmails("", false), []);
+  assert.strictEqual(require("../../functions/jumpin/service.js").SUPERADMIN_EMAIL, service.SUPERADMIN_EMAIL);
+  assert.strictEqual(core.clampConfig({ contactEmail: "" }).contactEmail, "");
   assert.strictEqual(core.postsToday({ postsDay: core.utcDay(NOW), postsToday: 2 }, NOW), 2);
   assert.strictEqual(core.activeReservations(null), 0);
   assert.strictEqual(core.canSend(Object.assign(core.defaultConfig(), { dailySmsCap: 0, dailySmsDay: core.utcDay(NOW) }), NOW), false);
@@ -907,7 +912,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(created.ok, true);
   assert.strictEqual(created.textSent, true);
   assert.strictEqual(created.group.status, "pending");
-  assert.strictEqual(created.group.supportNote, "Zelle:senthil930@gmail.com");
+  assert.strictEqual(created.group.supportNote, service.PLATFORM_SUPPORT_NOTE);
   assert.strictEqual(created.outbox.length, 1);
   assert.strictEqual(created.outbox[0].to, "+19802531359");
   assert.strictEqual(created.outbox[0].triggerType, "CARPOOL_GROUP_REQUEST");
@@ -962,7 +967,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   const savedCfg = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", groupName: "Ballantyne HOA", enabled: true, adminEmails: "org@example.com", supportNote: "Zelle:hijack@example.com", dailySmsCap: 999 }, NOW);
   assert.strictEqual(savedCfg.ok, true);
   assert.strictEqual(savedCfg.config.dailySmsCap, 150);
-  assert.strictEqual(savedCfg.config.supportNote, "Zelle:senthil930@gmail.com");
+  assert.strictEqual(savedCfg.config.supportNote, service.PLATFORM_SUPPORT_NOTE);
   assert.deepStrictEqual(savedCfg.config.adminEmails, ["org@example.com"]);
   const multiContact = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, adminEmails: "org@example.com", contactEmail: "org@example.com, co@example.com", dailySmsCap: 150 }, NOW);
   assert.strictEqual(multiContact.config.contactEmail, "org@example.com, co@example.com");
@@ -1029,7 +1034,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
     platformEnabled: false,
     iosThemeEnabled: true,
     platformDailySmsCap: 1500,
-    platformAdminEmail: "senthil930@gmail.com",
+    platformAdminEmail: service.SUPERADMIN_EMAIL,
     platformAdminPhone: "9802531359",
     platformSupportNote: "Venmo:@jumpin-help",
     maintenanceMessage: "Scheduled maintenance tonight"
@@ -1096,11 +1101,11 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
     superAdminEmails: "co-admin@example.com",
     platformAdminEmail: "contact-only@example.com"
   }, NOW);
-  assert.deepStrictEqual(coAdminSaved.platform.superAdminEmails, ["senthil930@gmail.com", "co-admin@example.com"]);
+  assert.deepStrictEqual(coAdminSaved.platform.superAdminEmails, [service.SUPERADMIN_EMAIL, "co-admin@example.com"]);
   assert.strictEqual((await service.listGroups(db, "co-admin@example.com", NOW)).isSuperAdmin, true);
   assert.strictEqual((await service.listGroups(db, "contact-only@example.com", NOW)).isSuperAdmin, false);
   assert.strictEqual((await service.searchMembers(db, "co-admin@example.com", { query: "Priya" }, NOW)).ok, true);
-  assert.strictEqual((await service.savePlatformConfig(db, "co-admin@example.com", { superAdminEmails: "" }, NOW)).platform.superAdminEmails[0], "senthil930@gmail.com");
+  assert.strictEqual((await service.savePlatformConfig(db, "co-admin@example.com", { superAdminEmails: "" }, NOW)).platform.superAdminEmails[0], service.SUPERADMIN_EMAIL);
   assert.strictEqual((await service.searchMembers(db, "co-admin@example.com", { query: "Priya" }, NOW)).ok, false);
   assert.strictEqual((await service.searchMembers(db, "", { query: "Priya" }, NOW)).ok, false);
   assert.strictEqual((await service.reviewGroup(db, "", { groupId: "ballantyne", decision: "approve" }, NOW)).ok, false);

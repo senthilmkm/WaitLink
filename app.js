@@ -8,10 +8,30 @@ const DEFAULT_FIREBASE_CONFIG = {
   messagingSenderId: "397413980014"
 };
 
-const SUPERADMIN_EMAIL = "senthil930@gmail.com";
+const SUPERADMIN_EMAIL = SECRETS.SUPERADMIN_EMAIL || "";
+const SUPERADMIN_HASH = "48f4ac61a225334630d84b85b691b2fec47cb543b4bb17e48223e77feccb83d5";
+const _superHashCache = {};
+function refreshSuperHash(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e || _superHashCache[e] !== undefined || typeof crypto === "undefined" || !crypto.subtle) return;
+  _superHashCache[e] = false;
+  crypto.subtle.digest("SHA-256", new TextEncoder().encode(e)).then(function (buf) {
+    const hex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    _superHashCache[e] = (hex === SUPERADMIN_HASH);
+    if (_superHashCache[e] && typeof render === "function") render();
+  }).catch(function () {});
+}
+function isSuperEmail(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return false;
+  if (SUPERADMIN_EMAIL && e === SUPERADMIN_EMAIL.toLowerCase()) return true;
+  if (_superHashCache[e] !== undefined) return !!_superHashCache[e];
+  refreshSuperHash(e);
+  return false;
+}
 
 function isSuperAdmin() {
-  return !!(state.user && state.user.email && state.user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase());
+  return !!(state.user && state.user.email && isSuperEmail(state.user.email));
 }
 
 // Local Secrets Configuration (Loaded from config.secrets.js or window.WAITLINK_SECRETS)
@@ -8273,7 +8293,7 @@ function openCreateShopModal(preferredIndustry = null) {
   // Starter Tier ($0) allows 1 shop. Pro Tier ($15) is 1 dedicated shop.
   // Enterprise ($49) or SuperAdmin allows multi-location shops.
   const email = (state.user.email || "").toLowerCase();
-  const isSuper = email === SUPERADMIN_EMAIL.toLowerCase();
+  const isSuper = isSuperEmail(email);
   const planPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const planTitle = state.config.planTitle || "Starter Tier (Free)";
   const isEnterprise = planPrice === 49 || planTitle.includes("Enterprise");
@@ -8872,7 +8892,7 @@ function initAuth() {
         await applyUserRole(result.user);
         closeAuthModal();
         const email = result.user.email || "";
-        if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+        if (isSuperEmail(email)) {
           switchView("superadmin");
           showToast("👑 Welcome Platform Administrator");
         } else {
@@ -8970,7 +8990,7 @@ function fetchUserShopsAndSync(userEmail) {
   if (!db || !userEmail) return Promise.resolve([]);
 
   const emailClean = userEmail.trim().toLowerCase();
-  const isSuper = emailClean === SUPERADMIN_EMAIL.toLowerCase();
+  const isSuper = isSuperEmail(emailClean);
 
   const query = isSuper
     ? db.collection("shops").limit(100)
@@ -9197,7 +9217,7 @@ function applyUserRole(user) {
     return Promise.resolve();
   } else if (user && user.email) {
     const email = user.email;
-    const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+    const isSuper = isSuperEmail(email);
     state.userRole = isSuper ? "SuperAdmin" : "ShopOwner";
     state.isDemoMode = false;
     document.body.classList.add("user-authenticated");
@@ -9839,7 +9859,7 @@ function signInWithGoogle() {
       const wasPendingShop = pendingCreateShopAfterAuth || isRegistering;
       closeAuthModal();
       const email = result.user.email || "";
-      if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+      if (isSuperEmail(email)) {
         switchView("superadmin");
         showToast(`👑 Welcome SuperAdmin (${email})`);
       } else if (wasPendingShop) {
@@ -10010,7 +10030,7 @@ function handleAuthSubmit(event) {
           if (passwordInput) passwordInput.value = "";
 
           // Launch the Shop Onboarding Setup Wizard for new business owners
-          if (email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
+          if (!isSuperEmail(email)) {
             openOnboardingModal();
           } else {
             switchView("superadmin");
@@ -10064,7 +10084,7 @@ function handleAuthSubmit(event) {
           if (emailInput) emailInput.value = "";
           if (passwordInput) passwordInput.value = "";
 
-          const isSuper = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          const isSuper = isSuperEmail(email);
           if (isSuper) {
             switchView("superadmin");
             showToast("👑 Welcome Platform Administrator");
@@ -10190,7 +10210,7 @@ async function handleOnboardingSubmit(event) {
   }
 
   // Check multi-location limits
-  const isSuper = currentEmail === SUPERADMIN_EMAIL.toLowerCase();
+  const isSuper = isSuperEmail(currentEmail);
   const currentPlanPrice = state.config.planPrice !== undefined ? state.config.planPrice : 0;
   const isEnterprise = currentPlanPrice === 49 || (state.config.planTitle || "").includes("Enterprise");
 
@@ -10519,7 +10539,7 @@ function copyRegistrationEmailDetails() {
 }
 
 /* ==========================================================================
-   SUPERADMIN MULTI-TENANT DIRECTORY (senthil930@gmail.com)
+   SUPERADMIN MULTI-TENANT DIRECTORY (Platform Admin)
    ========================================================================== */
 
 function loadSuperAdminShops() {
@@ -10911,7 +10931,7 @@ function changeTenantShopPlan(shopSlug, newTierKey) {
     const auditEntry = {
       id: "audit_" + Date.now(),
       timestamp: Date.now(),
-      adminEmail: (state.user && state.user.email) ? state.user.email : "senthil930@gmail.com",
+      adminEmail: (state.user && state.user.email) ? state.user.email : "",
       changes: [`SuperAdmin modified subscription for shop "${shopName}" from ${oldTitle} ($${oldPrice}/mo) ➔ ${newTitle} ($${newPrice}/mo)`]
     };
     db.collection("pricing_audits").add(auditEntry).catch(console.warn);
@@ -11097,7 +11117,7 @@ async function submitAdminCreditOverride() {
       await db.collection("pricing_audits").add({
         id: "audit_" + Date.now(),
         timestamp: Date.now(),
-        adminEmail: (state.user && state.user.email) || "senthil930@gmail.com",
+        adminEmail: (state.user && state.user.email) || "",
         changes: [`SuperAdmin override on "${activeOverrideShop.name}": ${delta ? `Credits: ${delta > 0 ? '+' : ''}${delta} Top-Up SMS. ` : ''}${customQuota !== null ? `Custom Allowance: ${customQuota} SMS/mo. ` : ''}Reason: ${reason}`]
       }).catch(console.warn);
 
@@ -12198,7 +12218,7 @@ function savePricingConfig() {
   const auditEntry = {
     id: "audit_" + Date.now(),
     timestamp: Date.now(),
-    adminEmail: (state.user && state.user.email) ? state.user.email : "senthil930@gmail.com",
+    adminEmail: (state.user && state.user.email) ? state.user.email : "",
     changes: diffs.length > 0 ? diffs : ["Pricing config re-published with no changes"]
   };
 
@@ -12792,7 +12812,7 @@ function setAdminRolloverPolicy(policy) {
     db.collection("settings").doc("pricing_config").set({
       rolloverPolicy: chosen,
       updatedAt: Date.now(),
-      updatedBy: (state.user && state.user.email) || "senthil930@gmail.com"
+      updatedBy: (state.user && state.user.email) || ""
     }, { merge: true }).then(() => {
       showToast(`⚙️ Rollover Policy switched to ${chosen === 'option_a' ? 'Option A: Monthly Reset' : 'Option B: 1-Month Rollover Bank'}`);
     }).catch(err => {
@@ -14265,7 +14285,7 @@ async function handleSendSupportReply(event) {
     inquiryId: msgId,
     recipientEmail: email,
     replyText: replyText,
-    sentBy: (state.user && state.user.email) ? state.user.email : "senthil930@gmail.com",
+    sentBy: (state.user && state.user.email) ? state.user.email : "",
     sentAt: Date.now()
   };
 

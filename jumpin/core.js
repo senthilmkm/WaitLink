@@ -145,9 +145,11 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
   }
 
-  function cleanAdminEmails(raw, includeDefault) {
+  function cleanAdminEmails(raw, includeDefault, defaultEmail) {
     const list = Array.isArray(raw) ? raw : String(raw || "").split(/[\n,;]+/);
-    const out = includeDefault === false ? [] : ["senthil930@gmail.com"];
+    const out = [];
+    const def = includeDefault !== false ? cleanEmail(defaultEmail) : "";
+    if (def) out.push(def);
     list.forEach(function (item) {
       const email = cleanEmail(item);
       if (email && out.indexOf(email) === -1) out.push(email);
@@ -157,7 +159,7 @@
 
   function cleanContactEmails(raw, fallback) {
     const list = cleanAdminEmails(raw, false);
-    return list.length ? list.join(", ") : (fallback || "senthil930@gmail.com");
+    return list.length ? list.join(", ") : (fallback || "");
   }
 
   function defaultConfig() {
@@ -165,8 +167,8 @@
       enabled: false,
       requireRideApproval: false,
       membersOnly: false,
-      adminEmails: ["senthil930@gmail.com"],
-      contactEmail: "senthil930@gmail.com",
+      adminEmails: [],
+      contactEmail: "",
       supportNote: "",
       postRideThankYouSms: false,
       dailySmsCap: 200,

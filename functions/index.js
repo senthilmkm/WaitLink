@@ -17,7 +17,8 @@ try {
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || localSecrets.brevo_api_key || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || localSecrets.resend_api_key || "";
-const SENDER_EMAIL = process.env.SENDER_EMAIL || localSecrets.sender_email || "senthil930@gmail.com";
+const SENDER_EMAIL = process.env.SENDER_EMAIL || localSecrets.sender_email || "";
+const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || localSecrets.superadmin_email || "").toLowerCase();
 const RESEND_SENDER = "WaitLink Security <onboarding@resend.dev>";
 const SENDER_NAME = "WaitLink Security";
 
@@ -538,7 +539,7 @@ exports.sendTwilioSms = onRequest({ cors: true, maxInstances: 10 }, async (req, 
 
     // 2. Verify Shop Ownership / Staff Authorization and Tier (Demo shops bypass paid tier lock)
     const callerEmail = decodedToken ? (decodedToken.email || "").toLowerCase() : "";
-    const isSuper = decodedToken && (callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com");
+    const isSuper = decodedToken && (callerEmail === SUPERADMIN_EMAIL);
 
     if (!isSuper && !isDemo) {
       if (!isStaffAuthenticated) {
@@ -834,7 +835,7 @@ exports.sendShopWelcomeEmail = onRequest({ cors: true, maxInstances: 10 }, async
 
 /**
  * Cloud Function: sendContactSupportAlert
- * Dispatches an automated email notification to senthil930@gmail.com whenever
+ * Dispatches an automated email notification to the platform admin whenever
  * a visitor, shop owner, or customer submits an inquiry on contact.html.
  */
 exports.sendContactSupportAlert = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
@@ -890,7 +891,7 @@ exports.sendContactSupportAlert = onRequest({ cors: true, maxInstances: 10 }, as
 </body></html>`;
 
     const dispatchResult = await dispatchEmail({
-      to: "senthil930@gmail.com",
+      to: SUPERADMIN_EMAIL,
       subject: `📩 New WaitLink Inquiry: ${cleanSubject} (from ${cleanName})`,
       html: emailHtml,
       text: `New Support Inquiry\nFrom: ${cleanName} (${cleanEmail})\nShop: ${cleanShop}\nTopic: ${cleanSubject}\n\nMessage:\n${cleanMessage}`
@@ -1277,7 +1278,7 @@ exports.verifyStripeSessionAndUpgrade = onRequest({ cors: true, maxInstances: 10
 
       const shopData = shopSnap.data() || {};
       const callerEmail = (decodedToken.email || "").toLowerCase();
-      const isSuper = callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com";
+      const isSuper = callerEmail === SUPERADMIN_EMAIL;
       const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
                       (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
 
@@ -1581,7 +1582,7 @@ exports.adjustShopSmsCredits = onRequest({ cors: true, maxInstances: 10 }, async
     try {
       const decoded = await admin.auth().verifyIdToken(authHeader.split("Bearer ")[1].trim());
       const caller = (decoded.email || "").toLowerCase();
-      const isSuper = caller === SENDER_EMAIL.toLowerCase() || caller === "senthil930@gmail.com";
+      const isSuper = caller === SUPERADMIN_EMAIL;
       if (!isSuper) {
         return res.status(403).json({ success: false, error: "Forbidden: SuperAdmin authentication required." });
       }
@@ -1677,7 +1678,7 @@ exports.sendSupportReply = onRequest({ cors: true, maxInstances: 10 }, async (re
       try {
         const decoded = await admin.auth().verifyIdToken(idToken);
         const caller = (decoded.email || "").toLowerCase();
-        const isSuper = caller === SENDER_EMAIL.toLowerCase() || caller === "senthil930@gmail.com";
+        const isSuper = caller === SUPERADMIN_EMAIL;
         if (!isSuper) {
           logger.warn("Non-admin attempted support reply:", caller);
           return res.status(403).json({ success: false, error: "Forbidden: SuperAdmin authentication required to dispatch support replies." });
@@ -1785,7 +1786,7 @@ exports.createStripePortalSession = onRequest({ cors: true, maxInstances: 10 }, 
       }
       const shopData = shopDoc.data() || {};
       const callerEmail = (decodedToken.email || "").toLowerCase();
-      const isSuper = callerEmail === SENDER_EMAIL.toLowerCase() || callerEmail === "senthil930@gmail.com";
+      const isSuper = callerEmail === SUPERADMIN_EMAIL;
       const isOwner = (shopData.ownerEmail && shopData.ownerEmail.toLowerCase() === callerEmail) ||
                       (shopData.ownerUid && shopData.ownerUid === decodedToken.uid);
 
@@ -2315,7 +2316,7 @@ async function requireCaller(req) {
 
 function assertShopOwner(decoded, shopData) {
   const email = String((decoded && decoded.email) || "").toLowerCase();
-  const isSuper = email === String(SENDER_EMAIL || "").toLowerCase() || email === "senthil930@gmail.com";
+  const isSuper = email === SUPERADMIN_EMAIL;
   if (isSuper) return;
   const ownerEmail = String((shopData && shopData.ownerEmail) || "").toLowerCase();
   const isOwner = (ownerEmail && ownerEmail === email) || (shopData && shopData.ownerUid && shopData.ownerUid === decoded.uid);
@@ -2893,7 +2894,7 @@ exports.createOwnerShop = onRequest({ cors: true, maxInstances: 10 }, async (req
       if (slug.length < 3 || slug.length > 60 || slug === "main-st-barbers" || slug.startsWith("demo-")) {
         return res.status(400).json({ success: false, error: "That shop link is not available." });
       }
-      const isSuper = email === String(SENDER_EMAIL || "").toLowerCase() || email === "senthil930@gmail.com";
+      const isSuper = email === SUPERADMIN_EMAIL;
       const db = admin.firestore();
       const shopRef = db.collection("shops").doc(slug);
       if ((await shopRef.get()).exists) {

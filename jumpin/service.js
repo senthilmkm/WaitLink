@@ -4,10 +4,13 @@
  */
 const core = require("./core.js");
 
+/* c8 ignore next 6 */
+let localSecrets = {};
+try { localSecrets = require(require("fs").existsSync(__dirname + "/../secrets.json") ? "../secrets.json" : "../functions/secrets.json"); } catch (e) { localSecrets = {}; }
 const GENERIC_LINK = "This link no longer works. Request a new text from the ride page.";
-const SUPERADMIN_EMAIL = "senthil930@gmail.com";
+const SUPERADMIN_EMAIL = String(process.env.JUMPIN_SUPERADMIN_EMAIL || localSecrets.superadmin_email || "").trim().toLowerCase();
 const PLATFORM_ADMIN_PHONE = "+19802531359";
-const PLATFORM_SUPPORT_NOTE = "Zelle:senthil930@gmail.com";
+const PLATFORM_SUPPORT_NOTE = String(process.env.JUMPIN_SUPPORT_NOTE || localSecrets.jumpin_support_note || "").trim();
 
 function clone(value) {
   return value == null ? null : JSON.parse(JSON.stringify(value));
@@ -146,7 +149,7 @@ async function loadPlatformConfig(tx, now) {
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
     platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
-    superAdminEmails: core.cleanAdminEmails(stored.superAdminEmails),
+    superAdminEmails: core.cleanAdminEmails(stored.superAdminEmails, true, SUPERADMIN_EMAIL),
     platformAdminPhone: parsedPhone.ok ? parsedPhone.e164 : PLATFORM_ADMIN_PHONE,
     platformDailySmsCap: cap,
     dailySmsDay: budget.day,
@@ -276,7 +279,8 @@ async function memberError(tx, config, e164, p) {
   const pack = await tx.get(p ? p.memberIndex : "carpool_private/member_index") || { members: [] };
   const hash = core.phoneHash16(e164);
   if (arr(pack.members).some(function (m) { return m.phoneHash === hash; })) return "";
-  const base = "JumpIn is for approved community members only. Please contact the administrator at " + config.contactEmail + " to be added.";
+  const contact = config.contactEmail || SUPERADMIN_EMAIL;
+  const base = "JumpIn is for approved community members only. Please contact the administrator at " + contact + " to be added.";
   if (!p || p.groupId === "default") return base + " If your neighborhood uses its own group, open the ?g=... link from your organizer.";
   return base;
 }
@@ -1681,7 +1685,7 @@ function savePlatformConfig(db, email, input, now) {
       ? (core.cleanEmail(body.platformAdminEmail) || prev.platformAdminEmail)
       : prev.platformAdminEmail;
     const nextSuperAdmins = body.superAdminEmails !== undefined
-      ? core.cleanAdminEmails(body.superAdminEmails)
+      ? core.cleanAdminEmails(body.superAdminEmails, true, SUPERADMIN_EMAIL)
       : prev.superAdminEmails;
     let nextAdminPhone = prev.platformAdminPhone;
     if (body.platformAdminPhone !== undefined && String(body.platformAdminPhone).trim()) {
@@ -1840,6 +1844,7 @@ function searchMembers(db, email, input, now) {
 
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
+  PLATFORM_SUPPORT_NOTE: PLATFORM_SUPPORT_NOTE,
   GENERIC_LINK: GENERIC_LINK,
   createMemoryDb: createMemoryDb,
   postRide: postRide,
