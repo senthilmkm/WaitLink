@@ -164,6 +164,10 @@
         "function": { "functionId": "carpoolAdminSavePlatformConfig", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolAdminSearchMembers",
+        "function": { "functionId": "carpoolAdminSearchMembers", "region": "us-central1" }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
