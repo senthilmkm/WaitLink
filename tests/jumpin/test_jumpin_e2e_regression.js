@@ -249,7 +249,7 @@ async function run() {
       idempotencyKey: "e2e-empty"
     }, null, NOW + 8000);
     assert.strictEqual(emptyPost.ok, true);
-    const emptyCron = await handlers.call(db, "carpoolCompleteTrips", {}, null, departAt + 500 * 60000);
+    const emptyCron = await handlers.call(db, "carpoolCompleteTrips", {}, null, departAt + 510 * 60000);
     assert.strictEqual(emptyCron.completed, 1);
     assert.strictEqual(emptyCron.outbox.length, 0);
     assert.strictEqual(db.snapshot()["carpool_public/rides/" + emptyPost.rideId].status, "cancelled");

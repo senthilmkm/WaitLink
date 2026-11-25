@@ -134,6 +134,12 @@ async function loadPlatformConfig(tx, now) {
   const supportNote = core.collapse(core.stripTags(stored.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE;
   const maintenanceMessage = core.collapse(core.stripTags(stored.maintenanceMessage || "")).slice(0, 200);
   const parsedPhone = stored.platformAdminPhone ? core.normalizePhone(stored.platformAdminPhone) : { ok: false };
+  const completeInterval = [5, 10, 15, 30].indexOf(Number(stored.completeTripsIntervalMinutes)) !== -1
+    ? Number(stored.completeTripsIntervalMinutes)
+    : 5;
+  const retainInterval = [24, 48, 72].indexOf(Number(stored.retainTripsIntervalHours)) !== -1
+    ? Number(stored.retainTripsIntervalHours)
+    : 24;
   return {
     platformEnabled: stored.platformEnabled !== false,
     iosThemeEnabled: stored.iosThemeEnabled === true,
@@ -143,7 +149,13 @@ async function loadPlatformConfig(tx, now) {
     platformAdminPhone: parsedPhone.ok ? parsedPhone.e164 : PLATFORM_ADMIN_PHONE,
     platformDailySmsCap: cap,
     dailySmsDay: budget.day,
-    dailySmsSent: budget.sent
+    dailySmsSent: budget.sent,
+    completeTripsEnabled: stored.completeTripsEnabled !== false,
+    completeTripsIntervalMinutes: completeInterval,
+    lastCompleteRunAt: Number(stored.lastCompleteRunAt) || 0,
+    retainTripsEnabled: stored.retainTripsEnabled !== false,
+    retainTripsIntervalHours: retainInterval,
+    lastRetainRunAt: Number(stored.lastRetainRunAt) || 0
   };
 }
 
@@ -1140,21 +1152,31 @@ async function completeDueGroup(tx, p, now, texts, platform) {
 }
 
 function completeDue(db, now, groupId) {
+  const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
     const texts = freshTexts();
-    const platform = await loadPlatformConfig(tx, now);
+    const platform = await loadPlatformConfig(tx, clock);
+    if (!groupId) {
+      if (!platform.completeTripsEnabled) return { ok: true, completed: 0, skipped: "disabled", texts: texts };
+      const minMs = platform.completeTripsIntervalMinutes * 60000 - 30000;
+      if (platform.lastCompleteRunAt && clock - platform.lastCompleteRunAt < minMs) {
+        return { ok: true, completed: 0, skipped: "interval", texts: texts };
+      }
+      platform.lastCompleteRunAt = clock;
+    }
     let total = 0;
     if (groupId) {
-      total += await completeDueGroup(tx, pathsFor(gidOf({ groupId: groupId })), now, texts, platform);
+      total += await completeDueGroup(tx, pathsFor(gidOf({ groupId: groupId })), clock, texts, platform);
     } else {
-      total += await completeDueGroup(tx, pathsFor("default"), now, texts, platform);
+      total += await completeDueGroup(tx, pathsFor("default"), clock, texts, platform);
       const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
       const groups = arr(gi.groups);
       for (let i = 0; i < groups.length; i++) {
         if (groups[i] && groups[i].groupId && groups[i].status === "active") {
-          total += await completeDueGroup(tx, pathsFor(groups[i].groupId), now, texts, platform);
+          total += await completeDueGroup(tx, pathsFor(groups[i].groupId), clock, texts, platform);
         }
       }
+      tx.set("carpool_platform/config", platform);
     }
     return { ok: true, completed: total, texts: texts };
   }).then(function (result) {
@@ -1200,14 +1222,25 @@ async function retainTripsGroup(tx, p, now) {
 }
 
 function retainTrips(db, now, groupId) {
+  const clock = now || Date.now();
   return db.runTransaction(async function (tx) {
-    const def = await retainTripsGroup(tx, pathsFor(groupId ? gidOf({ groupId: groupId }) : "default"), now);
+    const platform = await loadPlatformConfig(tx, clock);
+    if (!groupId) {
+      if (!platform.retainTripsEnabled) return { ok: true, kept: 0, audience: 0, skipped: "disabled" };
+      const minMs = platform.retainTripsIntervalHours * 3600000 - 5 * 60000;
+      if (platform.lastRetainRunAt && clock - platform.lastRetainRunAt < minMs) {
+        return { ok: true, kept: 0, audience: 0, skipped: "interval" };
+      }
+      platform.lastRetainRunAt = clock;
+    }
+    const def = await retainTripsGroup(tx, pathsFor(groupId ? gidOf({ groupId: groupId }) : "default"), clock);
     if (!groupId) {
       const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
       const groups = arr(gi.groups);
       for (let i = 0; i < groups.length; i++) {
-        if (groups[i] && groups[i].groupId) await retainTripsGroup(tx, pathsFor(groups[i].groupId), now);
+        if (groups[i] && groups[i].groupId) await retainTripsGroup(tx, pathsFor(groups[i].groupId), clock);
       }
+      tx.set("carpool_platform/config", platform);
     }
     return { ok: true, kept: def.kept, audience: def.audience };
   });
@@ -1574,6 +1607,14 @@ function savePlatformConfig(db, email, input, now) {
       if (!parsed.ok) return { ok: false, error: parsed.error };
       nextAdminPhone = parsed.e164;
     }
+    const nextCompleteEnabled = body.completeTripsEnabled !== undefined ? body.completeTripsEnabled !== false : prev.completeTripsEnabled;
+    const nextCompleteInterval = body.completeTripsIntervalMinutes != null && [5, 10, 15, 30].indexOf(Number(body.completeTripsIntervalMinutes)) !== -1
+      ? Number(body.completeTripsIntervalMinutes)
+      : prev.completeTripsIntervalMinutes;
+    const nextRetainEnabled = body.retainTripsEnabled !== undefined ? body.retainTripsEnabled !== false : prev.retainTripsEnabled;
+    const nextRetainInterval = body.retainTripsIntervalHours != null && [24, 48, 72].indexOf(Number(body.retainTripsIntervalHours)) !== -1
+      ? Number(body.retainTripsIntervalHours)
+      : prev.retainTripsIntervalHours;
     const next = {
       platformEnabled: nextEnabled,
       iosThemeEnabled: nextIos,
@@ -1583,7 +1624,13 @@ function savePlatformConfig(db, email, input, now) {
       platformAdminPhone: nextAdminPhone,
       platformDailySmsCap: nextCap,
       dailySmsDay: prev.dailySmsDay,
-      dailySmsSent: prev.dailySmsSent
+      dailySmsSent: prev.dailySmsSent,
+      completeTripsEnabled: nextCompleteEnabled,
+      completeTripsIntervalMinutes: nextCompleteInterval,
+      lastCompleteRunAt: prev.lastCompleteRunAt,
+      retainTripsEnabled: nextRetainEnabled,
+      retainTripsIntervalHours: nextRetainInterval,
+      lastRetainRunAt: prev.lastRetainRunAt
     };
     tx.set("carpool_platform/config", next);
     tx.set("carpool_platform/public_notice", {

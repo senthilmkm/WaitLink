@@ -462,6 +462,10 @@
           const pPhone = page.getElementById("jumpin-plat-phone");
           const pSup = page.getElementById("jumpin-plat-support");
           const pBan = page.getElementById("jumpin-plat-banner");
+          const pCompEn = page.getElementById("jumpin-plat-complete-enabled");
+          const pCompInt = page.getElementById("jumpin-plat-complete-interval");
+          const pRetEn = page.getElementById("jumpin-plat-retain-enabled");
+          const pRetInt = page.getElementById("jumpin-plat-retain-interval");
           const fIos = page.getElementById("jumpin-feat-ios");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
@@ -469,6 +473,10 @@
           if (pPhone) pPhone.value = (groupsData.platform.platformAdminPhone || "").replace(/^\+1/, "");
           if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
           if (pBan) pBan.value = groupsData.platform.maintenanceMessage || "";
+          if (pCompEn) pCompEn.value = groupsData.platform.completeTripsEnabled === false ? "off" : "on";
+          if (pCompInt) pCompInt.value = String(groupsData.platform.completeTripsIntervalMinutes || 5);
+          if (pRetEn) pRetEn.value = groupsData.platform.retainTripsEnabled === false ? "off" : "on";
+          if (pRetInt) pRetInt.value = String(groupsData.platform.retainTripsIntervalHours || 24);
           if (fIos) fIos.value = groupsData.platform.iosThemeEnabled ? "on" : "off";
         }
         if (groupSelect) {
@@ -735,6 +743,17 @@
       });
       const save = page.getElementById("jumpin-save");
       if (save) save.addEventListener("click", function () { withBusy(page, save, "Saving…", function () { return saveSettings(firebase, page, api, refresh, activeGroupId); }); });
+      if (page.querySelectorAll) {
+        page.querySelectorAll("[data-info-target]").forEach(function (btn) {
+          btn.addEventListener("click", function (e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const box = page.getElementById(btn.getAttribute("data-info-target"));
+            if (!box) return;
+            box.hidden = !box.hidden;
+            btn.setAttribute("aria-expanded", box.hidden ? "false" : "true");
+          });
+        });
+      }
       const platSave = page.getElementById("jumpin-plat-save");
       if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
         const pEn = page.getElementById("jumpin-plat-enabled");
@@ -743,6 +762,10 @@
         const pPhone = page.getElementById("jumpin-plat-phone");
         const pSup = page.getElementById("jumpin-plat-support");
         const pBan = page.getElementById("jumpin-plat-banner");
+        const pCompEn = page.getElementById("jumpin-plat-complete-enabled");
+        const pCompInt = page.getElementById("jumpin-plat-complete-interval");
+        const pRetEn = page.getElementById("jumpin-plat-retain-enabled");
+        const pRetInt = page.getElementById("jumpin-plat-retain-interval");
         withBusy(page, platSave, "Saving…", function () {
           return api.savePlatformConfig({
             platformEnabled: !pEn || pEn.value !== "no",
@@ -750,7 +773,11 @@
             platformAdminEmail: pEmail ? pEmail.value : "",
             platformAdminPhone: pPhone ? pPhone.value : "",
             platformSupportNote: pSup ? pSup.value : "",
-            maintenanceMessage: pBan ? pBan.value : ""
+            maintenanceMessage: pBan ? pBan.value : "",
+            completeTripsEnabled: !pCompEn || pCompEn.value !== "off",
+            completeTripsIntervalMinutes: pCompInt ? Number(pCompInt.value || 5) : 5,
+            retainTripsEnabled: !pRetEn || pRetEn.value !== "off",
+            retainTripsIntervalHours: pRetInt ? Number(pRetInt.value || 24) : 24
           }).then(function (res) {
             if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not save platform settings." });
             else {

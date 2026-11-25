@@ -608,7 +608,7 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   const early = await service.retainTrips(db, NOW + 2000);
   assert.ok(early.kept >= 1);
   await service.sendManageLink(db, { rideId: posted.rideId, phone: "5559876543", role: "rider", ip: "198.51.100.4" }, NOW + 80000);
-  const keptLimit = await service.retainTrips(db, NOW + 81000);
+  const keptLimit = await service.retainTrips(db, NOW + 81000, "default");
   assert.strictEqual(keptLimit.ok, true);
   const gate = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ requireRideApproval: true }) });
   const pending = await service.postRide(gate, postInput({ idempotencyKey: "rej" }), NOW);
@@ -1019,6 +1019,26 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformDailySmsCap: 0 });
   await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL);
   await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformEnabled: true, maintenanceMessage: "", platformDailySmsCap: 2000 }, NOW);
+  const schedSaved = await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, {
+    completeTripsEnabled: false,
+    completeTripsIntervalMinutes: 15,
+    retainTripsEnabled: false,
+    retainTripsIntervalHours: 48
+  }, NOW);
+  assert.strictEqual(schedSaved.platform.completeTripsEnabled, false);
+  assert.strictEqual(schedSaved.platform.completeTripsIntervalMinutes, 15);
+  assert.strictEqual(schedSaved.platform.retainTripsEnabled, false);
+  assert.strictEqual(schedSaved.platform.retainTripsIntervalHours, 48);
+  assert.strictEqual((await service.completeDue(db, NOW + 20 * 60000)).skipped, "disabled");
+  assert.strictEqual((await service.retainTrips(db, NOW + 50 * core.HOUR_MS)).skipped, "disabled");
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { completeTripsEnabled: true, retainTripsEnabled: true }, NOW);
+  const runAt = NOW + 15 * core.DAY_MS;
+  assert.strictEqual((await service.completeDue(db, runAt)).ok, true);
+  assert.strictEqual((await service.completeDue(db, runAt + 5 * 60000)).skipped, "interval");
+  assert.strictEqual((await service.retainTrips(db, runAt)).ok, true);
+  assert.strictEqual((await service.retainTrips(db, runAt + 24 * 3600000)).skipped, "interval");
+  assert.strictEqual(db.snapshot()["carpool_platform/config"].completeTripsIntervalMinutes, 15);
+  assert.strictEqual(db.snapshot()["carpool_platform/config"].retainTripsIntervalHours, 48);
 
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
