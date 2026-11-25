@@ -155,6 +155,11 @@
     return out;
   }
 
+  function cleanContactEmails(raw, fallback) {
+    const list = cleanAdminEmails(raw, false);
+    return list.length ? list.join(", ") : (fallback || "senthil930@gmail.com");
+  }
+
   function defaultConfig() {
     return {
       enabled: false,
@@ -191,7 +196,7 @@
       requireRideApproval: src.requireRideApproval === true,
       membersOnly: src.membersOnly === true,
       adminEmails: cleanAdminEmails(src.adminEmails, includeDefault),
-      contactEmail: cleanEmail(src.contactEmail) || base.contactEmail,
+      contactEmail: cleanContactEmails(src.contactEmail, base.contactEmail),
       supportNote: String(src.supportNote || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120),
       postRideThankYouSms: src.postRideThankYouSms === true,
       dailySmsCap: int("dailySmsCap", 0, 5000, base.dailySmsCap),

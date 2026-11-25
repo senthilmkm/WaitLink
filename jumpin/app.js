@@ -390,9 +390,12 @@
       const liJoin = el(doc, "li", "", "Want to join " + memberModal.groupName + " group? Reach out to the organizer");
       if (memberModal.contactEmail) {
         liJoin.appendChild(doc.createTextNode(" at "));
-        const mail = el(doc, "a", "mail-link", memberModal.contactEmail);
-        mail.href = "mailto:" + memberModal.contactEmail;
-        liJoin.appendChild(mail);
+        String(memberModal.contactEmail).split(",").map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (addr, idx) {
+          if (idx > 0) liJoin.appendChild(doc.createTextNode(", "));
+          const mail = el(doc, "a", "mail-link", addr);
+          mail.href = "mailto:" + addr;
+          liJoin.appendChild(mail);
+        });
       }
       liJoin.appendChild(doc.createTextNode(" to get added."));
       ul.appendChild(liJoin);

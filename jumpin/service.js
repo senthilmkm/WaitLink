@@ -1340,6 +1340,7 @@ function saveAdminConfig(db, email, input, now) {
       if (meta) {
         const nextName = core.collapse(core.stripTags(input && input.groupName ? input.groupName : meta.name)).slice(0, 50) || meta.name;
         meta.name = nextName;
+        meta.contactEmail = next.contactEmail;
         meta.supportNote = next.supportNote;
         meta.enabled = next.enabled;
         meta.updatedAt = now || Date.now();
