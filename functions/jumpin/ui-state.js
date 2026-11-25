@@ -76,6 +76,10 @@
       next.sheet = "";
       return next;
     }
+    if (event.type === "recovery-close") {
+      next.recovery = "";
+      return next;
+    }
     if (event.type === "cancel-ask") {
       if (event.role === "driver" && (next.role === "driver" || next.status === "pending")) next.sheet = "trip";
       else if (event.role === "rider" && next.role === "rider") next.sheet = "seat";

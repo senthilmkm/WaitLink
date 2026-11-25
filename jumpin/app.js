@@ -521,6 +521,11 @@
         phone.type = "tel";
         card.appendChild(phone);
         if (current.error) card.appendChild(el(doc, "p", "error", current.error));
+        const cancelRec = el(doc, "button", "textish", "Cancel");
+        on(cancelRec, "click", function () { state = ui.reduce(state, { type: "recovery-close" }); draw(); });
+        const recActions = el(doc, "div", "action-row");
+        recActions.appendChild(cancelRec);
+        card.appendChild(recActions);
       }
       if (!current.reserveOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
         let box = null;

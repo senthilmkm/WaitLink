@@ -832,6 +832,8 @@ it("covers fallback branches in the shell and the rules", function () {
   assert.strictEqual(flow.reserveOpen, false);
   flow = ui.reduce(flow, { type: "recovery", role: "rider" });
   assert.strictEqual(flow.recovery, "rider");
+  flow = ui.reduce(flow, { type: "recovery-close" });
+  assert.strictEqual(flow.recovery, "");
   flow = ui.reduce(flow, { type: "fail" });
   assert.strictEqual(flow.error, "");
   flow = ui.reduce(flow, { type: "notice" });
