@@ -666,6 +666,7 @@
 
     function draw() {
       syncIosTheme();
+      doc.title = (groupMeta && groupMeta.name) ? ("JumpIn — " + groupMeta.name) : "JumpIn — Community Carpool";
       rootNode.textContent = "";
       const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
@@ -1320,10 +1321,10 @@
     const bar = el(doc, "div", "bar");
     const link = el(doc, "a", "brand");
     link.href = homeHref;
-    link.appendChild(el(doc, "span", "mark", "⏳"));
-    link.appendChild(el(doc, "span", "", "WaitLink"));
+    link.appendChild(el(doc, "span", "mark", "🚗"));
+    link.appendChild(el(doc, "span", "", "JumpIn"));
+    if (meta && meta.name) link.appendChild(el(doc, "span", "product", meta.name));
     const nav = el(doc, "nav");
-    nav.appendChild(el(doc, "span", "product", (meta && meta.name) ? "JumpIn · " + meta.name : "JumpIn"));
     const rides = el(doc, "a", "", "Rides");
     rides.href = homeHref;
     nav.appendChild(rides);
@@ -1397,7 +1398,12 @@
     if (supportNote) {
       foot.appendChild(el(doc, "span", "support-foot", "Free community tool — chip in $1–$2 via " + supportNote + " to help cover text costs."));
     }
-    foot.appendChild(el(doc, "span", "", "JumpIn by WaitLink"));
+    const credit = el(doc, "span", "");
+    credit.appendChild(doc.createTextNode("JumpIn by "));
+    const wl = el(doc, "a", "", "WaitLink");
+    wl.href = "https://waitlink.app";
+    credit.appendChild(wl);
+    foot.appendChild(credit);
     [["Start a Group", "/jumpin-admin.html?tab=groups"], ["FAQ", "/jumpin-faq.html"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
       const link = el(doc, "a", "", item[0]);
       link.href = item[1];
