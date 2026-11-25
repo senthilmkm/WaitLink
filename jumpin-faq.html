@@ -3,30 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>JumpIn FAQ — Community Carpool Questions | WaitLink</title>
-  <meta name="description" content="Frequently asked questions about JumpIn community carpool: reserving multiple seats, offline ride costs, SMS manage links, cancellations, and privacy.">
+  <title>JumpIn FAQ — WaitLink</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#f1f5f9; --card:#fff; --border:#e2e8f0; --text:#0f172a; --muted:#475569; --primary:#0891b2; }
+    :root { --bg:#f1f5f9; --card:#fff; --border:#e2e8f0; --text:#0f172a; --muted:#475569; --primary:#0891b2; --primary-dark:#0e7490; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--bg); color:var(--text); font:15px/1.65 Inter,-apple-system,BlinkMacSystemFont,sans-serif; }
-    header { background:var(--card); border-bottom:1px solid var(--border); padding:14px 20px; position:sticky; top:0; z-index:20; }
-    .bar { max-width:860px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    header { background:var(--card); border-bottom:1px solid var(--border); padding:14px 20px; position:sticky; top:0; z-index:10; }
+    .bar { max-width:900px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .brand { font-family:Outfit,Inter,sans-serif; font-weight:800; font-size:18px; color:var(--text); text-decoration:none; }
     .brand span { color:var(--primary); }
     .nav { display:flex; gap:14px; font-size:14px; font-weight:600; flex-wrap:wrap; }
     .nav a { color:var(--primary); text-decoration:none; }
-    main { max-width:860px; margin:28px auto 60px; padding:0 16px; }
-    article { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
-    h1 { font-family:Outfit,Inter,sans-serif; font-size:28px; margin:0 0 6px; letter-spacing:-.02em; }
-    .lead { color:var(--muted); font-size:14px; margin:0 0 22px; }
-    .qa { padding:16px 0; border-top:1px solid var(--border); }
-    .qa:first-of-type { border-top:0; padding-top:4px; }
-    h2 { font-family:Outfit,Inter,sans-serif; font-size:17px; margin:0 0 6px; color:var(--text); }
-    p { color:#1e293b; margin:0; }
+    .nav a:hover { text-decoration:underline; }
+    main { max-width:900px; margin:28px auto 60px; padding:0 16px; }
+    .hero { background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%); color:#fff; border-radius:20px; padding:26px 24px; margin-bottom:20px; box-shadow:0 12px 28px rgba(8,145,178,.2); }
+    .hero h1 { font-family:Outfit,Inter,sans-serif; font-size:clamp(24px,4vw,32px); margin:0 0 6px; letter-spacing:-.02em; }
+    .hero p { margin:0; color:rgba(255,255,255,.92); font-size:15px; }
+    .cat { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:22px; margin-bottom:16px; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+    .cat h2 { font-family:Outfit,Inter,sans-serif; font-size:19px; margin:0 0 12px; color:var(--primary-dark); display:flex; align-items:center; gap:8px; }
+    details.faq-item { border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:#f8fafc; transition:border-color .15s, background-color .15s; }
+    details.faq-item:last-child { margin-bottom:0; }
+    details.faq-item[open] { background:#fff; border-color:#7dd3fc; }
+    details.faq-item summary { list-style:none; cursor:pointer; font-weight:700; font-size:15px; color:var(--text); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    details.faq-item summary::-webkit-details-marker { display:none; }
+    details.faq-item summary::after { content:"+"; color:var(--primary); font-size:18px; font-weight:800; flex-shrink:0; }
+    details.faq-item[open] summary::after { content:"−"; }
+    details.faq-item .ans { margin-top:10px; padding-top:10px; border-top:1px solid #e2e8f0; color:#334155; font-size:14.5px; }
+    details.faq-item .ans p { margin:0 0 8px; }
+    details.faq-item .ans p:last-child { margin-bottom:0; }
+    code { background:#e2e8f0; padding:2px 6px; border-radius:6px; font-size:13px; }
     footer { text-align:center; color:var(--muted); font-size:13px; margin-top:24px; }
-    @media (max-width:600px) { article { padding:18px; } h1 { font-size:24px; } }
+    footer a { color:var(--primary); font-weight:600; text-decoration:none; }
+    @media (max-width:600px) {
+      .hero { padding:20px 18px; }
+      .cat { padding:16px; }
+    }
   </style>
 </head>
 <body>
@@ -35,50 +48,135 @@
       <a class="brand" href="https://waitlink.app/?s=jumpin">⏳ WaitLink <span>JumpIn</span></a>
       <nav class="nav">
         <a href="https://waitlink.app/?s=jumpin">Rides</a>
-        <a href="/jumpin-how-it-works.html">How It Works</a>
         <a href="/jumpin-faq.html">FAQ</a>
-        <a href="/jumpin-safety.html">Safety</a>
+        <a href="/jumpin-privacy.html">Privacy</a>
         <a href="/jumpin-terms.html">Terms</a>
+        <a href="/jumpin-contact.html">Contact</a>
       </nav>
     </div>
   </header>
   <main>
-    <article>
+    <section class="hero">
       <h1>JumpIn Frequently Asked Questions</h1>
-      <p class="lead">Everything drivers and riders need to know about coordinating community rides on JumpIn.</p>
+      <p>Clear, accurate answers for visitors, drivers, and riders using JumpIn community carpool boards.</p>
+    </section>
 
-      <div class="qa">
-        <h2>Is JumpIn free to use?</h2>
-        <p>Yes. JumpIn is a free community carpool coordination tool with zero booking fees and no account signup required.</p>
-      </div>
-      <div class="qa">
-        <h2>How do ride costs and payments work?</h2>
-        <p>WaitLink never collects fares or processes payments online. When posting a ride, drivers may optionally display a suggested per-seat cost; any cost sharing is settled offline directly between the driver and riders.</p>
-      </div>
-      <div class="qa">
-        <h2>Can I reserve more than one seat?</h2>
-        <p>Yes. When reserving a seat, you can choose how many seats you need (up to the seats remaining, max 6) and optionally enter a drop-off location.</p>
-      </div>
-      <div class="qa">
-        <h2>How do I update or cancel my seat or trip?</h2>
-        <p>JumpIn texts you a private manage link right after you post a trip or reserve a seat. Open that link anytime to update seat count, message the driver/passengers, or cancel.</p>
-      </div>
-      <div class="qa">
-        <h2>Can a driver add a passenger manually?</h2>
-        <p>Yes. From the driver's trip screen, tapping <strong>Add passenger</strong> lets the driver book seats for a rider and send them an SMS manage link, while updating the available seat count automatically.</p>
-      </div>
-      <div class="qa">
-        <h2>Who can post or reserve rides?</h2>
-        <p>Depending on community settings, trips may be open to all visitors, require admin approval, or be restricted to approved community members managed by the JumpIn administrator.</p>
-      </div>
-      <div class="qa">
-        <h2>How do I stop SMS messages?</h2>
-        <p>Reply <strong>STOP</strong> to any JumpIn text message at any time to opt out of SMS alerts.</p>
-      </div>
-    </article>
+    <section class="cat">
+      <h2>👋 Getting Started (Visitors)</h2>
+      <details class="faq-item" open>
+        <summary>What is JumpIn, and do I need to download an app or create an account?</summary>
+        <div class="ans">
+          <p>JumpIn is a lightweight community carpool board built for neighbors, commuters, and local groups. No app download, password, or account signup is required for drivers or riders.</p>
+          <p>You simply enter your name and a valid 10-digit US/Canada mobile number when posting a ride or reserving a seat, and JumpIn texts you a private management link.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>How do neighborhood boards (like ?g=your-group) work?</summary>
+        <div class="ans">
+          <p>Each community group has its own isolated board URL (for example, <code>waitlink.app/?s=jumpin&amp;g=your-group</code>). Rides, seats, and SMS updates on one board stay strictly inside that group.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Why does a board say "Members Only" when I try to post or reserve?</summary>
+        <div class="ans">
+          <p>Some neighborhood groups enable <strong>Members Only</strong> mode so only pre-approved community phone numbers can post rides or reserve seats. If you see that notice, contact the group organizer shown in the popup to have your number added, or make sure you opened your group's exact <code>?g=</code> link.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Does JumpIn cost money or process payments?</summary>
+        <div class="ans">
+          <p>JumpIn itself is a free community coordination tool and does <strong>not</strong> process payments. If a driver lists an optional per-seat cost (e.g. <code>$5 / seat (direct)</code>), any cost-sharing is arranged directly between driver and rider.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="cat">
+      <h2>🚗 For Drivers</h2>
+      <details class="faq-item">
+        <summary>How do I post a ride, and can I post for past dates?</summary>
+        <div class="ans">
+          <p>Tap <strong>Post a ride</strong>, enter your name, 10-digit US/Canada phone number, pickup/destination, date &amp; time, available seats (up to the group limit, max 6), estimated duration, and optional ride cost or pickup note.</p>
+          <p>You <strong>cannot</strong> post a ride for a past date or time, or beyond the group's advance booking window (30 days by default).</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I manage my trip, add a passenger myself, or cancel?</summary>
+        <div class="ans">
+          <p>Right after posting, your browser saves your driver session and JumpIn texts you a private <code>view=trip</code> manage link. From that page you can:</p>
+          <p>&bull; <strong>Copy link</strong> to share the ride with neighbors.<br>&bull; <strong>Add passenger</strong> (before departure, while seats remain).<br>&bull; <strong>Message passengers</strong> to text all active riders at once.<br>&bull; <strong>Cancel trip</strong> (notifies all active riders by SMS).</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Do I get an SMS when a rider joins my trip?</summary>
+        <div class="ans">
+          <p>Currently, JumpIn posts a live update inside <strong>Trip Updates</strong> on your trip page and reduces available seats immediately, without sending an extra SMS for each booking. You <strong>do</strong> receive an SMS whenever a rider sends you a message.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>When can I mark a trip as Completed, and what happens if nobody joins?</summary>
+        <div class="ans">
+          <p>Once the departure time has passed and at least 1 active rider is on the trip, the <strong>Complete trip</strong> button appears. If you don't tap it manually, JumpIn automatically closes the trip <strong>1 hour after departure + estimated duration</strong>: trips with 1+ riders are marked <strong>Completed</strong> (and send an optional thank-you SMS if enabled by the group), while trips with 0 riders are automatically marked <strong>Cancelled</strong> with no thank-you SMS.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>What if I open my trip in another browser (like WhatsApp) or lose my link?</summary>
+        <div class="ans">
+          <p>Your driver access is saved in the browser you used to post and in the private link texted to your phone. If you switch browsers or lose the text, open the ride page, tap <strong>Driver? Manage this trip</strong>, and enter the phone number used to post the ride to receive a fresh manage link.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="cat">
+      <h2>💺 For Riders</h2>
+      <details class="faq-item">
+        <summary>How do I reserve a seat (or multiple seats for family)?</summary>
+        <div class="ans">
+          <p>Open any open trip with available seats, tap <strong>Reserve a seat</strong>, enter your name, 10-digit US/Canada phone number, number of seats needed, and an optional drop-off note. JumpIn reserves your seat(s) immediately and texts you a private <code>view=seat</code> manage link.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I change my seat count or cancel my reservation?</summary>
+        <div class="ans">
+          <p>Open your trip using the same browser or your texted <code>view=seat</code> link <strong>before the trip departs</strong>. You can update your seat count (if seats are available) or tap <strong>Cancel my seat</strong> to release your seats back to the board immediately.</p>
+          <p>Once the departure time has passed, seat edits and cancellations are locked.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I message the driver before or during the ride?</summary>
+        <div class="ans">
+          <p>On your trip page, use the quick chips (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or type a custom message and tap <strong>Send</strong>. Your message is posted to Trip Updates and texted directly to the driver.</p>
+          <p>Messaging works pre-departure and mid-trip up until <strong>departure + estimated duration + 1 hour</strong>.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>When does my SMS manage link expire?</summary>
+        <div class="ans">
+          <p>&bull; <strong>Edit or cancel seat:</strong> valid until the trip's <strong>departure time</strong>.<br>&bull; <strong>Message the driver:</strong> valid until <strong>departure + estimated duration + 1 hour</strong>.<br>&bull; <strong>Replaced or ended:</strong> your old link stops working immediately if you cancel your seat, request a new link via <em>Text me a link</em>, or the trip is completed/cancelled.<br>&bull; <strong>After expiry:</strong> completed or cancelled trips stay read-only for <strong>7 days</strong> with all action buttons hidden, and are then purged automatically.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="cat">
+      <h2>🔒 Privacy &amp; SMS</h2>
+      <details class="faq-item">
+        <summary>Is my phone number visible to other riders or public visitors?</summary>
+        <div class="ans">
+          <p><strong>No.</strong> Public trip pages only show names (first/display name), pickup/drop-off notes, seat counts, and Trip Updates — never full phone numbers.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I stop receiving SMS messages from JumpIn?</summary>
+        <div class="ans">
+          <p>Reply <code>STOP</code> to any JumpIn text message at any time to opt out of SMS notifications. (Note: you will still be able to view public trip boards in your browser.)</p>
+        </div>
+      </details>
+    </section>
+
     <footer>
-      JumpIn by WaitLink &bull;
-      <a href="https://waitlink.app/?s=jumpin" style="color:var(--primary);text-decoration:none;font-weight:600">Back to JumpIn Rides</a>
+      <a href="https://waitlink.app/?s=jumpin">Back to Rides Board</a> &bull;
+      <a href="/jumpin-privacy.html">Privacy</a> &bull;
+      <a href="/jumpin-terms.html">Terms</a> &bull;
+      <a href="/jumpin-contact.html">Contact</a>
     </footer>
   </main>
 </body>

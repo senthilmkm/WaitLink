@@ -1691,15 +1691,15 @@ function searchMembers(db, email, input, now) {
       const cfg = await loadConfig(tx, clock, p);
       const mPack = await tx.get(p.memberIndex) || { members: [] };
       const members = arr(mPack.members);
-      if (!members.length) continue;
       const bPack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
       const byHash = {};
-      function slot(hash) {
-        if (!byHash[hash]) byHash[hash] = { phoneE164: "", trips: [] };
+      function slot(hash, name) {
+        if (!byHash[hash]) byHash[hash] = { phoneE164: "", name: name || "", trips: [] };
+        else if (name && !byHash[hash].name) byHash[hash].name = name;
         return byHash[hash];
       }
       arr(bPack.audience).forEach(function (a) {
-        if (a && a.phoneE164) slot(core.phoneHash16(a.phoneE164)).phoneE164 = a.phoneE164;
+        if (a && a.phoneE164) slot(core.phoneHash16(a.phoneE164), a.name).phoneE164 = a.phoneE164;
       });
       const rides = arr(bPack.rides);
       for (let rIdx = 0; rIdx < rides.length; rIdx++) {
@@ -1707,14 +1707,14 @@ function searchMembers(db, email, input, now) {
         const ride = row && row.rideId ? await tx.get(p.ridePrivate(row.rideId)) : null;
         if (!ride) continue;
         const when = core.formatWhen(ride.departAt, ride.timeZone);
-        const dSlot = slot(core.phoneHash16(ride.driverPhoneE164));
+        const dSlot = slot(core.phoneHash16(ride.driverPhoneE164), ride.driverName);
         dSlot.phoneE164 = ride.driverPhoneE164;
         dSlot.trips.push({ rideId: ride.rideId, from: ride.from, to: ride.to, when: when, role: "Driver", status: ride.status });
         const resKeys = arr(ride.activeReservationDocIds);
         for (let k = 0; k < resKeys.length; k++) {
           const res = await tx.get(resKeys[k]);
           if (res && res.phoneE164) {
-            const rSlot = slot(core.phoneHash16(res.phoneE164));
+            const rSlot = slot(core.phoneHash16(res.phoneE164), res.name);
             rSlot.phoneE164 = res.phoneE164;
             rSlot.trips.push({
               rideId: ride.rideId,
@@ -1730,7 +1730,9 @@ function searchMembers(db, email, input, now) {
       const groupName = meta ? meta.name : (gid === "default" ? "Its-OK" : gid);
       const organizerEmail = (meta && meta.contactEmail) || cfg.contactEmail;
       const organizerPhone = (meta && meta.contactPhoneE164) || platform.platformAdminPhone;
+      const seenHashes = {};
       members.forEach(function (m) {
+        seenHashes[m.phoneHash] = true;
         const hit = (targetHash && m.phoneHash === targetHash) ||
           (isLast4 && m.phoneLast4 === digits) ||
           (String(m.name).toLowerCase().indexOf(nameQuery) !== -1);
@@ -1746,6 +1748,27 @@ function searchMembers(db, email, input, now) {
           organizerPhone: organizerPhone,
           addedAt: m.addedAt,
           trips: info ? info.trips : []
+        });
+      });
+      Object.keys(byHash).forEach(function (hash) {
+        if (seenHashes[hash]) return;
+        const info = byHash[hash];
+        const last4 = info.phoneE164 ? core.last4(info.phoneE164) : "";
+        const dispName = info.name || "Rider / Driver";
+        const hit = (targetHash && hash === targetHash) ||
+          (isLast4 && last4 === digits) ||
+          (dispName.toLowerCase().indexOf(nameQuery) !== -1);
+        if (!hit) return;
+        results.push({
+          name: dispName,
+          phone: info.phoneE164,
+          phoneLast4: last4,
+          groupId: gid,
+          groupName: groupName,
+          organizerEmail: organizerEmail,
+          organizerPhone: organizerPhone,
+          addedAt: 0,
+          trips: info.trips
         });
       });
     }

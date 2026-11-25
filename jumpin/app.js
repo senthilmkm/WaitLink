@@ -1395,7 +1395,7 @@
       foot.appendChild(el(doc, "span", "support-foot", "Free community tool — chip in $1–$2 via " + supportNote + " to help cover text costs."));
     }
     foot.appendChild(el(doc, "span", "", "JumpIn by WaitLink"));
-    [["Start a Group", "/jumpin-admin.html?tab=groups"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
+    [["Start a Group", "/jumpin-admin.html?tab=groups"], ["FAQ", "/jumpin-faq.html"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
       const link = el(doc, "a", "", item[0]);
       link.href = item[1];
       foot.appendChild(link);

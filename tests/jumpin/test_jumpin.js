@@ -1084,6 +1084,13 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual((await service.reviewGroup(db, "", { groupId: "ballantyne", decision: "approve" }, NOW)).ok, false);
   assert.strictEqual((await service.savePlatformConfig(db, "", { platformEnabled: true }, NOW)).ok, false);
 
+  const nmDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig() });
+  await service.postRide(nmDb, postInput({ name: "Visitor Driver", phone: "5553219876", idempotencyKey: "nm-drv" }), NOW);
+  assert.strictEqual((await service.searchMembers(nmDb, service.SUPERADMIN_EMAIL, { query: "Visitor" }, NOW)).results[0].phone, "+15553219876");
+  assert.strictEqual((await service.searchMembers(nmDb, service.SUPERADMIN_EMAIL, { query: "9876" }, NOW)).results.length, 1);
+  assert.strictEqual((await service.searchMembers(nmDb, service.SUPERADMIN_EMAIL, { query: "5553219876" }, NOW)).results.length, 1);
+  assert.strictEqual((await service.searchMembers(nmDb, service.SUPERADMIN_EMAIL, { query: "Nobody" }, NOW)).results.length, 0);
+
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "trips", confirm: true }, NOW);
   await service.purgeData(db, "org@example.com", { groupId: "ballantyne", scope: "all", confirm: true }, NOW);
 });
