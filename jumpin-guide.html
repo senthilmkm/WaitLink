@@ -671,10 +671,11 @@
               <td><span class="tag tag-open">Open (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
               <td>
                 <ul class="clean">
+                  <li><strong>Confirm joined riders (🔔 &rarr; ✓):</strong> Each newly joined rider shows an amber <strong>🔔</strong> pill; tap it to mark them seen (turns green <strong>✓</strong> and updates the rider's view to <strong>✓ Confirmed</strong> via <code>carpoolAckRider</code>).</li>
                   <li><strong>Message passengers</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> (with spinner).</li>
-                  <li><strong>Add passenger</strong> manually (if seats left &gt; 0).</li>
+                  <li><strong>Add passenger</strong> manually (if seats left &gt; 0; driver-added passengers start as <strong>✓</strong>).</li>
                   <li><strong>Cancel trip</strong> (confirmation modal: <em>Keep trip / Cancel trip</em>).</li>
-                  <li><strong>Copy link</strong> or <strong>Sign out on this device</strong>.</li>
+                  <li><strong>Share on WhatsApp / Copy link</strong> or <strong>Sign out on this device</strong>.</li>
                 </ul>
               </td>
               <td>
@@ -758,6 +759,7 @@
               <td><span class="tag tag-open">Reserved (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
               <td>
                 <ul class="clean">
+                  <li><strong>Live seat status:</strong> After reserving, your row under <strong>Passengers</strong> shows <strong>⏳ Pending</strong> until the driver taps <strong>🔔</strong>, when it updates in real time to <strong>✓ Confirmed</strong>.</li>
                   <li><strong>Message the driver</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> button right beside the input (with spinner).</li>
                   <li>Change seat count using the <strong>My seats</strong> dropdown + <strong>Update seats</strong> (enabled once changed; increase or decrease within available seats).</li>
                   <li><strong>Cancel my seat</strong> (opens centered <em>Cancel your seat?</em> confirmation modal).</li>
@@ -846,9 +848,10 @@
               <td><strong>Members</strong></td>
               <td>
                 <ul class="clean">
-                  <li>Add individual approved community members (name + US/Canada phone).</li>
-                  <li>Bulk-import members via CSV / pasted list.</li>
-                  <li>Remove members (with confirmation modal).</li>
+                  <li>Add individual approved community members (name + US/Canada phone) or bulk-import via CSV / pasted list (deduplicates by phone and stores full <code>phoneE164</code>).</li>
+                  <li>Alphabetically sorted, 2-column compact grid on desktop, with 12-per-page pagination and instant search by name or last 4.</li>
+                  <li><strong>All Members / 🛡️ Group Admins</strong> filter toggle next to search (showing admin Name, full Phone, Email, and <strong>🛡️</strong> icon on admin rows).</li>
+                  <li><strong>Edit</strong> any member (Name, Phone, optional Email, Group admin checkbox) or <strong>Remove</strong> (with confirmation modal).</li>
                 </ul>
               </td>
               <td>
