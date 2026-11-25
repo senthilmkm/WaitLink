@@ -453,6 +453,8 @@
         }
         const platCard = page.getElementById("jumpin-platform-settings");
         if (platCard) platCard.hidden = !groupsData.isSuperAdmin;
+        const featCard = page.getElementById("jumpin-feature-config");
+        if (featCard) featCard.hidden = !groupsData.isSuperAdmin;
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
@@ -460,12 +462,14 @@
           const pPhone = page.getElementById("jumpin-plat-phone");
           const pSup = page.getElementById("jumpin-plat-support");
           const pBan = page.getElementById("jumpin-plat-banner");
+          const fIos = page.getElementById("jumpin-feat-ios");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
           if (pEmail) pEmail.value = groupsData.platform.platformAdminEmail || "";
           if (pPhone) pPhone.value = (groupsData.platform.platformAdminPhone || "").replace(/^\+1/, "");
           if (pSup) pSup.value = groupsData.platform.platformSupportNote || "";
           if (pBan) pBan.value = groupsData.platform.maintenanceMessage || "";
+          if (fIos) fIos.value = groupsData.platform.iosThemeEnabled ? "on" : "off";
         }
         if (groupSelect) {
           groupSelect.textContent = "";
@@ -705,6 +709,23 @@
           state = admin.reduce(state, { type: "clear" });
           paint();
         }
+      });
+      const featSave = page.getElementById("jumpin-feat-save");
+      if (featSave && api && api.savePlatformConfig) featSave.addEventListener("click", function () {
+        const fIos = page.getElementById("jumpin-feat-ios");
+        withBusy(page, featSave, "Saving…", function () {
+          return api.savePlatformConfig({
+            iosThemeEnabled: !!(fIos && fIos.value === "on")
+          }).then(function (res) {
+            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not save feature config." });
+            else {
+              state = admin.reduce(state, { type: "clear" });
+              text(page.getElementById("jumpin-admin-status"), "Feature config saved.");
+              return refresh();
+            }
+            paint();
+          });
+        });
       });
       const save = page.getElementById("jumpin-save");
       if (save) save.addEventListener("click", function () { withBusy(page, save, "Saving…", function () { return saveSettings(firebase, page, api, refresh, activeGroupId); }); });

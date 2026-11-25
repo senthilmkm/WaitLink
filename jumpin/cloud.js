@@ -242,9 +242,10 @@
       const data = snap.exists ? snap.data() : null;
       onNotice({
         platformEnabled: !data || data.platformEnabled !== false,
+        iosThemeEnabled: !!(data && data.iosThemeEnabled === true),
         maintenanceMessage: (data && typeof data.maintenanceMessage === "string") ? data.maintenanceMessage : ""
       });
-    }, function () { onNotice({ platformEnabled: true, maintenanceMessage: "" }); });
+    }, function () { onNotice({ platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" }); });
   }
 
   function attach(win) {

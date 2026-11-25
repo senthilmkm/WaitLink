@@ -988,6 +988,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual((await service.savePlatformConfig(db, "nobody@example.com", { platformEnabled: false }, NOW)).ok, false);
   const platSaved = await handlers.call(db, "carpoolAdminSavePlatformConfig", {
     platformEnabled: false,
+    iosThemeEnabled: true,
     platformDailySmsCap: 1500,
     platformAdminEmail: "senthil930@gmail.com",
     platformAdminPhone: "9802531359",
@@ -995,6 +996,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
     maintenanceMessage: "Scheduled maintenance tonight"
   }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW);
   assert.strictEqual(platSaved.ok, true);
+  assert.strictEqual(platSaved.platform.iosThemeEnabled, true);
   assert.strictEqual(platSaved.platform.platformAdminPhone, "+19802531359");
   assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformAdminPhone: "bad" }, NOW)).ok, false);
   await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformAdminEmail: "", platformAdminPhone: "" }, NOW);

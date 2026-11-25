@@ -197,7 +197,22 @@
       "#jumpin-mid .link-row input{margin:0;flex:1 1 auto;min-width:0}",
       "#jumpin-mid .link-copy{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:8px;padding:0 12px;min-height:44px;font-size:14px;font-weight:700;cursor:pointer}",
       "#jumpin-mid .link-copy:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
-      "#jumpin-root .site-foot .support-foot{flex-basis:100%;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-weight:600;font-size:13px}"
+      "#jumpin-root .site-foot .support-foot{flex-basis:100%;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-weight:600;font-size:13px}",
+      "body.jumpin-ios #jumpin-root{background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Text\",\"Segoe UI\",Roboto,sans-serif}",
+      "body.jumpin-ios #jumpin-top{background:rgba(249,249,249,.86);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,.2);box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid .hero{background:#ffffff;border:0.5px solid rgba(60,60,67,.16);border-top:0.5px solid rgba(60,60,67,.16);border-radius:16px;box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid h1{font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",sans-serif;letter-spacing:-.025em}",
+      "body.jumpin-ios #jumpin-mid .filter-row{background:#e5e5ea;padding:3px;border-radius:10px;gap:2px}",
+      "body.jumpin-ios #jumpin-mid .filter-chip{border:0;background:transparent;border-radius:8px;min-height:32px;padding:4px 12px;color:#1c1c1e;box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid .filter-chip.active{background:#ffffff;color:#0891b2;box-shadow:0 1px 4px rgba(0,0,0,.12)}",
+      "body.jumpin-ios #jumpin-root .board-search{background:#e5e5ea;border:0;border-radius:10px;min-height:36px}",
+      "body.jumpin-ios #jumpin-mid .row{background:#ffffff;border:0.5px solid rgba(60,60,67,.16);border-radius:14px;box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid .row:active{background:#e5e5ea;transform:scale(0.988)}",
+      "body.jumpin-ios #jumpin-mid .row-head::after{content:\"›\";color:#c7c7cc;font-size:20px;font-weight:600;line-height:1;margin-left:4px;align-self:center}",
+      "body.jumpin-ios #jumpin-mid .confirm,body.jumpin-ios #jumpin-root.app-screen #jumpin-mid.post-card{border:0.5px solid rgba(60,60,67,.16);border-radius:16px;box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid .hero button,body.jumpin-ios #jumpin-bottom button{background:#0891b2;border-radius:14px;box-shadow:none}",
+      "body.jumpin-ios #jumpin-root.portal #jumpin-bottom{background:rgba(249,249,249,.86);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,.2)}",
+      "@media (max-width:700px){body.jumpin-ios #jumpin-sheet{top:auto;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}body.jumpin-ios #jumpin-sheet::before{content:\"\";display:block;width:38px;height:4px;border-radius:999px;background:#d1d1d6;margin:-10px auto 14px}}"
     ].join("");
     doc.head.appendChild(style);
   }
@@ -216,7 +231,12 @@
     let stopRide = function () { };
     let supportNote = "";
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
-    let platformNotice = { platformEnabled: true, maintenanceMessage: "" };
+    let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
+    function syncIosTheme() {
+      if (!doc.body || !doc.body.classList) return;
+      if (platformNotice.iosThemeEnabled) doc.body.classList.add("jumpin-ios");
+      else doc.body.classList.remove("jumpin-ios");
+    }
     let memberModal = null;
     function openMemberModal(result) {
       if (!result || !result.memberDenied) return;
@@ -634,6 +654,7 @@
     }
 
     function draw() {
+      syncIosTheme();
       rootNode.textContent = "";
       const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
@@ -1229,7 +1250,8 @@
       }
       if (cloud.watchPlatformNotice) {
         cleanups.push(cloud.watchPlatformNotice(function (notice) {
-          platformNotice = notice || { platformEnabled: true, maintenanceMessage: "" };
+          platformNotice = notice || { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
+          syncIosTheme();
           if (state.mode === "board") draw();
         }));
       }

@@ -136,6 +136,7 @@ async function loadPlatformConfig(tx, now) {
   const parsedPhone = stored.platformAdminPhone ? core.normalizePhone(stored.platformAdminPhone) : { ok: false };
   return {
     platformEnabled: stored.platformEnabled !== false,
+    iosThemeEnabled: stored.iosThemeEnabled === true,
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
     platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
@@ -1542,6 +1543,7 @@ function savePlatformConfig(db, email, input, now) {
     const prev = await loadPlatformConfig(tx, clock);
     const nextCap = body.platformDailySmsCap != null ? Math.max(0, Math.min(10000, Math.round(Number(body.platformDailySmsCap) || 0))) : prev.platformDailySmsCap;
     const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
+    const nextIos = body.iosThemeEnabled !== undefined ? body.iosThemeEnabled === true : prev.iosThemeEnabled;
     const nextBanner = body.maintenanceMessage !== undefined ? core.collapse(core.stripTags(body.maintenanceMessage || "")).slice(0, 200) : prev.maintenanceMessage;
     const nextSupport = body.platformSupportNote !== undefined
       ? (core.collapse(core.stripTags(body.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE)
@@ -1557,6 +1559,7 @@ function savePlatformConfig(db, email, input, now) {
     }
     const next = {
       platformEnabled: nextEnabled,
+      iosThemeEnabled: nextIos,
       maintenanceMessage: nextBanner,
       platformSupportNote: nextSupport,
       platformAdminEmail: nextAdminEmail,
@@ -1568,6 +1571,7 @@ function savePlatformConfig(db, email, input, now) {
     tx.set("carpool_platform/config", next);
     tx.set("carpool_platform/public_notice", {
       platformEnabled: nextEnabled,
+      iosThemeEnabled: nextIos,
       maintenanceMessage: nextBanner,
       updatedAt: clock
     });
