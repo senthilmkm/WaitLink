@@ -1029,7 +1029,26 @@
         const defaultParts = !state.draft ? core.partsInZone(Date.now() + 60 * 60000, defaultZone) : null;
         const postInputs = {};
         function buildPostField(spec, host) {
-          host.appendChild(el(doc, "label", "lbl", spec[1]));
+          if (spec[0] === "to") {
+            const toHead = el(doc, "div");
+            toHead.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;";
+            const toLbl = el(doc, "label", "lbl", spec[1]);
+            toLbl.style.margin = "0";
+            toHead.appendChild(toLbl);
+            const swapBtn = el(doc, "button", "chip-btn", "⇅ Swap");
+            swapBtn.type = "button";
+            swapBtn.style.cssText = "min-height:28px;padding:2px 10px;font-size:12px;";
+            swapBtn.setAttribute("aria-label", "Swap From and To");
+            on(swapBtn, "click", function () {
+              const tmp = postInputs.from.value;
+              postInputs.from.value = postInputs.to.value;
+              postInputs.to.value = tmp;
+            });
+            toHead.appendChild(swapBtn);
+            host.appendChild(toHead);
+          } else {
+            host.appendChild(el(doc, "label", "lbl", spec[1]));
+          }
           const input = el(doc, "input");
           input.name = spec[0];
           input.type = spec[2];
@@ -1045,16 +1064,6 @@
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
         fields.forEach(function (spec) { buildPostField(spec, mid); });
-        const swapRow = el(doc, "div", "chip-row");
-        const swapBtn = el(doc, "button", "chip-btn", "⇅ Swap From / To");
-        swapBtn.type = "button";
-        on(swapBtn, "click", function () {
-          const tmp = postInputs.from.value;
-          postInputs.from.value = postInputs.to.value;
-          postInputs.to.value = tmp;
-        });
-        swapRow.appendChild(swapBtn);
-        mid.appendChild(swapRow);
         const dtPair = el(doc, "div", "form-pair");
         const dateCol = el(doc, "div");
         const timeCol = el(doc, "div");
