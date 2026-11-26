@@ -1496,10 +1496,11 @@
       const secret = params.get("k") || "";
       if (view === "trip" && rideId && secret) cloud.saveTrip(rideId, secret);
       if (view === "seat" && params.get("r") && secret) cloud.saveSeat(params.get("r"), secret);
-      if (secret && win.history && win.history.replaceState && win.location) {
-        params.delete("k");
+      if (secret) params.delete("k");
+      if (win.history && win.history.replaceState && win.location && (secret || params.get("s") === "jumpin")) {
+        params.delete("s");
         const next = params.toString();
-        win.history.replaceState({}, "", win.location.pathname + (next ? "?" + next : ""));
+        win.history.replaceState({}, "", "/jumpin" + (next ? "?" + next : ""));
       }
       if (rideId && (view === "ride" || view === "trip" || view === "seat")) openRide(rideId);
       if (cloud.prepareAppCheck) {
@@ -1534,7 +1535,7 @@
 
   function brandBar(doc, top, meta, onInstall) {
     const gid = meta && meta.groupId && meta.groupId !== "default" ? meta.groupId : "";
-    const homeHref = "https://waitlink.app/?s=jumpin" + (gid ? "&g=" + encodeURIComponent(gid) : "");
+    const homeHref = "https://waitlink.app/jumpin" + (gid ? "?g=" + encodeURIComponent(gid) : "");
     const bar = el(doc, "div", "bar");
     const link = el(doc, "a", "brand");
     link.href = homeHref;

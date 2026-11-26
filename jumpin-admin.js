@@ -633,8 +633,8 @@
         }
         if (title) title.textContent = gName + (isPending ? (autoPending ? " — Waiting for Approval" : " — Request Submitted!") : " — Group Created!");
         if (msg) msg.textContent = isPending
-          ? ("Your board link will be waitlink.app/?s=jumpin&g=" + gId + ". We'll text you as soon as it's approved.")
-          : ("Your board is live at waitlink.app/?s=jumpin&g=" + gId + ".");
+          ? ("Your board link will be waitlink.app/jumpin?g=" + gId + ". We'll text you as soon as it's approved.")
+          : ("Your board is live at waitlink.app/jumpin?g=" + gId + ".");
         if (grpConfirm.dataset) {
           if (autoPending) grpConfirm.dataset.pendingAuto = "1";
           else delete grpConfirm.dataset.pendingAuto;
@@ -1093,7 +1093,7 @@
       function syncSlugPreview() {
         if (!slugPreview) return;
         const val = grpSlug && grpSlug.value ? grpSlug.value.trim() : "";
-        slugPreview.textContent = val ? ("Your link: waitlink.app/?s=jumpin&g=" + val) : "Used in your private link, e.g. waitlink.app/?s=jumpin&g=ballantyne";
+        slugPreview.textContent = val ? ("Your link: waitlink.app/jumpin?g=" + val) : "Used in your private link, e.g. waitlink.app/jumpin?g=ballantyne";
       }
       if (grpName && grpSlug) grpName.addEventListener("input", function () {
         setGroupFieldError("name", "");

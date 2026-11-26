@@ -784,8 +784,8 @@ function postMessage(db, input, now) {
     pub.messages = messages;
     pub.updatedAt = now;
     const targets = authorRole === "driver" ? riderPhones : [ride.driverPhoneE164];
-    const gSuffix = p.groupId !== "default" ? "&g=" + encodeURIComponent(p.groupId) : "";
-    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + ride.rideId;
+    const gPrefix = p.groupId !== "default" ? "g=" + encodeURIComponent(p.groupId) + "&" : "";
+    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId;
     for (let i = 0; i < targets.length; i++) {
       if (targets[i] && canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
@@ -889,9 +889,9 @@ function sendManageLink(db, input, now, rng) {
 }
 
 function manageUrl(kind, id, secret, rideId, groupId) {
-  const gSuffix = groupId && groupId !== "default" ? "&g=" + encodeURIComponent(groupId) : "";
-  if (kind === "trip") return "https://waitlink.app?s=jumpin" + gSuffix + "&view=trip&ride=" + id + "&k=" + secret;
-  return "https://waitlink.app?s=jumpin" + gSuffix + "&view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
+  const gPrefix = groupId && groupId !== "default" ? "g=" + encodeURIComponent(groupId) + "&" : "";
+  if (kind === "trip") return "https://waitlink.app/jumpin?" + gPrefix + "view=trip&ride=" + id + "&k=" + secret;
+  return "https://waitlink.app/jumpin?" + gPrefix + "view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
 }
 
 function isSuperAdminEmail(email, platform) {
@@ -926,8 +926,8 @@ function reviewRide(db, email, input, now) {
       pub.updatedAt = now;
       if (canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
-        const gSuffix = p.groupId !== "default" ? "&g=" + encodeURIComponent(p.groupId) : "";
-        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip is on the board. Share: https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
+        const gPrefix = p.groupId !== "default" ? "g=" + encodeURIComponent(p.groupId) + "&" : "";
+        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip is on the board. Share: https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
       }
     } else if (input.decision === "decline") {
       ride.status = "rejected";
@@ -1661,7 +1661,7 @@ function reviewGroup(db, email, input, now) {
       if (platform.dailySmsSent < platform.platformDailySmsCap) {
         platform.dailySmsSent += 1;
         tx.set("carpool_platform/config", platform);
-        queueText(texts, meta.contactPhoneE164, "JumpIn: Your group \"" + (meta.name || gid) + "\" is approved! Share this board link with members: https://waitlink.app/?s=jumpin&g=" + encodeURIComponent(gid), "CARPOOL_GROUP_APPROVED");
+        queueText(texts, meta.contactPhoneE164, "JumpIn: Your group \"" + (meta.name || gid) + "\" is approved! Share this board link with members: https://waitlink.app/jumpin?g=" + encodeURIComponent(gid), "CARPOOL_GROUP_APPROVED");
       }
     }
     const nextStatus = decision === "suspend" ? "suspended" : (decision === "approve" ? "active" : (meta && meta.status) || "active");

@@ -1,9 +1,9 @@
 {
-  "id": "/?s=jumpin",
+  "id": "/jumpin",
   "name": "JumpIn — Community Carpool",
   "short_name": "JumpIn",
   "description": "Private neighborhood & community carpool boards. Post a ride, reserve a seat, and coordinate via SMS.",
-  "start_url": "/?s=jumpin",
+  "start_url": "/jumpin",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

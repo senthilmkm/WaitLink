@@ -928,7 +928,7 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(approved.outbox.length, 1);
   assert.strictEqual(approved.outbox[0].to, "+15552345678");
   assert.strictEqual(approved.outbox[0].triggerType, "CARPOOL_GROUP_APPROVED");
-  assert.ok(approved.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok(approved.outbox[0].body.indexOf("?g=ballantyne") !== -1);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "cap", dailySmsCap: 150 }, NOW)).dailySmsCap, 150);
   assert.strictEqual((await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "ballantyne", decision: "suspend" }, NOW)).status, "suspended");
   assert.strictEqual((await service.postRide(db, postInput({ groupId: "ballantyne" }), NOW)).error, "This community group is currently paused.");
@@ -946,22 +946,22 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
 
   const posted = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2 }), NOW);
   assert.strictEqual(posted.ok, true);
-  assert.ok(posted.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok(posted.outbox[0].body.indexOf("?g=ballantyne") !== -1);
   await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, membersOnly: true, adminEmails: "org@example.com", dailySmsCap: 150 }, NOW);
   const nonMemberGroupPost = await service.postRide(db, postInput({ groupId: "ballantyne", phone: "5550009999", idempotencyKey: "nm-1" }), NOW);
   assert.ok(nonMemberGroupPost.error.indexOf("approved community members only") !== -1);
   await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", enabled: true, membersOnly: false, adminEmails: "org@example.com", dailySmsCap: 150 }, NOW);
   const reserved = await service.reserveSeat(db, { groupId: "ballantyne", rideId: posted.rideId, name: "Sam", phone: "5559876543", seats: 1, idempotencyKey: "bg1" }, NOW + 1000);
   assert.strictEqual(reserved.ok, true);
-  assert.ok(reserved.outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok(reserved.outbox[0].body.indexOf("?g=ballantyne") !== -1);
   assert.ok((await service.sendManageLink(db, { groupId: "ballantyne", rideId: posted.rideId, phone: "5552345678", role: "driver" }, NOW + 2000)).ok);
   assert.ok((await service.updateSeat(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret, seats: 2 }, NOW + 2100)).ok);
-  assert.ok((await service.postMessage(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret, text: "On my way" }, NOW + 2200)).outbox[0].body.indexOf("&g=ballantyne") !== -1);
+  assert.ok((await service.postMessage(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret, text: "On my way" }, NOW + 2200)).outbox[0].body.indexOf("?g=ballantyne") !== -1);
   assert.ok((await service.cancelSeat(db, { groupId: "ballantyne", rideId: posted.rideId, secret: reserved.secret }, NOW + 2300)).ok);
   assert.ok((await service.cancelTrip(db, { groupId: "ballantyne", rideId: posted.rideId, secret: posted.secret }, NOW + 2400)).ok);
   const posted2 = await service.postRide(db, postInput({ groupId: "ballantyne", seats: 2, idempotencyKey: "p2" }), NOW + 2500);
   assert.strictEqual(posted2.ok, true);
-  assert.ok(service.manageUrl("trip", "r1", "s1", "r1", "ballantyne").indexOf("&g=ballantyne") !== -1);
+  assert.ok(service.manageUrl("trip", "r1", "s1", "r1", "ballantyne").indexOf("?g=ballantyne") !== -1);
   assert.strictEqual(service.manageUrl("trip", "r1", "s1", "r1", "default").indexOf("&g="), -1);
 
   const savedCfg = await service.saveAdminConfig(db, "org@example.com", { groupId: "ballantyne", groupName: "Ballantyne HOA", enabled: true, adminEmails: "org@example.com", supportNote: "Zelle:hijack@example.com", dailySmsCap: 999 }, NOW);
