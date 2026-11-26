@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
   <meta name="robots" content="noindex">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="JumpIn Admin">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>JumpIn</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
@@ -24,7 +30,8 @@
       --shadow-card: 0 4px 12px rgba(15, 23, 42, 0.05);
     }
     [hidden] { display: none !important; }
-    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at top right, #ecfeff 0%, #f8fafc 42%, #f1f5f9 100%); color: var(--text-main); font: 15px/1.55 Inter, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; overscroll-behavior-y: contain; background: radial-gradient(circle at top right, #ecfeff 0%, #f8fafc 42%, #f1f5f9 100%); color: var(--text-main); font: 15px/1.55 Inter, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
     body { display: flex; flex-direction: column; min-height: 100dvh; }
     .saas-top { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03); }
     .saas-top-inner { max-width: 1080px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 24px 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -187,6 +194,28 @@
     .admin-switch { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 5px; min-height: 34px; border-radius: 999px; border: 1px solid #cbd5e1; background: #e2e8f0; color: #334155; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: background-color .15s, border-color .15s, color .15s; }
     .admin-switch-knob { width: 22px; height: 22px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25); transition: transform .15s; }
     .admin-switch[aria-checked="true"] { background: #0891b2; border-color: #0e7490; color: #ffffff; padding: 4px 5px 4px 10px; flex-direction: row-reverse; }
+    button:active { transform: scale(0.98); }
+    @media (max-width: 680px) {
+      main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom)); }
+      h1 { font-size: 20px; }
+      section { padding: 15px; border-radius: 14px; margin: 12px 0; }
+      .admin-header { padding: 14px; gap: 10px; margin-bottom: 10px; border-radius: 14px; }
+      #jumpin-group-select { flex: 1 1 100%; min-width: 0 !important; }
+      .admin-stat { padding: 9px 11px; }
+      .admin-stat-val { font-size: 16px; }
+      .admin-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; width: 100%; max-width: 100%; border-radius: 0; border: 0; border-top: 1px solid #cbd5e1; background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 18px rgba(15,23,42,.08); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+      .admin-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 5px 4px; min-height: 46px; font-size: 11px; line-height: 1.15; border-radius: 10px; position: relative; }
+      .admin-tab::before { font-size: 16px; line-height: 1; }
+      #jumpin-tab-btn-trips::before { content: "🚗"; }
+      #jumpin-tab-btn-members::before { content: "👥"; }
+      #jumpin-tab-btn-settings::before { content: "⚙️"; }
+      #jumpin-tab-btn-cleanup::before { content: "🧹"; }
+      .admin-tab .admin-count { position: absolute; top: 3px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 1.4; }
+      .saas-foot { display: none; }
+      .admin-modal { align-items: flex-end; padding: 0; }
+      .admin-modal-card { width: 100% !important; max-width: 100%; border-radius: 20px 20px 0 0; padding: 10px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 90dvh; box-shadow: 0 -10px 30px rgba(15,23,42,.22); }
+      .admin-modal-card::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 12px; }
+    }
   </style>
 </head>
 <body>
@@ -666,9 +695,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261126d"></script>
-  <script src="/jumpin/cloud.js?v=20261126d"></script>
-  <script src="/jumpin/admin-state.js?v=20261126d"></script>
-  <script src="/jumpin-admin.js?v=20261126d"></script>
+  <script src="/jumpin/core.js?v=20261126e"></script>
+  <script src="/jumpin/cloud.js?v=20261126e"></script>
+  <script src="/jumpin/admin-state.js?v=20261126e"></script>
+  <script src="/jumpin-admin.js?v=20261126e"></script>
 </body>
 </html>
