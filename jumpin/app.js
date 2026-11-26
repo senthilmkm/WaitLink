@@ -185,7 +185,7 @@
       "@media (max-width:600px){#jumpin-root .hero{padding:16px 14px;margin-bottom:12px}#jumpin-root .hero h1{font-size:22px;margin:6px 0 4px}}",
       "@media (max-width:360px){#jumpin-root .form-pair{grid-template-columns:1fr}}",
       "#jumpin-root .action-row select{width:auto;min-width:76px;margin:0;min-height:44px}",
-      "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}",
+      "#jumpin-root .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}",
       "#jumpin-root .hero-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}",
       "#jumpin-root .hero-badges .hero-eyebrow{margin:0}",
       "#jumpin-root .hero-group-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.01em;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
