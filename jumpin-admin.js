@@ -201,12 +201,18 @@
     const emailIn = doc.getElementById("jumpin-edit-member-email");
     const adminIn = doc.getElementById("jumpin-edit-member-admin");
     const blockBtn = doc.getElementById("jumpin-edit-member-block");
+    const blockedBadge = doc.getElementById("jumpin-edit-member-blocked-badge");
     const errNode = doc.getElementById("jumpin-edit-member-error");
+    const isBlocked = !!member._isBlocked;
     if (nameIn) nameIn.value = member.name || "";
     if (phoneIn) phoneIn.value = member.phoneE164 ? String(member.phoneE164).replace(/^\+1/, "") : "";
     if (emailIn) emailIn.value = member.email || "";
     if (adminIn) adminIn.checked = !!member.isAdmin;
-    if (blockBtn) blockBtn.hidden = !!member.isAdmin || !member.phoneE164;
+    if (blockedBadge) blockedBadge.hidden = !isBlocked;
+    if (blockBtn) {
+      blockBtn.hidden = !!member.isAdmin || (!member.phoneE164 && !isBlocked);
+      blockBtn.textContent = isBlocked ? "Unblock from posting" : "Block from posting";
+    }
     if (errNode) {
       errNode.textContent = "";
       errNode.hidden = true;
@@ -397,6 +403,8 @@
     text(doc.getElementById("jumpin-members-count"), allMembers.length ? String(allMembers.length) : "");
     const modeBadge = doc.getElementById("jumpin-members-mode");
     if (modeBadge && lists && lists.config) modeBadge.textContent = lists.config.membersOnly ? "Members only" : "Open to all";
+    const blockedHashes = {};
+    allBlocked.forEach(function (b) { if (b && b.phoneHash) blockedHashes[b.phoneHash] = true; });
     const membersBox = doc.getElementById("jumpin-members");
     if (membersBox) membersBox.hidden = showBlockedOnly;
     const mTotalPages = Math.max(1, Math.ceil(shownMembers.length / ADMIN_PAGE_SIZE));
@@ -406,6 +414,7 @@
     fill(doc, membersBox, null, pagedMembers, function (m) {
       const row = el(doc, "div", "admin-subrow");
       const adminFlag = !!(m._isAdmin || isAdminMember(m));
+      const blockedFlag = !!(m.phoneHash && blockedHashes[m.phoneHash]);
       const info = el(doc, "div", "admin-member-info");
       const nameWrap = el(doc, "div", "admin-member-name");
       if (adminFlag) {
@@ -413,6 +422,12 @@
         shield.setAttribute("title", "Group Admin");
         shield.setAttribute("aria-label", "Group Admin");
         nameWrap.appendChild(shield);
+      }
+      if (blockedFlag) {
+        const blk = el(doc, "span", "admin-shield", "🚫");
+        blk.setAttribute("title", "Blocked from posting");
+        blk.setAttribute("aria-label", "Blocked from posting");
+        nameWrap.appendChild(blk);
       }
       const phoneLabel = showAdminsOnly ? (m.phoneE164 || (m.phoneLast4 ? "····" + m.phoneLast4 : "")) : (m.phoneLast4 ? "····" + m.phoneLast4 : "");
       nameWrap.appendChild(doc.createTextNode((m.name || "Member") + (showAdminsOnly ? "" : (phoneLabel ? " · " + phoneLabel : ""))));
@@ -425,7 +440,7 @@
       if (cloud && cloud.setMembers && m.phoneHash) {
         const btns = el(doc, "div", "admin-actions");
         btns.style.marginTop = "0";
-        btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, m); }));
+        btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, Object.assign({}, m, { _isBlocked: blockedFlag })); }));
         row.appendChild(btns);
       }
       return row;
@@ -1372,11 +1387,17 @@
       if (editModal) editModal.addEventListener("click", function (ev) { if (ev.target === editModal) editModal.hidden = true; });
       if (editBlock && api && api.setPosting) editBlock.addEventListener("click", function () {
         const m = editingMember;
-        if (!m || !m.phoneE164) return;
+        if (!m || (!m.phoneE164 && !m._isBlocked)) return;
         if (editModal) editModal.hidden = true;
-        askConfirm(page, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
-          return api.setPosting({ groupId: activeGroupId, phone: m.phoneE164, name: m.name || "", blocked: true }).then(refresh);
-        });
+        if (m._isBlocked) {
+          askConfirm(page, "Unblock member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will be able to post new trips again.", "Unblock", function () {
+            return api.setPosting({ groupId: activeGroupId, phoneHash: m.phoneHash, blocked: false }).then(refresh);
+          });
+        } else {
+          askConfirm(page, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
+            return api.setPosting({ groupId: activeGroupId, phone: m.phoneE164, name: m.name || "", blocked: true }).then(refresh);
+          });
+        }
       });
       if (editRemove && api && api.setMembers) editRemove.addEventListener("click", function () {
         const m = editingMember;

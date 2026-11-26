@@ -610,20 +610,23 @@
     </div>
     <div class="admin-modal" id="jumpin-edit-member-modal" hidden>
       <div class="admin-modal-card" style="width: min(420px, 100%);">
-        <div class="admin-route">Edit member</div>
-        <p class="quiet" style="margin-top: 4px;">Update this member's name or US/Canada mobile number.</p>
+        <div class="admin-card-top" style="align-items:center;margin-bottom:2px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div class="admin-route">Edit member</div>
+            <span class="admin-badge" id="jumpin-edit-member-blocked-badge" hidden style="background:#fee2e2;color:#b91c1c;">🚫 Blocked</span>
+          </div>
+          <button type="button" class="admin-btn" id="jumpin-edit-member-cancel" aria-label="Close" style="min-height:32px;padding:4px 10px;">✕</button>
+        </div>
+        <p class="quiet" style="margin-top: 2px;">Update this member's name or US/Canada mobile number.</p>
         <label style="margin-top: 12px;">Name<input id="jumpin-edit-member-name" type="text" maxlength="40" placeholder="Alex"></label>
         <label>Phone<input id="jumpin-edit-member-phone" type="tel" placeholder="555 234 5678"></label>
         <label>Email (optional)<input id="jumpin-edit-member-email" type="email" placeholder="alex@email.com"></label>
         <label style="display:flex;align-items:center;gap:8px;margin-top:4px;cursor:pointer;"><input id="jumpin-edit-member-admin" type="checkbox" style="width:auto;min-height:auto;margin:0;"> Group admin</label>
         <p class="error" id="jumpin-edit-member-error" hidden></p>
-        <div class="admin-actions" style="margin-top: 16px; justify-content: flex-end;">
-          <button type="button" class="admin-btn" id="jumpin-edit-member-cancel">Cancel</button>
-          <button type="button" class="admin-btn primary" id="jumpin-edit-member-save" style="margin-left: 0;">Save changes</button>
-        </div>
-        <div class="admin-actions" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; justify-content: space-between;">
-          <button type="button" class="admin-btn warn" id="jumpin-edit-member-block">Block from posting</button>
-          <button type="button" class="admin-btn danger" id="jumpin-edit-member-remove" style="margin-left: 0;">Remove member</button>
+        <button type="button" class="filled" id="jumpin-edit-member-save" style="width:100%;margin-top:14px;">Save changes</button>
+        <div class="admin-actions" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; justify-content: space-between;">
+          <button type="button" id="jumpin-edit-member-block" style="background:none;border:none;padding:4px 2px;font-size:13px;font-weight:600;color:#475569;cursor:pointer;text-decoration:underline;">Block from posting</button>
+          <button type="button" id="jumpin-edit-member-remove" style="background:none;border:none;padding:4px 2px;font-size:13px;font-weight:600;color:var(--accent-rose);cursor:pointer;text-decoration:underline;">Remove member</button>
         </div>
       </div>
     </div>
@@ -641,9 +644,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125x"></script>
-  <script src="/jumpin/cloud.js?v=20261125x"></script>
-  <script src="/jumpin/admin-state.js?v=20261125x"></script>
-  <script src="/jumpin-admin.js?v=20261125x"></script>
+  <script src="/jumpin/core.js?v=20261125y"></script>
+  <script src="/jumpin/cloud.js?v=20261125y"></script>
+  <script src="/jumpin/admin-state.js?v=20261125y"></script>
+  <script src="/jumpin-admin.js?v=20261125y"></script>
 </body>
 </html>
