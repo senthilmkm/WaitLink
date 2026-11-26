@@ -211,6 +211,8 @@
       #jumpin-tab-btn-settings::before { content: "⚙️"; }
       #jumpin-tab-btn-cleanup::before { content: "🧹"; }
       .admin-tab .admin-count { position: absolute; top: 3px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 1.4; }
+      .admin-member-filter-pills { display: none !important; }
+      .admin-member-filter-select { display: block !important; width: auto; min-width: 132px; max-width: 46%; min-height: 40px; margin-top: 0; padding: 6px 10px; border-radius: 10px; background: #f8fafc; font-size: 14px; font-weight: 600; color: var(--text-main); }
       .saas-foot { display: none; }
       .admin-modal { align-items: flex-end; padding: 0; }
       .admin-modal-card { width: 100% !important; max-width: 100%; border-radius: 20px 20px 0 0; padding: 10px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 90dvh; box-shadow: 0 -10px 30px rgba(15,23,42,.22); }
@@ -363,9 +365,16 @@
         </div>
         <div class="admin-toolbar" style="margin-top: 4px;">
           <input id="jumpin-member-search" type="search" placeholder="Search members by name or last 4" aria-label="Search members">
-          <button type="button" class="admin-btn primary" id="jumpin-member-all-btn" aria-pressed="true" style="margin-top:0;white-space:nowrap;">All Members</button>
-          <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🛡️ Group Admins</button>
-          <button type="button" class="admin-btn" id="jumpin-member-blocked-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🚫 Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
+          <select id="jumpin-member-filter-select" class="admin-member-filter-select" aria-label="Filter members" hidden>
+            <option value="all">All Members</option>
+            <option value="admins">🛡️ Group Admins</option>
+            <option value="blocked" id="jumpin-member-blocked-opt">🚫 Blocked</option>
+          </select>
+          <div class="admin-member-filter-pills" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="admin-btn primary" id="jumpin-member-all-btn" aria-pressed="true" style="margin-top:0;white-space:nowrap;">All Members</button>
+            <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🛡️ Group Admins</button>
+            <button type="button" class="admin-btn" id="jumpin-member-blocked-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🚫 Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
+          </div>
         </div>
         <div id="jumpin-members" class="quiet admin-list"></div>
         <div id="jumpin-blocked" class="quiet admin-list" hidden></div>
@@ -689,9 +698,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261126f"></script>
-  <script src="/jumpin/cloud.js?v=20261126f"></script>
-  <script src="/jumpin/admin-state.js?v=20261126f"></script>
-  <script src="/jumpin-admin.js?v=20261126f"></script>
+  <script src="/jumpin/core.js?v=20261126g"></script>
+  <script src="/jumpin/cloud.js?v=20261126g"></script>
+  <script src="/jumpin/admin-state.js?v=20261126g"></script>
+  <script src="/jumpin-admin.js?v=20261126g"></script>
 </body>
 </html>

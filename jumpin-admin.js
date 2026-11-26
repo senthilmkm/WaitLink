@@ -358,6 +358,7 @@
       return button;
     });
     text(doc.getElementById("jumpin-blocked-count"), allBlocked.length ? String(allBlocked.length) : "");
+    text(doc.getElementById("jumpin-member-blocked-opt"), allBlocked.length ? ("🚫 Blocked (" + allBlocked.length + ")") : "🚫 Blocked");
     if (blockedBox) blockedBox.hidden = !showBlockedOnly;
     const adminEmails = ((lists && lists.config && lists.config.adminEmails) || []).map(function (e) { return String(e || "").toLowerCase(); }).filter(Boolean);
     const groupMeta = (lists && lists.group) || null;
@@ -1435,6 +1436,7 @@
         admins: page.getElementById("jumpin-member-admins-btn"),
         blocked: page.getElementById("jumpin-member-blocked-btn")
       };
+      const memberFilterSelect = page.getElementById("jumpin-member-filter-select");
       function setMemberFilterMode(mode) {
         memberFilter = mode || "all";
         Object.keys(memberFilterBtns).forEach(function (k) {
@@ -1444,9 +1446,11 @@
           btn.className = "admin-btn" + (active ? " primary" : "");
           btn.setAttribute("aria-pressed", active ? "true" : "false");
         });
+        if (memberFilterSelect) memberFilterSelect.value = memberFilter;
         pageByBox["jumpin-members"] = 1;
         paint();
       }
+      if (memberFilterSelect) memberFilterSelect.addEventListener("change", function () { setMemberFilterMode(memberFilterSelect.value || "all"); });
       if (memberFilterBtns.all) memberFilterBtns.all.addEventListener("click", function () { setMemberFilterMode("all"); });
       if (memberFilterBtns.admins) memberFilterBtns.admins.addEventListener("click", function () { setMemberFilterMode(memberFilter === "admins" ? "all" : "admins"); });
       if (memberFilterBtns.blocked) memberFilterBtns.blocked.addEventListener("click", function () { setMemberFilterMode(memberFilter === "blocked" ? "all" : "blocked"); });
