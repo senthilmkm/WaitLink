@@ -1645,7 +1645,8 @@ function reviewGroup(db, email, input, now) {
       cfg.dailySmsCap = Math.max(0, Math.min(2000, Math.round(Number(body.dailySmsCap) || 0)));
     }
     const texts = freshTexts();
-    if (decision === "approve" && meta && meta.contactPhoneE164) {
+    const wasPending = !meta || meta.status === "pending";
+    if (decision === "approve" && wasPending && meta && meta.contactPhoneE164) {
       const platform = await loadPlatformConfig(tx, clock);
       if (platform.dailySmsSent < platform.platformDailySmsCap) {
         platform.dailySmsSent += 1;
@@ -1662,7 +1663,7 @@ function reviewGroup(db, email, input, now) {
       return Object.assign({}, g, { status: nextStatus, enabled: cfg.enabled, dailySmsCap: cfg.dailySmsCap });
     });
     tx.set("carpool_platform/groups_index", gi);
-    const orgTextSent = decision !== "approve" || !(meta && meta.contactPhoneE164) || texts.length > 0;
+    const orgTextSent = decision !== "approve" || !wasPending || !(meta && meta.contactPhoneE164) || texts.length > 0;
     return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap, textSent: orgTextSent, texts: texts };
   }).then(function (result) { return withOutbox(result, result.texts); });
 }

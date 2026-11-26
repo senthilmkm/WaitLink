@@ -726,10 +726,11 @@
           bar.appendChild(pillBtn(page, "Copy Link", "", function (_e, btn) { copyUrl(shareUrl, btn); }));
           if (groupsData.isSuperAdmin && g.groupId !== "default" && api && api.reviewGroup) {
             if (g.status !== "active") {
-              bar.appendChild(pillBtn(page, "Approve", "primary", function (_e, btn) {
-                withBusy(page, btn, "Approving…", function () {
+              const isSuspended = g.status === "suspended";
+              bar.appendChild(pillBtn(page, isSuspended ? "Resume" : "Approve", "primary", function (_e, btn) {
+                withBusy(page, btn, isSuspended ? "Resuming…" : "Approving…", function () {
                   return api.reviewGroup({ groupId: g.groupId, decision: "approve" }).then(function (res) {
-                    if (res && res.textSent === false) text(page.getElementById("jumpin-admin-status"), "Group approved, but SMS notification could not be sent (SMS cap reached or unavailable).");
+                    if (res && res.textSent === false) text(page.getElementById("jumpin-admin-status"), "Group " + (isSuspended ? "resumed" : "approved") + ", but SMS notification could not be sent (SMS cap reached or unavailable).");
                     return refresh();
                   });
                 });
