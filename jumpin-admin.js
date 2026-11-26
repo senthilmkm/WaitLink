@@ -286,6 +286,14 @@
     const q = searchNode && searchNode.value ? searchNode.value.trim().toLowerCase() : "";
     const filterBy = function (arr) { return (arr || []).filter(function (r) { return matchesQuery(r, q); }); };
     const detailsAct = function (ride) { return { label: "Details", tone: "", onClick: function () { openDetailModal(doc, ride); } }; };
+    const blockRideAct = function (ride) {
+      const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" ");
+      return { label: "Block", tone: "warn", onClick: function () {
+        askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips.", "Block driver", function () {
+          return cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
+        });
+      } };
+    };
     fillTrips(doc, doc.getElementById("jumpin-pending"), doc.getElementById("jumpin-pending-count"), filterBy(lists && lists.pending), function (ride) {
       return ride.seatsLeft == null ? "Waiting" : seatsLabel(ride.seatsLeft, "");
     }, function (ride) {
@@ -293,6 +301,7 @@
       if (cloud) {
         list.push({ label: "Approve", tone: "primary", onClick: function (_e, btn) { withBusy(doc, btn, "Approving…", function () { return cloud.review(ride.rideId, "approve").then(cloud.refresh); }); } });
         list.push({ label: "Decline", tone: "warn", onClick: function (_e, btn) { withBusy(doc, btn, "Declining…", function () { return cloud.review(ride.rideId, "decline").then(cloud.refresh); }); } });
+        list.push(blockRideAct(ride));
         list.push({ label: "Cancel", tone: "danger", onClick: function () {
           const route = ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId;
           askConfirm(doc, "Cancel this trip?", route + " will be cancelled and riders notified.", "Cancel trip", function () {
@@ -308,13 +317,7 @@
       const list = [detailsAct(ride)];
       if (cloud) {
         const route = ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId;
-        const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" ");
         list.push({ label: "Text trip", tone: "primary", onClick: function () { cloud.chooseTrip(ride); } });
-        list.push({ label: "Block", tone: "warn", onClick: function () {
-          askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips.", "Block driver", function () {
-            return cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
-          });
-        } });
         list.push({ label: "Cancel", tone: "danger", onClick: function () {
           askConfirm(doc, "Cancel this trip?", route + " (" + (formatWhen(ride.departAt) || "upcoming") + ") will be cancelled and riders notified.", "Cancel trip", function () {
             return cloud.adminCancel(ride.rideId).then(cloud.refresh);
@@ -419,6 +422,13 @@
         const btns = el(doc, "div", "admin-actions");
         btns.style.marginTop = "0";
         btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, m); }));
+        if (cloud.setPosting && m.phoneE164 && !adminFlag) {
+          btns.appendChild(pillBtn(doc, "Block", "warn", function () {
+            askConfirm(doc, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
+              return cloud.setPosting({ phone: m.phoneE164, name: m.name || "", blocked: true }).then(cloud.refresh);
+            });
+          }));
+        }
         btns.appendChild(pillBtn(doc, "Remove", "danger", function () {
           askConfirm(doc, "Remove member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will no longer be on the community list.", "Remove", function () {
             return cloud.setMembers({ removePhoneHash: m.phoneHash }).then(cloud.refresh);
