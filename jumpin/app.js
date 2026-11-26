@@ -199,6 +199,15 @@
       "#jumpin-sheet .sheet-menu{display:grid;gap:8px;margin:0 0 12px}",
       "#jumpin-sheet .sheet-item{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin:0;padding:12px 14px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-sheet .sheet-item.danger{color:#be123c;background:#fff1f2;border-color:#fecdd3}",
+      "#jumpin-sheet.compact-info{padding:12px 16px calc(18px + env(safe-area-inset-bottom))}",
+      "@media (min-width:701px){#jumpin-sheet.compact-info{width:min(360px,calc(100% - 32px));padding:16px}}",
+      "#jumpin-sheet.compact-info>p:first-child{font-size:14px;margin:0 0 8px}",
+      "#jumpin-sheet.compact-info .sheet-menu{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 8px}",
+      "#jumpin-sheet.compact-info .sheet-item{min-height:36px;padding:6px 10px;border-radius:10px;font-size:13px;justify-content:center;text-align:center}",
+      "#jumpin-sheet.compact-info .sheet-item:last-child{grid-column:1 / -1}",
+      "#jumpin-sheet.compact-info .hint,#jumpin-sheet.compact-info p.muted{font-size:12px;line-height:1.35;margin:0 0 8px}",
+      "#jumpin-sheet.compact-info .action-row{margin-top:8px}",
+      "#jumpin-sheet.compact-info .action-row button{min-height:38px;font-size:14px;border-radius:10px}",
       "#jumpin-sheet .sheet-pax-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc)}",
       "#jumpin-sheet .sheet-pax-info{min-width:0;flex:1;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
       "#jumpin-sheet .sheet-pax-actions{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}",
@@ -1231,7 +1240,7 @@
     }
 
     function infoSheet(doc) {
-      const box = el(doc, "div");
+      const box = el(doc, "div", "compact-info");
       box.id = "jumpin-sheet";
       box.appendChild(el(doc, "p", "", "About JumpIn"));
       const menu = el(doc, "div", "sheet-menu");
