@@ -1864,6 +1864,16 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   assert.ok(mounted.getState().notice.indexOf("waitlist") !== -1);
   assert.strictEqual(ui.reduce(ui.reduce(ui.blank(), { type: "ride", ride: fullRide, role: "driver" }), { type: "waitlist-open" }).waitlistOpen, false);
   cloudMod.joinWaitlist("r1", "5558881111");
+  // Board top-right "?" Info sheet
+  mounted.setState(ui.blank());
+  const infoBtn = mounted.root.children[0].querySelectorAll("button").find(function (b) { return b.textContent === "?"; });
+  assert.ok(infoBtn);
+  infoBtn._listeners[0]();
+  const openedInfo = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(openedInfo);
+  assert.ok(openedInfo.querySelectorAll("a").some(function (a) { return a.textContent === "FAQ" && a.href === "/jumpin-faq.html"; }));
+  openedInfo.querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
+  assert.strictEqual(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }), undefined);
   view.destroy();
 });
 
