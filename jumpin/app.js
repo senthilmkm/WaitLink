@@ -970,8 +970,10 @@
         if (rides.length) {
           const tools = el(doc, "div", "board-tools");
           const filterRow = el(doc, "div", "filter-row");
+          const filterNow = Date.now();
           [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]].forEach(function (spec) {
-            const chip = el(doc, "button", "filter-chip" + (boardDateFilter === spec[0] ? " active" : ""), spec[1]);
+            const count = rides.filter(function (ride) { return matchesDateFilter(ride, spec[0], filterNow); }).length;
+            const chip = el(doc, "button", "filter-chip" + (boardDateFilter === spec[0] ? " active" : ""), spec[1] + " (" + count + ")");
             chip.type = "button";
             on(chip, "click", function () {
               boardDateFilter = spec[0];
@@ -1155,6 +1157,10 @@
             const clip = win.navigator && win.navigator.clipboard;
             if (clip && clip.writeText) clip.writeText(state.link);
             copyBtn.textContent = "✓ Copied";
+            if (win.setTimeout) {
+              const tid = win.setTimeout(function () { copyBtn.textContent = "📋 Copy"; }, 2000);
+              cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
+            }
           });
           linkRow.appendChild(copyBtn);
           card.appendChild(linkRow);
