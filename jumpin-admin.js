@@ -523,24 +523,26 @@
       }
       let activeTab = "trips";
       let platformViewOpen = false;
+      let hasActiveAccess = false;
+      function syncAdminChrome() {
+        const strip = page.getElementById("jumpin-summary-strip");
+        const tabsBar = page.getElementById("jumpin-admin-tabs");
+        if (strip) strip.hidden = !hasActiveAccess || platformViewOpen;
+        if (tabsBar) tabsBar.hidden = !hasActiveAccess || platformViewOpen;
+      }
       function showPlatformView(open) {
         platformViewOpen = !!open;
         const pv = page.getElementById("jumpin-platform-view");
         const pBtn = page.getElementById("jumpin-plat-open");
-        const strip = page.getElementById("jumpin-summary-strip");
-        const tabsBar = page.getElementById("jumpin-admin-tabs");
         if (pv) pv.hidden = !platformViewOpen;
         if (pBtn) pBtn.className = "admin-btn" + (platformViewOpen ? " primary" : "");
+        syncAdminChrome();
         if (platformViewOpen) {
-          if (strip) strip.hidden = true;
-          if (tabsBar) tabsBar.hidden = true;
           ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
             const p = page.getElementById("jumpin-tab-" + other);
             if (p) p.hidden = true;
           });
         } else {
-          if (strip) strip.hidden = false;
-          if (tabsBar) tabsBar.hidden = false;
           switchTab(activeTab);
         }
       }
@@ -705,17 +707,28 @@
         const groupWait = api.listGroups ? api.listGroups().then(function (gr) {
           if (gr && gr.ok) {
             groupsData = gr;
-            const ids = (gr.groups || []).map(function (g) { return g.groupId; });
+            const groups = gr.groups || [];
+            const ids = groups.map(function (g) { return g.groupId; });
+            hasActiveAccess = !!(gr.isSuperAdmin || groups.some(function (g) { return g.status === "active"; }));
             if (ids.length && ids.indexOf(activeGroupId) === -1) activeGroupId = ids[0];
-            if (!ids.length) {
+            if (!hasActiveAccess) {
               switchTab("groups");
               const createBox = page.getElementById("jumpin-create-group-box");
               if (createBox) createBox.open = true;
             }
+            syncAdminChrome();
             paintGroups();
+            if (groupSelect) groupSelect.hidden = !hasActiveAccess || !groups.length;
+            if (copyBoardBtn) copyBoardBtn.hidden = !hasActiveAccess || !groups.length;
           }
         }) : Promise.resolve();
         return groupWait.then(function () {
+          if (api.listGroups && !hasActiveAccess) {
+            lists = {};
+            state = admin.reduce(state, { type: "clear" });
+            paint();
+            return;
+          }
           return api.listAdmin(activeGroupId).then(function (result) {
             if (!result || result.ok === false) {
               state = admin.reduce(state, { type: "fail", error: (result && result.error) || "This page is not available." });
@@ -974,9 +987,7 @@
         if (adminBtn) adminBtn.hidden = !!user;
         if (titleEl) titleEl.textContent = user ? "Community Carpool Console" : "Start or Manage a Carpool Group";
         if (signOut) signOut.hidden = !user;
-        if (tabsBar) tabsBar.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
-        if (summaryStrip) summaryStrip.hidden = !user;
         if (navGuide && !user) navGuide.hidden = true;
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
         if (user) {
@@ -984,6 +995,8 @@
           if (createBox && activeTab === "groups") createBox.open = true;
           refresh();
         } else {
+          hasActiveAccess = false;
+          syncAdminChrome();
           groupsData = { isSuperAdmin: false, groups: [], platform: null };
           switchTab("");
           if (groupSelect) groupSelect.hidden = true;
