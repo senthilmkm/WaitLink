@@ -60,7 +60,7 @@
     .topbar-inner {
       max-width: 1120px;
       margin: 0 auto;
-      padding: 12px 20px;
+      padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -424,7 +424,7 @@
       body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
       .hero { padding: 28px 20px; border-radius: 18px; }
       .section { padding: 20px 16px; border-radius: 16px; }
-      .topbar-inner { padding: 10px 14px; }
+      .topbar-inner { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
     }
 
     @media print {
