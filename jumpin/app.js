@@ -1040,7 +1040,7 @@
         ];
         const saved = loadProfile();
         const defaultZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
-        const defaultParts = !state.draft ? core.partsInZone(Date.now() + 60 * 60000, defaultZone) : null;
+        const defaultParts = !state.draft ? core.partsInZone(roundUp30(Date.now() + 60 * 60000), defaultZone) : null;
         const postInputs = {};
         function buildPostField(spec, host) {
           if (spec[0] === "to") {
@@ -1106,9 +1106,20 @@
           chip.type = "button";
           on(chip, "click", function () {
             const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
-            const p = core.partsInZone(Date.now() + spec[1] * 60000, zone);
-            if (spec[2] && postInputs.date) postInputs.date.value = p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
-            if (spec[3] && postInputs.time) postInputs.time.value = String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0");
+            const nowMs = Date.now();
+            const targetMs = spec[1] > 0 ? roundUp30(nowMs + spec[1] * 60000) : nowMs;
+            const p = core.partsInZone(targetMs, zone);
+            const dateStr = p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
+            if (spec[2] && postInputs.date) postInputs.date.value = dateStr;
+            if (spec[3] && postInputs.time) {
+              postInputs.time.value = String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0");
+            } else if (spec[0] === "Today" && postInputs.time) {
+              const chosen = postInputs.time.value ? core.wallTimeToUtc(dateStr, postInputs.time.value, zone) : 0;
+              if (!chosen || chosen <= nowMs) {
+                const fp = core.partsInZone(roundUp30(nowMs + 30 * 60000), zone);
+                postInputs.time.value = String(fp.hour).padStart(2, "0") + ":" + String(fp.minute).padStart(2, "0");
+              }
+            }
           });
           whenChips.appendChild(chip);
         });
@@ -1605,11 +1616,15 @@
       }
     }
 
+    function roundUp30(ms) {
+      return Math.ceil(ms / (30 * 60000)) * 30 * 60000;
+    }
+
     function startReturnTrip(ride) {
       const r = ride || {};
       const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
       const baseMs = Math.max(Date.now() + 60 * 60000, (Number(r.departAt) || Date.now()) + 4 * 60 * 60000);
-      const p = core.partsInZone(baseMs, zone);
+      const p = core.partsInZone(roundUp30(baseMs), zone);
       const kept = state.rides || [];
       const saved = loadProfile();
       state = ui.reduce(state, { type: "post" });
