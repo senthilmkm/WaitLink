@@ -983,6 +983,8 @@
       });
       if (groupSelect) groupSelect.addEventListener("change", function () {
         activeGroupId = groupSelect.value || "default";
+        if (groupsViewOpen) showGroupsView(false);
+        if (platformViewOpen) showPlatformView(false);
         refresh();
       });
       if (copyBoardBtn) copyBoardBtn.addEventListener("click", function () {
