@@ -1,0 +1,26 @@
+{
+  "name": "JumpIn Admin — Carpool Console",
+  "short_name": "JumpIn Admin",
+  "description": "Manage your JumpIn neighborhood carpool board, members, trips, and settings.",
+  "start_url": "/jumpin-admin.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#0891b2",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/assets/jumpin-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/jumpin-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -100,6 +100,17 @@
   <link rel="apple-touch-icon" href="assets/waitlink_stripe_icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/waitlink_stripe_icon.png">
   <link rel="icon" type="image/png" sizes="512x512" href="assets/waitlink_stripe_icon.png">
+  <script>
+    if (/[?&]s=jumpin(?:&|$)/.test(location.search)) {
+      var m = document.querySelector('link[rel="manifest"]');
+      if (m) m.href = 'jumpin-manifest.webmanifest';
+      var t = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (t) t.content = 'JumpIn';
+      document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach(function (el) {
+        el.href = el.getAttribute('sizes') === '512x512' ? 'assets/jumpin-icon-512.png' : 'assets/jumpin-icon-192.png';
+      });
+    }
+  </script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

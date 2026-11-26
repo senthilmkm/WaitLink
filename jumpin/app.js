@@ -806,7 +806,7 @@
         badges.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
         if (canInstallApp()) {
-          const instChip = el(doc, "button", "chip-btn", "📲 Install App");
+          const instChip = el(doc, "button", "chip-btn", "📲 Add to Home Screen");
           instChip.type = "button";
           instChip.style.minHeight = "28px";
           instChip.style.padding = "2px 10px";
