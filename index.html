@@ -100,11 +100,12 @@
       var appTitle = isJumpIn ? 'JumpIn' : 'WaitLink';
       var icon192 = isJumpIn ? 'assets/jumpin-icon-192.png?v=2' : 'assets/waitlink_stripe_icon.png';
       var icon512 = isJumpIn ? 'assets/jumpin-icon-512.png?v=2' : 'assets/waitlink_stripe_icon.png';
+      var statusBar = isJumpIn ? 'default' : 'black-translucent';
       document.write(
         '<link rel="manifest" href="' + manifestHref + '">' +
         '<meta name="theme-color" content="' + themeColor + '">' +
         '<meta name="apple-mobile-web-app-capable" content="yes">' +
-        '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' +
+        '<meta name="apple-mobile-web-app-status-bar-style" content="' + statusBar + '">' +
         '<meta name="apple-mobile-web-app-title" content="' + appTitle + '">' +
         '<link rel="apple-touch-icon" href="' + icon192 + '">' +
         '<link rel="icon" type="image/png" sizes="192x192" href="' + icon192 + '">' +
