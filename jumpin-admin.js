@@ -1276,6 +1276,33 @@
           });
         });
       });
+      let memberActionPanel = "";
+      function setMemberPanel(mode) {
+        memberActionPanel = mode === memberActionPanel ? "" : (mode || "");
+        const addPanel = page.getElementById("jumpin-add-member-panel");
+        const bulkPanel = page.getElementById("jumpin-bulk-import-panel");
+        const openAddBtn = page.getElementById("jumpin-open-add-member");
+        const openBulkBtn = page.getElementById("jumpin-open-bulk-import");
+        if (addPanel) addPanel.hidden = memberActionPanel !== "add";
+        if (bulkPanel) bulkPanel.hidden = memberActionPanel !== "bulk";
+        if (openAddBtn) openAddBtn.className = "admin-btn" + (memberActionPanel === "bulk" ? "" : " primary");
+        if (openBulkBtn) openBulkBtn.className = "admin-btn" + (memberActionPanel === "bulk" ? " primary" : "");
+        if (memberActionPanel === "add") {
+          const n = page.getElementById("jumpin-member-name");
+          if (n && n.focus) n.focus();
+        } else if (memberActionPanel === "bulk") {
+          const b = page.getElementById("jumpin-member-bulk");
+          if (b && b.focus) b.focus();
+        }
+      }
+      const openAddMember = page.getElementById("jumpin-open-add-member");
+      const openBulkImport = page.getElementById("jumpin-open-bulk-import");
+      const cancelAddMember = page.getElementById("jumpin-add-member-cancel");
+      const cancelBulkImport = page.getElementById("jumpin-bulk-import-cancel");
+      if (openAddMember) openAddMember.addEventListener("click", function () { setMemberPanel("add"); });
+      if (openBulkImport) openBulkImport.addEventListener("click", function () { setMemberPanel("bulk"); });
+      if (cancelAddMember) cancelAddMember.addEventListener("click", function () { setMemberPanel(""); });
+      if (cancelBulkImport) cancelBulkImport.addEventListener("click", function () { setMemberPanel(""); });
       const addMember = page.getElementById("jumpin-member-add");
       if (addMember && api && api.setMembers) addMember.addEventListener("click", function () {
         const nameNode = page.getElementById("jumpin-member-name");
@@ -1286,6 +1313,7 @@
             else {
               if (nameNode) nameNode.value = "";
               if (phoneNode) phoneNode.value = "";
+              setMemberPanel("");
               state = admin.reduce(state, { type: "clear" });
               refresh();
             }
@@ -1301,6 +1329,7 @@
             if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not import members." });
             else {
               if (bulkNode) bulkNode.value = "";
+              setMemberPanel("");
               state = admin.reduce(state, { type: "clear" });
               text(page.getElementById("jumpin-admin-status"), "Added " + (res.added || 0) + " members" + (res.skipped ? " (" + res.skipped + " skipped)" : "") + ".");
               refresh();
