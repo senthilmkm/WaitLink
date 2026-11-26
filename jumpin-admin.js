@@ -882,12 +882,28 @@
       });
       const grpName = page.getElementById("jumpin-group-name");
       const grpSlug = page.getElementById("jumpin-group-slug");
+      const slugPreview = page.getElementById("jumpin-group-slug-preview");
+      function syncSlugPreview() {
+        if (!slugPreview) return;
+        const val = grpSlug && grpSlug.value ? grpSlug.value.trim() : "";
+        slugPreview.textContent = val ? ("Your link: waitlink.app/?s=jumpin&g=" + val) : "Used in your private link, e.g. waitlink.app/?s=jumpin&g=ballantyne";
+      }
       if (grpName && grpSlug) grpName.addEventListener("input", function () {
         if (!grpSlug.dataset || !grpSlug.dataset.edited) {
-          grpSlug.value = String(grpName.value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+          let s = String(grpName.value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          if (s.length > 20) {
+            const cut = s.slice(0, 20);
+            const dash = cut.lastIndexOf("-");
+            s = (dash >= 4 ? cut.slice(0, dash) : cut).replace(/-+$/g, "");
+          }
+          grpSlug.value = s;
+          syncSlugPreview();
         }
       });
-      if (grpSlug) grpSlug.addEventListener("input", function () { if (grpSlug.dataset) grpSlug.dataset.edited = "1"; });
+      if (grpSlug) grpSlug.addEventListener("input", function () {
+        if (grpSlug.dataset) grpSlug.dataset.edited = "1";
+        syncSlugPreview();
+      });
       const grpCreate = page.getElementById("jumpin-group-create");
       if (grpCreate && api && api.createGroup) grpCreate.addEventListener("click", function () {
         const payload = {
