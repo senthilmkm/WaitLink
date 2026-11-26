@@ -918,10 +918,9 @@
       function syncInstallBtn() {
         if (!installBtn) return;
         const ua = (win.navigator && win.navigator.userAgent) || "";
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         const standalone = !!((win.matchMedia && win.matchMedia("(display-mode: standalone)").matches) || (win.navigator && win.navigator.standalone));
         const isIos = /iPad|iPhone|iPod/i.test(ua);
-        installBtn.hidden = !isMobile || standalone || (!deferredInstallPrompt && !isIos);
+        installBtn.hidden = standalone || (!deferredInstallPrompt && !isIos);
       }
       if (win.addEventListener) {
         win.addEventListener("beforeinstallprompt", function (e) {
