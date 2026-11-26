@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>JumpIn — Community Carpool</title>
+  <meta name="description" content="Private neighborhood &amp; community carpool boards. Post a ride, reserve a seat, and coordinate via SMS. Zero app fees.">
+  <link rel="canonical" href="https://waitlink.app/jumpin">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="JumpIn">
+  <meta property="og:title" content="JumpIn — Community Carpool">
+  <meta property="og:description" content="Reserve a seat or post a community carpool ride. Zero app fees, instant SMS updates.">
+  <meta property="og:url" content="https://waitlink.app/jumpin">
+  <meta property="og:image" content="https://waitlink.app/assets/jumpin-icon-512.png?v=2">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="JumpIn — Community Carpool">
+  <meta name="twitter:description" content="Reserve a seat or post a community carpool ride. Zero app fees, instant SMS updates.">
+  <meta name="twitter:image" content="https://waitlink.app/assets/jumpin-icon-512.png?v=2">
+  <meta name="theme-color" content="#0891b2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="JumpIn">
+  <link rel="manifest" href="jumpin-manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/jumpin-icon-192.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/jumpin-icon-512.png?v=2">
+  <link rel="apple-touch-icon" href="assets/jumpin-icon-192.png?v=2">
+  <script>
+    (function () {
+      var q = location.search ? location.search.slice(1) : "";
+      var hasS = /(?:^|&)s=jumpin(?:&|$)/.test(q);
+      var target = "/?" + (hasS ? q : ("s=jumpin" + (q ? "&" + q : "")));
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body style="font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;color:#0f172a;display:grid;place-items:center;min-height:100dvh;margin:0;padding:24px;text-align:center;">
+  <main>
+    <img src="assets/jumpin-icon-192.png?v=2" alt="JumpIn" width="64" height="64" style="border-radius:16px;">
+    <h1 style="font-size:22px;margin:14px 0 8px;">JumpIn — Community Carpool</h1>
+    <p style="color:#475569;margin:0 0 18px;">Opening your carpool board…</p>
+    <a href="/?s=jumpin" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#0891b2;color:#fff;font-weight:700;text-decoration:none;">Open JumpIn</a>
+  </main>
+</body>
+</html>

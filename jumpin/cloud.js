@@ -80,8 +80,8 @@
 
   function publicRideUrl(rideId, groupId) {
     const gid = normalizeGroup(groupId);
-    const gSuffix = gid !== "default" ? "&g=" + encodeURIComponent(gid) : "";
-    return "https://waitlink.app?s=jumpin" + gSuffix + "&view=ride&ride=" + rideId;
+    const gPrefix = gid !== "default" ? "g=" + encodeURIComponent(gid) + "&" : "";
+    return "https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + rideId;
   }
 
   function failure(name) {

@@ -512,7 +512,7 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   cloud.saveSeat(mem, "rsv_1", "seat");
   assert.strictEqual(cloud.roleFor({ getItem: function () { return ""; } }, { rideId: "ride_b", riders: [{ reservationId: "rsv_1" }] }), "");
   assert.strictEqual(cloud.seatSecretFor(mem, { riders: [{ reservationId: "rsv_1" }] }), "seat");
-  assert.strictEqual(cloud.publicRideUrl("ride_a"), "https://waitlink.app?s=jumpin&view=ride&ride=ride_a");
+  assert.strictEqual(cloud.publicRideUrl("ride_a"), "https://waitlink.app/jumpin?view=ride&ride=ride_a");
 
   const adminState = require("../../jumpin/admin-state.js");
   assert.strictEqual(adminState.settingsErrors({ dailySmsCap: 10, maxSeats: 4, horizonDays: 30, maxMessagesPerRide: 20, maxPostsPerPhonePerDay: 10, maxActiveReservationsPerPhone: 5, maxSmsPerRecord: 4, resendCooldownSec: 60 }).value.maxSeats, 4);

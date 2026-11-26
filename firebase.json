@@ -175,6 +175,10 @@
         "function": { "functionId": "carpoolAdminSearchMembers", "region": "us-central1" }
       },
       {
+        "source": "/jumpin",
+        "destination": "/jumpin.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

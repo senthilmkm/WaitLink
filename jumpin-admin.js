@@ -545,7 +545,7 @@
       const groupSelect = page.getElementById("jumpin-group-select");
       const copyBoardBtn = page.getElementById("jumpin-copy-board-link");
       function boardUrlFor(gid) {
-        return "https://waitlink.app/?s=jumpin" + (gid && gid !== "default" ? "&g=" + encodeURIComponent(gid) : "");
+        return "https://waitlink.app/jumpin" + (gid && gid !== "default" ? "?g=" + encodeURIComponent(gid) : "");
       }
       function copyUrl(url, btn) {
         const clip = win.navigator && win.navigator.clipboard;
