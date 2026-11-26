@@ -1206,7 +1206,12 @@
         if (signOut) signOut.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
         if (navGuide && !user) navGuide.hidden = true;
-        text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
+        const signedInEl = page.getElementById("jumpin-signedin-as");
+        if (signedInEl) {
+          signedInEl.textContent = user ? ("Signed in as " + (user.email || "JumpIn admin")) : "";
+          signedInEl.hidden = !user;
+        }
+        text(page.getElementById("jumpin-admin-status"), user ? "" : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
         if (user) {
           if (grpEmail && !grpEmail.value && user.email) grpEmail.value = user.email;
           if (groupsViewOpen) {
