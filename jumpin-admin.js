@@ -737,7 +737,10 @@
               }));
             } else {
               bar.appendChild(pillBtn(page, "Suspend", "warn", function (_e, btn) {
-                withBusy(page, btn, "Pausing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "suspend" }).then(refresh); });
+                const suspendMsg = (g.name || g.groupId) + " (?" + "g=" + g.groupId + ") will be paused immediately. Visitors will not be able to post new rides or reserve seats, while existing rides, members, and settings are preserved. You can click Resume anytime to reopen it (no SMS is sent).";
+                askConfirm(page, "Suspend group?", suspendMsg, "Suspend", function () {
+                  return withBusy(page, btn, "Pausing…", function () { return api.reviewGroup({ groupId: g.groupId, decision: "suspend" }).then(refresh); });
+                });
               }));
             }
             const removeLabel = g.status === "pending" ? "Reject" : "Delete";
