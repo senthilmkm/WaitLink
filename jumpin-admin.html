@@ -196,6 +196,7 @@
     .admin-switch-knob { width: 22px; height: 22px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25); transition: transform .15s; }
     .admin-switch[aria-checked="true"] { background: #0891b2; border-color: #0e7490; color: #ffffff; padding: 4px 5px 4px 10px; flex-direction: row-reverse; }
     button:active { transform: scale(0.98); }
+    @media (min-width: 681px) { #jumpin-install-app { display: none !important; } }
     @media (max-width: 680px) {
       main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom)); }
       h1 { font-size: 20px; }
@@ -225,12 +226,12 @@
   <header class="saas-top">
     <div class="saas-top-inner">
       <a class="saas-brand" href="https://waitlink.app/?s=jumpin">
-        <span class="saas-mark">🚗</span>
+        <span class="saas-mark" style="overflow:hidden;"><img src="/assets/jumpin-icon-192.png?v=2" alt="JumpIn" style="width:100%;height:100%;display:block;"></span>
         <span>JumpIn</span>
       </a>
       <span class="saas-pill">Admin</span>
       <nav class="saas-nav" aria-label="JumpIn links">
-        <button type="button" class="admin-btn" id="jumpin-install-app" hidden style="min-height:32px;padding:3px 10px;font-size:12px;">📲 Add to Home Screen</button>
+        <button type="button" id="jumpin-install-app" hidden style="background:transparent;border:0;padding:4px 6px;min-height:32px;font-size:12.5px;font-weight:600;color:#475569;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">📲 Add to Home Screen</button>
         <a href="https://waitlink.app/?s=jumpin">Rides</a>
         <a href="/jumpin-guide.html" id="jumpin-nav-guide" hidden>Guide</a>
       </nav>
@@ -700,9 +701,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261126h"></script>
-  <script src="/jumpin/cloud.js?v=20261126h"></script>
-  <script src="/jumpin/admin-state.js?v=20261126h"></script>
-  <script src="/jumpin-admin.js?v=20261126h"></script>
+  <script src="/jumpin/core.js?v=20261126i"></script>
+  <script src="/jumpin/cloud.js?v=20261126i"></script>
+  <script src="/jumpin/admin-state.js?v=20261126i"></script>
+  <script src="/jumpin-admin.js?v=20261126i"></script>
 </body>
 </html>

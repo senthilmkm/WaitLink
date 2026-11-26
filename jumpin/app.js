@@ -151,6 +151,8 @@
       "#jumpin-root *{-webkit-tap-highlight-color:transparent}",
       "#jumpin-root button:active{transform:scale(0.98)}",
       "#jumpin-root .jumpin-mobile-bar{display:none}",
+      "#jumpin-root .jumpin-install-link{display:inline-flex;align-items:center;gap:4px;width:auto;margin-top:8px;padding:2px 0;font-size:12.5px;font-weight:600;color:#475569;text-decoration:underline;text-underline-offset:2px}",
+      "@media (min-width:701px){#jumpin-root .jumpin-install-link{display:none !important}}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
       "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:calc(82px + env(safe-area-inset-bottom))}#jumpin-root.portal .site-foot{display:none}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:18px 16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
@@ -442,9 +444,11 @@
     let deferredInstall = null;
     let installModal = false;
     function canInstallApp() {
+      const ua = (win.navigator && win.navigator.userAgent) || "";
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
       const standalone = !!((win.matchMedia && win.matchMedia("(display-mode: standalone)").matches) || (win.navigator && win.navigator.standalone));
-      const isIos = /iPad|iPhone|iPod/i.test((win.navigator && win.navigator.userAgent) || "");
-      return !standalone && !!(deferredInstall || isIos);
+      const isIos = /iPad|iPhone|iPod/i.test(ua);
+      return isMobile && !standalone && !!(deferredInstall || isIos);
     }
     if (win.addEventListener) {
       win.addEventListener("beforeinstallprompt", function (e) {
@@ -811,24 +815,6 @@
         const badges = el(doc, "div", "hero-badges");
         badges.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
-        if (canInstallApp()) {
-          const instChip = el(doc, "button", "chip-btn", "📲 Add to Home Screen");
-          instChip.type = "button";
-          instChip.style.minHeight = "28px";
-          instChip.style.padding = "2px 10px";
-          instChip.style.fontSize = "12px";
-          on(instChip, "click", function () {
-            if (deferredInstall && deferredInstall.prompt) {
-              deferredInstall.prompt();
-              deferredInstall = null;
-              draw();
-            } else {
-              installModal = true;
-              draw();
-            }
-          });
-          badges.appendChild(instChip);
-        }
         copy.appendChild(badges);
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
@@ -838,6 +824,21 @@
           orgLink.href = "/jumpin-admin.html?tab=groups";
           orgLine.appendChild(orgLink);
           copy.appendChild(orgLine);
+        }
+        if (canInstallApp()) {
+          const instLink = el(doc, "button", "textish jumpin-install-link", "📲 Add to Home Screen");
+          instLink.type = "button";
+          on(instLink, "click", function () {
+            if (deferredInstall && deferredInstall.prompt) {
+              deferredInstall.prompt();
+              deferredInstall = null;
+              draw();
+            } else {
+              installModal = true;
+              draw();
+            }
+          });
+          copy.appendChild(instLink);
         }
         hero.appendChild(copy);
         wrap.appendChild(hero);
@@ -1532,7 +1533,16 @@
     const bar = el(doc, "div", "bar");
     const link = el(doc, "a", "brand");
     link.href = homeHref;
-    link.appendChild(el(doc, "span", "mark", "🚗"));
+    const mark = el(doc, "span", "mark");
+    const markImg = doc.createElement("img");
+    markImg.src = "/assets/jumpin-icon-192.png?v=2";
+    markImg.alt = "JumpIn";
+    markImg.style.width = "100%";
+    markImg.style.height = "100%";
+    markImg.style.borderRadius = "inherit";
+    markImg.style.display = "block";
+    mark.appendChild(markImg);
+    link.appendChild(mark);
     link.appendChild(el(doc, "span", "", "JumpIn"));
     const nav = el(doc, "nav");
     const rides = el(doc, "a", "", "Rides");
