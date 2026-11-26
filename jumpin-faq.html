@@ -19,7 +19,7 @@
     .nav { display:flex; gap:14px; font-size:14px; font-weight:600; flex-wrap:wrap; }
     .nav a { color:var(--primary); text-decoration:none; }
     .nav a:hover { text-decoration:underline; }
-    main { max-width:900px; margin:28px auto 60px; padding:0 16px; }
+    main { max-width:900px; margin:28px auto 60px; padding:0 16px calc(64px + env(safe-area-inset-bottom)); }
     .hero { background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%); color:#fff; border-radius:20px; padding:26px 24px; margin-bottom:20px; box-shadow:0 12px 28px rgba(8,145,178,.2); }
     .hero h1 { font-family:Outfit,Inter,sans-serif; font-size:clamp(24px,4vw,32px); margin:0 0 6px; letter-spacing:-.02em; }
     .hero p { margin:0; color:rgba(255,255,255,.92); font-size:15px; }

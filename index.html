@@ -92,24 +92,25 @@
   </script>
 
   <!-- PWA & Apple Tablet Standalone Configuration -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#06b6d4">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="WaitLink">
-  <link rel="apple-touch-icon" href="assets/waitlink_stripe_icon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/waitlink_stripe_icon.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="assets/waitlink_stripe_icon.png">
   <script>
-    if (/[?&]s=jumpin(?:&|$)/.test(location.search)) {
-      var m = document.querySelector('link[rel="manifest"]');
-      if (m) m.href = 'jumpin-manifest.webmanifest';
-      var t = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-      if (t) t.content = 'JumpIn';
-      document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach(function (el) {
-        el.href = el.getAttribute('sizes') === '512x512' ? 'assets/jumpin-icon-512.png?v=2' : 'assets/jumpin-icon-192.png?v=2';
-      });
-    }
+    (function () {
+      var isJumpIn = /[?&]s=jumpin(?:&|$)/.test(location.search);
+      var manifestHref = isJumpIn ? 'jumpin-manifest.webmanifest' : 'manifest.webmanifest';
+      var themeColor = isJumpIn ? '#0891b2' : '#06b6d4';
+      var appTitle = isJumpIn ? 'JumpIn' : 'WaitLink';
+      var icon192 = isJumpIn ? 'assets/jumpin-icon-192.png?v=2' : 'assets/waitlink_stripe_icon.png';
+      var icon512 = isJumpIn ? 'assets/jumpin-icon-512.png?v=2' : 'assets/waitlink_stripe_icon.png';
+      document.write(
+        '<link rel="manifest" href="' + manifestHref + '">' +
+        '<meta name="theme-color" content="' + themeColor + '">' +
+        '<meta name="apple-mobile-web-app-capable" content="yes">' +
+        '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' +
+        '<meta name="apple-mobile-web-app-title" content="' + appTitle + '">' +
+        '<link rel="apple-touch-icon" href="' + icon192 + '">' +
+        '<link rel="icon" type="image/png" sizes="192x192" href="' + icon192 + '">' +
+        '<link rel="icon" type="image/png" sizes="512x512" href="' + icon512 + '">'
+      );
+    })();
   </script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

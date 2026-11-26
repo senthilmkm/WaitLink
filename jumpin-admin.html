@@ -197,14 +197,14 @@
     .admin-switch[aria-checked="true"] { background: #0891b2; border-color: #0e7490; color: #ffffff; padding: 4px 5px 4px 10px; flex-direction: row-reverse; }
     button:active { transform: scale(0.98); }
     @media (max-width: 680px) {
-      main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom)); }
+      main { padding: 12px 12px calc(96px + env(safe-area-inset-bottom)); }
       h1 { font-size: 20px; }
       section { padding: 15px; border-radius: 14px; margin: 12px 0; }
       .admin-header { padding: 14px; gap: 10px; margin-bottom: 10px; border-radius: 14px; }
       #jumpin-group-select { flex: 1 1 100%; min-width: 0 !important; }
       .admin-stat { padding: 9px 11px; }
       .admin-stat-val { font-size: 16px; }
-      .admin-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; width: 100%; max-width: 100%; border-radius: 0; border: 0; border-top: 1px solid #cbd5e1; background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 18px rgba(15,23,42,.08); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+      .admin-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; width: 100%; max-width: 100%; border-radius: 0; border: 0; border-top: 1px solid #cbd5e1; background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 6px 8px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 18px rgba(15,23,42,.08); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .admin-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 5px 4px; min-height: 46px; font-size: 11px; line-height: 1.15; border-radius: 10px; position: relative; }
       .admin-tab::before { font-size: 16px; line-height: 1; }
       #jumpin-tab-btn-trips::before { content: "🚗"; }
@@ -216,7 +216,7 @@
       .admin-member-filter-select { display: block !important; width: auto; min-width: 132px; max-width: 46%; min-height: 40px; margin-top: 0; padding: 6px 10px; border-radius: 10px; background: #f8fafc; font-size: 14px; font-weight: 600; color: var(--text-main); }
       .saas-foot { display: none; }
       .admin-modal { align-items: flex-end; padding: 0; }
-      .admin-modal-card { width: 100% !important; max-width: 100%; border-radius: 20px 20px 0 0; padding: 10px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 90dvh; box-shadow: 0 -10px 30px rgba(15,23,42,.22); }
+      .admin-modal-card { width: 100% !important; max-width: 100%; border-radius: 20px 20px 0 0; padding: 10px 18px calc(28px + env(safe-area-inset-bottom)); max-height: 90dvh; box-shadow: 0 -10px 30px rgba(15,23,42,.22); }
       .admin-modal-card::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 12px; }
     }
   </style>

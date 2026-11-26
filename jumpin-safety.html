@@ -19,7 +19,7 @@
     .brand span { color:var(--primary); }
     .nav { display:flex; gap:14px; font-size:14px; font-weight:600; flex-wrap:wrap; }
     .nav a { color:var(--primary); text-decoration:none; }
-    main { max-width:860px; margin:28px auto 60px; padding:0 16px; }
+    main { max-width:860px; margin:28px auto 60px; padding:0 16px calc(64px + env(safe-area-inset-bottom)); }
     article { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
     h1 { font-family:Outfit,Inter,sans-serif; font-size:28px; margin:0 0 6px; letter-spacing:-.02em; }
     .lead { color:var(--muted); font-size:14px; margin:0 0 22px; }
