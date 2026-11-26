@@ -1018,11 +1018,13 @@
           postHead.appendChild(sub);
         }
         mid.appendChild(postHead);
-        const fields = [
-          ["name", "Your name", "text", "Alex"],
-          ["phone", "Phone (US/Canada)", "tel", "555 234 5678"],
+        const routeFields = [
           ["from", "From", "text", "Library"],
           ["to", "To", "text", "Office"]
+        ];
+        const driverFields = [
+          ["name", "Your name", "text", "Alex"],
+          ["phone", "Phone (US/Canada)", "tel", "555 234 5678"]
         ];
         const saved = loadProfile();
         const defaultZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
@@ -1063,7 +1065,7 @@
           host.appendChild(input);
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
-        fields.forEach(function (spec) { buildPostField(spec, mid); });
+        routeFields.forEach(function (spec) { buildPostField(spec, mid); });
         const dtPair = el(doc, "div", "form-pair");
         const dateCol = el(doc, "div");
         const timeCol = el(doc, "div");
@@ -1138,6 +1140,7 @@
         capPair.appendChild(seatsCol);
         capPair.appendChild(durCol);
         mid.appendChild(capPair);
+        driverFields.forEach(function (spec) { buildPostField(spec, mid); });
         mid.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
         const rideCost = el(doc, "input");
         rideCost.name = "rideCost";
