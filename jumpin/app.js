@@ -999,8 +999,17 @@
       } else if (state.mode === "post") {
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
         const postHead = el(doc, "div", "post-head");
-        postHead.appendChild(el(doc, "span", "hero-eyebrow", "New Trip"));
+        const postBadges = el(doc, "div", "hero-badges");
+        postBadges.appendChild(el(doc, "span", "hero-eyebrow", "New Trip"));
+        postBadges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
+        postHead.appendChild(postBadges);
         postHead.appendChild(el(doc, "h1", "", "Post a ride"));
+        if (groupMeta.membersOnly) {
+          const sub = el(doc, "p", "muted", "For approved " + (groupMeta.name || "Its-OK") + " members only");
+          sub.style.fontStyle = "italic";
+          sub.style.marginTop = "4px";
+          postHead.appendChild(sub);
+        }
         mid.appendChild(postHead);
         const fields = [
           ["name", "Your name", "text", "Alex"],

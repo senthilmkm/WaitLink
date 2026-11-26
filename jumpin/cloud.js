@@ -209,15 +209,16 @@
           name: "Its-OK",
           status: "active",
           enabled: !data || data.enabled !== false,
+          membersOnly: !!(data && data.membersOnly === true),
           contactEmail: (data && typeof data.contactEmail === "string") ? data.contactEmail : "",
           supportNote: (data && typeof data.supportNote === "string") ? data.supportNote : ""
         });
-      }, function () { onMeta({ groupId: "default", name: "Its-OK", status: "active", enabled: true, contactEmail: "", supportNote: "" }); });
+      }, function () { onMeta({ groupId: "default", name: "Its-OK", status: "active", enabled: true, membersOnly: false, contactEmail: "", supportNote: "" }); });
     }
     return firebase.firestore().collection("carpool_groups").doc(gid).onSnapshot(function (snap) {
       const data = snap.exists ? snap.data() : null;
       if (!data) {
-        onMeta({ groupId: gid, name: gid, status: "missing", enabled: false, contactEmail: "", supportNote: "" });
+        onMeta({ groupId: gid, name: gid, status: "missing", enabled: false, membersOnly: false, contactEmail: "", supportNote: "" });
         return;
       }
       onMeta({
@@ -225,10 +226,11 @@
         name: data.name || gid,
         status: data.status || "pending",
         enabled: data.enabled === true,
+        membersOnly: data.membersOnly === true,
         contactEmail: typeof data.contactEmail === "string" ? data.contactEmail : "",
         supportNote: typeof data.supportNote === "string" ? data.supportNote : ""
       });
-    }, function () { onMeta({ groupId: gid, name: gid, status: "pending", enabled: false, contactEmail: "", supportNote: "" }); });
+    }, function () { onMeta({ groupId: gid, name: gid, status: "pending", enabled: false, membersOnly: false, contactEmail: "", supportNote: "" }); });
   }
 
   function watchSupportNote(win, onNote, groupId) {
