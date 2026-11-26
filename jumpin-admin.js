@@ -570,6 +570,32 @@
           if (["trips", "members", "settings", "blocked", "cleanup", "groups"].indexOf(t) !== -1) activeTab = t;
         } catch (err) { /* keep default tab */ }
       })();
+      function showGroupConfirmCard(group, isPending, allowAnother, shouldScroll, autoPending) {
+        const grpConfirm = page.getElementById("jumpin-group-confirm");
+        const grpAnother = page.getElementById("jumpin-group-another");
+        if (grpAnother) grpAnother.hidden = !allowAnother;
+        if (!grpConfirm) return;
+        const badge = page.getElementById("jumpin-group-confirm-badge");
+        const title = page.getElementById("jumpin-group-confirm-title");
+        const msg = page.getElementById("jumpin-group-confirm-msg");
+        const gName = (group && group.name) || "";
+        const gId = (group && group.groupId) || "";
+        if (badge) {
+          badge.textContent = isPending ? "⏳ Pending Approval" : "✓ Active";
+          badge.style.background = isPending ? "#fef3c7" : "#dcfce7";
+          badge.style.color = isPending ? "#92400e" : "#15803d";
+        }
+        if (title) title.textContent = gName + (isPending ? (autoPending ? " — Waiting for Approval" : " — Request Submitted!") : " — Group Created!");
+        if (msg) msg.textContent = isPending
+          ? ("Your board link will be waitlink.app/?s=jumpin&g=" + gId + ". We'll text you as soon as it's approved.")
+          : ("Your board is live at waitlink.app/?s=jumpin&g=" + gId + ".");
+        if (grpConfirm.dataset) {
+          if (autoPending) grpConfirm.dataset.pendingAuto = "1";
+          else delete grpConfirm.dataset.pendingAuto;
+        }
+        grpConfirm.hidden = false;
+        if (shouldScroll && grpConfirm.scrollIntoView) grpConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
       function paintGroups() {
         const listNode = page.getElementById("jumpin-groups-list");
         const countNode = page.getElementById("jumpin-groups-count");
@@ -583,6 +609,22 @@
         const platOpenBtn = page.getElementById("jumpin-plat-open");
         if (platOpenBtn) platOpenBtn.hidden = !groupsData.isSuperAdmin;
         if (!groupsData.isSuperAdmin && platformViewOpen) showPlatformView(false);
+        const pendingGrp = !groupsData.isSuperAdmin ? groups.find(function (g) { return g.status === "pending"; }) : null;
+        const createSection = page.getElementById("jumpin-create-group-section");
+        if (createSection) createSection.hidden = !!pendingGrp;
+        if (pendingGrp) {
+          const mBox = page.getElementById("jumpin-manage-groups-box");
+          if (mBox) mBox.open = true;
+          showGroupConfirmCard(pendingGrp, true, false, false, true);
+        } else {
+          const grpAnother = page.getElementById("jumpin-group-another");
+          if (grpAnother) grpAnother.hidden = false;
+          const grpConfirm = page.getElementById("jumpin-group-confirm");
+          if (grpConfirm && grpConfirm.dataset && grpConfirm.dataset.pendingAuto === "1") {
+            grpConfirm.hidden = true;
+            delete grpConfirm.dataset.pendingAuto;
+          }
+        }
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
@@ -1004,24 +1046,14 @@
               syncSlugPreview();
               const cBox = page.getElementById("jumpin-create-group-box");
               if (cBox) cBox.open = false;
+              const cSec = page.getElementById("jumpin-create-group-section");
+              if (cSec) cSec.hidden = isPending && !groupsData.isSuperAdmin;
               const mBox = page.getElementById("jumpin-manage-groups-box");
               if (mBox) mBox.open = true;
-              if (grpConfirm) {
-                const badge = page.getElementById("jumpin-group-confirm-badge");
-                const title = page.getElementById("jumpin-group-confirm-title");
-                const msg = page.getElementById("jumpin-group-confirm-msg");
-                if (badge) {
-                  badge.textContent = isPending ? "⏳ Pending Approval" : "✓ Active";
-                  badge.style.background = isPending ? "#fef3c7" : "#dcfce7";
-                  badge.style.color = isPending ? "#92400e" : "#15803d";
-                }
-                if (title) title.textContent = (gObj.name || payload.name) + (isPending ? " — Request Submitted!" : " — Group Created!");
-                if (msg) msg.textContent = isPending
-                  ? ("Your board link will be waitlink.app/?s=jumpin&g=" + (gObj.groupId || payload.groupId) + ". We'll text you as soon as it's approved.")
-                  : ("Your board is live at waitlink.app/?s=jumpin&g=" + (gObj.groupId || payload.groupId) + ".");
-                grpConfirm.hidden = false;
-                if (grpConfirm.scrollIntoView) grpConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              }
+              showGroupConfirmCard({
+                name: gObj.name || payload.name,
+                groupId: gObj.groupId || payload.groupId
+              }, isPending, !isPending || !!groupsData.isSuperAdmin, true, false);
               return refresh();
             }
             paint();
