@@ -107,7 +107,7 @@
       var t = document.querySelector('meta[name="apple-mobile-web-app-title"]');
       if (t) t.content = 'JumpIn';
       document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach(function (el) {
-        el.href = el.getAttribute('sizes') === '512x512' ? 'assets/jumpin-icon-512.png' : 'assets/jumpin-icon-192.png';
+        el.href = el.getAttribute('sizes') === '512x512' ? 'assets/jumpin-icon-512.png?v=2' : 'assets/jumpin-icon-192.png?v=2';
       });
     }
   </script>
