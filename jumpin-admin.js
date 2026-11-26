@@ -175,7 +175,7 @@
 
   let pendingConfirmFn = null;
   let editingMemberHash = "";
-  let showAdminsOnly = false;
+  let memberFilter = "all";
 
   function askConfirm(doc, title, message, confirmLabel, onConfirm) {
     const modal = doc.getElementById("jumpin-confirm-modal");
@@ -329,14 +329,23 @@
     fillTrips(doc, doc.getElementById("jumpin-cancelled"), doc.getElementById("jumpin-cancelled-count"), filterBy(lists && lists.cancelled), function (ride) {
       return ride.status === "rejected" ? "Declined" : "Cancelled";
     }, function (ride) { return [detailsAct(ride)]; });
-    fill(doc, doc.getElementById("jumpin-blocked"), doc.getElementById("jumpin-blocked-count"), (lists && lists.blocked) || [], function (entry) {
+    const mSearchNode = doc.getElementById("jumpin-member-search");
+    const mq = mSearchNode && mSearchNode.value ? mSearchNode.value.trim().toLowerCase() : "";
+    const showAdminsOnly = memberFilter === "admins";
+    const showBlockedOnly = memberFilter === "blocked";
+    const allBlocked = (lists && lists.blocked) || [];
+    const shownBlocked = mq ? allBlocked.filter(function (entry) {
+      return [entry.driverName, entry.phoneLast4].filter(Boolean).join(" ").toLowerCase().indexOf(mq) !== -1;
+    }) : allBlocked;
+    const blockedBox = doc.getElementById("jumpin-blocked");
+    fill(doc, blockedBox, null, shownBlocked, function (entry) {
       const button = el(doc, "button", "admin-blocked-btn", (entry.driverName || "Driver") + " ····" + entry.phoneLast4 + " — Unblock");
       button.type = "button";
       if (cloud) button.addEventListener("click", function () { withBusy(doc, button, "Unblocking…", function () { return cloud.setPosting({ phoneHash: entry.phoneHash, blocked: false }).then(cloud.refresh); }); });
       return button;
     });
-    const mSearchNode = doc.getElementById("jumpin-member-search");
-    const mq = mSearchNode && mSearchNode.value ? mSearchNode.value.trim().toLowerCase() : "";
+    text(doc.getElementById("jumpin-blocked-count"), allBlocked.length ? String(allBlocked.length) : "");
+    if (blockedBox) blockedBox.hidden = !showBlockedOnly;
     const adminEmails = ((lists && lists.config && lists.config.adminEmails) || []).map(function (e) { return String(e || "").toLowerCase(); }).filter(Boolean);
     const groupMeta = (lists && lists.group) || null;
     const groupPhone = (groupMeta && groupMeta.contactPhoneE164) || "";
@@ -382,6 +391,7 @@
     const modeBadge = doc.getElementById("jumpin-members-mode");
     if (modeBadge && lists && lists.config) modeBadge.textContent = lists.config.membersOnly ? "Members only" : "Open to all";
     const membersBox = doc.getElementById("jumpin-members");
+    if (membersBox) membersBox.hidden = showBlockedOnly;
     const mTotalPages = Math.max(1, Math.ceil(shownMembers.length / ADMIN_PAGE_SIZE));
     const mPage = Math.min(pageByBox["jumpin-members"] || 1, mTotalPages);
     pageByBox["jumpin-members"] = mPage;
@@ -525,7 +535,7 @@
       let platformViewOpen = false;
       let groupsViewOpen = false;
       let hasActiveAccess = false;
-      const GROUP_TABS = ["trips", "members", "settings", "blocked", "cleanup"];
+      const GROUP_TABS = ["trips", "members", "settings", "cleanup"];
       function hideGroupTabs() {
         GROUP_TABS.forEach(function (other) {
           const p = page.getElementById("jumpin-tab-" + other);
@@ -1302,23 +1312,26 @@
         pageByBox["jumpin-members"] = 1;
         paint();
       });
-      const allMembersBtn = page.getElementById("jumpin-member-all-btn");
-      const adminsBtn = page.getElementById("jumpin-member-admins-btn");
-      function setMemberFilterMode(adminsOnly) {
-        showAdminsOnly = !!adminsOnly;
-        if (allMembersBtn) {
-          allMembersBtn.className = "admin-btn" + (showAdminsOnly ? "" : " primary");
-          allMembersBtn.setAttribute("aria-pressed", showAdminsOnly ? "false" : "true");
-        }
-        if (adminsBtn) {
-          adminsBtn.className = "admin-btn" + (showAdminsOnly ? " primary" : "");
-          adminsBtn.setAttribute("aria-pressed", showAdminsOnly ? "true" : "false");
-        }
+      const memberFilterBtns = {
+        all: page.getElementById("jumpin-member-all-btn"),
+        admins: page.getElementById("jumpin-member-admins-btn"),
+        blocked: page.getElementById("jumpin-member-blocked-btn")
+      };
+      function setMemberFilterMode(mode) {
+        memberFilter = mode || "all";
+        Object.keys(memberFilterBtns).forEach(function (k) {
+          const btn = memberFilterBtns[k];
+          if (!btn) return;
+          const active = memberFilter === k;
+          btn.className = "admin-btn" + (active ? " primary" : "");
+          btn.setAttribute("aria-pressed", active ? "true" : "false");
+        });
         pageByBox["jumpin-members"] = 1;
         paint();
       }
-      if (allMembersBtn) allMembersBtn.addEventListener("click", function () { setMemberFilterMode(false); });
-      if (adminsBtn) adminsBtn.addEventListener("click", function () { setMemberFilterMode(!showAdminsOnly); });
+      if (memberFilterBtns.all) memberFilterBtns.all.addEventListener("click", function () { setMemberFilterMode("all"); });
+      if (memberFilterBtns.admins) memberFilterBtns.admins.addEventListener("click", function () { setMemberFilterMode(memberFilter === "admins" ? "all" : "admins"); });
+      if (memberFilterBtns.blocked) memberFilterBtns.blocked.addEventListener("click", function () { setMemberFilterMode(memberFilter === "blocked" ? "all" : "blocked"); });
       const editModal = page.getElementById("jumpin-edit-member-modal");
       const editCancel = page.getElementById("jumpin-edit-member-cancel");
       const editSave = page.getElementById("jumpin-edit-member-save");

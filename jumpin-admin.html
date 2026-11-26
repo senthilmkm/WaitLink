@@ -254,11 +254,14 @@
       <button type="button" class="admin-tab active" id="jumpin-tab-btn-trips">Trips</button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-members">Members<span class="admin-count" id="jumpin-members-count"></span></button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-settings">Settings</button>
-      <button type="button" class="admin-tab" id="jumpin-tab-btn-blocked">Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-cleanup">Cleanup</button>
     </nav>
     <div id="jumpin-tab-trips" hidden>
       <section>
+        <div class="admin-card-top" style="flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+          <h2 style="margin:0;">Trips</h2>
+          <button type="button" class="admin-btn primary" id="jumpin-open-broadcast">📣 Broadcast SMS</button>
+        </div>
         <div class="admin-toolbar">
           <div class="admin-filter-row">
             <button type="button" class="admin-btn primary" id="jumpin-filter-upcoming">Upcoming<span class="admin-count" id="jumpin-upcoming-count"></span></button>
@@ -267,7 +270,6 @@
             <button type="button" class="admin-btn" id="jumpin-filter-cancelled">Cancelled<span class="admin-count" id="jumpin-cancelled-count"></span></button>
           </div>
           <input id="jumpin-search" type="search" placeholder="Search route, driver, or last 4" aria-label="Search trips">
-          <button type="button" class="admin-btn" id="jumpin-open-broadcast">Broadcast</button>
         </div>
         <div id="jumpin-upcoming" class="quiet"></div>
         <div id="jumpin-pending" class="quiet" hidden></div>
@@ -311,8 +313,10 @@
           <input id="jumpin-member-search" type="search" placeholder="Search members by name or last 4" aria-label="Search members">
           <button type="button" class="admin-btn primary" id="jumpin-member-all-btn" aria-pressed="true" style="margin-top:0;white-space:nowrap;">All Members</button>
           <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🛡️ Group Admins</button>
+          <button type="button" class="admin-btn" id="jumpin-member-blocked-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🚫 Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
         </div>
         <div id="jumpin-members" class="quiet admin-list"></div>
+        <div id="jumpin-blocked" class="quiet admin-list" hidden></div>
       </section>
     </div>
     <div id="jumpin-tab-settings" hidden>
@@ -357,12 +361,6 @@
           <label title="Minimum wait time (in seconds) before someone can request another manage-link text."><span class="tip">Seconds between replacement texts</span><input id="jumpin-cooldown" inputmode="numeric" value="60"></label>
         </div>
         <button type="button" class="filled" id="jumpin-save">Save JumpIn settings</button>
-      </section>
-    </div>
-    <div id="jumpin-tab-blocked" hidden>
-      <section>
-        <h2>Blocked from posting</h2>
-        <div id="jumpin-blocked" class="quiet admin-list"></div>
       </section>
     </div>
     <div id="jumpin-tab-cleanup" hidden>
@@ -621,9 +619,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125s"></script>
-  <script src="/jumpin/cloud.js?v=20261125s"></script>
-  <script src="/jumpin/admin-state.js?v=20261125s"></script>
-  <script src="/jumpin-admin.js?v=20261125s"></script>
+  <script src="/jumpin/core.js?v=20261125t"></script>
+  <script src="/jumpin/cloud.js?v=20261125t"></script>
+  <script src="/jumpin/admin-state.js?v=20261125t"></script>
+  <script src="/jumpin-admin.js?v=20261125t"></script>
 </body>
 </html>
