@@ -1314,10 +1314,10 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const addRide = { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 2, riders: [{ reservationId: "rsv_dup", name: "Sam", seats: 1 }] };
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: addRide, role: "driver" }), { ride: addRide, reserveOpen: true }));
   const ackBtn1 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
-  assert.strictEqual(ackBtn1.textContent, "🔔");
+  assert.strictEqual(ackBtn1.textContent, "Tap to confirm");
   ackBtn1._listeners[0]();
   const ackBtn2 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
-  assert.strictEqual(ackBtn2.textContent, "✓");
+  assert.strictEqual(ackBtn2.textContent, "✓ Confirmed");
   ackBtn2._listeners[0]();
   assert.strictEqual(ackCalls.length, 2);
   assert.strictEqual(ackCalls[0].seen, true);
@@ -1402,6 +1402,417 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   searchInp._listeners[0]();
   const emptyBox = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children[0];
   emptyBox.children.find(function (c) { return c.textContent === "Show all rides"; })._listeners[0]();
+  view.destroy();
+});
+
+it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and updates UI", async function () {
+  const handlers = require("../../jumpin/handlers.js");
+  const db = service.createMemoryDb(seed());
+  const baseNow = Date.UTC(2026, 6, 1, 12, 0, 0);
+  const tz = "America/New_York";
+  const d1 = core.formatDateInput(baseNow + core.DAY_MS, tz);
+  const t1 = core.formatTimeInput(baseNow + core.DAY_MS, tz);
+  const d2 = core.formatDateInput(baseNow + 2 * core.DAY_MS, tz);
+  const t2 = core.formatTimeInput(baseNow + 2 * core.DAY_MS, tz);
+
+  // Bad field validation
+  let bad = await handlers.call(db, "carpoolEditRide", { rideId: "r1", secret: "s", date: "", time: t1, seats: 3, note: "" }, null, baseNow);
+  assert.strictEqual(bad.field, "date");
+  bad = await handlers.call(db, "carpoolEditRide", { rideId: "r1", secret: "s", date: d1, time: "", seats: 3, note: "" }, null, baseNow);
+  assert.strictEqual(bad.field, "time");
+  bad = await handlers.call(db, "carpoolEditRide", { rideId: "r1", secret: "s", date: d1, time: t1, seats: 0, note: "" }, null, baseNow);
+  assert.strictEqual(bad.field, "seats");
+  bad = await handlers.call(db, "carpoolEditRide", { rideId: "r1", secret: "s", date: d1, time: t1, seats: 3, note: "x".repeat(281) }, null, baseNow);
+  assert.strictEqual(bad.field, "note");
+
+  // Post a ride + reserve 2 seats
+  const posted = await service.postRide(db, {
+    name: "Dan", phone: "5552221111", from: "Town", to: "City",
+    date: d1, time: t1, timeZone: tz, seats: 4, note: "Main gate"
+  }, baseNow);
+  assert.strictEqual(posted.ok, true);
+  const res = await service.reserveSeat(db, {
+    rideId: posted.rideId, name: "Eva", phone: "5553334444", seats: 2, dropoff: "Plaza"
+  }, baseNow + 1000);
+  assert.strictEqual(res.ok, true);
+
+  // Wrong secret rejected
+  const wrongSec = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: "wrong", date: d1, time: t1, seats: 4, note: "Main gate"
+  }, null, baseNow + 2000);
+  assert.strictEqual(wrongSec.ok, false);
+
+  // Group maxSeats cap enforced
+  const dbCap = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 4 }) });
+  const pCap = await service.postRide(dbCap, {
+    name: "Dan", phone: "5552221111", from: "Town", to: "City",
+    date: d1, time: t1, timeZone: tz, seats: 3, note: ""
+  }, baseNow);
+  await service.reserveSeat(dbCap, { rideId: pCap.rideId, name: "Bo", phone: "5557778888", seats: 1 }, baseNow + 500);
+  const tooManySeats = await service.editRide(dbCap, {
+    rideId: pCap.rideId, secret: pCap.secret, date: d1, time: t1, seats: 5, note: ""
+  }, baseNow + 1000);
+  assert.strictEqual(tooManySeats.field, "seats");
+  const pastEdit = await service.editRide(dbCap, {
+    rideId: pCap.rideId, secret: pCap.secret, date: "2020-01-01", time: "08:00", seats: 3, note: ""
+  }, baseNow + 1000);
+  assert.strictEqual(pastEdit.field, "time");
+  const oneBooked = await service.editRide(dbCap, {
+    rideId: pCap.rideId, secret: pCap.secret, date: d1, time: t1, seats: 0, note: ""
+  }, baseNow + 1000);
+  assert.strictEqual(oneBooked.field, "seats");
+  const riderCannotEdit = ui.reduce(ui.blank(), { type: "edit-open" });
+  assert.strictEqual(riderCannotEdit.editOpen, false);
+  const disabledDb = service.createMemoryDb();
+  const disabledEdit = await service.editRide(disabledDb, { rideId: "x", secret: "s", date: d1, time: t1, seats: 2, note: "" }, baseNow);
+  assert.strictEqual(disabledEdit.ok, false);
+
+  // Cannot shrink seats below booked (2)
+  const tooFew = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d1, time: t1, seats: 1, note: "Main gate"
+  }, null, baseNow + 2000);
+  assert.strictEqual(tooFew.ok, false);
+  assert.strictEqual(tooFew.field, "seats");
+  assert.ok(tooFew.error.indexOf("2 seats are already reserved") !== -1);
+
+  // No-op returns unchanged with 0 SMS
+  const noop = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d1, time: t1, seats: 4, note: "Main gate"
+  }, null, baseNow + 2000);
+  assert.strictEqual(noop.ok, true);
+  assert.strictEqual(noop.unchanged, true);
+  assert.strictEqual((noop.outbox || []).length, 0);
+
+  // Seat-only change succeeds with 0 SMS
+  const seatOnly = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d1, time: t1, seats: 5, note: "Main gate"
+  }, null, baseNow + 2000);
+  assert.strictEqual(seatOnly.ok, true);
+  assert.strictEqual(seatOnly.ride.seatsTotal, 5);
+  assert.strictEqual(seatOnly.ride.seatsLeft, 3);
+  assert.strictEqual((seatOnly.outbox || []).length, 0);
+
+  // Time + note change sends 1 delta SMS to active rider
+  const timeNote = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 5, note: "North lot"
+  }, null, baseNow + 3000);
+  assert.strictEqual(timeNote.ok, true);
+  assert.strictEqual(timeNote.ride.note, "North lot");
+  assert.strictEqual((timeNote.outbox || []).length, 1);
+  assert.ok(timeNote.outbox[0].body.indexOf("JumpIn update") !== -1);
+  assert.ok(timeNote.outbox[0].body.indexOf("North lot") !== -1);
+
+  // Departed trip cannot be edited
+  const departedEdit = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 5, note: "Late"
+  }, null, timeNote.ride.departAt + 1000);
+  assert.strictEqual(departedEdit.ok, false);
+  assert.ok(departedEdit.error.indexOf("already left") !== -1);
+
+  // Max seats exceeded & note cleared branches
+  const overMax = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 6, note: ""
+  }, null, baseNow + 3500);
+  assert.strictEqual(overMax.ok, true);
+  assert.strictEqual(overMax.ride.note, "");
+
+  // Edit cap (max 15 time/note edits)
+  for (let k = 0; k < 13; k++) {
+    const step = await handlers.call(db, "carpoolEditRide", {
+      rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 5, note: "Gate " + k
+    }, null, baseNow + 4000 + k);
+    assert.strictEqual(step.ok, true);
+  }
+  const overCap = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 5, note: "Gate 99"
+  }, null, baseNow + 5000);
+  assert.strictEqual(overCap.ok, false);
+  assert.ok(overCap.error.indexOf("maximum number of edits") !== -1);
+
+  // Cancelled trip cannot be edited
+  await handlers.call(db, "carpoolCancelTrip", { rideId: posted.rideId, secret: posted.secret }, null, baseNow + 5500);
+  const cancelledEdit = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: d2, time: t2, seats: 5, note: "After cancel"
+  }, null, baseNow + 5600);
+  assert.strictEqual(cancelledEdit.ok, false);
+
+  // UI flow: Edit trip -> Save changes -> Cancel
+  const win = fakeWindow();
+  let editCalls = 0;
+  const futureDepart = Date.now() + 2 * core.DAY_MS;
+  win.JumpInCloud = {
+    watchBoard: function () { return function () {}; },
+    tripSecret: function () { return posted.secret; },
+    editRide: function (rideId, secret, fields) {
+      editCalls++;
+      return Promise.resolve({
+        ok: true,
+        ride: Object.assign({}, timeNote.ride, { departAt: futureDepart, timeZone: tz, note: fields.note, seatsTotal: Number(fields.seats), seatsLeft: Number(fields.seats) - 2 })
+      });
+    }
+  };
+  const mounted = view.mount(win);
+  const futureRide = Object.assign({}, timeNote.ride, { departAt: futureDepart, timeZone: tz, riders: [{ reservationId: "res1", name: "Eva", seats: 2 }] });
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  const mTripBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; });
+  assert.ok(mTripBtn);
+  mTripBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "trip");
+  const editBtn = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✏️ Edit trip"; });
+  assert.ok(editBtn);
+  editBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().editOpen, true);
+  const sheet = mounted.root.children[3];
+  assert.strictEqual(sheet.id, "jumpin-sheet");
+  const noteInput = sheet.querySelectorAll("input").find(function (i) { return i.name === "note"; });
+  noteInput.value = "Updated spot";
+  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(editCalls, 1);
+  assert.strictEqual(mounted.getState().editOpen, false);
+  assert.strictEqual(mounted.getState().notice, "Trip updated.");
+
+  // Cancel edit closes editOpen cleanly + error & reject branches in UI
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✏️ Edit trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().editOpen, true);
+  win.JumpInCloud.editRide = function () { return Promise.resolve({ ok: false, field: "note", error: "Bad note" }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().error, "Bad note");
+  win.JumpInCloud.editRide = function () { return Promise.reject(new Error("offline")); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.ok(mounted.getState().error.indexOf("Could not update trip") !== -1);
+  const cancelEditBtn = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Cancel"; });
+  cancelEditBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().editOpen, false);
+
+  // Remove a passenger (backend + UI confirm sheet)
+  const rmBad = await handlers.call(db, "carpoolRemoveRider", { rideId: "", reservationId: "" }, null, baseNow);
+  assert.strictEqual(rmBad.ok, false);
+  const dbRm = service.createMemoryDb(seed());
+  const pRm = await service.postRide(dbRm, {
+    name: "Dan", phone: "5552221111", from: "Town", to: "City",
+    date: d1, time: t1, timeZone: tz, seats: 4, note: ""
+  }, baseNow);
+  const resRm = await service.reserveSeat(dbRm, { rideId: pRm.rideId, name: "Eva", phone: "5553334444", seats: 2 }, baseNow + 500);
+  await service.reserveSeat(dbRm, { rideId: pRm.rideId, name: "Leo", phone: "5553335555", seats: 1 }, baseNow + 550);
+  const rmWrong = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: "bad", reservationId: resRm.reservationId }, null, baseNow + 600);
+  assert.strictEqual(rmWrong.ok, false);
+  const rmMissing = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: pRm.secret, reservationId: "nope" }, null, baseNow + 600);
+  assert.strictEqual(rmMissing.ok, false);
+  const rmOk = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: pRm.secret, reservationId: resRm.reservationId }, null, baseNow + 700);
+  assert.strictEqual(rmOk.ok, true);
+  assert.strictEqual(rmOk.seatsLeft, 3);
+  assert.strictEqual((rmOk.outbox || []).length, 1);
+  const rmAgain = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: pRm.secret, reservationId: resRm.reservationId }, null, baseNow + 800);
+  assert.strictEqual(rmAgain.already, true);
+  const rmDeparted = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: pRm.secret, reservationId: resRm.reservationId }, null, baseNow + 10 * core.DAY_MS);
+  assert.strictEqual(rmDeparted.ok, false);
+  const rmNoConfig = await handlers.call(service.createMemoryDb(), "carpoolRemoveRider", { rideId: "r1", secret: "s", reservationId: "res1" }, null, baseNow);
+  assert.strictEqual(rmNoConfig.ok, false);
+  assert.strictEqual(ui.reduce(ui.blank(), { type: "remove-ask", rider: { reservationId: "r1" } }).sheet, "");
+  await handlers.call(dbRm, "carpoolCancelTrip", { rideId: pRm.rideId, secret: pRm.secret }, null, baseNow + 900);
+  const rmCancelledTrip = await handlers.call(dbRm, "carpoolRemoveRider", { rideId: pRm.rideId, secret: pRm.secret, reservationId: resRm.reservationId }, null, baseNow + 950);
+  assert.strictEqual(rmCancelledTrip.ok, false);
+
+  // SMS cap exhausted during removeRider
+  const dbZero = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 0 }) });
+  const pZero = await service.postRide(dbZero, {
+    name: "Dan", phone: "5552221111", from: "Town", to: "City",
+    date: d1, time: t1, timeZone: tz, seats: 2, note: ""
+  }, baseNow);
+  const resZero = await service.reserveSeat(dbZero, { rideId: pZero.rideId, name: "Eva", phone: "5553334444", seats: 1 }, baseNow + 100);
+  const rmZero = await service.removeRider(dbZero, { rideId: pZero.rideId, secret: pZero.secret, reservationId: resZero.reservationId }, baseNow + 200);
+  assert.strictEqual(rmZero.ok, true);
+  assert.strictEqual((rmZero.outbox || []).length, 0);
+  const dbPaused = service.createMemoryDb({ "carpool_platform/config": { platformEnabled: false, maintenanceMessage: "Paused" }, "settings/carpool_config": enabledConfig() });
+  assert.strictEqual((await service.removeRider(dbPaused, { rideId: "r", secret: "s", reservationId: "res" }, baseNow)).ok, false);
+  assert.strictEqual((await service.editRide(dbPaused, { rideId: "r", secret: "s", date: d1, time: t1, seats: 2, note: "" }, baseNow)).ok, false);
+  const dbSusp = service.createMemoryDb({ "carpool_groups/g1": { groupId: "g1", status: "suspended" } });
+  assert.strictEqual((await service.removeRider(dbSusp, { groupId: "g1", rideId: "r", secret: "s", reservationId: "res" }, baseNow)).ok, false);
+  assert.strictEqual((await service.editRide(dbSusp, { groupId: "g1", rideId: "r", secret: "s", date: d1, time: t1, seats: 2, note: "" }, baseNow)).ok, false);
+  const cloudMod = require("../../jumpin/cloud.js").attach(fakeWindow());
+  assert.strictEqual(typeof cloudMod.removeRider, "function");
+  assert.strictEqual(typeof cloudMod.editRide, "function");
+  cloudMod.removeRider("r1", "s1", "res1");
+  cloudMod.editRide("r1", "s1", { date: d1, time: t1, seats: 2, note: "" });
+  const rmOneSeat = await service.removeRider(dbZero, { rideId: pZero.rideId, secret: pZero.secret, reservationId: resZero.reservationId }, baseNow + 250);
+  assert.strictEqual(rmOneSeat.already, true);
+  // 1-seat removal ("1 seat freed")
+  const dbOne = service.createMemoryDb(seed());
+  const pOne = await service.postRide(dbOne, { name: "Dan", phone: "5552221111", from: "Town", to: "City", date: d1, time: t1, timeZone: tz, seats: 2, note: "" }, baseNow);
+  const resOne = await service.reserveSeat(dbOne, { rideId: pOne.rideId, name: "Eva", phone: "5553334444", seats: 1 }, baseNow + 100);
+  const rmOneOk = await service.removeRider(dbOne, { rideId: pOne.rideId, secret: pOne.secret, reservationId: resOne.reservationId }, baseNow + 200);
+  assert.strictEqual(rmOneOk.ok, true);
+  // Missing reservation doc in activeReservationDocIds
+  const dbGap = service.createMemoryDb(Object.assign(seed(), {
+    "carpool_private/rides/r_gap": {
+      rideId: "r_gap", status: "open", from: "Town", to: "City", departAt: baseNow + core.DAY_MS,
+      timeZone: tz, seatsTotal: 2, seatsLeft: 1, driverTokenHash: core.hashSecret("sec"),
+      activeReservationDocIds: ["carpool_private/rides/r_gap/reservations/missing", "carpool_private/rides/r_gap/reservations/r1"]
+    },
+    "carpool_private/rides/r_gap/reservations/r1": {
+      reservationId: "res_gap", rideId: "r_gap", status: "active", name: "", phoneE164: "+15553334444", seats: 1
+    }
+  }));
+  const rmGap = await service.removeRider(dbGap, { rideId: "r_gap", secret: "sec", reservationId: "res_gap" }, baseNow + 200);
+  assert.strictEqual(rmGap.ok, true);
+
+  let rmCalls = 0;
+  win.JumpInCloud.ackRider = function () { return Promise.resolve({ ok: true }); };
+  win.JumpInCloud.removeRider = function () { rmCalls++; return Promise.resolve({ ok: true }); };
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "passengers");
+  const adjBtn = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Adjust / Remove"; });
+  assert.ok(adjBtn);
+  adjBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().sheet, "remove");
+  // Multi-seat partial removal stepper: + -> Keep 1 seat ("Save seats"), then - -> Remove all
+  const rmPlus = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "+"; });
+  const rmMinus = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "−"; });
+  assert.ok(rmPlus && rmMinus);
+  rmPlus._listeners[0]();
+  const saveSeatsBtn = mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save seats"; });
+  assert.ok(saveSeatsBtn);
+  saveSeatsBtn._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().notice, "Passenger seats updated.");
+  // Full remove all path + Cancel path
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Adjust / Remove"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "+"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "−"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Cancel"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().sheet, "");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Adjust / Remove"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Remove all"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(rmCalls, 2);
+  assert.strictEqual(mounted.getState().notice, "Passenger removed.");
+
+  // Partial seat removal & increase backend checks (invalid keepSeats, over seatsTotal, valid decrease & increase)
+  const dbPart = service.createMemoryDb(seed());
+  const pPart = await service.postRide(dbPart, { name: "Dan", phone: "5552221111", from: "Town", to: "City", date: d1, time: t1, timeZone: tz, seats: 4, note: "" }, baseNow);
+  const resPart = await service.reserveSeat(dbPart, { rideId: pPart.rideId, name: "Eva", phone: "5553334444", seats: 3 }, baseNow + 100);
+  await service.reserveSeat(dbPart, { rideId: pPart.rideId, name: "Leo", phone: "5553335555", seats: 1 }, baseNow + 150);
+  const sameKeep = await service.removeRider(dbPart, { rideId: pPart.rideId, secret: pPart.secret, reservationId: resPart.reservationId, keepSeats: 3 }, baseNow + 200);
+  assert.strictEqual(sameKeep.already, true);
+  const badKeep = await service.removeRider(dbPart, { rideId: pPart.rideId, secret: pPart.secret, reservationId: resPart.reservationId, keepSeats: 7 }, baseNow + 200);
+  assert.strictEqual(badKeep.ok, false);
+  const overKeep = await service.removeRider(dbPart, { rideId: pPart.rideId, secret: pPart.secret, reservationId: resPart.reservationId, keepSeats: 4 }, baseNow + 200);
+  assert.strictEqual(overKeep.ok, false);
+  const okKeep = await service.removeRider(dbPart, { rideId: pPart.rideId, secret: pPart.secret, reservationId: resPart.reservationId, keepSeats: 1 }, baseNow + 250);
+  assert.strictEqual(okKeep.ok, true);
+  assert.strictEqual(okKeep.seatsLeft, 2);
+  assert.strictEqual(okKeep.keepSeats, 1);
+  const okInc = await service.removeRider(dbPart, { rideId: pPart.rideId, secret: pPart.secret, reservationId: resPart.reservationId, keepSeats: 2 }, baseNow + 300);
+  assert.strictEqual(okInc.ok, true);
+  assert.strictEqual(okInc.seatsLeft, 1);
+  assert.strictEqual(okInc.keepSeats, 2);
+
+  // Remove error branch + Edit time error branch + sheet actions coverage in UI
+  win.JumpInCloud.removeRider = function () { return Promise.resolve({ ok: false, error: "Could not remove" }); };
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Adjust / Remove"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Remove all"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().error, "Could not remove");
+  win.JumpInCloud.editRide = function () { return Promise.resolve({ ok: true, unchanged: true, ride: futureRide }); };
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✏️ Edit trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().notice, "No changes made.");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✏️ Edit trip"; })._listeners[0]();
+  const sheetDate = mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "date"; });
+  sheetDate.value = "";
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "date");
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "date"; }).value = "2020-01-01";
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Save changes"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "time");
+  // Cover Manage trip & Manage passengers sheet actions (Close, Add passenger, Cancel trip, Post return trip, Complete trip)
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "driver" }), { ride: futureRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().sheet, "trip");
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Keep trip"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "➕ Add passenger"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "passengers-add");
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Back"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "passengers");
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "➕ Add passenger"; })._listeners[0]();
+  // Validation error + ok + fail + reject inside Add passenger sheet
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Confirm passenger"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "name");
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "Mia";
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "5557771234";
+  win.JumpInCloud.reserveSeat = function () { return Promise.resolve({ ok: false, error: "Full" }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Confirm passenger"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().error, "Full");
+  win.JumpInCloud.reserveSeat = function () { return Promise.reject(new Error("net")); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Confirm passenger"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.ok(mounted.getState().error.indexOf("Could not add passenger") !== -1);
+  win.JumpInCloud.reserveSeat = function () { return Promise.resolve({ ok: true, reservationId: "r_new", seatsLeft: 1 }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Confirm passenger"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().notice, "Passenger added.");
+  const pastRide = Object.assign({}, futureRide, { departAt: Date.now() - 60000 });
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: pastRide, role: "driver" }), { ride: pastRide, when: "Soon" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✓ Complete trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().sheet, "complete");
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Keep open"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "↩️ Post return trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().mode, "ride");
+  assert.strictEqual(mounted.getState().driverSheet, "return");
+  // Close with X returns to ride detail
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✕"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().driverSheet, "");
+  assert.strictEqual(mounted.getState().mode, "ride");
+  // Re-open return sheet: test validation, fail, reject, and success
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "↩️ Post return trip"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "bad";
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "phone");
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "5557771234";
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "date"; }).value = "2020-01-01";
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "time");
+  const retSoon = core.partsInZone(Date.now() + 2 * core.DAY_MS, tz);
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "date"; }).value = retSoon.year + "-" + String(retSoon.month).padStart(2, "0") + "-" + String(retSoon.day).padStart(2, "0");
+  win.JumpInCloud.postRide = function () { return Promise.resolve({ ok: false, error: "Denied" }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().error, "Denied");
+  win.JumpInCloud.postRide = function () { return Promise.reject(new Error("net")); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.ok(mounted.getState().error.indexOf("Could not post") !== -1);
+  win.JumpInCloud.postRide = function () { return Promise.resolve({ ok: true, rideId: "ride_ret", secret: "sec_ret", status: "open" }); };
+  win.JumpInCloud.publicRideUrl = function (id) { return "https://waitlink.app/?s=jumpin&view=ride&ride=" + id; };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().mode, "posted");
   view.destroy();
 });
 

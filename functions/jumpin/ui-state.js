@@ -19,9 +19,12 @@
       role: "",
       seatsLeft: 0,
       reserveOpen: false,
+      editOpen: false,
+      driverSheet: "",
       recovery: "",
       sheet: "",
       pendingAction: "",
+      removeTarget: null,
       error: "",
       field: "",
       notice: "",
@@ -45,9 +48,12 @@
       role: role || "",
       seatsLeft: ride.seatsLeft,
       reserveOpen: false,
+      editOpen: false,
+      driverSheet: "",
       recovery: "",
       sheet: "",
       pendingAction: "",
+      removeTarget: null,
       error: "",
       field: "",
       notice: "",
@@ -63,6 +69,8 @@
     if (event.type === "reserve-open") {
       if (next.status !== "open" || next.seatsLeft < 1 || (next.role && next.role !== "driver")) return next;
       next.reserveOpen = true;
+      next.editOpen = false;
+      next.driverSheet = "";
       next.recovery = "";
       return next;
     }
@@ -70,9 +78,37 @@
       next.reserveOpen = false;
       return next;
     }
+    if (event.type === "edit-open") {
+      if (next.role !== "driver" || (next.status !== "open" && next.status !== "pending")) return next;
+      next.editOpen = true;
+      next.driverSheet = "";
+      next.reserveOpen = false;
+      next.recovery = "";
+      return next;
+    }
+    if (event.type === "edit-close") {
+      next.editOpen = false;
+      return next;
+    }
+    if (event.type === "driver-sheet") {
+      if (next.role === "driver") {
+        next.driverSheet = event.which === "passengers" ? "passengers" : (event.which === "passengers-add" ? "passengers-add" : (event.which === "return" ? "return" : "trip"));
+        next.editOpen = false;
+        next.reserveOpen = false;
+        next.recovery = "";
+        next.sheet = "";
+      }
+      return next;
+    }
+    if (event.type === "driver-sheet-close") {
+      next.driverSheet = "";
+      return next;
+    }
     if (event.type === "recovery") {
       next.recovery = event.role === "driver" ? "driver" : "rider";
       next.reserveOpen = false;
+      next.editOpen = false;
+      next.driverSheet = "";
       next.sheet = "";
       return next;
     }
@@ -83,23 +119,39 @@
     if (event.type === "cancel-ask") {
       if (event.role === "driver" && (next.role === "driver" || next.status === "pending")) next.sheet = "trip";
       else if (event.role === "rider" && next.role === "rider") next.sheet = "seat";
+      next.editOpen = false;
+      next.driverSheet = "";
       next.pendingAction = "";
       return next;
     }
     if (event.type === "complete-ask") {
       if (next.role === "driver" && next.status === "open") next.sheet = "complete";
+      next.editOpen = false;
+      next.driverSheet = "";
       next.pendingAction = "";
+      return next;
+    }
+    if (event.type === "remove-ask") {
+      if (next.role === "driver" && next.status === "open" && event.rider) {
+        next.sheet = "remove";
+        next.removeTarget = event.rider;
+        next.editOpen = false;
+        next.driverSheet = "";
+        next.pendingAction = "";
+      }
       return next;
     }
     if (event.type === "keep") {
       next.sheet = "";
       next.pendingAction = "";
+      next.removeTarget = null;
       return next;
     }
     if (event.type === "confirm") {
       if (next.sheet === "seat") next.pendingAction = "cancel-seat";
       if (next.sheet === "trip") next.pendingAction = "cancel-trip";
       if (next.sheet === "complete") next.pendingAction = "complete-trip";
+      if (next.sheet === "remove") next.pendingAction = "remove-rider";
       next.sheet = "";
       return next;
     }

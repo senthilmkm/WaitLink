@@ -663,6 +663,7 @@
               <td>
                 <ul class="clean">
                   <li>View waiting status on manage link.</li>
+                  <li><strong>Edit trip</strong> (update departure date/time, total seats, or pickup note before departure).</li>
                   <li><strong>Cancel trip</strong> (opens confirmation modal).</li>
                   <li><strong>Sign out on this device</strong>.</li>
                 </ul>
@@ -675,9 +676,10 @@
               <td><span class="tag tag-open">Open (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
               <td>
                 <ul class="clean">
-                  <li><strong>Confirm joined riders (🔔 &rarr; ✓):</strong> Each newly joined rider shows an amber <strong>🔔</strong> pill; tap it to mark them seen (turns green <strong>✓</strong> and updates the rider's view to <strong>✓ Confirmed</strong> via <code>carpoolAckRider</code>).</li>
+                  <li><strong>Confirm joined riders (Tap to confirm &rarr; ✓ Confirmed):</strong> Each newly joined rider shows an amber <strong>Tap to confirm</strong> pill; tap it to mark them <strong>✓ Confirmed</strong> (updates the rider's view to <strong>✓ Confirmed</strong> via <code>carpoolAckRider</code>).</li>
+                  <li><strong>2-Button Bottom Sheets:</strong> Tap <strong>Manage trip</strong> (Edit trip, Post return trip, Complete trip, Cancel trip) or <strong>Manage passengers</strong> (Add passenger, Adjust / Remove seats with <code>− / +</code> stepper).</li>
                   <li><strong>Message passengers</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> (with spinner); past messages live in collapsible <strong>💬 Trip Updates</strong>.</li>
-                  <li><strong>Add passenger</strong> manually (1-tap seat pills if seats left &gt; 0; driver-added passengers start as <strong>✓</strong>).</li>
+                  <li><strong>Add passenger</strong> manually (1-tap seat pills if seats left &gt; 0; driver-added passengers start as <strong>✓</strong>), or tap <strong>✕</strong> next to a passenger before departure to <strong>Remove</strong> them or reduce their seat count (confirmation modal with <code>− / +</code> stepper) and free seats.</li>
                   <li><strong>Post return trip</strong> (1-tap pre-filled reverse route) or <strong>Cancel trip</strong> (confirmation modal: <em>Keep trip / Cancel trip</em>).</li>
                   <li><strong>Share on WhatsApp / Copy link</strong> or <strong>Sign out on this device</strong>.</li>
                 </ul>
@@ -937,10 +939,24 @@
             </tr>
             <tr>
               <td><span class="tag tag-open">Driver Flow</span></td>
+              <td>Edit trip details (time or pickup note changed)</td>
+              <td><strong>All Active Riders</strong></td>
+              <td><code>JumpIn update (From-To): Time &lt;When&gt;; Note: &lt;Note&gt;. &lt;link&gt;</code> (only sent if time or note changes; seat-count-only edits send 0 SMS).</td>
+              <td>Public <code>view=ride</code> link; capped at 15 time/note edits per trip.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Driver Flow</span></td>
               <td>Message passengers</td>
               <td><strong>All Active Riders</strong></td>
               <td><code>JumpIn (From-To) &lt;Name&gt;: &lt;Message&gt; &lt;link&gt;</code> (excludes cancelled riders).</td>
               <td>Public <code>view=ride</code> link: viewable until purged <strong>7 days</strong> after trip ends (tombstone kept 30 days).</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-done">Driver Flow</span></td>
+              <td>Remove a passenger (<code>✕</code>)</td>
+              <td><strong>Removed Rider</strong></td>
+              <td><code>JumpIn (From-To): Driver removed your seat. &lt;link&gt;</code> (frees seats immediately and clears their active reservation).</td>
+              <td>Public <code>view=ride</code> link; seat manage link stops working immediately.</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Driver Flow</span></td>

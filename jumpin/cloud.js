@@ -300,11 +300,19 @@
       cancelSeat: function (rideId, secret) {
         return call("carpoolCancelSeat", { rideId: rideId, secret: secret });
       },
+      removeRider: function (rideId, secret, reservationId, keepSeats) {
+        const body = { rideId: rideId, secret: secret, reservationId: reservationId };
+        if (keepSeats != null) body.keepSeats = Number(keepSeats);
+        return call("carpoolRemoveRider", body);
+      },
       updateSeat: function (rideId, secret, seats) {
         return call("carpoolUpdateSeat", { rideId: rideId, secret: secret, seats: Number(seats) });
       },
       cancelTrip: function (rideId, secret) {
         return call("carpoolCancelTrip", { rideId: rideId, secret: secret });
+      },
+      editRide: function (rideId, secret, fields) {
+        return call("carpoolEditRide", Object.assign({ rideId: rideId, secret: secret }, fields));
       },
       completeTrip: function (rideId, secret) {
         return call("carpoolCompleteTrip", { rideId: rideId, secret: secret });

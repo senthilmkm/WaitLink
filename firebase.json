@@ -103,8 +103,16 @@
         "function": { "functionId": "carpoolCancelSeat", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolRemoveRider",
+        "function": { "functionId": "carpoolRemoveRider", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolCancelTrip",
         "function": { "functionId": "carpoolCancelTrip", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolEditRide",
+        "function": { "functionId": "carpoolEditRide", "region": "us-central1" }
       },
       {
         "source": "/api/carpoolCompleteTrip",

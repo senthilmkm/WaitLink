@@ -597,6 +597,95 @@ function cancelSeat(db, input, now) {
   });
 }
 
+function removeRider(db, input, now) {
+  if (!input || !input.rideId || !input.reservationId) {
+    return Promise.resolve({ ok: false, error: "Passenger not found." });
+  }
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
+    const config = await loadConfig(tx, now, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(p.ridePrivate(input.rideId));
+    if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
+    if (ride.departAt <= now) return { ok: false, error: "This trip has already left." };
+    if (ride.status !== "open") return { ok: false, error: "This trip is not open." };
+    const keys = arr(ride.activeReservationDocIds);
+    let targetKey = "";
+    let target = null;
+    const riderRows = [];
+    let remainingSeats = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const row = await tx.get(keys[i]);
+      if (!row) continue;
+      if (row.reservationId === input.reservationId) {
+        targetKey = keys[i];
+        target = row;
+      } else if (row.status === "active") {
+        remainingSeats += Number(row.seats) || 1;
+        riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
+      }
+    }
+    if (!target) return { ok: false, error: "Passenger not found." };
+    if (target.status === "cancelled") return { ok: true, already: true, seatsLeft: ride.seatsLeft };
+    const oldSeats = Number(target.seats) || 1;
+    const keepSeats = input.keepSeats == null ? 0 : Number(input.keepSeats);
+    if (!Number.isInteger(keepSeats) || keepSeats < 0 || keepSeats > 6) {
+      return { ok: false, error: "Choose seats from 0 to 6." };
+    }
+    if (keepSeats === oldSeats) return { ok: true, already: true, seatsLeft: ride.seatsLeft, keepSeats: keepSeats };
+    if (keepSeats > 0 && remainingSeats + keepSeats > (Number(ride.seatsTotal) || 0)) {
+      return { ok: false, error: "Not enough seats left on this trip." };
+    }
+    const freed = oldSeats - keepSeats;
+    const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
+    const phone = await tx.get(p.phone(target.phoneE164)) || { activeReservations: 0 };
+    if (keepSeats === 0) {
+      target.status = "cancelled";
+      target.cancelledAt = now;
+      target.removedByDriver = true;
+      target.idempotencySecret = "";
+      phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
+      tx.set(p.phone(target.phoneE164), phone);
+      pub.riders = arr(pub.riders).filter(function (row) { return row.reservationId !== target.reservationId; });
+    } else {
+      target.seats = keepSeats;
+      riderRows.push({ phoneE164: target.phoneE164, name: target.name || "", status: "active" });
+      pub.riders = arr(pub.riders).map(function (row) {
+        if (row.reservationId === target.reservationId) return Object.assign({}, row, { seats: keepSeats });
+        return row;
+      });
+    }
+    ride.seatsLeft = Math.max(0, Math.min(Number(ride.seatsTotal) || 0, (Number(ride.seatsTotal) || 0) - (remainingSeats + keepSeats)));
+    pub.seatsLeft = ride.seatsLeft;
+    const deltaCount = Math.abs(freed);
+    const deltaWord = deltaCount === 1 ? "1 seat" : deltaCount + " seats";
+    const sysText = keepSeats === 0
+      ? (target.name || "Passenger") + " removed by driver (" + deltaWord + " freed)."
+      : (target.name || "Passenger") + " updated to " + (keepSeats === 1 ? "1 seat" : keepSeats + " seats") + " by driver (" + (freed > 0 ? deltaWord + " freed" : deltaWord + " added") + ").";
+    pub.messages = arr(pub.messages).concat([core.systemMessage(sysText, now, arr(pub.messages).length + 1)]);
+    pub.updatedAt = now;
+    if (target.phoneE164 && canSendBoth(config, platform, now)) {
+      bumpSms(config, platform);
+      const body = keepSeats === 0
+        ? "JumpIn (" + shortRoute(ride.from, ride.to) + "): Driver removed your seat. " + manageUrl("ride", ride.rideId, "", "", p.groupId)
+        : "JumpIn (" + shortRoute(ride.from, ride.to) + "): Driver updated your seats to " + keepSeats + ". " + manageUrl("ride", ride.rideId, "", "", p.groupId);
+      queueText(texts, target.phoneE164, body, keepSeats === 0 ? "CARPOOL_RIDER_REMOVED" : "CARPOOL_RIDER_UPDATED");
+    }
+    tx.set(targetKey, target);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    await rememberRide(tx, ride, riderRows, p);
+    saveConfig(tx, config, p, texts.length ? platform : null);
+    return { ok: true, seatsLeft: ride.seatsLeft, keepSeats: keepSeats, ride: pub, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
+  });
+}
+
 async function findReservationKey(tx, input, p) {
   if (input.reservationDocId) return input.reservationDocId;
   if (input.rideId && input.phone) {
@@ -668,6 +757,90 @@ function completeTrip(db, input, now) {
     tx.set(p.broadcastIndex, { rides: rides, audience: arr(index.audience) });
     if (texts.length) saveConfig(tx, config, p, platform);
     return { ok: true, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
+  });
+}
+
+function editRide(db, input, now) {
+  const checked = core.editErrors(input || {});
+  if (checked.error) return Promise.resolve({ ok: false, field: checked.field, error: checked.error });
+  const fields = checked.value;
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
+    const config = await loadConfig(tx, now, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(p.ridePrivate(input.rideId));
+    if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
+    if (ride.status !== "open" && ride.status !== "pending") return { ok: false, error: "This trip can no longer be edited." };
+    if (ride.departAt <= now) return { ok: false, error: "This trip has already left." };
+    const tz = ride.timeZone || input.timeZone || "UTC";
+    const depart = core.departureError(fields.date, fields.time, tz, now, config.horizonDays);
+    if (depart.error) return { ok: false, field: "time", error: depart.error };
+    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
+    const keys = arr(ride.activeReservationDocIds);
+    const activeRiders = [];
+    let bookedSeats = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const reservation = await tx.get(keys[i]);
+      if (!reservation || reservation.status !== "active") continue;
+      bookedSeats += Number(reservation.seats) || 1;
+      activeRiders.push({ docKey: keys[i], phoneE164: reservation.phoneE164, name: reservation.name || "", status: "active" });
+    }
+    if (fields.seats < bookedSeats) {
+      return { ok: false, field: "seats", error: bookedSeats === 1 ? "1 seat is already reserved." : (bookedSeats + " seats are already reserved.") };
+    }
+    const timeChanged = depart.departAt !== ride.departAt;
+    const seatsChanged = fields.seats !== ride.seatsTotal;
+    const noteChanged = fields.note !== (ride.note || "");
+    const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
+    if (!timeChanged && !seatsChanged && !noteChanged) return { ok: true, unchanged: true, ride: pub };
+    const edits = Number(ride.editCount) || 0;
+    if ((timeChanged || noteChanged) && edits >= 15) return { ok: false, error: "This trip reached the maximum number of edits (15)." };
+    const changes = [];
+    const smsParts = [];
+    if (timeChanged) {
+      const newWhen = core.formatWhen(depart.departAt, tz);
+      changes.push("time -> " + newWhen);
+      smsParts.push("Time " + newWhen);
+    }
+    if (seatsChanged) changes.push("seats -> " + fields.seats);
+    if (noteChanged) {
+      changes.push(fields.note ? "note updated" : "note cleared");
+      smsParts.push(fields.note ? "Note: " + fields.note.slice(0, 60) : "Note cleared");
+    }
+    ride.departAt = depart.departAt;
+    ride.seatsTotal = fields.seats;
+    ride.seatsLeft = fields.seats - bookedSeats;
+    ride.note = fields.note;
+    if (timeChanged || noteChanged) ride.editCount = edits + 1;
+    ride.updatedAt = now;
+    pub.departAt = ride.departAt;
+    pub.seatsTotal = ride.seatsTotal;
+    pub.seatsLeft = ride.seatsLeft;
+    pub.note = ride.note;
+    pub.messages = arr(pub.messages).concat([core.systemMessage("Trip updated: " + changes.join(", ") + ".", now, arr(pub.messages).length + 1)]);
+    pub.updatedAt = now;
+    if (smsParts.length && activeRiders.length) {
+      const routeTag = shortRoute(ride.from, ride.to);
+      const rideLink = manageUrl("ride", ride.rideId, "", "", p.groupId);
+      const body = "JumpIn update (" + routeTag + "): " + smsParts.join("; ") + ". " + rideLink;
+      for (let i = 0; i < activeRiders.length; i++) {
+        if (!canSendBoth(config, platform, now)) break;
+        bumpSms(config, platform);
+        queueText(texts, activeRiders[i].phoneE164, body, "CARPOOL_TRIP_UPDATED");
+      }
+    }
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    await rememberRide(tx, ride, activeRiders, p);
+    saveConfig(tx, config, p, texts.length ? platform : null);
+    return { ok: true, ride: pub, texts: texts };
   }).then(function (result) {
     return withOutbox(result, result.texts);
   });
@@ -1871,7 +2044,9 @@ module.exports = {
   reserveSeat: reserveSeat,
   updateSeat: updateSeat,
   cancelSeat: cancelSeat,
+  removeRider: removeRider,
   cancelTrip: cancelTrip,
+  editRide: editRide,
   completeTrip: completeTrip,
   ackRider: ackRider,
   postMessage: postMessage,

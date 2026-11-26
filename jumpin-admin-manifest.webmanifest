@@ -8,7 +8,10 @@
   "orientation": "any",
   "background_color": "#f8fafc",
   "theme_color": "#0891b2",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/assets/jumpin-icon-192.png?v=2",

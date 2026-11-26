@@ -307,6 +307,16 @@
     return { value: { name: name.value, phone: phone.e164, seats: seats, dropoff: dropoff.value } };
   }
 
+  function editErrors(fields) {
+    if (!fields.date) return { field: "date", error: "Choose a date." };
+    if (!fields.time) return { field: "time", error: "Choose a time." };
+    const seats = Number(fields.seats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
+    const note = noteValue(fields.note);
+    if (note.error) return { field: "note", error: note.error };
+    return { value: { date: String(fields.date), time: String(fields.time), seats: seats, note: note.value } };
+  }
+
   function partsInZone(utcMs, timeZone) {
     const fmt = new Intl.DateTimeFormat("en-US", {
       timeZone: timeZone,
@@ -397,6 +407,16 @@
     });
     const zone = ZONE_SHORT[bag.timeZoneName] || bag.timeZoneName || "";
     return bag.weekday + " " + bag.hour + ":" + bag.minute + " " + bag.dayPeriod + (zone ? " " + zone : "");
+  }
+
+  function formatDateInput(utcMs, timeZone) {
+    const p = partsInZone(utcMs, timeZone || "UTC");
+    return String(p.year).padStart(4, "0") + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
+  }
+
+  function formatTimeInput(utcMs, timeZone) {
+    const p = partsInZone(utcMs, timeZone || "UTC");
+    return String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0");
   }
 
   function utcDay(now) {
@@ -514,6 +534,7 @@
     configFieldError: configFieldError,
     postErrors: postErrors,
     reserveErrors: reserveErrors,
+    editErrors: editErrors,
     messageError: messageError,
     announceError: announceError,
     zonedToUtc: zonedToUtc,
@@ -521,6 +542,8 @@
     formatDuration: formatDuration,
     formatCost: formatCost,
     formatWhen: formatWhen,
+    formatDateInput: formatDateInput,
+    formatTimeInput: formatTimeInput,
     partsInZone: partsInZone,
     utcDay: utcDay,
     postsToday: postsToday,

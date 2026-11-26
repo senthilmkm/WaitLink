@@ -84,9 +84,10 @@
       "#jumpin-mid .route-dot{position:absolute;left:2px;top:36px;width:10px;height:10px;border-radius:50%;background:#0891b2}",
       "#jumpin-mid .route-dot.from::after{content:'';position:absolute;left:4px;top:12px;width:2px;height:52px;background:#cbd5e1}",
       "#jumpin-mid .route-dot.to{top:38px;border-radius:3px;background:#0f172a}",
-      "#jumpin-mid .seat-pills{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0 0 14px}",
-      "#jumpin-mid .seat-pill{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:700;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}",
-      "#jumpin-mid .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-root .seat-pills{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0 0 14px}",
+      "#jumpin-root .seat-pill{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:700;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}",
+      "#jumpin-root .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-root .seat-pill:disabled{opacity:.35;cursor:not-allowed;background:#f1f5f9}",
       "#jumpin-mid .ride-sec{display:contents}",
       "#jumpin-mid .driver-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;margin-left:auto}",
       "@keyframes jumpin-shimmer{0%,100%{opacity:.5}50%{opacity:1}}",
@@ -94,7 +95,7 @@
       "#jumpin-mid .skel-line{height:14px;border-radius:8px;background:#e2e8f0;margin-bottom:8px}",
       "#jumpin-mid .skel-line.w70{width:70%}",
       "#jumpin-mid .skel-line.w45{width:45%;margin-bottom:0}",
-      "#jumpin-mid .row:active,#jumpin-root .chip-btn:active,#jumpin-mid .seat-pill:active,#jumpin-mid .filter-chip:active{transform:scale(0.97)}",
+      "#jumpin-root .row:active,#jumpin-root .chip-btn:active,#jumpin-root .seat-pill:active,#jumpin-mid .filter-chip:active{transform:scale(0.97)}",
       "#jumpin-mid .msg-row{background:#f1f5f9;border-radius:14px;padding:9px 12px;margin:6px 0;font-size:14px;color:var(--text-main,#0f172a)}",
       "#jumpin-mid .confirm .link-box-sep{margin-top:14px;padding-top:14px;border-top:1px dashed #cbd5e1}",
       "#jumpin-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10000;padding:8px 16px;border-radius:999px;background:#0f172a;color:#fff;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(15,23,42,.25);pointer-events:none}",
@@ -154,11 +155,11 @@
       "#jumpin-mid .info-v{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-mid .post-head{margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0}",
       "#jumpin-mid .post-head h1{font-size:26px;margin:0}",
-      "#jumpin-mid .dur-stepper{display:flex;align-items:center;gap:10px;margin:0 0 14px}",
-      "#jumpin-mid .dur-btn{min-width:52px;min-height:44px;padding:0 14px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:18px;font-weight:700;cursor:pointer}",
-      "#jumpin-mid .dur-btn:hover:not(:disabled){background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
-      "#jumpin-mid .dur-btn:disabled{opacity:.4;cursor:not-allowed;color:#64748b}",
-      "#jumpin-mid .dur-val{flex:1;min-height:44px;display:grid;place-items:center;padding:0 12px;background:#f8fafc;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);font-size:16px;font-weight:700;color:var(--text-main,#090d16)}",
+      "#jumpin-root .dur-stepper{display:flex;align-items:center;gap:10px;margin:0 0 14px}",
+      "#jumpin-root .dur-btn{min-width:52px;min-height:44px;padding:0 14px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:18px;font-weight:700;cursor:pointer}",
+      "#jumpin-root .dur-btn:hover:not(:disabled){background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-root .dur-btn:disabled{opacity:.4;cursor:not-allowed;color:#64748b}",
+      "#jumpin-root .dur-val{flex:1;min-height:44px;display:grid;place-items:center;padding:0 12px;background:#f8fafc;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px);font-size:16px;font-weight:700;color:var(--text-main,#090d16)}",
       "#jumpin-mid .row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%}",
       "#jumpin-mid .pill-group{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 0 auto}",
       "#jumpin-mid .status-pill{flex:0 0 auto;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.3;border:1px solid transparent}",
@@ -177,13 +178,28 @@
       "#jumpin-top nav .jumpin-nav-install:hover{border-color:var(--primary,#0891b2);color:var(--primary-dark,#0e7490)}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
-      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:10px 12px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:16px}#jumpin-root.portal #jumpin-bottom{padding-bottom:calc(74px + env(safe-area-inset-bottom))}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm.ride-detail{padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .confirm.ride-detail .ride-sec{display:block;background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 3px 10px rgba(15,23,42,.04)}#jumpin-mid .confirm.ride-detail .ride-sec > *:first-child{margin-top:0}#jumpin-mid .confirm.ride-detail .ride-sec > *:last-child{margin-bottom:0}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(28px + env(safe-area-inset-bottom))}#jumpin-root.app-screen.form-open #jumpin-bottom{padding:8px 14px calc(96px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:12px 14px 14px;gap:6px 12px;font-size:12.5px}#jumpin-root .site-foot a{padding:3px 0}#jumpin-root .site-foot .support-foot{font-size:12px;line-height:1.4;overflow-wrap:anywhere}#jumpin-root .site-foot .spacer{margin-left:0;width:100%;text-align:center}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
+      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:10px 12px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:16px}#jumpin-root.portal #jumpin-bottom{padding-bottom:calc(74px + env(safe-area-inset-bottom))}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm.ride-detail{padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .confirm.ride-detail .ride-sec{display:block;background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 3px 10px rgba(15,23,42,.04)}#jumpin-mid .confirm.ride-detail .ride-sec > *:first-child{margin-top:0}#jumpin-mid .confirm.ride-detail .ride-sec > *:last-child{margin-bottom:0}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(28px + env(safe-area-inset-bottom))}#jumpin-root.app-screen.form-open #jumpin-bottom{padding:8px 14px calc(96px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:12px 14px 14px;gap:6px 12px;font-size:12.5px;justify-content:center;text-align:center}#jumpin-root .site-foot a{padding:3px 0}#jumpin-root .site-foot .support-foot{font-size:12px;line-height:1.4;overflow-wrap:anywhere}#jumpin-root .site-foot .spacer{margin-left:0;width:100%;text-align:center}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
       "@media (max-width:480px){#jumpin-mid h1{font-size:24px}#jumpin-mid .row .route{font-size:16px}#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
       "@media (max-width:380px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm.ride-detail{padding:0}#jumpin-mid .confirm h1{font-size:20px}}",
       "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
       "#jumpin-sheet p{margin:0 0 12px;font-weight:600}",
       "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
+      "#jumpin-sheet .lbl{display:block;margin:0 0 4px;font-size:13px;font-weight:600;color:var(--text-muted,#1e293b)}",
+      "#jumpin-sheet input{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 12px;padding:0 12px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
+      "#jumpin-sheet .hint{font-size:13px;color:var(--text-muted,#475569);margin:-4px 0 10px}",
+      "#jumpin-sheet .error{font-size:13px;color:#be123c;margin:0 0 10px;font-weight:600}",
       "#jumpin-sheet button{min-height:44px;margin:6px 10px 0 0}",
+      "#jumpin-sheet .seat-pills button,#jumpin-sheet .dur-stepper button{min-height:40px;margin:0}",
+      "#jumpin-sheet .sheet-menu{display:grid;gap:8px;margin:0 0 12px}",
+      "#jumpin-sheet .sheet-item{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin:0;padding:12px 14px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:600;text-align:left;cursor:pointer}",
+      "#jumpin-sheet .sheet-item.danger{color:#be123c;background:#fff1f2;border-color:#fecdd3}",
+      "#jumpin-sheet .sheet-pax-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc)}",
+      "#jumpin-sheet .sheet-pax-info{min-width:0;flex:1;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
+      "#jumpin-sheet .sheet-pax-actions{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}",
+      "#jumpin-sheet .sheet-pax-actions button{min-height:36px;margin:0}",
+      "#jumpin-sheet .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}",
+      "#jumpin-sheet .sheet-head p{margin:0;font-weight:700;font-size:16px}",
+      "#jumpin-sheet .sheet-x{min-width:36px;min-height:36px;margin:0;padding:0;border:1px solid var(--border-color,#e2e8f0);border-radius:999px;background:var(--bg-input,#f8fafc);color:var(--text-muted,#475569);font-size:16px;font-weight:700;cursor:pointer;display:grid;place-items:center}",
       "#jumpin-root .action-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:center}",
       "#jumpin-root .secondary-action-row{margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .form-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;box-sizing:border-box;align-items:start}",
@@ -204,21 +220,21 @@
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
       "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
-      "#jumpin-mid .filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}",
-      "#jumpin-mid .filter-chip{flex:0 0 auto;min-height:36px;padding:6px 14px;border-radius:999px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--text-muted,#1e293b);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
+      "#jumpin-mid .filter-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}",
+      "#jumpin-mid .filter-chip{flex:0 0 auto;min-height:36px;padding:6px 10px;border-radius:999px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--text-muted,#1e293b);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
       "#jumpin-mid .filter-chip.active{background:var(--primary,#0891b2);color:#fff;border-color:var(--primary,#0891b2);box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-mid .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 0 6px;flex-wrap:wrap}",
       "#jumpin-mid .pager-btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:14px;font-weight:700;cursor:pointer}",
       "#jumpin-mid .pager-btn:disabled{opacity:.45;cursor:not-allowed;color:var(--text-muted,#64748b)}",
       "#jumpin-mid .pager-info{font-size:14px;font-weight:600;color:var(--text-muted,#475569);padding:0 6px;white-space:nowrap}",
-      "@media (max-width:700px){#jumpin-mid .board-tools{flex-wrap:nowrap;gap:8px;margin:0 0 10px}#jumpin-root .board-search{flex:0 1 138px;min-width:108px;max-width:150px;min-height:34px;padding:4px 10px;font-size:13px}#jumpin-mid .filter-row{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:6px;padding-bottom:0}#jumpin-mid .filter-chip{min-height:34px;padding:4px 10px;font-size:12px}#jumpin-mid .filter-row::-webkit-scrollbar{display:none}}",
+      "@media (max-width:700px){#jumpin-mid .board-tools{flex-wrap:nowrap;gap:8px;margin:0 0 10px}#jumpin-root .board-search{flex:0 1 138px;min-width:108px;max-width:150px;min-height:34px;padding:4px 10px;font-size:13px}#jumpin-mid .filter-row{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:0}#jumpin-mid .filter-chip{min-height:34px;padding:4px 8px;font-size:12px}#jumpin-mid .filter-row::-webkit-scrollbar{display:none}}",
       "@media (max-width:519px){#jumpin-mid .pager-edge{display:none}}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
       "#jumpin-mid .reserve-head{margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--border-color,#e2e8f0);font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:17px;font-weight:700;color:var(--text-main,#090d16)}",
       "#jumpin-root .rider-row{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px 12px;margin-bottom:6px;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:10px;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
       "#jumpin-root .rider-ack-btn,#jumpin-root .rider-ack-pill{margin-left:auto;flex:0 0 auto;padding:0 10px;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}",
-      "#jumpin-root .rider-ack-btn{min-width:40px;min-height:36px;font-size:15px;cursor:pointer;transition:transform .12s,background-color .15s}",
+      "#jumpin-root .rider-ack-btn{min-width:40px;min-height:34px;font-size:12px;cursor:pointer;transition:transform .12s,background-color .15s}",
       "#jumpin-root .rider-ack-pill{min-height:28px;font-size:12px}",
       "#jumpin-root .rider-ack-btn.unseen,#jumpin-root .rider-ack-pill.unseen{background:#fef3c7;border:1px solid #f59e0b;color:#92400e}",
       "#jumpin-root .rider-ack-btn.seen,#jumpin-root .rider-ack-pill.seen{background:#dcfce7;border:1px solid #86efac;color:#15803d}",
@@ -249,8 +265,8 @@
       "body.jumpin-ios #jumpin-top{background:rgba(249,249,249,.86);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,.2);box-shadow:none}",
       "body.jumpin-ios #jumpin-mid .hero{background:#ffffff;border:0.5px solid rgba(60,60,67,.16);border-top:0.5px solid rgba(60,60,67,.16);border-radius:16px;box-shadow:none}",
       "body.jumpin-ios #jumpin-mid h1{font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",sans-serif;letter-spacing:-.025em}",
-      "body.jumpin-ios #jumpin-mid .filter-row{background:#e5e5ea;padding:3px;border-radius:10px;gap:2px}",
-      "body.jumpin-ios #jumpin-mid .filter-chip{border:0;background:transparent;border-radius:8px;min-height:32px;padding:4px 12px;color:#1c1c1e;box-shadow:none}",
+      "body.jumpin-ios #jumpin-mid .filter-row{background:#e5e5ea;padding:2px;border-radius:10px;gap:1px}",
+      "body.jumpin-ios #jumpin-mid .filter-chip{border:0;background:transparent;border-radius:8px;min-height:32px;padding:4px 8px;color:#1c1c1e;box-shadow:none}",
       "body.jumpin-ios #jumpin-mid .filter-chip.active{background:#ffffff;color:#0891b2;box-shadow:0 1px 4px rgba(0,0,0,.12)}",
       "body.jumpin-ios #jumpin-root .board-search{background:#e5e5ea;border:0;border-radius:10px;min-height:36px}",
       "body.jumpin-ios #jumpin-mid .row{background:#ffffff;border:0.5px solid rgba(60,60,67,.16);border-radius:14px;box-shadow:none}",
@@ -366,7 +382,7 @@
         const kept = state.rides || [];
         if (!ride) {
           state = Object.assign(ui.reduce(state, { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { rides: kept, ride: null });
-        } else if (ride.status === "open" && (state.reserveOpen || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
+        } else if (ride.status === "open" && (state.reserveOpen || state.editOpen || state.driverSheet || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
           state = Object.assign({}, state, {
             rides: kept,
             ride: ride,
@@ -388,7 +404,7 @@
             route: ride.from + " → " + ride.to,
             when: whenOf(ride),
             link: cloud.publicRideUrl(ride.rideId),
-            notice: ride.status === "open" && (prevNotice === "You have a seat." || /^You have \d+ seats\.$/.test(prevNotice || "") || prevNotice === "Passenger added." || prevNotice === "Seat cancelled." || prevNotice === "Seats updated.") ? prevNotice : ""
+            notice: ride.status === "open" && (prevNotice === "You have a seat." || /^You have \d+ seats\.$/.test(prevNotice || "") || prevNotice === "Passenger added." || prevNotice === "Seat cancelled." || prevNotice === "Seats updated." || prevNotice === "Trip updated." || prevNotice === "Passenger removed." || prevNotice === "Passenger seats updated.") ? prevNotice : ""
           });
         }
         draw();
@@ -405,44 +421,124 @@
       if (state.busy) btn.disabled = true;
     }
 
+    function buildSeatStepper(doc, host, name, minVal, maxVal, initialVal, formatLabel, onPick) {
+      const hidden = el(doc, "input");
+      hidden.type = "hidden";
+      hidden.name = name;
+      let val = Number(initialVal);
+      if (!Number.isFinite(val) || val < minVal || val > maxVal) val = minVal;
+      hidden.value = String(val);
+      const wrap = el(doc, "div", "dur-stepper");
+      const minus = el(doc, "button", "dur-btn", "−");
+      minus.type = "button";
+      minus.setAttribute("aria-label", "Decrease seats");
+      const readout = el(doc, "div", "dur-val", formatLabel(val));
+      const plus = el(doc, "button", "dur-btn", "+");
+      plus.type = "button";
+      plus.setAttribute("aria-label", "Increase seats");
+      function sync() {
+        hidden.value = String(val);
+        readout.textContent = formatLabel(val);
+        minus.disabled = val <= minVal || state.busy;
+        plus.disabled = val >= maxVal || state.busy;
+        if (onPick) onPick(val);
+      }
+      on(minus, "click", function () { if (val > minVal) { val -= 1; sync(); } });
+      on(plus, "click", function () { if (val < maxVal) { val += 1; sync(); } });
+      sync();
+      wrap.appendChild(minus);
+      wrap.appendChild(readout);
+      wrap.appendChild(plus);
+      host.appendChild(hidden);
+      host.appendChild(wrap);
+      return hidden;
+    }
+
     function confirmSheet(doc) {
       const sheet = el(doc, "section");
       sheet.id = "jumpin-sheet";
       const kind = state.sheet || state.busySheet;
       const isComplete = kind === "complete";
-      const title = isComplete ? "Complete this trip?" : (kind === "trip" ? "Cancel this trip?" : "Cancel your seat?");
+      const isRemove = kind === "remove";
+      const target = state.removeTarget || {};
+      const curTargetSeats = Number(target.seats) || 1;
+      const maxKeep = Math.min(6, curTargetSeats + (Number((state.ride || {}).seatsLeft) || 0));
+      const multiRemove = isRemove && maxKeep > 1;
+      let keepSeatsPick = 0;
+      const title = isComplete
+        ? "Complete this trip?"
+        : (multiRemove
+          ? ("Adjust or remove " + (target.name || "passenger") + "?")
+          : (isRemove ? ("Remove " + (target.name || "passenger") + "?") : (kind === "trip" ? "Cancel this trip?" : "Cancel your seat?")));
       sheet.appendChild(el(doc, "p", "", title));
       if (isComplete) sheet.appendChild(el(doc, "p", "muted", "This marks the trip as completed and closes trip messaging."));
-      const keep = el(doc, "button", "textish", isComplete ? "Keep open" : (kind === "trip" ? "Keep trip" : "Keep seat"));
+      if (isRemove && !multiRemove) {
+        sheet.appendChild(el(doc, "p", "muted", "This frees 1 seat and sends them a short SMS."));
+      }
+      if (multiRemove) {
+        sheet.appendChild(el(doc, "p", "muted", "Currently " + curTargetSeats + (curTargetSeats === 1 ? " seat" : " seats") + " reserved. Adjust seats (0 to remove):"));
+      }
+      const keep = el(doc, "button", "textish", isComplete ? "Keep open" : (isRemove ? "Cancel" : (kind === "trip" ? "Keep trip" : "Keep seat")));
       if (state.busy) keep.disabled = true;
       on(keep, "click", function () { state = ui.reduce(state, { type: "keep" }); draw(); });
-      sheet.appendChild(keep);
-      const idleConfirm = isComplete ? "Complete trip" : (kind === "trip" ? "Cancel trip" : "Cancel seat");
-      const busyConfirm = isComplete ? "Completing…" : "Cancelling…";
       const yes = el(doc, "button", isComplete ? "confirm-primary" : "danger");
+      function refreshRemoveBtn(k) {
+        keepSeatsPick = k;
+        if (!multiRemove || state.busy) return;
+        yes.className = k === 0 ? "danger" : "confirm-primary";
+        yes.textContent = k === 0 ? "Remove all" : "Save seats";
+      }
+      if (multiRemove) {
+        buildSeatStepper(doc, sheet, "keepSeats", 0, maxKeep, 0, function (v) {
+          return v === 0 ? "0 (Remove all)" : (v === 1 ? "1 seat" : v + " seats");
+        }, refreshRemoveBtn);
+      }
+      sheet.appendChild(keep);
+      const idleConfirm = isComplete ? "Complete trip" : (multiRemove ? "Remove all" : (isRemove ? "Remove" : (kind === "trip" ? "Cancel trip" : "Cancel seat")));
+      const busyConfirm = isComplete ? "Completing…" : (multiRemove && keepSeatsPick > 0 ? "Saving…" : (isRemove ? "Removing…" : "Cancelling…"));
       spinText(doc, yes, state.busy && state.busyAction === "sheet", busyConfirm, idleConfirm, !isComplete);
       on(yes, "click", function () {
         const ride = state.ride || (state.rideId ? { rideId: state.rideId } : null);
         const sheetKind = state.sheet;
+        const removeTarget = state.removeTarget;
+        const chosenKeep = multiRemove ? keepSeatsPick : undefined;
         state = ui.reduce(state, { type: "confirm" });
         const action = state.pendingAction;
         if (cloud && ride && action) {
           state.busy = true;
           state.busyAction = "sheet";
           state.busySheet = sheetKind;
-          const isDriverAction = action === "cancel-trip" || action === "complete-trip";
+          const isDriverAction = action === "cancel-trip" || action === "complete-trip" || action === "remove-rider";
           const secret = isDriverAction ? cloud.tripSecret(ride.rideId) : cloud.seatSecretFor(ride);
           const job = action === "complete-trip"
             ? cloud.completeTrip(ride.rideId, secret)
-            : (action === "cancel-trip" ? cloud.cancelTrip(ride.rideId, secret) : cloud.cancelSeat(ride.rideId, secret));
+            : (action === "remove-rider"
+              ? cloud.removeRider(ride.rideId, secret, removeTarget && removeTarget.reservationId, chosenKeep)
+              : (action === "cancel-trip" ? cloud.cancelTrip(ride.rideId, secret) : cloud.cancelSeat(ride.rideId, secret)));
           job.then(function (result) {
             state.busy = false;
             state.busyAction = "";
             state.busySheet = "";
+            state.removeTarget = null;
             if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
             else if (action === "complete-trip") {
               const nextRide = Object.assign({}, state.ride || {}, { status: "completed" });
               state = Object.assign({}, state, { status: "completed", notice: "Trip completed.", ride: nextRide });
+            } else if (action === "remove-rider") {
+              const nextRide = Object.assign({}, state.ride || {}, result && result.ride ? result.ride : {
+                seatsLeft: result && result.seatsLeft != null ? result.seatsLeft : (Number((state.ride || {}).seatsLeft) || 0) + (curTargetSeats - (chosenKeep || 0)),
+                riders: ((state.ride || {}).riders || []).map(function (r) {
+                  if (removeTarget && r.reservationId === removeTarget.reservationId && chosenKeep > 0) return Object.assign({}, r, { seats: chosenKeep });
+                  return r;
+                }).filter(function (r) { return !removeTarget || chosenKeep > 0 || r.reservationId !== removeTarget.reservationId; })
+              });
+              state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: "driver" }), {
+                ride: nextRide,
+                rides: state.rides || [],
+                when: state.when,
+                link: state.link,
+                notice: chosenKeep > 0 ? "Passenger seats updated." : "Passenger removed."
+              });
             }
             else if (action === "cancel-trip") state = Object.assign({}, state, { status: "cancelled", notice: "This trip was cancelled.", link: "" });
             else state = Object.assign({}, state, { mode: "ride", role: "", notice: "Seat cancelled.", reserveOpen: false });
@@ -451,6 +547,7 @@
             state.busy = false;
             state.busyAction = "";
             state.busySheet = "";
+            state.removeTarget = null;
             state = ui.reduce(state, { type: "fail", error: "Could not complete request. Check the connection and try again." });
             draw();
           });
@@ -458,6 +555,464 @@
         draw();
       });
       sheet.appendChild(yes);
+      return sheet;
+    }
+
+    function editSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const ride = state.ride || {};
+      const draft = state.editDraft || {};
+      const tz = ride.timeZone || (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+      const bookedSeats = (ride.riders || []).reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
+      sheet.appendChild(el(doc, "p", "", "Edit trip details"));
+      sheet.appendChild(el(doc, "label", "lbl", "Date"));
+      const dateIn = el(doc, "input");
+      dateIn.name = "date";
+      dateIn.type = "date";
+      dateIn.value = draft.date != null ? draft.date : core.formatDateInput(ride.departAt, tz);
+      if (state.error && state.field === "date") dateIn.className = "input-invalid";
+      sheet.appendChild(dateIn);
+      if (state.error && state.field === "date") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Departure time"));
+      const timeIn = el(doc, "input");
+      timeIn.name = "time";
+      timeIn.type = "time";
+      timeIn.value = draft.time != null ? draft.time : core.formatTimeInput(ride.departAt, tz);
+      if (state.error && state.field === "time") timeIn.className = "input-invalid";
+      sheet.appendChild(timeIn);
+      if (state.error && state.field === "time") sheet.appendChild(el(doc, "p", "error", state.error));
+      const curLeft = ride.seatsLeft != null ? Number(ride.seatsLeft) : Math.max(0, (Number(ride.seatsTotal) || 1) - bookedSeats);
+      const maxLeft = Math.max(0, 6 - bookedSeats);
+      const minLeft = bookedSeats > 0 ? 0 : 1;
+      sheet.appendChild(el(doc, "label", "lbl", bookedSeats > 0 ? "Seats left" : "Total seats"));
+      buildSeatStepper(doc, sheet, "seatsLeft", minLeft, maxLeft, draft.seatsLeft != null ? draft.seatsLeft : curLeft, function (v) {
+        if (bookedSeats > 0) return v === 0 ? "0 (Full)" : (v === 1 ? "1 seat left" : v + " seats left");
+        return v === 1 ? "1 seat" : v + " seats";
+      });
+      if (bookedSeats > 0) {
+        sheet.appendChild(el(doc, "p", "hint", (bookedSeats === 1 ? "1 seat already reserved" : bookedSeats + " seats already reserved") + " · max 6 total."));
+      }
+      if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
+      const noteIn = el(doc, "input");
+      noteIn.name = "note";
+      noteIn.type = "text";
+      noteIn.maxLength = 280;
+      noteIn.placeholder = "e.g. Meet by North entrance";
+      noteIn.value = draft.note != null ? draft.note : (ride.note || "");
+      if (state.error && state.field === "note") noteIn.className = "input-invalid";
+      sheet.appendChild(noteIn);
+      if (state.error && state.field === "note") sheet.appendChild(el(doc, "p", "error", state.error));
+      if (bookedSeats > 0) {
+        sheet.appendChild(el(doc, "p", "hint", "Reserved riders get a short SMS if time or pickup note changes."));
+      }
+      if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
+      const cancelBtn = el(doc, "button", "textish", "Cancel");
+      if (state.busy) cancelBtn.disabled = true;
+      on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "edit-close" }), { editDraft: null }); draw(); });
+      sheet.appendChild(cancelBtn);
+      const saveBtn = el(doc, "button", "confirm-primary");
+      saveBtn.type = "button";
+      spinText(doc, saveBtn, state.busy && state.busyAction === "edit", "Saving…", "Save changes", false);
+      on(saveBtn, "click", function () {
+        if (!cloud || !state.ride) return;
+        const values = {};
+        sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
+        values.seats = String(bookedSeats + Number(values.seatsLeft != null ? values.seatsLeft : curLeft));
+        values.timeZone = tz;
+        const errors = core.editErrors(values);
+        const when = errors.error ? null : core.departureError(values.date, values.time, tz, Date.now(), 30);
+        if (errors.error) {
+          state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+          state.editDraft = values;
+          draw();
+        } else if (when.error) {
+          state = ui.reduce(state, { type: "fail", field: "time", error: when.error });
+          state.editDraft = values;
+          draw();
+        } else {
+          state.busy = true;
+          state.busyAction = "edit";
+          state.editDraft = values;
+          draw();
+          cloud.editRide(state.ride.rideId, cloud.tripSecret(state.ride.rideId), values).then(function (result) {
+            state.busy = false;
+            state.busyAction = "";
+            if (!result || result.ok === false) {
+              state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not update trip. Check the connection and try again." });
+              state.editDraft = values;
+            } else {
+              const updatedRide = Object.assign({}, state.ride, result.ride || {});
+              state = Object.assign(ui.reduce(state, { type: "ride", ride: updatedRide, role: "driver" }), {
+                ride: updatedRide,
+                rides: state.rides || [],
+                editDraft: null,
+                when: core.formatWhen(updatedRide.departAt, updatedRide.timeZone || tz),
+                link: state.link,
+                notice: result.unchanged ? "No changes made." : "Trip updated."
+              });
+            }
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not update trip. Check the connection and try again." });
+            state.editDraft = values;
+            draw();
+          });
+        }
+      });
+      sheet.appendChild(saveBtn);
+      return sheet;
+    }
+
+    function manageTripSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const ride = state.ride || {};
+      const departed = !!(ride.departAt && Date.now() >= ride.departAt);
+      const hasRiders = !!(ride.riders && ride.riders.length);
+      const msgClosed = !!(ride.departAt && Date.now() >= ride.departAt + ((Number(ride.durationMinutes) || 0) * 60000) + 60 * 60000);
+      sheet.appendChild(el(doc, "p", "", "Manage trip"));
+      const menu = el(doc, "div", "sheet-menu");
+      if ((state.status === "open" || state.status === "pending") && !departed) {
+        const editBtn = el(doc, "button", "sheet-item", "✏️ Edit trip");
+        editBtn.type = "button";
+        on(editBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "edit-open" }), { editDraft: null }); draw(); });
+        menu.appendChild(editBtn);
+      }
+      if (state.status === "open" && departed && hasRiders) {
+        const completeBtn = el(doc, "button", "sheet-item", "✓ Complete trip");
+        completeBtn.type = "button";
+        on(completeBtn, "click", function () { state = ui.reduce(state, { type: "complete-ask" }); draw(); });
+        menu.appendChild(completeBtn);
+      }
+      if (state.status !== "cancelled") {
+        const retBtn = el(doc, "button", "sheet-item", "↩️ Post return trip");
+        retBtn.type = "button";
+        on(retBtn, "click", function () { state = ui.reduce(state, { type: "driver-sheet-close" }); stopRide(); startReturnTrip(ride); });
+        menu.appendChild(retBtn);
+      }
+      if (state.status !== "open" || !msgClosed) {
+        const cancelBtn = el(doc, "button", "sheet-item danger", "✕ Cancel trip");
+        cancelBtn.type = "button";
+        on(cancelBtn, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
+        menu.appendChild(cancelBtn);
+      }
+      sheet.appendChild(menu);
+      const closeBtn = el(doc, "button", "textish", "Close");
+      closeBtn.type = "button";
+      on(closeBtn, "click", function () { state = ui.reduce(state, { type: "driver-sheet-close" }); draw(); });
+      sheet.appendChild(closeBtn);
+      return sheet;
+    }
+
+    function returnTripSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const draft = state.draft || {};
+      const head = el(doc, "div", "sheet-head");
+      head.appendChild(el(doc, "p", "", "Post return trip"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      if (state.busy) xBtn.disabled = true;
+      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "driver-sheet-close" }), { draft: null }); draw(); });
+      head.appendChild(xBtn);
+      sheet.appendChild(head);
+      function addField(label, name, type, val, ph) {
+        sheet.appendChild(el(doc, "label", "lbl", label));
+        const inp = el(doc, "input");
+        inp.name = name;
+        if (type) inp.type = type;
+        if (ph) inp.placeholder = ph;
+        inp.value = val || "";
+        if (state.error && state.field === name) inp.className = "input-invalid";
+        sheet.appendChild(inp);
+        if (state.error && state.field === name) sheet.appendChild(el(doc, "p", "error", state.error));
+      }
+      addField("Your name", "name", "text", draft.name);
+      addField("Phone (US/Canada)", "phone", "tel", draft.phone);
+      addField("From", "from", "text", draft.from);
+      addField("To", "to", "text", draft.to);
+      addField("Date", "date", "date", draft.date);
+      addField("Departure time", "time", "time", draft.time);
+      sheet.appendChild(el(doc, "label", "lbl", "Seats"));
+      buildSeatStepper(doc, sheet, "seats", 1, 6, Number(draft.seats || 3), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
+      addField("Pickup note, optional", "note", "text", draft.note, "e.g. Meet by North entrance");
+      addField("Ride cost per seat (optional, $)", "rideCost", "number", draft.rideCost, "0");
+      if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
+      const postBtn = el(doc, "button", "confirm-primary");
+      postBtn.type = "button";
+      postBtn.style.width = "100%";
+      spinText(doc, postBtn, state.busy && state.busyAction === "return-post", "Posting…", "Post return trip", false);
+      on(postBtn, "click", function () {
+        const values = { durationMinutes: String(draft.durationMinutes || 60) };
+        sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
+        values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+        const errors = core.postErrors(values);
+        const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
+        if (errors.error) {
+          state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+          state.draft = values;
+          draw();
+        } else if (when.error) {
+          state = ui.reduce(state, { type: "fail", field: "time", error: when.error });
+          state.draft = values;
+          draw();
+        } else if (cloud) {
+          state.busy = true;
+          state.busyAction = "return-post";
+          state.draft = values;
+          draw();
+          Promise.resolve().then(function () { return cloud.postRide(values); }).then(function (result) {
+            state.busy = false;
+            state.busyAction = "";
+            if (!result || result.ok === false) {
+              state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
+              state.draft = values;
+              openMemberModal(result);
+            } else {
+              saveProfile(values.name, values.phone);
+              saveRecentRoute(values.from, values.to);
+              state = postedFromServer(state, result, values, when.departAt);
+            }
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not post. Check the connection and try again." });
+            state.draft = values;
+            draw();
+          });
+        }
+      });
+      sheet.appendChild(postBtn);
+      return sheet;
+    }
+
+    function managePassengersSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const ride = state.ride || {};
+      const departed = !!(ride.departAt && Date.now() >= ride.departAt);
+      const riders = ride.riders || [];
+      if (state.driverSheet === "passengers-add") {
+        const draft = state.reserveDraft || {};
+        const maxAdd = Math.max(1, Math.min(6, Number(ride.seatsLeft) || 1));
+        sheet.appendChild(el(doc, "p", "", "Add passenger"));
+        sheet.appendChild(el(doc, "label", "lbl", "Passenger name"));
+        const nameIn = el(doc, "input");
+        nameIn.name = "name";
+        nameIn.value = draft.name || "";
+        if (state.error && state.field === "name") nameIn.className = "input-invalid";
+        sheet.appendChild(nameIn);
+        if (state.error && state.field === "name") sheet.appendChild(el(doc, "p", "error", state.error));
+        sheet.appendChild(el(doc, "label", "lbl", "Passenger phone (US/Canada)"));
+        const phoneIn = el(doc, "input");
+        phoneIn.name = "phone";
+        phoneIn.type = "tel";
+        phoneIn.value = draft.phone || "";
+        if (state.error && state.field === "phone") phoneIn.className = "input-invalid";
+        sheet.appendChild(phoneIn);
+        if (state.error && state.field === "phone") sheet.appendChild(el(doc, "p", "error", state.error));
+        if (maxAdd > 1) {
+          sheet.appendChild(el(doc, "label", "lbl", "Seats"));
+          buildSeatStepper(doc, sheet, "seats", 1, maxAdd, draft.seats || 1, function (v) {
+            return v === 1 ? "1 seat" : v + " seats";
+          });
+        }
+        sheet.appendChild(el(doc, "label", "lbl", "Drop off location, optional"));
+        const dropIn = el(doc, "input");
+        dropIn.name = "dropoff";
+        dropIn.type = "text";
+        dropIn.placeholder = "e.g. University City";
+        dropIn.value = draft.dropoff || "";
+        sheet.appendChild(dropIn);
+        if (state.error && state.field !== "name" && state.field !== "phone") sheet.appendChild(el(doc, "p", "error", state.error));
+        const backBtn = el(doc, "button", "textish", "Back");
+        backBtn.type = "button";
+        if (state.busy) backBtn.disabled = true;
+        on(backBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "driver-sheet", which: "passengers" }), { reserveDraft: null }); draw(); });
+        sheet.appendChild(backBtn);
+        const addSaveBtn = el(doc, "button", "confirm-primary");
+        addSaveBtn.type = "button";
+        spinText(doc, addSaveBtn, state.busy && state.busyAction === "add-pax", "Adding…", "Confirm passenger", false);
+        on(addSaveBtn, "click", function () {
+          if (!cloud || !state.ride) return;
+          const values = {};
+          sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
+          const errors = core.reserveErrors(values);
+          if (errors.error) {
+            state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+            state.reserveDraft = values;
+            draw();
+            return;
+          }
+          state.busy = true;
+          state.busyAction = "add-pax";
+          state.reserveDraft = values;
+          draw();
+          cloud.reserveSeat(state.ride.rideId, values, { skipSaveSeat: true }).then(function (result) {
+            state.busy = false;
+            state.busyAction = "";
+            if (!result || result.ok === false) {
+              state = ui.reduce(state, { type: "fail", error: (result && result.error) || "Could not add passenger. Check the connection and try again." });
+              state.reserveDraft = values;
+            } else {
+              const bookedSeats = Number(values.seats || 1);
+              const existingRiders = state.ride.riders || [];
+              const alreadyListed = result.reservationId && existingRiders.some(function (r) { return r.reservationId === result.reservationId; });
+              const nextSeatsLeft = result.seatsLeft != null ? Number(result.seatsLeft) : Math.max(0, Number(state.ride.seatsLeft || 1) - bookedSeats);
+              const updatedRide = Object.assign({}, state.ride, {
+                seatsLeft: nextSeatsLeft,
+                riders: alreadyListed ? existingRiders : existingRiders.concat([{ reservationId: result.reservationId, name: values.name, seats: bookedSeats, dropoff: values.dropoff || "", driverSeenAt: Date.now(), status: "active" }])
+              });
+              state = Object.assign(ui.reduce(state, { type: "ride", ride: updatedRide, role: "driver" }), {
+                ride: updatedRide,
+                rides: state.rides || [],
+                reserveDraft: null,
+                when: state.when,
+                link: state.link,
+                notice: "Passenger added."
+              });
+            }
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not add passenger. Check the connection and try again." });
+            draw();
+          });
+        });
+        sheet.appendChild(addSaveBtn);
+        return sheet;
+      }
+      sheet.appendChild(el(doc, "p", "", "Manage passengers"));
+      const menu = el(doc, "div", "sheet-menu");
+      if (state.status === "open" && !departed && ride.seatsLeft > 0) {
+        const addBtn = el(doc, "button", "sheet-item", "➕ Add passenger");
+        addBtn.type = "button";
+        on(addBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "driver-sheet", which: "passengers-add" }), { reserveDraft: null }); draw(); });
+        menu.appendChild(addBtn);
+      }
+      riders.forEach(function (rider) {
+        const row = el(doc, "div", "sheet-pax-row");
+        const rName = rider.name || "Passenger";
+        const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : " (1 seat)";
+        row.appendChild(el(doc, "div", "sheet-pax-info", rName + seatSuffix));
+        const paxActs = el(doc, "div", "sheet-pax-actions");
+        if (cloud && cloud.ackRider && rider.reservationId) {
+          paxActs.appendChild(buildAckButton(doc, ride, rider));
+        }
+        if (state.status === "open" && !departed && cloud && cloud.removeRider && rider.reservationId) {
+          const adjBtn = el(doc, "button", "textish", "Adjust / Remove");
+          adjBtn.type = "button";
+          on(adjBtn, "click", function () { state = ui.reduce(state, { type: "remove-ask", rider: rider }); draw(); });
+          paxActs.appendChild(adjBtn);
+        }
+        row.appendChild(paxActs);
+        menu.appendChild(row);
+      });
+      if (!menu.children.length) {
+        sheet.appendChild(el(doc, "p", "muted", "No passengers on this trip yet."));
+      } else {
+        sheet.appendChild(menu);
+      }
+      const closeBtn = el(doc, "button", "textish", "Close");
+      closeBtn.type = "button";
+      on(closeBtn, "click", function () { state = ui.reduce(state, { type: "driver-sheet-close" }); draw(); });
+      sheet.appendChild(closeBtn);
+      return sheet;
+    }
+
+    function returnTripSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const draft = state.draft || {};
+      const head = el(doc, "div", "sheet-head");
+      head.appendChild(el(doc, "p", "", "Post return trip"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      if (state.busy) xBtn.disabled = true;
+      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "driver-sheet-close" }), { draft: null }); draw(); });
+      head.appendChild(xBtn);
+      sheet.appendChild(head);
+      function addField(label, name, type, val, ph) {
+        sheet.appendChild(el(doc, "label", "lbl", label));
+        const inp = el(doc, "input");
+        inp.name = name;
+        if (type) inp.type = type;
+        if (ph) inp.placeholder = ph;
+        inp.value = val || "";
+        if (state.error && state.field === name) inp.className = "input-invalid";
+        sheet.appendChild(inp);
+        if (state.error && state.field === name) sheet.appendChild(el(doc, "p", "error", state.error));
+      }
+      addField("Your name", "name", "text", draft.name);
+      addField("Phone (US/Canada)", "phone", "tel", draft.phone);
+      addField("From", "from", "text", draft.from);
+      addField("To", "to", "text", draft.to);
+      addField("Date", "date", "date", draft.date);
+      addField("Departure time", "time", "time", draft.time);
+      sheet.appendChild(el(doc, "label", "lbl", "Seats"));
+      buildSeatStepper(doc, sheet, "seats", 1, 6, Number(draft.seats || 3), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
+      addField("Pickup note, optional", "note", "text", draft.note, "e.g. Meet by North entrance");
+      addField("Ride cost per seat (optional, $)", "rideCost", "number", draft.rideCost, "0");
+      if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
+      const postBtn = el(doc, "button", "confirm-primary");
+      postBtn.type = "button";
+      postBtn.style.width = "100%";
+      spinText(doc, postBtn, state.busy && state.busyAction === "return-post", "Posting…", "Post return trip", false);
+      on(postBtn, "click", function () {
+        const values = { durationMinutes: String(draft.durationMinutes || 60) };
+        sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
+        values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+        const errors = core.postErrors(values);
+        const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
+        if (errors.error) {
+          state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+          state.draft = values;
+          draw();
+        } else if (when.error) {
+          state = ui.reduce(state, { type: "fail", field: "time", error: when.error });
+          state.draft = values;
+          draw();
+        } else if (cloud) {
+          state.busy = true;
+          state.busyAction = "return-post";
+          state.draft = values;
+          draw();
+          Promise.resolve().then(function () { return cloud.postRide(values); }).then(function (result) {
+            state.busy = false;
+            state.busyAction = "";
+            if (!result || result.ok === false) {
+              state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
+              state.draft = values;
+              openMemberModal(result);
+            } else {
+              saveProfile(values.name, values.phone);
+              saveRecentRoute(values.from, values.to);
+              state = postedFromServer(state, result, values, when.departAt);
+            }
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not post. Check the connection and try again." });
+            state.draft = values;
+            draw();
+          });
+        }
+      });
+      sheet.appendChild(postBtn);
       return sheet;
     }
 
@@ -530,6 +1085,32 @@
       return box;
     }
 
+    function buildAckButton(doc, ride, rider) {
+      const seen = !!rider.driverSeenAt;
+      const rName = rider.name || "Passenger";
+      const ackBtn = el(doc, "button", "rider-ack-btn " + (seen ? "seen" : "unseen"), seen ? "✓ Confirmed" : "Tap to confirm");
+      ackBtn.type = "button";
+      ackBtn.setAttribute("title", seen ? "Confirmed — tap to mark pending" : "New rider — tap to confirm");
+      ackBtn.setAttribute("aria-label", seen ? (rName + " confirmed") : ("Confirm " + rName));
+      on(ackBtn, "click", function () {
+        const prevSeen = rider.driverSeenAt || 0;
+        const nextSeen = !prevSeen;
+        rider.driverSeenAt = nextSeen ? Date.now() : 0;
+        draw();
+        Promise.resolve(cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen)).then(function (res) {
+          if (!res || res.ok === false) {
+            rider.driverSeenAt = prevSeen;
+            state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not update rider status." });
+            draw();
+          }
+        }, function () {
+          rider.driverSeenAt = prevSeen;
+          draw();
+        });
+      });
+      return ackBtn;
+    }
+
     function rideCard(doc, current) {
       const ride = current.ride;
       const card = el(doc, "section", "confirm ride-detail");
@@ -561,9 +1142,23 @@
         if (supportNote) secTop.appendChild(supportCard(doc, supportNote));
       }
       if (current.status === "open" && ride.seatsLeft === 0) secTop.appendChild(el(doc, "p", "route", "Full"));
+      if (!current.reserveOpen && current.role === "driver" && (current.status === "open" || current.status === "pending")) {
+        const topActions = el(doc, "div", "action-row");
+        const mTrip = el(doc, "button", "textish", "Manage trip");
+        mTrip.type = "button";
+        on(mTrip, "click", function () { state = ui.reduce(state, { type: "driver-sheet", which: "trip" }); draw(); });
+        topActions.appendChild(mTrip);
+        if (current.status === "open") {
+          const mPax = el(doc, "button", "textish", "Manage passengers");
+          mPax.type = "button";
+          on(mPax, "click", function () { state = ui.reduce(state, { type: "driver-sheet", which: "passengers" }); draw(); });
+          topActions.appendChild(mPax);
+        }
+        secTop.appendChild(topActions);
+      }
       card.appendChild(secTop);
       const secPeople = el(doc, "div", "ride-sec");
-      if (ride.driverName) {
+      if (ride.driverName && current.role !== "driver") {
         const dRow = el(doc, "div", "rider-row");
         dRow.appendChild(el(doc, "span", "mini-av", ride.driverName.charAt(0).toUpperCase()));
         dRow.appendChild(el(doc, "span", "", ride.driverName));
@@ -573,6 +1168,14 @@
       if (ride.riders && ride.riders.length) {
         const totalReserved = ride.riders.reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
         secPeople.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
+        if (current.role === "driver") {
+          const unseenCount = ride.riders.filter(function (r) { return !r.driverSeenAt; }).length;
+          if (unseenCount > 0) {
+            const note = el(doc, "p", "hint", unseenCount === 1 ? "1 new passenger — tap Confirm so they know you saw their seat." : unseenCount + " new passengers — tap Confirm so they know you saw their seats.");
+            note.style.cssText = "margin:0 0 8px;font-size:12.5px;color:#92400e;";
+            secPeople.appendChild(note);
+          }
+        }
         ride.riders.forEach(function (rider) {
           const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : "";
           const dropSuffix = rider.dropoff ? " · Drop off: " + rider.dropoff : "";
@@ -582,27 +1185,7 @@
           rRow.appendChild(el(doc, "span", "", rName + seatSuffix + dropSuffix));
           const seen = !!rider.driverSeenAt;
           if (current.role === "driver" && cloud && cloud.ackRider && rider.reservationId) {
-            const ackBtn = el(doc, "button", "rider-ack-btn " + (seen ? "seen" : "unseen"), seen ? "✓" : "🔔");
-            ackBtn.type = "button";
-            ackBtn.setAttribute("title", seen ? "Seen — tap to mark unseen" : "New rider — tap to mark seen");
-            ackBtn.setAttribute("aria-label", seen ? (rName + " seen") : ("Mark " + rName + " as seen"));
-            on(ackBtn, "click", function () {
-              const prevSeen = rider.driverSeenAt || 0;
-              const nextSeen = !prevSeen;
-              rider.driverSeenAt = nextSeen ? Date.now() : 0;
-              draw();
-              Promise.resolve(cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen)).then(function (res) {
-                if (!res || res.ok === false) {
-                  rider.driverSeenAt = prevSeen;
-                  state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not update rider status." });
-                  draw();
-                }
-              }, function () {
-                rider.driverSeenAt = prevSeen;
-                draw();
-              });
-            });
-            rRow.appendChild(ackBtn);
+            rRow.appendChild(buildAckButton(doc, ride, rider));
           } else {
             rRow.appendChild(el(doc, "span", "rider-ack-pill " + (seen ? "seen" : "unseen"), seen ? "✓ Confirmed" : "⏳ Pending"));
           }
@@ -689,7 +1272,7 @@
         card.appendChild(secRec);
       }
       const msgClosed = !!(ride.departAt && Date.now() >= ride.departAt + ((Number(ride.durationMinutes) || 0) * 60000) + 60 * 60000);
-      if (!current.reserveOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
+      if (!current.reserveOpen && !current.editOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
         let box = null;
         const hasRiders = !!(ride.riders && ride.riders.length);
         if (current.status === "open" && !msgClosed && (current.role === "rider" || hasRiders)) {
@@ -719,28 +1302,7 @@
         const secActions = el(doc, "div", "ride-sec");
         const actions = el(doc, "div", "action-row");
         const departed = !!(ride.departAt && Date.now() >= ride.departAt);
-        if (current.role === "driver") {
-          if (current.status === "open" && !departed && ride.seatsLeft > 0) {
-            const addPax = el(doc, "button", "textish", "Add passenger");
-            on(addPax, "click", function () { state = ui.reduce(state, { type: "reserve-open" }); draw(); });
-            actions.appendChild(addPax);
-          }
-          if (current.status === "open" && departed && hasRiders) {
-            const complete = el(doc, "button", "textish", "Complete trip");
-            on(complete, "click", function () { state = ui.reduce(state, { type: "complete-ask" }); draw(); });
-            actions.appendChild(complete);
-          }
-          if (current.status !== "open" || !msgClosed) {
-            const cancel = el(doc, "button", "textish", "Cancel trip");
-            on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
-            actions.appendChild(cancel);
-          }
-          if (current.status !== "cancelled") {
-            const retBtn = el(doc, "button", "textish", "Post return trip");
-            on(retBtn, "click", function () { stopRide(); startReturnTrip(ride); });
-            actions.appendChild(retBtn);
-          }
-        } else if (cloud && cloud.seatSecretFor(ride) && !departed) {
+        if (current.role !== "driver" && cloud && cloud.seatSecretFor(ride) && !departed) {
           const myInfo = cloud.seatInfoFor ? cloud.seatInfoFor(ride) : null;
           const mySeats = (myInfo && Number(myInfo.seats)) || 1;
           const maxTotal = Math.min(6, mySeats + (Number(ride.seatsLeft) || 0));
@@ -788,7 +1350,7 @@
         if (secActions.children.length) card.appendChild(secActions);
       } else {
         if (secChat.children.length) card.appendChild(secChat);
-        if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
+        if (!current.reserveOpen && !current.editOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
           const secRecBox = el(doc, "div", "ride-sec");
           const recBox = el(doc, "div", "recovery-box");
           const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
@@ -811,7 +1373,7 @@
           card.appendChild(secRecBox);
         }
       }
-      if (current.error && !current.reserveOpen && !current.recovery) card.appendChild(el(doc, "p", "error", current.error));
+      if (current.error && !current.reserveOpen && !current.editOpen && !current.recovery) card.appendChild(el(doc, "p", "error", current.error));
       return card;
     }
 
@@ -859,7 +1421,7 @@
       const prevMsgEl = !state.busy && rootNode.querySelector ? rootNode.querySelector("input[name=message]") : null;
       const unsentMessage = prevMsgEl && prevMsgEl.value ? prevMsgEl.value : "";
       rootNode.textContent = "";
-      const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.recovery));
+      const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.editOpen || state.recovery));
       rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
       const top = el(doc, "header");
       top.id = "jumpin-top";
@@ -1346,6 +1908,21 @@
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
         if (state.role === "driver" && state.status !== "cancelled") {
           const actions = el(doc, "div", "action-row");
+          if (state.ride && (state.status === "open" || state.status === "pending")) {
+            const editPosted = el(doc, "button", "textish", "Edit trip");
+            on(editPosted, "click", function () {
+              const r = state.ride;
+              state = Object.assign(ui.reduce(ui.reduce(state, { type: "ride", ride: r, role: "driver" }), { type: "edit-open" }), {
+                ride: r,
+                rides: state.rides || [],
+                when: state.when,
+                link: state.link,
+                editDraft: null
+              });
+              draw();
+            });
+            actions.appendChild(editPosted);
+          }
           const retBtn = el(doc, "button", "textish", "Post return trip");
           on(retBtn, "click", function () { startReturnTrip(state.ride); });
           actions.appendChild(retBtn);
@@ -1412,6 +1989,7 @@
       if (state.mode === "board" && groupMeta.status && groupMeta.status !== "active") label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
+      if (state.busy && label === "Save changes") label = "Saving…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
       if (state.busy && (label === "Text me a link" || label === "Send message")) label = "Sending…";
       if (label) {
@@ -1605,6 +2183,10 @@
         rootNode.appendChild(mbar);
       }
       if (state.sheet || (state.busy && state.busyAction === "sheet")) rootNode.appendChild(confirmSheet(doc));
+      else if (state.editOpen && state.role === "driver") rootNode.appendChild(editSheet(doc));
+      else if (state.driverSheet === "trip" && state.role === "driver") rootNode.appendChild(manageTripSheet(doc));
+      else if (state.driverSheet === "return" && state.role === "driver") rootNode.appendChild(returnTripSheet(doc));
+      else if ((state.driverSheet === "passengers" || state.driverSheet === "passengers-add") && state.role === "driver") rootNode.appendChild(managePassengersSheet(doc));
       else if (memberModal) rootNode.appendChild(memberSheet(doc));
       else if (installModal) rootNode.appendChild(installSheet(doc));
       applyShell(win, rootNode, state.mode);
@@ -1704,24 +2286,26 @@
       }
     }
 
-    function buildSeatPills(doc, host, name, maxPick, initialVal) {
+    function buildSeatPills(doc, host, name, maxPick, initialVal, minPick) {
       const hidden = el(doc, "input");
       hidden.type = "hidden";
       hidden.name = name;
-      let picked = Number(initialVal || 1);
-      if (!Number.isFinite(picked) || picked < 1 || picked > maxPick) picked = 1;
+      const floor = minPick != null ? Math.max(0, Number(minPick)) : 1;
+      const start = floor === 0 ? 0 : 1;
+      let picked = initialVal != null && initialVal !== "" ? Number(initialVal) : floor;
+      if (!Number.isFinite(picked) || picked < floor || picked > maxPick) picked = floor;
       hidden.value = String(picked);
       const wrap = el(doc, "div", "seat-pills");
-      wrap.style.gridTemplateColumns = "repeat(" + maxPick + ",minmax(0,1fr))";
+      wrap.style.gridTemplateColumns = "repeat(" + Math.max(1, maxPick - start + 1) + ",minmax(0,1fr))";
       const btns = [];
-      for (let n = 1; n <= maxPick; n++) {
+      for (let n = start; n <= maxPick; n++) {
         const b = el(doc, "button", "seat-pill" + (n === picked ? " active" : ""), String(n));
         b.type = "button";
         b.setAttribute("aria-label", n === 1 ? "1 seat" : n + " seats");
         on(b, "click", function () {
           picked = n;
           hidden.value = String(n);
-          btns.forEach(function (btn, idx) { btn.className = "seat-pill" + (idx + 1 === n ? " active" : ""); });
+          btns.forEach(function (btn, idx) { btn.className = "seat-pill" + (start + idx === n ? " active" : ""); });
         });
         btns.push(b);
         wrap.appendChild(b);
@@ -1742,9 +2326,7 @@
       const p = core.partsInZone(roundUp30(baseMs), zone);
       const kept = state.rides || [];
       const saved = loadProfile();
-      state = ui.reduce(state, { type: "post" });
-      state.rides = kept;
-      state.draft = {
+      const draft = {
         name: r.driverName || saved.name || "",
         phone: saved.phone || "",
         from: r.to || "",
@@ -1756,6 +2338,13 @@
         rideCost: r.rideCost ? String(r.rideCost) : "",
         note: r.note || ""
       };
+      if (state.mode === "ride" && state.role === "driver" && r.rideId) {
+        state = ui.reduce(state, { type: "driver-sheet", which: "return" });
+      } else {
+        state = ui.reduce(state, { type: "post" });
+      }
+      state.rides = kept;
+      state.draft = draft;
       draw();
     }
 
@@ -1878,9 +2467,6 @@
 
   function siteFooter(doc, supportNote) {
     const foot = el(doc, "div", "site-foot");
-    if (supportNote) {
-      foot.appendChild(el(doc, "span", "support-foot", "Free community tool — chip in $1–$2 via " + supportNote + " to help cover text costs."));
-    }
     const credit = el(doc, "span", "");
     credit.appendChild(doc.createTextNode("JumpIn by "));
     const wl = el(doc, "a", "", "WaitLink");
@@ -1893,6 +2479,9 @@
       foot.appendChild(link);
     });
     foot.appendChild(el(doc, "span", "spacer", "© 2026 WaitLink"));
+    if (supportNote) {
+      foot.appendChild(el(doc, "span", "support-foot", "Free community tool — chip in $1–$2 via " + supportNote + " to help cover text costs."));
+    }
     return foot;
   }
 
