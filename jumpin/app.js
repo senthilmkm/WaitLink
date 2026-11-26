@@ -817,6 +817,7 @@
             return [ride.from, ride.to, ride.driverName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
           });
           if (!shown.length) {
+            if (groupMeta.status && groupMeta.status !== "active") return;
             const empty = el(doc, "div", "empty");
             const filtered = !!(q || boardDateFilter !== "all");
             empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
@@ -1148,6 +1149,7 @@
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
       if (!label && state.mode === "ride") label = "Close";
+      if (state.mode === "board" && groupMeta.status && groupMeta.status !== "active") label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
@@ -1304,7 +1306,7 @@
           }
           draw();
         });
-        if (state.busy || (state.mode === "board" && groupMeta.status && groupMeta.status !== "active")) button.disabled = true;
+        if (state.busy) button.disabled = true;
         button.className = state.mode === "board" ? "cta" : "";
         if (state.mode === "board" && hero) hero.appendChild(button);
         else bottom.appendChild(button);
