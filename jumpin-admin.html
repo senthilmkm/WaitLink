@@ -313,7 +313,7 @@
           </div>
           <div class="admin-settings-grid">
             <label>Name<input id="jumpin-member-name" placeholder="Alex"></label>
-            <label>Phone<input id="jumpin-member-phone" type="tel" placeholder="555 234 5678"><span style="display:block;font-weight:400;font-size:12px;color:#64748b;margin-top:4px;">US/Canada 10-digit mobile &mdash; spaces, dashes, (555), or +1 ok</span></label>
+            <label>Phone<input id="jumpin-member-phone" type="tel" placeholder="555 234 5678"><span style="display:block;font-weight:400;font-size:12px;color:#64748b;margin-top:4px;">US/Canada 10-digit mobile &mdash; spaces, dashes, (555), or +1 ok</span><span class="admin-field-err" id="jumpin-err-member-phone" hidden></span></label>
           </div>
           <button type="button" class="admin-btn primary" id="jumpin-member-add">Add member</button>
         </div>
@@ -324,6 +324,7 @@
           </div>
           <label>One per line: <code>Name, 555 234 5678</code> or just <code>555 234 5678</code>
             <textarea id="jumpin-member-bulk" rows="3" placeholder="Alex, 555-234-5678&#10;Sam, 555-987-6543"></textarea>
+            <span class="admin-field-err" id="jumpin-err-member-bulk" hidden></span>
           </label>
           <button type="button" class="admin-btn primary" id="jumpin-member-import">Import list</button>
         </div>
@@ -644,9 +645,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125y"></script>
-  <script src="/jumpin/cloud.js?v=20261125y"></script>
-  <script src="/jumpin/admin-state.js?v=20261125y"></script>
-  <script src="/jumpin-admin.js?v=20261125y"></script>
+  <script src="/jumpin/core.js?v=20261125z"></script>
+  <script src="/jumpin/cloud.js?v=20261125z"></script>
+  <script src="/jumpin/admin-state.js?v=20261125z"></script>
+  <script src="/jumpin-admin.js?v=20261125z"></script>
 </body>
 </html>

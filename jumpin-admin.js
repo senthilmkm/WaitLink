@@ -299,7 +299,7 @@
     const blockRideAct = function (ride) {
       const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" ");
       return { label: "Block", tone: "warn", onClick: function () {
-        askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips.", "Block driver", function () {
+        askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips. No SMS will be sent to the driver.", "Block driver", function () {
           return cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
         });
       } };
@@ -1292,6 +1292,17 @@
         });
       });
       let memberActionPanel = "";
+      function setInlineError(inputId, errId, msg) {
+        const inp = page.getElementById(inputId);
+        const errEl = page.getElementById(errId);
+        const hasErr = !!msg;
+        if (errEl) { errEl.textContent = msg || ""; errEl.hidden = !hasErr; }
+        if (inp && inp.classList) {
+          if (hasErr) inp.classList.add("admin-input-invalid");
+          else inp.classList.remove("admin-input-invalid");
+        }
+        return hasErr ? inp : null;
+      }
       function setMemberPanel(mode) {
         memberActionPanel = mode === memberActionPanel ? "" : (mode || "");
         const addPanel = page.getElementById("jumpin-add-member-panel");
@@ -1302,6 +1313,8 @@
         if (bulkPanel) bulkPanel.hidden = memberActionPanel !== "bulk";
         if (openAddBtn) openAddBtn.className = "admin-btn" + (memberActionPanel === "bulk" ? "" : " primary");
         if (openBulkBtn) openBulkBtn.className = "admin-btn" + (memberActionPanel === "bulk" ? " primary" : "");
+        setInlineError("jumpin-member-phone", "jumpin-err-member-phone", "");
+        setInlineError("jumpin-member-bulk", "jumpin-err-member-bulk", "");
         if (memberActionPanel === "add") {
           const n = page.getElementById("jumpin-member-name");
           if (n && n.focus) n.focus();
@@ -1314,6 +1327,10 @@
       const openBulkImport = page.getElementById("jumpin-open-bulk-import");
       const cancelAddMember = page.getElementById("jumpin-add-member-cancel");
       const cancelBulkImport = page.getElementById("jumpin-bulk-import-cancel");
+      const memberPhoneIn = page.getElementById("jumpin-member-phone");
+      const memberBulkIn = page.getElementById("jumpin-member-bulk");
+      if (memberPhoneIn) memberPhoneIn.addEventListener("input", function () { setInlineError("jumpin-member-phone", "jumpin-err-member-phone", ""); });
+      if (memberBulkIn) memberBulkIn.addEventListener("input", function () { setInlineError("jumpin-member-bulk", "jumpin-err-member-bulk", ""); });
       if (openAddMember) openAddMember.addEventListener("click", function () { setMemberPanel("add"); });
       if (openBulkImport) openBulkImport.addEventListener("click", function () { setMemberPanel("bulk"); });
       if (cancelAddMember) cancelAddMember.addEventListener("click", function () { setMemberPanel(""); });
@@ -1322,10 +1339,21 @@
       if (addMember && api && api.setMembers) addMember.addEventListener("click", function () {
         const nameNode = page.getElementById("jumpin-member-name");
         const phoneNode = page.getElementById("jumpin-member-phone");
+        const phoneVal = phoneNode ? phoneNode.value : "";
+        const c = win.JumpInCore;
+        const parsed = c && c.normalizePhone ? c.normalizePhone(phoneVal) : { ok: phoneVal.replace(/\D/g, "").length >= 10, error: "Enter a US or Canada mobile number." };
+        if (!parsed.ok) {
+          const bad = setInlineError("jumpin-member-phone", "jumpin-err-member-phone", parsed.error || "Enter a US or Canada mobile number.");
+          if (bad && bad.focus) bad.focus();
+          return;
+        }
+        setInlineError("jumpin-member-phone", "jumpin-err-member-phone", "");
         withBusy(page, addMember, "Adding…", function () {
-          return api.setMembers({ groupId: activeGroupId, name: nameNode ? nameNode.value : "", phone: phoneNode ? phoneNode.value : "" }).then(function (res) {
-            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not add member." });
-            else {
+          return api.setMembers({ groupId: activeGroupId, name: nameNode ? nameNode.value : "", phone: phoneVal }).then(function (res) {
+            if (!res || res.ok === false) {
+              const bad = setInlineError("jumpin-member-phone", "jumpin-err-member-phone", (res && res.error) || "Could not add member.");
+              if (bad && bad.focus) bad.focus();
+            } else {
               if (nameNode) nameNode.value = "";
               if (phoneNode) phoneNode.value = "";
               setMemberPanel("");
@@ -1339,10 +1367,19 @@
       const importMembers = page.getElementById("jumpin-member-import");
       if (importMembers && api && api.setMembers) importMembers.addEventListener("click", function () {
         const bulkNode = page.getElementById("jumpin-member-bulk");
+        const bulkVal = bulkNode ? bulkNode.value : "";
+        if (!bulkVal.trim()) {
+          const bad = setInlineError("jumpin-member-bulk", "jumpin-err-member-bulk", "Paste at least one name and US/Canada phone number.");
+          if (bad && bad.focus) bad.focus();
+          return;
+        }
+        setInlineError("jumpin-member-bulk", "jumpin-err-member-bulk", "");
         withBusy(page, importMembers, "Importing…", function () {
-          return api.setMembers({ groupId: activeGroupId, bulk: bulkNode ? bulkNode.value : "" }).then(function (res) {
-            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not import members." });
-            else {
+          return api.setMembers({ groupId: activeGroupId, bulk: bulkVal }).then(function (res) {
+            if (!res || res.ok === false) {
+              const bad = setInlineError("jumpin-member-bulk", "jumpin-err-member-bulk", (res && res.error) || "Could not import members.");
+              if (bad && bad.focus) bad.focus();
+            } else {
               if (bulkNode) bulkNode.value = "";
               setMemberPanel("");
               state = admin.reduce(state, { type: "clear" });
@@ -1390,11 +1427,11 @@
         if (!m || (!m.phoneE164 && !m._isBlocked)) return;
         if (editModal) editModal.hidden = true;
         if (m._isBlocked) {
-          askConfirm(page, "Unblock member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will be able to post new trips again.", "Unblock", function () {
+          askConfirm(page, "Unblock member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will be able to post new trips again. No SMS will be sent to the member.", "Unblock", function () {
             return api.setPosting({ groupId: activeGroupId, phoneHash: m.phoneHash, blocked: false }).then(refresh);
           });
         } else {
-          askConfirm(page, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
+          askConfirm(page, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips. No SMS will be sent to the member.", "Block", function () {
             return api.setPosting({ groupId: activeGroupId, phone: m.phoneE164, name: m.name || "", blocked: true }).then(refresh);
           });
         }
