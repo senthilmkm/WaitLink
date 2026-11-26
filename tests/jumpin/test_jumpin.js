@@ -1874,6 +1874,13 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   assert.ok(openedInfo.querySelectorAll("a").some(function (a) { return a.textContent === "FAQ" && a.href === "/jumpin-faq.html"; }));
   openedInfo.querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
   assert.strictEqual(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }), undefined);
+  // Sub-screen native header titles
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  assert.strictEqual(mounted.root.children[0].children[1].textContent, "Post a ride");
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "" }), { ride: futureRide, when: "Soon" }));
+  assert.strictEqual(mounted.root.children[0].children[1].textContent, "Trip details");
+  mounted.setState(Object.assign(ui.blank(), { mode: "posted", route: "A → B", when: "Soon", seatsText: "2 seats left" }));
+  assert.strictEqual(mounted.root.children[0].children[1].textContent, "Trip posted");
   view.destroy();
 });
 
