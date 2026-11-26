@@ -46,6 +46,8 @@
     input, textarea { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
     input:hover, textarea:hover, select:hover { border-color: #94a3b8; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(8,145,178,.14); }
+    .admin-input-invalid { border-color: #dc2626 !important; background: #fef2f2 !important; box-shadow: 0 0 0 3px rgba(220,38,38,.12) !important; }
+    .admin-field-err { display: block; color: #dc2626; font-size: 12.5px; font-weight: 600; margin-top: 4px; }
     select:disabled { opacity: .55; cursor: not-allowed; background: #f1f5f9; }
     button { min-height: 40px; font-size: 14px; font-family: inherit; }
     button.filled { width: 100%; min-height: 46px; border: 0; border-radius: 11px; background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(8,145,178,.24); transition: transform .12s, box-shadow .15s, filter .15s; }
@@ -409,10 +411,10 @@
           <summary>Create Neighborhood Group</summary>
           <p class="quiet" style="margin-bottom:12px;">Create an isolated JumpIn carpool board for your neighborhood, school, or community. New organizer requests start pending until platform approval.</p>
           <div class="admin-settings-grid">
-            <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"></label>
-            <label title="Short web address ID for your group's private board (lowercase letters, numbers, and dashes only). Example: entering 'ballantyne' creates your shareable link waitlink.app/?s=jumpin&amp;g=ballantyne."><span class="tip">Group URL Slug</span><input id="jumpin-group-slug" type="text" maxlength="32" placeholder="e.g. ballantyne"><span id="jumpin-group-slug-preview" style="display:block;font-weight:400;font-size:12px;color:#64748b;margin-top:4px;">Used in your private link, e.g. <code>waitlink.app/?s=jumpin&amp;g=ballantyne</code></span></label>
-            <label>Contact Email<input id="jumpin-group-email" type="email" placeholder="organizer@email.com"></label>
-            <label>Organizer Phone (required, US/Canada)<input id="jumpin-group-phone" type="tel" placeholder="555 234 5678"></label>
+            <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"><span class="admin-field-err" id="jumpin-err-group-name" hidden></span></label>
+            <label title="Short web address ID for your group's private board (lowercase letters, numbers, and dashes only). Example: entering 'ballantyne' creates your shareable link waitlink.app/?s=jumpin&amp;g=ballantyne."><span class="tip">Group URL Slug</span><input id="jumpin-group-slug" type="text" maxlength="32" placeholder="e.g. ballantyne"><span id="jumpin-group-slug-preview" style="display:block;font-weight:400;font-size:12px;color:#64748b;margin-top:4px;">Used in your private link, e.g. <code>waitlink.app/?s=jumpin&amp;g=ballantyne</code></span><span class="admin-field-err" id="jumpin-err-group-slug" hidden></span></label>
+            <label>Contact Email<input id="jumpin-group-email" type="email" placeholder="organizer@email.com"><span class="admin-field-err" id="jumpin-err-group-email" hidden></span></label>
+            <label>Organizer Phone (required, US/Canada)<input id="jumpin-group-phone" type="tel" placeholder="555 234 5678"><span class="admin-field-err" id="jumpin-err-group-phone" hidden></span></label>
             <label>Members Only
               <select id="jumpin-group-members-only">
                 <option value="yes">Yes (recommended)</option>
@@ -601,9 +603,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125h"></script>
-  <script src="/jumpin/cloud.js?v=20261125h"></script>
-  <script src="/jumpin/admin-state.js?v=20261125h"></script>
-  <script src="/jumpin-admin.js?v=20261125h"></script>
+  <script src="/jumpin/core.js?v=20261125i"></script>
+  <script src="/jumpin/cloud.js?v=20261125i"></script>
+  <script src="/jumpin/admin-state.js?v=20261125i"></script>
+  <script src="/jumpin-admin.js?v=20261125i"></script>
 </body>
 </html>

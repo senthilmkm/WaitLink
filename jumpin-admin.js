@@ -895,13 +895,40 @@
       });
       const grpName = page.getElementById("jumpin-group-name");
       const grpSlug = page.getElementById("jumpin-group-slug");
+      const grpEmail = page.getElementById("jumpin-group-email");
+      const grpPhone = page.getElementById("jumpin-group-phone");
       const slugPreview = page.getElementById("jumpin-group-slug-preview");
+      const groupFieldMap = {
+        name: ["jumpin-group-name", "jumpin-err-group-name"],
+        groupId: ["jumpin-group-slug", "jumpin-err-group-slug"],
+        contactEmail: ["jumpin-group-email", "jumpin-err-group-email"],
+        contactPhone: ["jumpin-group-phone", "jumpin-err-group-phone"]
+      };
+      function setGroupFieldError(field, message) {
+        const pair = groupFieldMap[field];
+        if (!pair) return null;
+        const inp = page.getElementById(pair[0]);
+        const err = page.getElementById(pair[1]);
+        if (inp) {
+          if (message) { inp.classList.add("admin-input-invalid"); inp.setAttribute("aria-invalid", "true"); }
+          else { inp.classList.remove("admin-input-invalid"); inp.removeAttribute("aria-invalid"); }
+        }
+        if (err) {
+          err.textContent = message || "";
+          err.hidden = !message;
+        }
+        return inp;
+      }
+      function clearGroupFieldErrors() {
+        Object.keys(groupFieldMap).forEach(function (k) { setGroupFieldError(k, ""); });
+      }
       function syncSlugPreview() {
         if (!slugPreview) return;
         const val = grpSlug && grpSlug.value ? grpSlug.value.trim() : "";
         slugPreview.textContent = val ? ("Your link: waitlink.app/?s=jumpin&g=" + val) : "Used in your private link, e.g. waitlink.app/?s=jumpin&g=ballantyne";
       }
       if (grpName && grpSlug) grpName.addEventListener("input", function () {
+        setGroupFieldError("name", "");
         if (!grpSlug.dataset || !grpSlug.dataset.edited) {
           let s = String(grpName.value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
           if (s.length > 20) {
@@ -910,26 +937,50 @@
             s = (dash >= 4 ? cut.slice(0, dash) : cut).replace(/-+$/g, "");
           }
           grpSlug.value = s;
+          setGroupFieldError("groupId", "");
           syncSlugPreview();
         }
       });
       if (grpSlug) grpSlug.addEventListener("input", function () {
         if (grpSlug.dataset) grpSlug.dataset.edited = "1";
+        setGroupFieldError("groupId", "");
         syncSlugPreview();
       });
+      if (grpEmail) grpEmail.addEventListener("input", function () { setGroupFieldError("contactEmail", ""); });
+      if (grpPhone) grpPhone.addEventListener("input", function () { setGroupFieldError("contactPhone", ""); });
       const grpCreate = page.getElementById("jumpin-group-create");
       if (grpCreate && api && api.createGroup) grpCreate.addEventListener("click", function () {
+        clearGroupFieldErrors();
         const payload = {
-          name: grpName ? grpName.value : "",
-          groupId: grpSlug ? grpSlug.value : "",
-          contactEmail: (page.getElementById("jumpin-group-email") || {}).value || "",
-          contactPhone: (page.getElementById("jumpin-group-phone") || {}).value || "",
+          name: grpName ? grpName.value.trim() : "",
+          groupId: grpSlug ? grpSlug.value.trim().toLowerCase() : "",
+          contactEmail: grpEmail ? grpEmail.value.trim() : "",
+          contactPhone: grpPhone ? grpPhone.value.trim() : "",
           membersOnly: ((page.getElementById("jumpin-group-members-only") || {}).value || "yes") === "yes"
         };
+        const c = win.JumpInCore;
+        let firstBad = null;
+        if (!payload.name) firstBad = firstBad || setGroupFieldError("name", "Enter a community or group name.");
+        const slugMsg = c && c.groupSlugError ? c.groupSlugError(payload.groupId) : (!/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(payload.groupId) ? "Enter a 3–32 character slug (letters, numbers, and dashes)." : "");
+        if (slugMsg) firstBad = setGroupFieldError("groupId", slugMsg) && (firstBad || page.getElementById("jumpin-group-slug"));
+        const emailOk = c && c.cleanEmail ? !!c.cleanEmail(payload.contactEmail) : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.contactEmail);
+        if (!emailOk) firstBad = setGroupFieldError("contactEmail", "Enter a valid contact email.") && (firstBad || page.getElementById("jumpin-group-email"));
+        const phoneParsed = c && c.normalizePhone ? c.normalizePhone(payload.contactPhone) : { ok: payload.contactPhone.replace(/\D/g, "").length >= 10, error: "Enter a valid 10-digit US/Canada mobile number." };
+        if (!phoneParsed.ok) firstBad = setGroupFieldError("contactPhone", phoneParsed.error || "Enter a valid 10-digit US/Canada mobile number.") && (firstBad || page.getElementById("jumpin-group-phone"));
+        if (firstBad) {
+          if (firstBad.focus) firstBad.focus();
+          return;
+        }
         withBusy(page, grpCreate, "Creating…", function () {
           return api.createGroup(payload).then(function (res) {
-            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not create group." });
-            else {
+            if (!res || res.ok === false) {
+              if (res && res.field && groupFieldMap[res.field]) {
+                const elBad = setGroupFieldError(res.field, res.error || "Check this field.");
+                if (elBad && elBad.focus) elBad.focus();
+              } else {
+                state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not create group." });
+              }
+            } else {
               activeGroupId = res.group && res.group.groupId ? res.group.groupId : activeGroupId;
               state = admin.reduce(state, { type: "clear" });
               const baseStatus = res.group && res.group.status === "pending" ? "Group requested — waiting for platform approval." : "Group created and active.";
@@ -991,6 +1042,7 @@
         if (navGuide && !user) navGuide.hidden = true;
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
         if (user) {
+          if (grpEmail && !grpEmail.value && user.email) grpEmail.value = user.email;
           switchTab(activeTab);
           if (createBox && activeTab === "groups") createBox.open = true;
           refresh();
