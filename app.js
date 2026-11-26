@@ -8,7 +8,7 @@ const DEFAULT_FIREBASE_CONFIG = {
   messagingSenderId: "397413980014"
 };
 
-const SUPERADMIN_EMAIL = SECRETS.SUPERADMIN_EMAIL || "";
+const SUPERADMIN_EMAIL = (typeof window !== "undefined" && window.WAITLINK_SECRETS && window.WAITLINK_SECRETS.SUPERADMIN_EMAIL) || "";
 const SUPERADMIN_HASH = "48f4ac61a225334630d84b85b691b2fec47cb543b4bb17e48223e77feccb83d5";
 const _superHashCache = {};
 function refreshSuperHash(email) {
