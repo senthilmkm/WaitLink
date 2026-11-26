@@ -612,6 +612,17 @@
         grpConfirm.hidden = false;
         if (shouldScroll && grpConfirm.scrollIntoView) grpConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+      function setCreateGroupOpen(open) {
+        const cSec = page.getElementById("jumpin-create-group-section");
+        const newBtn = page.getElementById("jumpin-new-group-btn");
+        const cancelBtn = page.getElementById("jumpin-create-group-cancel");
+        const groups = groupsData.groups || [];
+        const hasPendingBlock = !groupsData.isSuperAdmin && groups.some(function (g) { return g.status === "pending"; });
+        const isOpen = !!open && !hasPendingBlock;
+        if (cSec) cSec.hidden = !isOpen;
+        if (newBtn) newBtn.hidden = isOpen || hasPendingBlock;
+        if (cancelBtn) cancelBtn.hidden = !groups.length;
+      }
       function paintGroups() {
         const listNode = page.getElementById("jumpin-groups-list");
         const countNode = page.getElementById("jumpin-groups-count");
@@ -626,13 +637,15 @@
         if (platOpenBtn) platOpenBtn.hidden = !groupsData.isSuperAdmin;
         if (!groupsData.isSuperAdmin && platformViewOpen) showPlatformView(false);
         const pendingGrp = !groupsData.isSuperAdmin ? groups.find(function (g) { return g.status === "pending"; }) : null;
-        const createSection = page.getElementById("jumpin-create-group-section");
-        if (createSection) createSection.hidden = !!pendingGrp;
         if (pendingGrp) {
-          const mBox = page.getElementById("jumpin-manage-groups-box");
-          if (mBox) mBox.open = true;
+          setCreateGroupOpen(false);
           showGroupConfirmCard(pendingGrp, true, false, false, true);
         } else {
+          if (!groups.length) setCreateGroupOpen(true);
+          else {
+            const cSec = page.getElementById("jumpin-create-group-section");
+            setCreateGroupOpen(cSec ? !cSec.hidden : false);
+          }
           const grpAnother = page.getElementById("jumpin-group-another");
           if (grpAnother) grpAnother.hidden = false;
           const grpConfirm = page.getElementById("jumpin-group-confirm");
@@ -772,8 +785,6 @@
             if (ids.length && ids.indexOf(activeGroupId) === -1) activeGroupId = ids[0];
             if (!hasActiveAccess) {
               showGroupsView(true);
-              const createBox = page.getElementById("jumpin-create-group-box");
-              if (createBox) createBox.open = true;
             } else if (groupsViewOpen) {
               showGroupsView(true);
             }
@@ -1021,12 +1032,16 @@
       const grpCreate = page.getElementById("jumpin-group-create");
       const grpConfirm = page.getElementById("jumpin-group-confirm");
       const grpAnother = page.getElementById("jumpin-group-another");
-      if (grpAnother) grpAnother.addEventListener("click", function () {
+      const grpNewBtn = page.getElementById("jumpin-new-group-btn");
+      const grpCancelBtn = page.getElementById("jumpin-create-group-cancel");
+      function openCreateGroupForm() {
         if (grpConfirm) grpConfirm.hidden = true;
-        const cBox = page.getElementById("jumpin-create-group-box");
-        if (cBox) cBox.open = true;
+        setCreateGroupOpen(true);
         if (grpName && grpName.focus) grpName.focus();
-      });
+      }
+      if (grpAnother) grpAnother.addEventListener("click", openCreateGroupForm);
+      if (grpNewBtn) grpNewBtn.addEventListener("click", openCreateGroupForm);
+      if (grpCancelBtn) grpCancelBtn.addEventListener("click", function () { setCreateGroupOpen(false); });
       if (grpCreate && api && api.createGroup) grpCreate.addEventListener("click", function () {
         clearGroupFieldErrors();
         const payload = {
@@ -1072,12 +1087,7 @@
               }
               if (grpPhone) grpPhone.value = "";
               syncSlugPreview();
-              const cBox = page.getElementById("jumpin-create-group-box");
-              if (cBox) cBox.open = false;
-              const cSec = page.getElementById("jumpin-create-group-section");
-              if (cSec) cSec.hidden = isPending && !groupsData.isSuperAdmin;
-              const mBox = page.getElementById("jumpin-manage-groups-box");
-              if (mBox) mBox.open = true;
+              setCreateGroupOpen(false);
               showGroupConfirmCard({
                 name: gObj.name || payload.name,
                 groupId: gObj.groupId || payload.groupId
@@ -1142,7 +1152,6 @@
           if (grpEmail && !grpEmail.value && user.email) grpEmail.value = user.email;
           if (groupsViewOpen) {
             showGroupsView(true);
-            if (createBox) createBox.open = true;
           } else {
             switchTab(activeTab);
           }

@@ -406,15 +406,6 @@
       </section>
     </div>
     <div id="jumpin-tab-groups" hidden>
-      <section id="jumpin-groups-header" style="padding:14px 18px;">
-        <div class="admin-card-top" style="align-items:center;margin-bottom:0;">
-          <div>
-            <h2 style="margin:0 0 2px;">My Groups</h2>
-            <p class="quiet">Create a neighborhood carpool board or manage your existing groups.</p>
-          </div>
-          <button type="button" class="admin-btn" id="jumpin-groups-back">← Back to Console</button>
-        </div>
-      </section>
       <section id="jumpin-group-confirm" hidden style="background:linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%);border:1px solid #86efac;border-top:3px solid #059669;">
         <div class="admin-card-top" style="align-items:center;">
           <div>
@@ -425,9 +416,22 @@
           <button type="button" class="admin-btn" id="jumpin-group-another">+ Request Another Group</button>
         </div>
       </section>
-      <section id="jumpin-create-group-section">
-        <details class="admin-collapse" id="jumpin-create-group-box">
-          <summary>Create Neighborhood Group</summary>
+      <section id="jumpin-groups-main">
+        <div class="admin-card-top" style="flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <div>
+            <h2 style="margin:0 0 2px;">My Groups</h2>
+            <p class="quiet">Create a neighborhood carpool board or manage your existing groups.</p>
+          </div>
+          <div class="admin-actions" style="margin-top:0;">
+            <button type="button" class="admin-btn primary" id="jumpin-new-group-btn">+ New Group</button>
+            <button type="button" class="admin-btn" id="jumpin-groups-back">← Back to Console</button>
+          </div>
+        </div>
+        <div id="jumpin-create-group-section" hidden style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;">
+          <div class="admin-card-top" style="align-items:center;margin-bottom:6px;">
+            <h3 style="margin:0;">Create Neighborhood Group</h3>
+            <button type="button" class="admin-btn" id="jumpin-create-group-cancel">Cancel</button>
+          </div>
           <p class="quiet" style="margin-bottom:12px;">Create an isolated JumpIn carpool board for your neighborhood, school, or community. New organizer requests start pending until platform approval.</p>
           <div class="admin-settings-grid">
             <label>Community / Group Name<input id="jumpin-group-name" type="text" maxlength="50" placeholder="e.g. Ballantyne Neighbors"><span class="admin-field-err" id="jumpin-err-group-name" hidden></span></label>
@@ -442,14 +446,9 @@
             </label>
           </div>
           <button type="button" class="filled" id="jumpin-group-create">Request Group</button>
-        </details>
-      </section>
-      <section>
-        <details class="admin-collapse" id="jumpin-manage-groups-box">
-          <summary>Manage Groups</summary>
-          <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
-          <div id="jumpin-groups-list" class="admin-list quiet"></div>
-        </details>
+        </div>
+        <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
+        <div id="jumpin-groups-list" class="admin-list quiet"></div>
       </section>
     </div>
     <div id="jumpin-platform-view" hidden>
@@ -622,9 +621,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125l"></script>
-  <script src="/jumpin/cloud.js?v=20261125l"></script>
-  <script src="/jumpin/admin-state.js?v=20261125l"></script>
-  <script src="/jumpin-admin.js?v=20261125l"></script>
+  <script src="/jumpin/core.js?v=20261125m"></script>
+  <script src="/jumpin/cloud.js?v=20261125m"></script>
+  <script src="/jumpin/admin-state.js?v=20261125m"></script>
+  <script src="/jumpin-admin.js?v=20261125m"></script>
 </body>
 </html>
