@@ -190,19 +190,23 @@
     modal.hidden = false;
   }
 
+  let editingMember = null;
   function openEditMemberModal(doc, member) {
     const modal = doc.getElementById("jumpin-edit-member-modal");
     if (!modal || !member) return;
+    editingMember = member;
     editingMemberHash = member.phoneHash || "";
     const nameIn = doc.getElementById("jumpin-edit-member-name");
     const phoneIn = doc.getElementById("jumpin-edit-member-phone");
     const emailIn = doc.getElementById("jumpin-edit-member-email");
     const adminIn = doc.getElementById("jumpin-edit-member-admin");
+    const blockBtn = doc.getElementById("jumpin-edit-member-block");
     const errNode = doc.getElementById("jumpin-edit-member-error");
     if (nameIn) nameIn.value = member.name || "";
     if (phoneIn) phoneIn.value = member.phoneE164 ? String(member.phoneE164).replace(/^\+1/, "") : "";
     if (emailIn) emailIn.value = member.email || "";
     if (adminIn) adminIn.checked = !!member.isAdmin;
+    if (blockBtn) blockBtn.hidden = !!member.isAdmin || !member.phoneE164;
     if (errNode) {
       errNode.textContent = "";
       errNode.hidden = true;
@@ -422,18 +426,6 @@
         const btns = el(doc, "div", "admin-actions");
         btns.style.marginTop = "0";
         btns.appendChild(pillBtn(doc, "Edit", "", function () { openEditMemberModal(doc, m); }));
-        if (cloud.setPosting && m.phoneE164 && !adminFlag) {
-          btns.appendChild(pillBtn(doc, "Block", "warn", function () {
-            askConfirm(doc, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
-              return cloud.setPosting({ phone: m.phoneE164, name: m.name || "", blocked: true }).then(cloud.refresh);
-            });
-          }));
-        }
-        btns.appendChild(pillBtn(doc, "Remove", "danger", function () {
-          askConfirm(doc, "Remove member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will no longer be on the community list.", "Remove", function () {
-            return cloud.setMembers({ removePhoneHash: m.phoneHash }).then(cloud.refresh);
-          });
-        }));
         row.appendChild(btns);
       }
       return row;
@@ -1345,8 +1337,26 @@
       const editModal = page.getElementById("jumpin-edit-member-modal");
       const editCancel = page.getElementById("jumpin-edit-member-cancel");
       const editSave = page.getElementById("jumpin-edit-member-save");
+      const editBlock = page.getElementById("jumpin-edit-member-block");
+      const editRemove = page.getElementById("jumpin-edit-member-remove");
       if (editCancel && editModal) editCancel.addEventListener("click", function () { editModal.hidden = true; });
       if (editModal) editModal.addEventListener("click", function (ev) { if (ev.target === editModal) editModal.hidden = true; });
+      if (editBlock && api && api.setPosting) editBlock.addEventListener("click", function () {
+        const m = editingMember;
+        if (!m || !m.phoneE164) return;
+        if (editModal) editModal.hidden = true;
+        askConfirm(page, "Block member from posting?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") won't be able to post new trips.", "Block", function () {
+          return api.setPosting({ groupId: activeGroupId, phone: m.phoneE164, name: m.name || "", blocked: true }).then(refresh);
+        });
+      });
+      if (editRemove && api && api.setMembers) editRemove.addEventListener("click", function () {
+        const m = editingMember;
+        if (!m || !m.phoneHash) return;
+        if (editModal) editModal.hidden = true;
+        askConfirm(page, "Remove member?", (m.name || "Member") + " (····" + (m.phoneLast4 || "") + ") will no longer be on the community list.", "Remove", function () {
+          return api.setMembers({ groupId: activeGroupId, removePhoneHash: m.phoneHash }).then(refresh);
+        });
+      });
       if (editSave && api && api.setMembers) editSave.addEventListener("click", function () {
         const nameIn = page.getElementById("jumpin-edit-member-name");
         const phoneIn = page.getElementById("jumpin-edit-member-phone");
