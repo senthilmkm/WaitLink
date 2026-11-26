@@ -707,7 +707,11 @@
             groupsData = gr;
             const ids = (gr.groups || []).map(function (g) { return g.groupId; });
             if (ids.length && ids.indexOf(activeGroupId) === -1) activeGroupId = ids[0];
-            if (!ids.length) switchTab("groups");
+            if (!ids.length) {
+              switchTab("groups");
+              const createBox = page.getElementById("jumpin-create-group-box");
+              if (createBox) createBox.open = true;
+            }
             paintGroups();
           }
         }) : Promise.resolve();
@@ -742,10 +746,15 @@
           paint();
         });
       }
-      page.getElementById("jumpin-signin").addEventListener("click", function () {
+      function runGoogleSignIn(openNewGroup) {
+        if (openNewGroup) activeTab = "groups";
+        else if (activeTab === "groups") activeTab = "trips";
         const provider = new firebase.auth.GoogleAuthProvider();
         firebase.auth().signInWithPopup(provider).then(refresh);
-      });
+      }
+      page.getElementById("jumpin-signin").addEventListener("click", function () { runGoogleSignIn(true); });
+      const signInAdmin = page.getElementById("jumpin-signin-admin");
+      if (signInAdmin) signInAdmin.addEventListener("click", function () { runGoogleSignIn(false); });
       const signOut = page.getElementById("jumpin-signout");
       if (signOut) signOut.addEventListener("click", function () {
         if (platformViewOpen) showPlatformView(false);
@@ -938,19 +947,25 @@
       });
       firebase.auth().onAuthStateChanged(function (user) {
         const button = page.getElementById("jumpin-signin");
+        const adminBtn = page.getElementById("jumpin-signin-admin");
+        const titleEl = page.getElementById("jumpin-console-title");
+        const createBox = page.getElementById("jumpin-create-group-box");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
         const signedOutInfo = page.getElementById("jumpin-signedout-info");
         const summaryStrip = page.getElementById("jumpin-summary-strip");
         const navGuide = page.getElementById("jumpin-nav-guide");
         if (button) button.hidden = !!user;
+        if (adminBtn) adminBtn.hidden = !!user;
+        if (titleEl) titleEl.textContent = user ? "Community Carpool Console" : "Start or Manage a Carpool Group";
         if (signOut) signOut.hidden = !user;
         if (tabsBar) tabsBar.hidden = !user;
         if (signedOutInfo) signedOutInfo.hidden = !!user;
         if (summaryStrip) summaryStrip.hidden = !user;
         if (navGuide && !user) navGuide.hidden = true;
-        text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "Sign in with Google to manage your group or request a new neighborhood board.");
+        text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
         if (user) {
           switchTab(activeTab);
+          if (createBox && activeTab === "groups") createBox.open = true;
           refresh();
         } else {
           groupsData = { isSuperAdmin: false, groups: [], platform: null };
