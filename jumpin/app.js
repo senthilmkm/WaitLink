@@ -1359,8 +1359,10 @@
             return;
           } else if (label === "Share on WhatsApp" && state.link) {
             const groupLabel = groupMeta.name ? groupMeta.name + " carpool: " : "JumpIn carpool: ";
-            const waUrl = "https://wa.me/?text=" + encodeURIComponent(groupLabel + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
-            if (win.open) win.open(waUrl, "_blank", "noopener,noreferrer");
+            const msg = encodeURIComponent(groupLabel + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
+            const isMobile = platform === "android" || platform === "ios";
+            if (isMobile && win.location) win.location.href = "whatsapp://send?text=" + msg;
+            else if (win.open) win.open("https://wa.me/?text=" + msg, "_blank", "noopener,noreferrer");
           } else if (label === "Copy link") {
             const clip = win.navigator && win.navigator.clipboard;
             const link = state.link || (state.ride && cloud ? cloud.publicRideUrl(state.ride.rideId) : "");
