@@ -553,7 +553,8 @@
         if (btn) btn.className = "admin-btn" + (isOpen ? " primary" : "");
         if (!isPlat) {
           const gBack = page.getElementById("jumpin-groups-back");
-          if (gBack) gBack.hidden = !hasActiveAccess;
+          const cSec = page.getElementById("jumpin-create-group-section");
+          if (gBack) gBack.hidden = !hasActiveAccess || !!(cSec && !cSec.hidden);
         }
         syncAdminChrome();
         if (isOpen) hideGroupTabs();
@@ -618,12 +619,14 @@
         const cancelBtn = page.getElementById("jumpin-create-group-cancel");
         const platSms = page.getElementById("jumpin-platform-sms");
         const listNode = page.getElementById("jumpin-groups-list");
+        const gBack = page.getElementById("jumpin-groups-back");
         const groups = groupsData.groups || [];
         const hasPendingBlock = !groupsData.isSuperAdmin && groups.some(function (g) { return g.status === "pending"; });
         const isOpen = !!open && !hasPendingBlock;
         if (cSec) cSec.hidden = !isOpen;
         if (newBtn) newBtn.hidden = isOpen || hasPendingBlock;
         if (cancelBtn) cancelBtn.hidden = !groups.length;
+        if (gBack) gBack.hidden = !hasActiveAccess || isOpen;
         if (platSms) platSms.hidden = isOpen;
         if (listNode) listNode.hidden = isOpen;
       }
