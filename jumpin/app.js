@@ -1887,7 +1887,7 @@
     wl.href = "https://waitlink.app";
     credit.appendChild(wl);
     foot.appendChild(credit);
-    [["Start a Group", "/jumpin-admin.html?tab=groups"], ["FAQ", "/jumpin-faq.html"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
+    [["FAQ", "/jumpin-faq.html"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"]].forEach(function (item) {
       const link = el(doc, "a", "", item[0]);
       link.href = item[1];
       foot.appendChild(link);
