@@ -89,6 +89,15 @@
       "#jumpin-mid .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-mid .ride-sec{display:contents}",
       "#jumpin-mid .driver-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;margin-left:auto}",
+      "@keyframes jumpin-shimmer{0%,100%{opacity:.5}50%{opacity:1}}",
+      "#jumpin-mid .skel-card{padding:16px;background:var(--bg-card,#fff);border:1px solid #e2e8f0;border-radius:16px;animation:jumpin-shimmer 1.1s ease-in-out infinite}",
+      "#jumpin-mid .skel-line{height:14px;border-radius:8px;background:#e2e8f0;margin-bottom:8px}",
+      "#jumpin-mid .skel-line.w70{width:70%}",
+      "#jumpin-mid .skel-line.w45{width:45%;margin-bottom:0}",
+      "#jumpin-mid .row:active,#jumpin-root .chip-btn:active,#jumpin-mid .seat-pill:active,#jumpin-mid .filter-chip:active{transform:scale(0.97)}",
+      "#jumpin-mid .msg-row{background:#f1f5f9;border-radius:14px;padding:9px 12px;margin:6px 0;font-size:14px;color:var(--text-main,#0f172a)}",
+      "#jumpin-mid .confirm .link-box-sep{margin-top:14px;padding-top:14px;border-top:1px dashed #cbd5e1}",
+      "#jumpin-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10000;padding:8px 16px;border-radius:999px;background:#0f172a;color:#fff;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(15,23,42,.25);pointer-events:none}",
       "#jumpin-mid .driver-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid #f1f5f9}",
       "#jumpin-mid .driver-summary-txt{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
@@ -271,6 +280,7 @@
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
+    let extrasOpen = false;
     let boardLoaded = !cloud;
     function syncIosTheme() {
       if (!doc.body || !doc.body.classList) return;
@@ -306,6 +316,36 @@
       try {
         secrets.setItem("waitlink_jumpin_profile", JSON.stringify({ name: name, phone: phone }));
       } catch (err) { /* ignore storage quota errors */ }
+    }
+
+    function loadRecentRoutes() {
+      if (!secrets || !secrets.getItem) return [];
+      try {
+        const arr = JSON.parse(secrets.getItem("waitlink_jumpin_routes") || "[]");
+        return Array.isArray(arr) ? arr.slice(0, 3) : [];
+      } catch (err) { return []; }
+    }
+
+    function saveRecentRoute(from, to) {
+      if (!secrets || !secrets.setItem || !from || !to) return;
+      try {
+        const list = loadRecentRoutes().filter(function (r) { return r && (r.from !== from || r.to !== to); });
+        list.unshift({ from: from, to: to });
+        secrets.setItem("waitlink_jumpin_routes", JSON.stringify(list.slice(0, 3)));
+      } catch (err) { /* ignore storage quota errors */ }
+    }
+
+    function showToast(msg) {
+      if (!doc.body) return;
+      const prev = doc.getElementById("jumpin-toast");
+      if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+      const t = el(doc, "div", "", msg);
+      t.id = "jumpin-toast";
+      doc.body.appendChild(t);
+      if (win.setTimeout) {
+        const tid = win.setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2000);
+        cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); if (t.parentNode) t.parentNode.removeChild(t); });
+      }
     }
 
     function seatsLabel(n) {
@@ -692,24 +732,11 @@
           const mySeats = (myInfo && Number(myInfo.seats)) || 1;
           const maxTotal = Math.min(6, mySeats + (Number(ride.seatsLeft) || 0));
           if (maxTotal > 1 && cloud.updateSeat) {
-            const seatPick = el(doc, "select");
-            seatPick.name = "mySeats";
-            seatPick.setAttribute("aria-label", "My seats");
-            for (let n = 1; n <= maxTotal; n++) {
-              const opt = el(doc, "option", "", n === 1 ? "1 seat" : n + " seats");
-              opt.value = String(n);
-              if (n === mySeats) opt.selected = true;
-              seatPick.appendChild(opt);
-            }
-            actions.appendChild(seatPick);
+            const mySeatInput = buildSeatPills(doc, actions, "mySeats", maxTotal, mySeats);
             const saveSeats = el(doc, "button", "textish");
             spinText(doc, saveSeats, state.busy && state.busyAction === "update-seats", "Updating…", "Update seats", true);
-            if (!state.busy && Number(seatPick.value || 1) === mySeats) saveSeats.disabled = true;
-            on(seatPick, "change", function () {
-              saveSeats.disabled = state.busy || Number(seatPick.value || 1) === mySeats;
-            });
             on(saveSeats, "click", function () {
-              const nextSeats = Number(seatPick.value || 1);
+              const nextSeats = Number(mySeatInput.value || mySeats);
               if (nextSeats === mySeats) return;
               state.busy = true;
               state.busyAction = "update-seats";
@@ -892,6 +919,7 @@
         const pager = el(doc, "div", "pager");
         function matchesDateFilter(ride, filter, nowMs) {
           if (filter === "all") return true;
+          if (filter === "mine") return !!(cloud && cloud.roleFor && cloud.roleFor(ride));
           const ts = Number(ride.departAt || 0);
           if (!ts) return false;
           const d = new Date(nowMs);
@@ -913,17 +941,16 @@
           });
           if (!shown.length) {
             if (groupMeta.status && groupMeta.status !== "active") return;
-            const empty = el(doc, "div", "empty");
             if (!boardLoaded && !q && boardDateFilter === "all") {
-              const spinBox = el(doc, "div", "empty-icon");
-              const sp = el(doc, "span", "jumpin-spin dark");
-              sp.style.marginRight = "0";
-              spinBox.appendChild(sp);
-              empty.appendChild(spinBox);
-              empty.appendChild(el(doc, "p", "route", "Loading rides…"));
-              list.appendChild(empty);
+              for (let s = 0; s < 3; s++) {
+                const sk = el(doc, "div", "skel-card");
+                sk.appendChild(el(doc, "div", "skel-line w70"));
+                sk.appendChild(el(doc, "div", "skel-line w45"));
+                list.appendChild(sk);
+              }
               return;
             }
+            const empty = el(doc, "div", "empty");
             const filtered = !!(q || boardDateFilter !== "all");
             empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
             empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
@@ -1009,7 +1036,10 @@
           const tools = el(doc, "div", "board-tools");
           const filterRow = el(doc, "div", "filter-row");
           const filterNow = Date.now();
-          [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]].forEach(function (spec) {
+          const filterSpecs = [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]];
+          const myCount = cloud && cloud.roleFor ? rides.filter(function (ride) { return !!cloud.roleFor(ride); }).length : 0;
+          if (myCount > 0) filterSpecs.splice(1, 0, ["mine", "My Trips"]);
+          filterSpecs.forEach(function (spec) {
             const count = rides.filter(function (ride) { return matchesDateFilter(ride, spec[0], filterNow); }).length;
             const chip = el(doc, "button", "filter-chip" + (boardDateFilter === spec[0] ? " active" : ""), spec[1] + " (" + count + ")");
             chip.type = "button";
@@ -1099,6 +1129,20 @@
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
         const secRoute = el(doc, "section", "post-section");
+        const recent = loadRecentRoutes();
+        if (recent.length) {
+          const rRow = el(doc, "div", "chip-row");
+          recent.forEach(function (rt) {
+            const rb = el(doc, "button", "chip-btn", rt.from + " → " + rt.to);
+            rb.type = "button";
+            on(rb, "click", function () {
+              if (postInputs.from) postInputs.from.value = rt.from;
+              if (postInputs.to) postInputs.to.value = rt.to;
+            });
+            rRow.appendChild(rb);
+          });
+          secRoute.appendChild(rRow);
+        }
         routeFields.forEach(function (spec) {
           const rf = el(doc, "div", "route-field");
           rf.appendChild(el(doc, "span", "route-dot " + spec[0]));
@@ -1179,6 +1223,15 @@
         stepper.appendChild(plusDur);
         secSched.appendChild(dur);
         secSched.appendChild(stepper);
+        const durChips = el(doc, "div", "chip-row");
+        durChips.style.marginBottom = "0";
+        [["30m", 30], ["1h", 60], ["2h", 120], ["3h", 180]].forEach(function (spec) {
+          const dc = el(doc, "button", "chip-btn", spec[0]);
+          dc.type = "button";
+          on(dc, "click", function () { syncDur(spec[1]); });
+          durChips.appendChild(dc);
+        });
+        secSched.appendChild(durChips);
         mid.appendChild(secSched);
         const secDriver = el(doc, "section", "post-section");
         const hasSavedDriver = !!(saved.name && saved.phone);
@@ -1203,25 +1256,41 @@
         } else {
           driverFields.forEach(function (spec) { buildPostField(spec, secDriver); });
         }
-        secDriver.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
-        const rideCost = el(doc, "input");
-        rideCost.name = "rideCost";
-        rideCost.type = "number";
-        rideCost.min = "0";
-        rideCost.max = "500";
-        rideCost.step = "0.01";
-        rideCost.inputMode = "decimal";
-        rideCost.placeholder = "Free (or e.g. 5)";
-        if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
-        secDriver.appendChild(rideCost);
-        if (state.error && state.field === "rideCost") secDriver.appendChild(el(doc, "p", "error", state.error));
-        secDriver.appendChild(el(doc, "label", "lbl", "Note, optional"));
-        const note = el(doc, "input");
-        note.name = "note";
-        note.type = "text";
-        note.placeholder = "South door";
-        if (state.draft && state.draft.note) note.value = state.draft.note;
-        secDriver.appendChild(note);
+        const showExtras = extrasOpen || !!(state.draft && (state.draft.rideCost || state.draft.note)) || !!(state.error && state.field === "rideCost");
+        if (showExtras) {
+          secDriver.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
+          const rideCost = el(doc, "input");
+          rideCost.name = "rideCost";
+          rideCost.type = "number";
+          rideCost.min = "0";
+          rideCost.max = "500";
+          rideCost.step = "0.01";
+          rideCost.inputMode = "decimal";
+          rideCost.placeholder = "Free (or e.g. 5)";
+          if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
+          secDriver.appendChild(rideCost);
+          if (state.error && state.field === "rideCost") secDriver.appendChild(el(doc, "p", "error", state.error));
+          secDriver.appendChild(el(doc, "label", "lbl", "Note, optional"));
+          const note = el(doc, "input");
+          note.name = "note";
+          note.type = "text";
+          note.placeholder = "South door";
+          if (state.draft && state.draft.note) note.value = state.draft.note;
+          secDriver.appendChild(note);
+        } else {
+          const exBtn = el(doc, "button", "chip-btn", "+ Add price or pickup note");
+          exBtn.type = "button";
+          exBtn.style.marginBottom = "8px";
+          on(exBtn, "click", function () { extrasOpen = true; draw(); });
+          secDriver.appendChild(exBtn);
+          [["rideCost", ""], ["note", ""]].forEach(function (pair) {
+            const hi = el(doc, "input");
+            hi.type = "hidden";
+            hi.name = pair[0];
+            hi.value = pair[1];
+            secDriver.appendChild(hi);
+          });
+        }
         secDriver.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
         mid.appendChild(secDriver);
       } else if (state.mode === "posted") {
@@ -1234,7 +1303,8 @@
         const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
         if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
         if (state.link) {
-          card.appendChild(el(doc, "p", "section-lbl", "Share trip link"));
+          const shareLbl = el(doc, "p", "section-lbl link-box-sep", "Share trip link");
+          card.appendChild(shareLbl);
           const linkRow = el(doc, "div", "link-row");
           const link = el(doc, "input");
           link.readOnly = true;
@@ -1247,6 +1317,7 @@
             const clip = win.navigator && win.navigator.clipboard;
             if (clip && clip.writeText) clip.writeText(state.link);
             copyBtn.textContent = "✓ Copied";
+            showToast("Link copied!");
             if (win.setTimeout) {
               const tid = win.setTimeout(function () { copyBtn.textContent = "📋 Copy"; }, 2000);
               cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
@@ -1366,6 +1437,9 @@
                   openMemberModal(result);
                 } else {
                   saveProfile(values.name, values.phone);
+                  saveRecentRoute(values.from, values.to);
+                  extrasOpen = false;
+                  driverEditOpen = false;
                   state = postedFromServer(state, result, values, when.departAt);
                 }
                 draw();
@@ -1641,6 +1715,7 @@
       }
       host.appendChild(hidden);
       host.appendChild(wrap);
+      return hidden;
     }
 
     function roundUp30(ms) {
