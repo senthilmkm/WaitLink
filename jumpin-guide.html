@@ -915,7 +915,7 @@
         <span class="section-icon admin">💬</span>
         <h2>7. Complete SMS Notification Matrix (Who Gets Texted &amp; When)</h2>
       </div>
-      <p class="section-sub">Every automated SMS sent across Driver, Rider, New User / Recovery, Group Creation, Admin, and Scheduled flows. All custom-group links automatically include <code>&amp;g=&lt;slug&gt;</code>.</p>
+      <p class="section-sub">Every automated SMS uses pure GSM-7 ASCII (&le;160 chars for single-segment billing) with a short <code>(From-To)</code> route context and a direct <code>waitlink.app/jumpin</code> link when applicable. Custom-group links automatically include <code>g=&lt;slug&gt;</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -932,49 +932,49 @@
               <td><span class="tag tag-open">Driver Flow</span></td>
               <td>Post a new ride</td>
               <td><strong>Driver</strong></td>
-              <td>Private manage link (<code>view=trip</code>). Respects daily post cap, blocklist, and Members-Only list.</td>
+              <td><code>JumpIn posted (From-To): &lt;link&gt;</code> or <code>JumpIn pending (From-To): &lt;link&gt;</code> (<code>view=trip</code>). Respects daily post cap, blocklist, and Members-Only list.</td>
               <td>Valid until trip is completed/cancelled (or purged 7 days after end). Cancel/message closes at <code>depart + duration + 1 hr</code>; rotated if <em>Text me a link</em> is used.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Driver Flow</span></td>
               <td>Message passengers</td>
               <td><strong>All Active Riders</strong></td>
-              <td>Driver's message + trip link (excludes cancelled riders).</td>
+              <td><code>JumpIn (From-To) &lt;Name&gt;: &lt;Message&gt; &lt;link&gt;</code> (excludes cancelled riders).</td>
               <td>Public <code>view=ride</code> link: viewable until purged <strong>7 days</strong> after trip ends (tombstone kept 30 days).</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Driver Flow</span></td>
               <td>Complete trip manually</td>
               <td><strong>Driver &amp; Active Riders</strong></td>
-              <td>Post-ride thank-you + Support / Tip handle (only if <em>Post-ride thank-you text</em> &amp; handle are set).</td>
+              <td><code>JumpIn ride done (From-To). Free tool - chip in $1-$2: &lt;handle&gt;</code> (only if <em>Post-ride thank-you text</em> &amp; handle are set).</td>
               <td>No link sent (informational SMS only).</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Driver Flow</span></td>
               <td>Cancel trip</td>
               <td><strong>All Active Riders</strong></td>
-              <td>Cancellation notice for the trip.</td>
+              <td><code>JumpIn trip cancelled (From-To, &lt;When&gt;).</code></td>
               <td>No link sent; all driver &amp; rider manage links for the trip stop working immediately.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>
               <td>Reserve seat(s)</td>
               <td><strong>Rider</strong></td>
-              <td>Seat count confirmation + private manage link (<code>view=seat</code>).</td>
+              <td><code>JumpIn seat (From-To): &lt;link&gt;</code> or <code>JumpIn &lt;N&gt; seats (From-To): &lt;link&gt;</code> (<code>view=seat</code>).</td>
               <td>Edit/cancel valid until <strong>departure</strong>; messaging valid until <code>depart + duration + 1 hr</code>. Invalidated if seat is cancelled or rotated via <em>Text me a link</em>.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>
               <td>Message the driver</td>
               <td><strong>Driver</strong></td>
-              <td>Rider's message + trip link (works pre-departure and mid-trip until <code>depart + duration + 1 hr</code>).</td>
+              <td><code>JumpIn (From-To) &lt;Name&gt;: &lt;Message&gt; &lt;link&gt;</code> (works pre-departure and mid-trip until <code>depart + duration + 1 hr</code>).</td>
               <td>Public <code>view=ride</code> link: viewable until purged <strong>7 days</strong> after trip ends.</td>
             </tr>
             <tr>
               <td><span class="tag tag-sms">New User / Recovery</span></td>
               <td>Request lost manage link (<em>Text me a link</em>)</td>
               <td><strong>Driver or Rider</strong> (matched on that trip)</td>
-              <td>Fresh private manage link. Subject to per-record limit and resend cooldown; always shows neutral confirmation.</td>
+              <td><code>JumpIn driver link (From-To): &lt;link&gt;</code> or <code>JumpIn seat link (From-To): &lt;link&gt;</code>. Subject to per-record limit and resend cooldown; always shows neutral confirmation.</td>
               <td>Replaces &amp; invalidates the previous token immediately; follows the same trip/seat lifecycle rules above.</td>
             </tr>
             <tr>
@@ -988,28 +988,28 @@
               <td><span class="tag tag-active">Group Creation</span></td>
               <td>Organizer submits new group request</td>
               <td><strong>Platform Admin</strong> (<code>platformAdminPhone</code>)</td>
-              <td>Group name, <code>?g=&lt;slug&gt;</code>, organizer email, and direct review link (<code>jumpin-admin.html?tab=groups</code>).</td>
+              <td><code>JumpIn group request: &lt;Name&gt; (&lt;slug&gt;) &lt;email&gt; Review: &lt;link&gt;</code> (<code>jumpin-admin.html?tab=groups</code>).</td>
               <td>Static admin console link (no expiry; requires SuperAdmin Google sign-in).</td>
             </tr>
             <tr>
               <td><span class="tag tag-active">Group Creation</span></td>
               <td>Platform Admin approves group</td>
               <td><strong>Group Organizer</strong> (<code>contactPhoneE164</code>)</td>
-              <td>Confirmation + shareable group board link (<code>waitlink.app/jumpin?g=&lt;slug&gt;</code>).</td>
+              <td><code>JumpIn group "&lt;Name&gt;" approved! Share: waitlink.app/jumpin?g=&lt;slug&gt;</code></td>
               <td>Active as long as the group is <code>active</code> (disabled if suspended or deleted).</td>
             </tr>
             <tr>
               <td><span class="tag tag-pending">Admin Flow</span></td>
               <td>Approve or Decline pending ride</td>
               <td><strong>Driver</strong></td>
-              <td>Public share link (if approved) or not-approved notice (if declined).</td>
+              <td><code>JumpIn trip on the board (From-To). Share: &lt;link&gt;</code> (if approved) or <code>JumpIn trip not approved (From-To).</code> (if declined).</td>
               <td>Approved <code>view=ride</code> link valid until purged 7 days after trip ends; declined trips have no active link.</td>
             </tr>
             <tr>
               <td><span class="tag tag-done">Admin Flow</span></td>
               <td>Admin cancels trip</td>
               <td><strong>Driver &amp; Active Riders</strong></td>
-              <td>Admin cancellation notice for the trip.</td>
+              <td><code>JumpIn admin cancelled (From-To, &lt;When&gt;).</code></td>
               <td>No link sent; all trip &amp; seat manage links stop working immediately.</td>
             </tr>
             <tr>
@@ -1023,7 +1023,7 @@
               <td><span class="tag tag-done">System Scheduler</span></td>
               <td>Auto-complete after <code>depart + duration + 1 hr</code></td>
               <td><strong>Driver &amp; Active Riders</strong> (only if 1+ riders joined)</td>
-              <td>Thank-you + tip handle SMS if enabled. If 0 riders joined, trip is auto-cancelled with <strong>0 SMS</strong>.</td>
+              <td><code>JumpIn ride done (From-To). Free tool - chip in $1-$2: &lt;handle&gt;</code> if enabled. If 0 riders joined, trip is auto-cancelled with <strong>0 SMS</strong>.</td>
               <td>No link sent; all manage actions close when trip is marked completed/cancelled.</td>
             </tr>
           </tbody>
