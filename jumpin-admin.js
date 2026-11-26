@@ -913,6 +913,33 @@
       if (grpOpen) grpOpen.addEventListener("click", function () { showGroupsView(true); });
       const grpBack = page.getElementById("jumpin-groups-back");
       if (grpBack) grpBack.addEventListener("click", function () { showGroupsView(false); });
+      const installBtn = page.getElementById("jumpin-install-app");
+      let deferredInstallPrompt = null;
+      function syncInstallBtn() {
+        if (!installBtn) return;
+        const standalone = !!((win.matchMedia && win.matchMedia("(display-mode: standalone)").matches) || (win.navigator && win.navigator.standalone));
+        const isIos = /iPad|iPhone|iPod/i.test((win.navigator && win.navigator.userAgent) || "");
+        installBtn.hidden = standalone || (!deferredInstallPrompt && !isIos);
+      }
+      if (win.addEventListener) {
+        win.addEventListener("beforeinstallprompt", function (e) {
+          if (e && e.preventDefault) e.preventDefault();
+          deferredInstallPrompt = e;
+          syncInstallBtn();
+        });
+      }
+      if (installBtn) {
+        syncInstallBtn();
+        installBtn.addEventListener("click", function () {
+          if (deferredInstallPrompt && deferredInstallPrompt.prompt) {
+            deferredInstallPrompt.prompt();
+            deferredInstallPrompt = null;
+            syncInstallBtn();
+          } else {
+            askConfirm(page, "Add JumpIn Admin to Home Screen", "On iPhone/iPad Safari: tap Share (⬆️) at the bottom, then tap 'Add to Home Screen'. On Android Chrome: open the browser menu (⋮) and tap 'Install app' or 'Add to Home screen'.", "Got it", function () { return Promise.resolve(); });
+          }
+        });
+      }
       const platOpen = page.getElementById("jumpin-plat-open");
       if (platOpen) platOpen.addEventListener("click", function () { showPlatformView(true); });
       const platBack = page.getElementById("jumpin-plat-back");
