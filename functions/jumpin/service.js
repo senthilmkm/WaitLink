@@ -208,6 +208,12 @@ function saveConfig(tx, config, p, platform) {
   if (platform) tx.set("carpool_platform/config", platform);
 }
 
+function shortRoute(from, to) {
+  const f = String(from || "").trim().slice(0, 14);
+  const t = String(to || "").trim().slice(0, 14);
+  return f && t ? f + "-" + t : (f || t || "trip");
+}
+
 function queueText(outbox, to, body, triggerType) {
   outbox.push({ to: to, body: body, triggerType: triggerType, shopSlug: "jumpin" });
 }
@@ -348,9 +354,10 @@ function postRide(db, input, now, rng) {
     if (sent) {
       ride.smsSent = 1;
       bumpSms(config, platform);
+      const routeTag = shortRoute(fields.from, fields.to);
       const body = status === "pending"
-        ? "JumpIn trip is waiting for approval. Manage: " + manageUrl("trip", rideId, secret, rideId, p.groupId)
-        : "JumpIn trip posted. Manage: " + manageUrl("trip", rideId, secret, rideId, p.groupId);
+        ? "JumpIn pending (" + routeTag + "): " + manageUrl("trip", rideId, secret, rideId, p.groupId)
+        : "JumpIn posted (" + routeTag + "): " + manageUrl("trip", rideId, secret, rideId, p.groupId);
       queueText(texts, fields.phone, body, "CARPOOL_DRIVER_LINK");
     }
     phone.postsDay = core.utcDay(now);
@@ -455,8 +462,8 @@ function reserveSeat(db, input, now, rng) {
       reservation.smsSent = 1;
       bumpSms(config, platform);
       const when = core.formatWhen(ride.departAt, ride.timeZone);
-      const seatWord = requested === 1 ? "a seat" : (requested + " seats");
-      queueText(texts, fields.phone, "You have " + seatWord + ". " + when + ", " + ride.from + " to " + ride.to + ". Manage: " + manageUrl("seat", reservationId, secret, ride.rideId, p.groupId), "CARPOOL_RIDER_LINK");
+      const seatWord = requested === 1 ? "seat" : (requested + " seats");
+      queueText(texts, fields.phone, "JumpIn " + seatWord + " (" + shortRoute(ride.from, ride.to) + "): " + manageUrl("seat", reservationId, secret, ride.rideId, p.groupId), "CARPOOL_RIDER_LINK");
     }
     tx.set(key, reservation);
     tx.set(p.ridePrivate(ride.rideId), ride);
@@ -639,7 +646,7 @@ function completeTrip(db, input, now) {
     ride.completedAt = now;
     if (phones.length) {
       ride.thankYouSentAt = now;
-      const body = "Hope your JumpIn ride (" + ride.from + " to " + ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
+      const body = "JumpIn ride done (" + shortRoute(ride.from, ride.to) + "). Free tool - chip in $1-$2: " + config.supportNote;
       phones.forEach(function (ph) {
         if (canSendBoth(config, platform, now)) {
           bumpSms(config, platform);
@@ -706,15 +713,15 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin, p, 
       bumpSms(config, platform);
       const when = core.formatWhen(ride.departAt, ride.timeZone);
       const body = admin
-        ? "A JumpIn admin cancelled this trip. " + when + ", " + ride.from + " to " + ride.to + "."
-        : "JumpIn trip cancelled. " + when + ", " + ride.from + " to " + ride.to + ".";
+        ? "JumpIn admin cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ")."
+        : "JumpIn trip cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").";
       queueText(outbox, reservation.phoneE164, body, "CARPOOL_TRIP_CANCELLED");
     }
   }
   if (admin && canSendBoth(config, platform, now)) {
     bumpSms(config, platform);
     const when = core.formatWhen(ride.departAt, ride.timeZone);
-    queueText(outbox, ride.driverPhoneE164, "A JumpIn admin cancelled this trip. " + when + ", " + ride.from + " to " + ride.to + ".", "CARPOOL_TRIP_CANCELLED");
+    queueText(outbox, ride.driverPhoneE164, "JumpIn admin cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").", "CARPOOL_TRIP_CANCELLED");
   }
   ride.status = "cancelled";
   ride.cancelledAt = now;
@@ -785,7 +792,7 @@ function postMessage(db, input, now) {
     pub.updatedAt = now;
     const targets = authorRole === "driver" ? riderPhones : [ride.driverPhoneE164];
     const gPrefix = p.groupId !== "default" ? "g=" + encodeURIComponent(p.groupId) + "&" : "";
-    const noteBody = "JumpIn (" + ride.from + " to " + ride.to + "): " + authorName + ": " + checked.value + " https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId;
+    const noteBody = "JumpIn (" + shortRoute(ride.from, ride.to) + ") " + authorName + ": " + checked.value + " https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId;
     for (let i = 0; i < targets.length; i++) {
       if (targets[i] && canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
@@ -878,7 +885,7 @@ function sendManageLink(db, input, now, rng) {
     target.smsSent = (target.smsSent || 0) + 1;
     target.idempotencySecret = "";
     bumpSms(config, platform);
-    queueText(texts, phone.e164, "New JumpIn link: " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId, p.groupId), "CARPOOL_DRIVER_LINK");
+    queueText(texts, phone.e164, "JumpIn " + (kind === "trip" ? "driver" : "seat") + " link (" + shortRoute(ride.from, ride.to) + "): " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId, p.groupId), "CARPOOL_DRIVER_LINK");
     if (kind === "trip") tx.set(p.ridePrivate(ride.rideId), target);
     else tx.set(p.reservation(ride.rideId, phone.e164), target);
     saveConfig(tx, config, p, platform);
@@ -927,7 +934,7 @@ function reviewRide(db, email, input, now) {
       if (canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
         const gPrefix = p.groupId !== "default" ? "g=" + encodeURIComponent(p.groupId) + "&" : "";
-        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip is on the board. Share: https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
+        queueText(texts, ride.driverPhoneE164, "JumpIn trip on the board (" + shortRoute(ride.from, ride.to) + "). Share: https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
       }
     } else if (input.decision === "decline") {
       ride.status = "rejected";
@@ -935,7 +942,7 @@ function reviewRide(db, email, input, now) {
       pub.updatedAt = now;
       if (canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
-        queueText(texts, ride.driverPhoneE164, "Your JumpIn trip was not approved.", "CARPOOL_DRIVER_LINK");
+        queueText(texts, ride.driverPhoneE164, "JumpIn trip not approved (" + shortRoute(ride.from, ride.to) + ").", "CARPOOL_DRIVER_LINK");
       }
     } else return { ok: false, error: "Enter a decision." };
     tx.set(p.ridePrivate(ride.rideId), ride);
@@ -1179,7 +1186,7 @@ async function completeDueGroup(tx, p, now, texts, platform) {
     }
     if (item.phones.length) {
       item.ride.thankYouSentAt = now;
-      const body = "Hope your JumpIn ride (" + item.ride.from + " to " + item.ride.to + ") went well! Free community tool — chip in $1-$2 via " + config.supportNote + " to help cover text costs.";
+      const body = "JumpIn ride done (" + shortRoute(item.ride.from, item.ride.to) + "). Free tool - chip in $1-$2: " + config.supportNote;
       item.phones.forEach(function (ph) {
         if (canSendBoth(config, platform, now)) {
           bumpSms(config, platform);
@@ -1567,7 +1574,7 @@ function createGroup(db, email, input, now) {
     if (!isSuper && platform.platformAdminPhone && platform.dailySmsSent < platform.platformDailySmsCap) {
       platform.dailySmsSent += 1;
       tx.set("carpool_platform/config", platform);
-      queueText(texts, platform.platformAdminPhone, "JumpIn: New group request \"" + name + "\" (?g=" + gid + ") from " + cfg.contactEmail + ". Review: https://waitlink.app/jumpin-admin.html?tab=groups", "CARPOOL_GROUP_REQUEST");
+      queueText(texts, platform.platformAdminPhone, "JumpIn group request: " + name + " (" + gid + ") " + cfg.contactEmail + " Review: https://waitlink.app/jumpin-admin.html?tab=groups", "CARPOOL_GROUP_REQUEST");
     }
     tx.set(p.groupMeta, meta);
     saveConfig(tx, cfg, p);
@@ -1661,7 +1668,7 @@ function reviewGroup(db, email, input, now) {
       if (platform.dailySmsSent < platform.platformDailySmsCap) {
         platform.dailySmsSent += 1;
         tx.set("carpool_platform/config", platform);
-        queueText(texts, meta.contactPhoneE164, "JumpIn: Your group \"" + (meta.name || gid) + "\" is approved! Share this board link with members: https://waitlink.app/jumpin?g=" + encodeURIComponent(gid), "CARPOOL_GROUP_APPROVED");
+        queueText(texts, meta.contactPhoneE164, "JumpIn group \"" + (meta.name || gid) + "\" approved! Share: https://waitlink.app/jumpin?g=" + encodeURIComponent(gid), "CARPOOL_GROUP_APPROVED");
       }
     }
     const nextStatus = decision === "suspend" ? "suspended" : (decision === "approve" ? "active" : (meta && meta.status) || "active");
