@@ -740,8 +740,11 @@
               }));
             }
             const removeLabel = g.status === "pending" ? "Reject" : "Delete";
+            const removeMsg = g.status === "pending"
+              ? (g.name || g.groupId) + " (?" + "g=" + g.groupId + ") will be permanently deleted, including its pending request and settings. No SMS or email will be sent to the organizer, and the URL slug can be reused."
+              : (g.name || g.groupId) + " (?" + "g=" + g.groupId + ") will be permanently deleted along with all its rides, reservations, members, blocked numbers, and settings. No SMS or email will be sent to the organizer, drivers, or riders, and this cannot be undone (use Suspend to pause temporarily).";
             bar.appendChild(pillBtn(page, removeLabel, "danger", function () {
-              askConfirm(page, removeLabel + " group?", (g.name || g.groupId) + " (?" + "g=" + g.groupId + ") will be removed from the platform.", removeLabel, function () {
+              askConfirm(page, removeLabel + " group?", removeMsg, removeLabel, function () {
                 return api.reviewGroup({ groupId: g.groupId, decision: "reject" }).then(function () {
                   if (activeGroupId === g.groupId) activeGroupId = "default";
                   return refresh();
