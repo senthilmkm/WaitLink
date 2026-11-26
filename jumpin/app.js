@@ -269,6 +269,7 @@
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
+    let boardLoaded = !cloud;
     function syncIosTheme() {
       if (!doc.body || !doc.body.classList) return;
       if (platformNotice.iosThemeEnabled) doc.body.classList.add("jumpin-ios");
@@ -903,6 +904,16 @@
           if (!shown.length) {
             if (groupMeta.status && groupMeta.status !== "active") return;
             const empty = el(doc, "div", "empty");
+            if (!boardLoaded && !q && boardDateFilter === "all") {
+              const spinBox = el(doc, "div", "empty-icon");
+              const sp = el(doc, "span", "jumpin-spin dark");
+              sp.style.marginRight = "0";
+              spinBox.appendChild(sp);
+              empty.appendChild(spinBox);
+              empty.appendChild(el(doc, "p", "route", "Loading rides…"));
+              list.appendChild(empty);
+              return;
+            }
             const filtered = !!(q || boardDateFilter !== "all");
             empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
             empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
@@ -1570,6 +1581,7 @@
       let stop = function () { };
       try {
         stop = cloud.watchBoard(function (rides) {
+          boardLoaded = true;
           try {
             state.rides = (rides || []).map(function (ride) {
               return { rideId: ride.rideId, from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "" };
@@ -1577,7 +1589,7 @@
             if (state.mode === "board") draw();
           } catch (err) { /* leave the board that is already on screen */ }
         }) || function () { };
-      } catch (err) { stop = function () { }; }
+      } catch (err) { boardLoaded = true; stop = function () { }; }
       cleanups.push(stop);
       if (cloud.watchGroup) {
         cleanups.push(cloud.watchGroup(function (meta) {

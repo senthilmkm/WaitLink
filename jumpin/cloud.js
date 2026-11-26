@@ -171,7 +171,10 @@
 
   function watchBoard(win, onChange, groupId) {
     const firebase = ensureFirebase(win);
-    if (!firebase || !firebase.firestore) return function () {};
+    if (!firebase || !firebase.firestore) {
+      try { onChange([]); } catch (ignore) { /* keep the screen that already drew */ }
+      return function () {};
+    }
     try {
       return ridesCollection(firebase, groupId).where("status", "==", "open").onSnapshot(function (snap) {
         const now = Date.now();
