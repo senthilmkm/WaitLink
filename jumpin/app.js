@@ -149,6 +149,7 @@
       "#jumpin-mid .meta,#jumpin-mid .muted{color:var(--text-muted,#1e293b);font-size:14px;margin:0;overflow-wrap:anywhere}",
       "#jumpin-mid .hint{color:var(--text-muted,#1e293b);font-size:14px;margin:8px 0 0}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
+      "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
       "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:0 12px;gap:8px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(20px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:18px 16px;border-radius:16px}#jumpin-mid .wrap{padding:16px 12px}#jumpin-mid .hero{padding:18px}#jumpin-mid h1{font-size:26px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button{width:100%}#jumpin-root.app-screen #jumpin-bottom{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}}",
       "@media (max-width:480px){#jumpin-mid h1{font-size:24px}#jumpin-mid .row .route{font-size:16px}#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
       "@media (max-width:380px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}#jumpin-mid .info-grid{grid-template-columns:1fr}}",
@@ -525,13 +526,17 @@
         const name = el(doc, "input");
         name.name = "name";
         name.value = draft.name != null ? draft.name : (saved.name || "");
+        if (current.error && current.field === "name") name.className = "input-invalid";
         card.appendChild(name);
+        if (current.error && current.field === "name") card.appendChild(el(doc, "p", "error", current.error));
         card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone (US/Canada)" : "Phone (US/Canada)"));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
         phone.value = draft.phone != null ? draft.phone : (saved.phone || "");
+        if (current.error && current.field === "phone") phone.className = "input-invalid";
         card.appendChild(phone);
+        if (current.error && current.field === "phone") card.appendChild(el(doc, "p", "error", current.error));
         if ((Number(ride.seatsLeft) || 1) > 1) {
           card.appendChild(el(doc, "label", "lbl", "Seats"));
           const seatSel = el(doc, "select");
@@ -554,7 +559,7 @@
         if (draft.dropoff) dropoff.value = draft.dropoff;
         card.appendChild(dropoff);
         card.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage their seat, and JumpIn notices."));
-        if (current.error) card.appendChild(el(doc, "p", "error", current.error));
+        if (current.error && current.field !== "name" && current.field !== "phone") card.appendChild(el(doc, "p", "error", current.error));
         const cancelForm = el(doc, "button", "textish", "Cancel");
         on(cancelForm, "click", function () { state = Object.assign(ui.reduce(state, { type: "reserve-close" }), { reserveDraft: null }); draw(); });
         const formActions = el(doc, "div", "action-row");
@@ -569,6 +574,7 @@
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
+        if (current.error) phone.className = "input-invalid";
         card.appendChild(phone);
         if (current.error) card.appendChild(el(doc, "p", "error", current.error));
         const cancelRec = el(doc, "button", "textish", "Cancel");
@@ -696,6 +702,11 @@
 
     function sendMessage(text) {
       if (!cloud || !state.ride) return;
+      if (!String(text || "").trim()) {
+        state = ui.reduce(state, { type: "fail", error: "Enter a message." });
+        draw();
+        return;
+      }
       const secret = state.role === "driver" ? cloud.tripSecret(state.ride.rideId) : cloud.seatSecretFor(state.ride);
       state.busy = true;
       state.busyAction = "send";
@@ -957,6 +968,7 @@
           else if (defaultParts && spec[0] === "date") input.value = defaultParts.year + "-" + String(defaultParts.month).padStart(2, "0") + "-" + String(defaultParts.day).padStart(2, "0");
           else if (defaultParts && spec[0] === "time") input.value = String(defaultParts.hour).padStart(2, "0") + ":" + String(defaultParts.minute).padStart(2, "0");
           postInputs[spec[0]] = input;
+          if (state.error && state.field === spec[0]) input.className = "input-invalid";
           host.appendChild(input);
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
