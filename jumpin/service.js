@@ -1048,11 +1048,16 @@ function listAdmin(db, email, now, groupId) {
         messages: arr(pub.messages)
       };
     }
+    const safeConfig = p.groupId === "default" ? config : Object.assign({}, config, {
+      adminEmails: arr(config.adminEmails).filter(function (em) {
+        return !isSuperAdminEmail(em, platform) || (meta && core.cleanEmail(meta.contactEmail) === em);
+      })
+    });
     return {
       ok: true,
       groupId: p.groupId,
       group: meta,
-      config: config,
+      config: safeConfig,
       pending: allRides.filter(function (ride) { return ride.status === "pending"; }).map(card),
       upcoming: allRides.filter(function (ride) { return ride.status === "open" && ride.departAt > clock; }).map(card),
       past: allRides.filter(function (ride) { return ride.status === "completed" || (ride.status === "open" && ride.departAt <= clock); }).map(card),
@@ -1522,12 +1527,13 @@ function createGroup(db, email, input, now) {
     const enabled = isSuper;
     const cap = isSuper ? 100 : 0;
     const supportNote = isSuper ? (core.collapse(core.stripTags(body.supportNote || "")).slice(0, 80) || platform.platformSupportNote) : platform.platformSupportNote;
+    const contactEmail = core.cleanEmail(body.contactEmail) || caller;
     const cfg = core.clampConfig({
       enabled: enabled,
       membersOnly: body.membersOnly !== false,
-      contactEmail: core.cleanEmail(body.contactEmail) || caller,
+      contactEmail: contactEmail,
       supportNote: supportNote,
-      adminEmails: [caller],
+      adminEmails: [isSuper ? contactEmail : caller],
       dailySmsCap: cap
     });
     const meta = {
