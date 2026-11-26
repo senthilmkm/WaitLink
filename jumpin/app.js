@@ -458,9 +458,15 @@
       box.id = "jumpin-sheet";
       box.appendChild(el(doc, "p", "", "Add JumpIn to Home Screen"));
       box.appendChild(el(doc, "p", "muted", "On iPhone/iPad Safari: tap Share (⬆️) at the bottom, then tap 'Add to Home Screen'. On Android Chrome: open the browser menu (⋮) and tap 'Install app' or 'Add to Home screen'."));
-      const ok = el(doc, "button", "", "Got it");
+      const row = el(doc, "div", "action-row");
+      const ok = el(doc, "button", "confirm-primary", "Got it");
+      ok.type = "button";
+      ok.style.width = "100%";
+      ok.style.margin = "0";
+      ok.style.cursor = "pointer";
       on(ok, "click", function () { installModal = false; draw(); });
-      box.appendChild(ok);
+      row.appendChild(ok);
+      box.appendChild(row);
       return box;
     }
 
