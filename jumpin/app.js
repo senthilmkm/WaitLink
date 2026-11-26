@@ -281,6 +281,7 @@
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
     let extrasOpen = false;
+    let updatesOpen = false;
     let boardLoaded = !cloud;
     function syncIosTheme() {
       if (!doc.body || !doc.body.classList) return;
@@ -610,11 +611,22 @@
       if (secPeople.children.length) card.appendChild(secPeople);
       const secChat = el(doc, "div", "ride-sec");
       if (ride.messages && ride.messages.length) {
-        secChat.appendChild(el(doc, "div", "section-lbl", "Trip Updates"));
-        ride.messages.forEach(function (message) {
-          const who = message.authorName || "";
-          secChat.appendChild(el(doc, "div", "msg-row", (who ? who + ": " : "") + (message.text || "")));
-        });
+        const upHead = el(doc, "div");
+        upHead.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:" + (updatesOpen ? "6px" : "0") + ";";
+        const upLbl = el(doc, "div", "section-lbl", "💬 Trip Updates (" + ride.messages.length + ")");
+        upLbl.style.margin = "0";
+        upHead.appendChild(upLbl);
+        const upToggle = el(doc, "button", "chip-btn", updatesOpen ? "Hide ▴" : "Show ▾");
+        upToggle.type = "button";
+        on(upToggle, "click", function () { updatesOpen = !updatesOpen; draw(); });
+        upHead.appendChild(upToggle);
+        secChat.appendChild(upHead);
+        if (updatesOpen) {
+          ride.messages.forEach(function (message) {
+            const who = message.authorName || "";
+            secChat.appendChild(el(doc, "div", "msg-row", (who ? who + ": " : "") + (message.text || "")));
+          });
+        }
       }
       if (current.reserveOpen) {
         const secRes = el(doc, "div", "ride-sec");
