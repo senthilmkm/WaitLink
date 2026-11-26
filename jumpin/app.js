@@ -361,6 +361,7 @@
     function openRide(rideId) {
       if (!cloud || !rideId) return;
       stopRide();
+      updatesOpen = false;
       stopRide = cloud.watchRide(rideId, function (ride) {
         const kept = state.rides || [];
         if (!ride) {
