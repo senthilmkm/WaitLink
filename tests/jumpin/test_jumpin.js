@@ -838,7 +838,7 @@ it("covers fallback branches in the shell and the rules", function () {
   const mounted = view.mount(bare);
   mounted.setState(Object.assign(ui.blank(), { mode: "ride", status: "", notice: "", role: "", seatsLeft: 0 }));
   assert.strictEqual(mounted.root.style.height, "0px");
-  const rideText = mounted.root.children[1].children.map(function (child) { return child.textContent; }).join(" ");
+  const rideText = mounted.root.children[1].children[0].children.map(function (child) { return child.textContent; }).join(" ");
   assert.ok(rideText.indexOf("Ride") !== -1);
   const noIntl = fakeWindow();
   noIntl.Intl = null;
@@ -1330,6 +1330,10 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] }, role: "" }), { ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] } }));
   const riderPills = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; }).map(function (r) { return r.children[r.children.length - 1].textContent; });
   assert.deepStrictEqual(riderPills, ["⏳ Pending", "✓ Confirmed"]);
+  addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { ride: null }));
+  assert.strictEqual(addMount.root.children[2].children[0].children[0].textContent, "Close");
+  addMount.root.children[2].children[0]._listeners[0]();
+  assert.strictEqual(addMount.getState().mode, "board");
   addWin.JumpInCloud.roleFor = function (ride) {
     if (ride.rideId === "r_open") return "driver";
     if (ride.rideId === "r_last") return "rider";

@@ -438,6 +438,8 @@
     function rideCard(doc, current) {
       const ride = current.ride;
       const card = el(doc, "section", "confirm");
+      const badgeMap = { pending: ["Pending approval", " pending"], completed: ["✓ Completed", ""], cancelled: ["Cancelled", ""], rejected: ["Not approved", ""] };
+      if (badgeMap[current.status]) card.appendChild(el(doc, "span", "confirm-badge" + badgeMap[current.status][1], badgeMap[current.status][0]));
       if (current.notice) card.appendChild(el(doc, "h1", "", current.notice));
       card.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
       const whenText = (current.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
@@ -1134,13 +1136,18 @@
       } else if (state.ride) {
         mid.appendChild(rideCard(doc, state));
       } else {
-        mid.appendChild(el(doc, "p", "route", rideLine(state)));
+        const card = el(doc, "section", "confirm");
+        card.appendChild(el(doc, "span", "confirm-badge", state.status === "missing" ? "Link expired" : "Trip status"));
+        card.appendChild(el(doc, "h1", "", state.status === "missing" ? "Trip unavailable" : rideLine(state)));
+        card.appendChild(el(doc, "p", "muted", "This trip link has expired or the trip is no longer available."));
+        mid.appendChild(card);
       }
       let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
       if (label === "Post") label = "Post ride";
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
+      if (!label && state.mode === "ride") label = "Close";
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
@@ -1289,6 +1296,11 @@
             const link = state.link || (state.ride && cloud ? cloud.publicRideUrl(state.ride.rideId) : "");
             if (clip && clip.writeText && link) clip.writeText(link);
             state = ui.reduce(state, { type: "notice", notice: "Copied" });
+          } else if (label === "Close") {
+            stopRide();
+            const kept = state.rides || [];
+            state = ui.reduce(state, { type: "board" });
+            state.rides = kept;
           }
           draw();
         });
