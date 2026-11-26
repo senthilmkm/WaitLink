@@ -1221,12 +1221,17 @@
       const featSave = page.getElementById("jumpin-feat-save");
       if (featSave && api && api.savePlatformConfig) featSave.addEventListener("click", function () {
         const fIos = page.getElementById("jumpin-feat-ios");
+        const featErr = page.getElementById("jumpin-feat-error");
+        if (featErr) { featErr.textContent = ""; featErr.hidden = true; }
         withBusy(page, featSave, "Saving…", function () {
           return api.savePlatformConfig({
             iosThemeEnabled: !!(fIos && fIos.value === "on")
           }).then(function (res) {
-            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not save feature config." });
-            else {
+            if (!res || res.ok === false) {
+              const msg = (res && res.error) || "Could not save feature config.";
+              if (featErr) { featErr.textContent = msg; featErr.hidden = false; }
+              else state = admin.reduce(state, { type: "fail", error: msg });
+            } else {
               state = admin.reduce(state, { type: "clear" });
               text(page.getElementById("jumpin-admin-status"), "Feature config saved.");
               return refresh();
@@ -1281,8 +1286,13 @@
             retainTripsEnabled: !pRetEn || pRetEn.value !== "off",
             retainTripsIntervalHours: pRetInt ? Number(pRetInt.value || 24) : 24
           }).then(function (res) {
-            if (!res || res.ok === false) state = admin.reduce(state, { type: "fail", error: (res && res.error) || "Could not save platform settings." });
-            else {
+            const platErr = page.getElementById("jumpin-plat-error");
+            if (!res || res.ok === false) {
+              const msg = (res && res.error) || "Could not save platform settings.";
+              if (platErr) { platErr.textContent = msg; platErr.hidden = false; }
+              else state = admin.reduce(state, { type: "fail", error: msg });
+            } else {
+              if (platErr) { platErr.textContent = ""; platErr.hidden = true; }
               state = admin.reduce(state, { type: "clear" });
               text(page.getElementById("jumpin-admin-status"), "Platform settings saved.");
               return refresh();
@@ -1444,19 +1454,55 @@
           return api.setMembers({ groupId: activeGroupId, removePhoneHash: m.phoneHash }).then(refresh);
         });
       });
+      const editNameIn = page.getElementById("jumpin-edit-member-name");
+      const editPhoneIn = page.getElementById("jumpin-edit-member-phone");
+      const editEmailIn = page.getElementById("jumpin-edit-member-email");
+      function clearEditMemberErr() {
+        const errNode = page.getElementById("jumpin-edit-member-error");
+        if (errNode) { errNode.textContent = ""; errNode.hidden = true; }
+        [editNameIn, editPhoneIn, editEmailIn].forEach(function (inp) {
+          if (inp && inp.classList) inp.classList.remove("admin-input-invalid");
+        });
+      }
+      [editNameIn, editPhoneIn, editEmailIn].forEach(function (inp) {
+        if (inp) inp.addEventListener("input", clearEditMemberErr);
+      });
       if (editSave && api && api.setMembers) editSave.addEventListener("click", function () {
-        const nameIn = page.getElementById("jumpin-edit-member-name");
-        const phoneIn = page.getElementById("jumpin-edit-member-phone");
-        const emailIn = page.getElementById("jumpin-edit-member-email");
         const adminIn = page.getElementById("jumpin-edit-member-admin");
         const errNode = page.getElementById("jumpin-edit-member-error");
+        clearEditMemberErr();
+        const nameVal = editNameIn ? editNameIn.value.trim() : "";
+        const phoneVal = editPhoneIn ? editPhoneIn.value.trim() : "";
+        const emailVal = editEmailIn ? editEmailIn.value.trim() : "";
+        const c = win.JumpInCore;
+        let badInp = null;
+        let badMsg = "";
+        if (!nameVal) {
+          badInp = editNameIn;
+          badMsg = "Enter a member name.";
+        } else {
+          const parsedPhone = c && c.normalizePhone ? c.normalizePhone(phoneVal) : { ok: phoneVal.replace(/\D/g, "").length >= 10, error: "Enter a US or Canada mobile number." };
+          if (!parsedPhone.ok) {
+            badInp = editPhoneIn;
+            badMsg = parsedPhone.error || "Enter a US or Canada mobile number.";
+          } else if (emailVal && !(c && c.cleanEmail ? c.cleanEmail(emailVal) : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal))) {
+            badInp = editEmailIn;
+            badMsg = "Enter a valid email address.";
+          }
+        }
+        if (badMsg) {
+          if (errNode) { errNode.textContent = badMsg; errNode.hidden = false; }
+          if (badInp && badInp.classList) badInp.classList.add("admin-input-invalid");
+          if (badInp && badInp.focus) badInp.focus();
+          return;
+        }
         withBusy(page, editSave, "Saving…", function () {
           return api.setMembers({
             groupId: activeGroupId,
             editPhoneHash: editingMemberHash,
-            name: nameIn ? nameIn.value : "",
-            phone: phoneIn ? phoneIn.value : "",
-            email: emailIn ? emailIn.value : "",
+            name: nameVal,
+            phone: phoneVal,
+            email: emailVal,
             isAdmin: !!(adminIn && adminIn.checked)
           }).then(function (res) {
             if (!res || res.ok === false) {
@@ -1590,9 +1636,18 @@
       resendCooldownSec: Number(doc.getElementById("jumpin-cooldown").value)
     };
     const checked = admin.settingsErrors(fields);
-    const error = doc.getElementById("jumpin-error");
+    const settingsErr = doc.getElementById("jumpin-settings-error");
+    const error = settingsErr || doc.getElementById("jumpin-error");
+    function setSettingsErr(msg) {
+      if (settingsErr) {
+        settingsErr.textContent = msg || "";
+        settingsErr.hidden = !msg;
+      } else if (error) {
+        error.textContent = msg || "";
+      }
+    }
     if (checked.error) {
-      if (error) error.textContent = checked.error;
+      setSettingsErr(checked.error);
       return;
     }
     if (api && api.saveAdminConfig) {
@@ -1601,16 +1656,16 @@
       checked.value.groupId = groupId || "default";
       return api.saveAdminConfig(checked.value).then(function (res) {
         if (!res || res.ok === false) {
-          if (error) error.textContent = (res && res.error) || "This page is not available.";
+          setSettingsErr((res && res.error) || "This page is not available.");
           return;
         }
-        if (error) error.textContent = "";
+        setSettingsErr("");
         applyConfig(doc, res.config || checked.value);
         const status = doc.getElementById("jumpin-admin-status");
         if (status) status.textContent = "Saved.";
         if (onSaved) onSaved();
       }).catch(function () {
-        if (error) error.textContent = "This page is not available.";
+        setSettingsErr("This page is not available.");
       });
     }
     const ref = firebase.firestore().doc("settings/carpool_config");
