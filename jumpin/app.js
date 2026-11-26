@@ -97,8 +97,8 @@
       "#jumpin-root .site-foot{width:min(1040px,100%);margin:0 auto;padding:16px 24px calc(16px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;color:var(--text-muted,#1e293b);font-size:14px}",
       "#jumpin-root .site-foot a{color:var(--primary,#0891b2);font-weight:600}",
       "#jumpin-root .site-foot .spacer{margin-left:auto}",
-      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
-      "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(24px + env(safe-area-inset-bottom));background:transparent;border-top:0}",
+      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:14px 20px calc(20px + env(safe-area-inset-bottom));background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
+      "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(84px + env(safe-area-inset-bottom));background:transparent;border-top:0}",
       "@media (min-width:701px){#jumpin-root.app-screen #jumpin-mid{padding:36px 24px 20px}#jumpin-root.app-screen #jumpin-bottom{position:static;margin-top:0;padding:8px 24px 32px;background:transparent;border-top:0}}",
       "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .15s,filter .15s}",
       "#jumpin-mid .hero button:hover,#jumpin-bottom button:hover{filter:brightness(1.05)}",
@@ -726,9 +726,19 @@
       } else if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
         const recBox = el(doc, "div", "recovery-box");
         const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
-        on(seat, "click", function () { state = ui.reduce(state, { type: "recovery", role: "rider" }); draw(); });
+        on(seat, "click", function () {
+          state = ui.reduce(state, { type: "recovery", role: "rider" });
+          draw();
+          const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
+          if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
         const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
-        on(trip, "click", function () { state = ui.reduce(state, { type: "recovery", role: "driver" }); draw(); });
+        on(trip, "click", function () {
+          state = ui.reduce(state, { type: "recovery", role: "driver" });
+          draw();
+          const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
+          if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
         recBox.appendChild(seat);
         recBox.appendChild(trip);
         card.appendChild(recBox);
