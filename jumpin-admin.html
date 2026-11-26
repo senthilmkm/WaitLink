@@ -185,7 +185,7 @@
     .admin-stat-val { font-family: Outfit, Inter, sans-serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .admin-collapse summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-family: Outfit, Inter, sans-serif; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; color: var(--text-main); user-select: none; }
     .admin-collapse summary::-webkit-details-marker { display: none; }
-    .admin-collapse summary::after { content: "â–¸"; font-size: 16px; color: #64748b; transition: transform .15s; }
+    .admin-collapse summary::after { content: "▸"; font-size: 16px; color: #64748b; transition: transform .15s; }
     .admin-collapse[open] summary::after { transform: rotate(90deg); color: var(--primary); }
     .admin-collapse[open] summary { margin-bottom: 12px; }
     .admin-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
@@ -207,10 +207,10 @@
       .admin-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; width: 100%; max-width: 100%; border-radius: 0; border: 0; border-top: 1px solid #cbd5e1; background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 6px 8px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 18px rgba(15,23,42,.08); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .admin-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 5px 4px; min-height: 46px; font-size: 11px; line-height: 1.15; border-radius: 10px; position: relative; }
       .admin-tab::before { font-size: 16px; line-height: 1; }
-      #jumpin-tab-btn-trips::before { content: "ðŸš—"; }
-      #jumpin-tab-btn-members::before { content: "ðŸ‘¥"; }
-      #jumpin-tab-btn-settings::before { content: "âš™ï¸"; }
-      #jumpin-tab-btn-cleanup::before { content: "ðŸ§¹"; }
+      #jumpin-tab-btn-trips::before { content: "🚗"; }
+      #jumpin-tab-btn-members::before { content: "👥"; }
+      #jumpin-tab-btn-settings::before { content: "⚙️"; }
+      #jumpin-tab-btn-cleanup::before { content: "🧹"; }
       .admin-tab .admin-count { position: absolute; top: 3px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 1.4; }
       .admin-member-filter-pills { display: none !important; }
       .admin-member-filter-select { display: block !important; width: auto; min-width: 132px; max-width: 46%; min-height: 40px; margin-top: 0; padding: 6px 10px; border-radius: 10px; background: #f8fafc; font-size: 14px; font-weight: 600; color: var(--text-main); }
@@ -230,7 +230,7 @@
       </a>
       <span class="saas-pill">Admin</span>
       <nav class="saas-nav" aria-label="JumpIn links">
-        <button type="button" id="jumpin-install-app" hidden style="background:transparent;border:0;padding:2px 4px;min-height:0;font-size:12.5px;font-weight:600;color:#475569;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">ðŸ“² Add to Home Screen</button>
+        <button type="button" id="jumpin-install-app" hidden style="background:transparent;border:0;padding:2px 4px;min-height:0;font-size:12.5px;font-weight:600;color:#475569;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">📲 Add to Home Screen</button>
         <a href="https://waitlink.app/jumpin">Rides</a>
         <a href="/jumpin-guide.html" id="jumpin-nav-guide" hidden>Guide</a>
       </nav>
@@ -250,7 +250,7 @@
         <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
         <button type="button" class="admin-btn primary" id="jumpin-copy-board-link" hidden>Copy Board Link</button>
         <button type="button" class="admin-btn" id="jumpin-groups-open" hidden>My Groups<span class="admin-count" id="jumpin-groups-count"></span></button>
-        <button type="button" class="admin-btn" id="jumpin-plat-open" hidden>ðŸ”’ Platform Settings</button>
+        <button type="button" class="admin-btn" id="jumpin-plat-open" hidden>🔒 Platform Settings</button>
         <button type="button" class="filled" id="jumpin-signin">+ Start a New Group</button>
         <button type="button" class="admin-btn" id="jumpin-signin-admin">Existing Admin Sign In</button>
       </div>
@@ -297,7 +297,7 @@
       <section>
         <div class="admin-card-top" style="flex-wrap:wrap;align-items:center;margin-bottom:10px;">
           <h2 style="margin:0;">Trips</h2>
-          <button type="button" class="admin-btn primary" id="jumpin-open-broadcast">ðŸ“£ Broadcast SMS</button>
+          <button type="button" class="admin-btn primary" id="jumpin-open-broadcast">📣 Broadcast SMS</button>
         </div>
         <div class="admin-toolbar">
           <div class="admin-filter-row">
@@ -318,7 +318,7 @@
           <h2>Send a text</h2>
           <button type="button" class="admin-btn" id="jumpin-text-close">Close</button>
         </div>
-        <p class="quiet">One note. Youâ€™ll see how many people get it before it sends.</p>
+        <p class="quiet">One note. You’ll see how many people get it before it sends.</p>
         <p class="quiet" id="jumpin-selected-trip" hidden></p>
         <textarea id="jumpin-announce" maxlength="280" aria-label="Announcement" placeholder="What should we text?"></textarea>
         <p id="jumpin-count"></p>
@@ -369,13 +369,13 @@
           <input id="jumpin-member-search" type="search" placeholder="Search members by name or last 4" aria-label="Search members">
           <select id="jumpin-member-filter-select" class="admin-member-filter-select" aria-label="Filter members" hidden>
             <option value="all">All Members</option>
-            <option value="admins">ðŸ›¡ï¸ Group Admins</option>
-            <option value="blocked" id="jumpin-member-blocked-opt">ðŸš« Blocked</option>
+            <option value="admins">🛡️ Group Admins</option>
+            <option value="blocked" id="jumpin-member-blocked-opt">🚫 Blocked</option>
           </select>
           <div class="admin-member-filter-pills" style="display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="admin-btn primary" id="jumpin-member-all-btn" aria-pressed="true" style="margin-top:0;white-space:nowrap;">All Members</button>
-            <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">ðŸ›¡ï¸ Group Admins</button>
-            <button type="button" class="admin-btn" id="jumpin-member-blocked-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">ðŸš« Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
+            <button type="button" class="admin-btn" id="jumpin-member-admins-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🛡️ Group Admins</button>
+            <button type="button" class="admin-btn" id="jumpin-member-blocked-btn" aria-pressed="false" style="margin-top:0;white-space:nowrap;">🚫 Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
           </div>
         </div>
         <div id="jumpin-members" class="quiet admin-list"></div>
@@ -406,7 +406,7 @@
             </select>
           </label>
           <label title="Comma-separated email(s) shown to non-members when JumpIn is in Members only mode."><span class="tip">Admin contact email(s)</span><input id="jumpin-contact-email" type="text" value="senthil930@gmail.com" placeholder="organizer@email.com, co-admin@email.com"></label>
-          <label id="jumpin-support-note-wrap" title="Optional Zelle/Venmo tip note shown on JumpIn confirmation screens and footer. Leave blank to hide."><span class="tip">Support / Tip handle (optional)</span><span class="admin-plat-badge" id="jumpin-support-plat-badge" hidden title="Hidden from custom group admins â€” only Platform Admins can view or edit this.">ðŸ”’ Platform Only</span><input id="jumpin-support-note" maxlength="120" placeholder="e.g. Zelle: name@email.com Â· Venmo: @handle"></label>
+          <label id="jumpin-support-note-wrap" title="Optional Zelle/Venmo tip note shown on JumpIn confirmation screens and footer. Leave blank to hide."><span class="tip">Support / Tip handle (optional)</span><span class="admin-plat-badge" id="jumpin-support-plat-badge" hidden title="Hidden from custom group admins — only Platform Admins can view or edit this.">🔒 Platform Only</span><input id="jumpin-support-note" maxlength="120" placeholder="e.g. Zelle: name@email.com · Venmo: @handle"></label>
           <label title="If Yes and Support / Tip handle is set, sends one thank-you text with your tip handle after a ride completes."><span class="tip">Post-ride thank-you text</span>
             <select id="jumpin-thankyou" aria-label="Post-ride thank-you text">
               <option value="no">No</option>
@@ -471,7 +471,7 @@
       <section id="jumpin-group-confirm" hidden style="background:linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%);border:1px solid #86efac;border-top:3px solid #059669;">
         <div class="admin-card-top" style="flex-wrap:wrap;align-items:center;">
           <div>
-            <span class="admin-badge" id="jumpin-group-confirm-badge" style="background:#fef3c7;color:#92400e;margin-bottom:6px;display:inline-block;">â³ Pending Approval</span>
+            <span class="admin-badge" id="jumpin-group-confirm-badge" style="background:#fef3c7;color:#92400e;margin-bottom:6px;display:inline-block;">⏳ Pending Approval</span>
             <h2 id="jumpin-group-confirm-title" style="margin:0 0 4px;">Group Request Submitted!</h2>
             <p class="quiet" id="jumpin-group-confirm-msg" style="margin:0;"></p>
           </div>
@@ -486,7 +486,7 @@
           </div>
           <div class="admin-actions" style="margin-top:0;">
             <button type="button" class="admin-btn primary" id="jumpin-new-group-btn">+ New Group</button>
-            <button type="button" class="admin-btn" id="jumpin-groups-back">â† Back to Console</button>
+            <button type="button" class="admin-btn" id="jumpin-groups-back">← Back to Console</button>
           </div>
         </div>
         <div id="jumpin-create-group-section" hidden style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;">
@@ -520,7 +520,7 @@
             <h2 style="margin:0 0 2px;">Platform Settings</h2>
             <p class="quiet">Global controls across all JumpIn community groups (Platform Admin only).</p>
           </div>
-          <button type="button" class="admin-btn" id="jumpin-plat-back">â† Back to Console</button>
+          <button type="button" class="admin-btn" id="jumpin-plat-back">← Back to Console</button>
         </div>
         <nav class="admin-tabs" aria-label="Platform settings sections" style="margin-bottom:16px;">
           <button type="button" class="admin-tab active" id="jumpin-plat-tab-btn-general">Settings</button>
@@ -539,10 +539,10 @@
             <label class="admin-full-span">Platform Admin Sign-in Emails (comma-separated)<input id="jumpin-plat-super-emails" type="text" placeholder="senthil930@gmail.com, co-admin@email.com"></label>
             <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">These Google accounts can sign in as Platform Admin and manage all groups. Primary owner (senthil930@gmail.com) cannot be removed.</p>
             <label>Platform Contact Email<input id="jumpin-plat-email" type="email" value="senthil930@gmail.com"></label>
-            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">Notification &amp; support contact email only â€” does not grant Platform Admin sign-in access.</p>
+            <p class="admin-note muted admin-full-span" style="margin:-6px 0 8px;">Notification &amp; support contact email only — does not grant Platform Admin sign-in access.</p>
             <label>Platform Admin Phone (US/Canada)<input id="jumpin-plat-phone" type="tel" value="9802531359"></label>
             <label>Default Support / Tip Handle<input id="jumpin-plat-support" type="text" maxlength="80" placeholder="e.g. Zelle:name@email.com"></label>
-            <label class="admin-full-span">Home Maintenance / Banner Message (optional, max 200 chars)<textarea id="jumpin-plat-banner" rows="2" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10â€“11 PM"></textarea></label>
+            <label class="admin-full-span">Home Maintenance / Banner Message (optional, max 200 chars)<textarea id="jumpin-plat-banner" rows="2" maxlength="200" placeholder="e.g. Scheduled SMS maintenance tonight 10–11 PM"></textarea></label>
             <div class="admin-pair-group">
               <div class="admin-pair-row">
                 <div class="admin-field">
@@ -669,9 +669,9 @@
         <div class="admin-card-top" style="align-items:center;margin-bottom:2px;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <div class="admin-route">Edit member</div>
-            <span class="admin-badge" id="jumpin-edit-member-blocked-badge" hidden style="background:#fee2e2;color:#b91c1c;">ðŸš« Blocked</span>
+            <span class="admin-badge" id="jumpin-edit-member-blocked-badge" hidden style="background:#fee2e2;color:#b91c1c;">🚫 Blocked</span>
           </div>
-          <button type="button" class="admin-btn" id="jumpin-edit-member-cancel" aria-label="Close" style="min-height:32px;padding:4px 10px;">âœ•</button>
+          <button type="button" class="admin-btn" id="jumpin-edit-member-cancel" aria-label="Close" style="min-height:32px;padding:4px 10px;">✕</button>
         </div>
         <p class="quiet" style="margin-top: 2px;">Update this member's name or US/Canada mobile number.</p>
         <label style="margin-top: 12px;">Name<input id="jumpin-edit-member-name" type="text" maxlength="40" placeholder="Alex"></label>
@@ -694,7 +694,7 @@
       <a href="/jumpin-privacy.html">Privacy</a>
       <a href="/jumpin-terms.html">Terms</a>
       <a href="/jumpin-contact.html">Contact</a>
-      <span class="spacer">Â© 2026 WaitLink</span>
+      <span class="spacer">© 2026 WaitLink</span>
     </div>
   </footer>
   <script src="/firebase-app-compat.js"></script>
