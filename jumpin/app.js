@@ -665,6 +665,11 @@
             on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
             actions.appendChild(cancel);
           }
+          if (current.status !== "cancelled") {
+            const retBtn = el(doc, "button", "textish", "Post return trip");
+            on(retBtn, "click", function () { stopRide(); startReturnTrip(ride); });
+            actions.appendChild(retBtn);
+          }
         } else if (cloud && cloud.seatSecretFor(ride) && !departed) {
           const myInfo = cloud.seatInfoFor ? cloud.seatInfoFor(ride) : null;
           const mySeats = (myInfo && Number(myInfo.seats)) || 1;
@@ -1040,6 +1045,16 @@
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
         fields.forEach(function (spec) { buildPostField(spec, mid); });
+        const swapRow = el(doc, "div", "chip-row");
+        const swapBtn = el(doc, "button", "chip-btn", "⇅ Swap From / To");
+        swapBtn.type = "button";
+        on(swapBtn, "click", function () {
+          const tmp = postInputs.from.value;
+          postInputs.from.value = postInputs.to.value;
+          postInputs.to.value = tmp;
+        });
+        swapRow.appendChild(swapBtn);
+        mid.appendChild(swapRow);
         const dtPair = el(doc, "div", "form-pair");
         const dateCol = el(doc, "div");
         const timeCol = el(doc, "div");
@@ -1172,6 +1187,9 @@
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
         if (state.role === "driver" && state.status !== "cancelled") {
           const actions = el(doc, "div", "action-row");
+          const retBtn = el(doc, "button", "textish", "Post return trip");
+          on(retBtn, "click", function () { startReturnTrip(state.ride); });
+          actions.appendChild(retBtn);
           const cancel = el(doc, "button", "textish", "Cancel trip");
           on(cancel, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
           actions.appendChild(cancel);
@@ -1521,6 +1539,30 @@
       if (cloud.prepareAppCheck) {
         try { cloud.prepareAppCheck(); } catch (err) { /* the board still works if App Check cannot start */ }
       }
+    }
+
+    function startReturnTrip(ride) {
+      const r = ride || {};
+      const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+      const baseMs = Math.max(Date.now() + 60 * 60000, (Number(r.departAt) || Date.now()) + 4 * 60 * 60000);
+      const p = core.partsInZone(baseMs, zone);
+      const kept = state.rides || [];
+      const saved = loadProfile();
+      state = ui.reduce(state, { type: "post" });
+      state.rides = kept;
+      state.draft = {
+        name: r.driverName || saved.name || "",
+        phone: saved.phone || "",
+        from: r.to || "",
+        to: r.from || "",
+        date: p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0"),
+        time: String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0"),
+        seats: String(r.seatsTotal || r.seatsLeft || 3),
+        durationMinutes: Number(r.durationMinutes) || 30,
+        rideCost: r.rideCost ? String(r.rideCost) : "",
+        note: r.note || ""
+      };
+      draw();
     }
 
     function shortTripId(id) {
