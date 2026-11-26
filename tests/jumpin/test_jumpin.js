@@ -1268,7 +1268,8 @@ it("shows the confirmation screen after a saved post and the field error on a ba
     ride: { rideId: "r_fam", from: "A", to: "B", status: "open", seatsLeft: 3, riders: [{ reservationId: "r1", name: "Sam", seats: 2 }] },
     reserveOpen: true
   }));
-  assert.ok(famMount.root.children[1].children[0].children.some(function (c) { return c.tag === "select"; }));
+  assert.ok(famMount.root.children[1].querySelectorAll("button").some(function (c) { return c.className.indexOf("seat-pill") !== -1; }));
+  assert.ok(famMount.root.children[1].querySelectorAll("input").some(function (c) { return c.name === "seats"; }));
   const rUpWin = fakeWindow();
   rUpWin.JumpInCloud = {
     watchBoard: function () { return function () {}; },
@@ -1279,7 +1280,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const rUpMount = view.mount(rUpWin);
   const rUpRide = { rideId: "r_up", from: "A", to: "B", status: "open", departAt: Date.now() + 600000, seatsLeft: 2, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }] };
   rUpMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: rUpRide, role: "rider" }), { ride: rUpRide }));
-  const rActions = rUpMount.root.children[1].children[0].children.find(function (c) { return c.className === "action-row"; });
+  const rActions = rUpMount.root.children[1].querySelectorAll("div").find(function (c) { return c.className === "action-row"; });
   const rSel = rActions.children.find(function (c) { return c.tag === "select"; });
   const rBtn = rActions.children.find(function (c) { return c.textContent === "Update seats"; });
   rSel.value = "1";
@@ -1311,21 +1312,21 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const addMount = view.mount(addWin);
   const addRide = { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 2, riders: [{ reservationId: "rsv_dup", name: "Sam", seats: 1 }] };
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: addRide, role: "driver" }), { ride: addRide, reserveOpen: true }));
-  const ackBtn1 = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
+  const ackBtn1 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
   assert.strictEqual(ackBtn1.textContent, "🔔");
   ackBtn1._listeners[0]();
-  const ackBtn2 = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
+  const ackBtn2 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
   assert.strictEqual(ackBtn2.textContent, "✓");
   ackBtn2._listeners[0]();
   assert.strictEqual(ackCalls.length, 2);
   assert.strictEqual(ackCalls[0].seen, true);
   assert.strictEqual(ackCalls[1].seen, false);
   addWin.JumpInCloud.ackRider = function () { return Promise.resolve({ ok: false, error: "Ack denied" }); };
-  addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
+  addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(addMount.getState().error, "Ack denied");
   addWin.JumpInCloud.ackRider = function () { return Promise.reject(new Error("net")); };
-  addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
+  addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0]._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   addWin.JumpInCloud.ackRider = function (rideId, secret, resId, seen) { ackCalls.push({ rideId: rideId, secret: secret, resId: resId, seen: seen }); return Promise.resolve({ ok: true }); };
   let scrolled = 0;
@@ -1344,7 +1345,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   assert.strictEqual(addMount.getState().ride.seatsLeft, 2);
   assert.strictEqual(addMount.getState().ride.riders.length, 1);
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] }, role: "" }), { ride: { rideId: "r_add", from: "A", to: "B", status: "open", seatsLeft: 1, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }, { reservationId: "r2", name: "Pat", seats: 1, driverSeenAt: 100 }] } }));
-  const riderPills = addMount.root.children[1].children[0].children.filter(function (c) { return c.className === "rider-row"; }).map(function (r) { return r.children[r.children.length - 1].textContent; });
+  const riderPills = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; }).map(function (r) { return r.children[r.children.length - 1].textContent; });
   assert.deepStrictEqual(riderPills, ["⏳ Pending", "✓ Confirmed"]);
   addMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { ride: null }));
   assert.strictEqual(addMount.root.children[2].children[0].children[0].textContent, "Close");

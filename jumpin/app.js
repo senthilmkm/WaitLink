@@ -87,6 +87,8 @@
       "#jumpin-mid .seat-pills{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0 0 14px}",
       "#jumpin-mid .seat-pill{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:700;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}",
       "#jumpin-mid .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-mid .ride-sec{display:contents}",
+      "#jumpin-mid .driver-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;margin-left:auto}",
       "#jumpin-mid .driver-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid #f1f5f9}",
       "#jumpin-mid .driver-summary-txt{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
@@ -166,9 +168,9 @@
       "#jumpin-top nav .jumpin-nav-install:hover{border-color:var(--primary,#0891b2);color:var(--primary-dark,#0e7490)}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
-      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:calc(96px + env(safe-area-inset-bottom))}#jumpin-root.portal .site-foot{display:none}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(24px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
+      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:10px 12px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:calc(96px + env(safe-area-inset-bottom))}#jumpin-root.portal .site-foot{display:none}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm.ride-detail{padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .confirm.ride-detail .ride-sec{display:block;background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 3px 10px rgba(15,23,42,.04)}#jumpin-mid .confirm.ride-detail .ride-sec > *:first-child{margin-top:0}#jumpin-mid .confirm.ride-detail .ride-sec > *:last-child{margin-bottom:0}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(24px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
       "@media (max-width:480px){#jumpin-mid h1{font-size:24px}#jumpin-mid .row .route{font-size:16px}#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
-      "@media (max-width:380px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}#jumpin-mid .info-grid{grid-template-columns:1fr}}",
+      "@media (max-width:380px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm.ride-detail{padding:0}#jumpin-mid .confirm h1{font-size:20px}}",
       "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
       "#jumpin-sheet p{margin:0 0 12px;font-weight:600}",
       "#jumpin-sheet p.muted{margin:-4px 0 14px;font-weight:400}",
@@ -488,11 +490,12 @@
 
     function rideCard(doc, current) {
       const ride = current.ride;
-      const card = el(doc, "section", "confirm");
+      const card = el(doc, "section", "confirm ride-detail");
+      const secTop = el(doc, "div", "ride-sec");
       const badgeMap = { pending: ["Pending approval", " pending"], completed: ["✓ Completed", ""], cancelled: ["Cancelled", ""], rejected: ["Not approved", ""] };
-      if (badgeMap[current.status]) card.appendChild(el(doc, "span", "confirm-badge" + badgeMap[current.status][1], badgeMap[current.status][0]));
-      if (current.notice) card.appendChild(el(doc, "h1", "", current.notice));
-      card.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
+      if (badgeMap[current.status]) secTop.appendChild(el(doc, "span", "confirm-badge" + badgeMap[current.status][1], badgeMap[current.status][0]));
+      if (current.notice) secTop.appendChild(el(doc, "h1", "", current.notice));
+      secTop.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
       const whenText = (current.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
       const grid = el(doc, "div", "info-grid");
       function addTile(k, v) {
@@ -507,16 +510,27 @@
       const tripCode = shortTripId(ride.rideId);
       if (tripCode) addTile("Trip ID", tripCode);
       if (ride.note) addTile("Pickup / Note", ride.note);
-      card.appendChild(grid);
+      secTop.appendChild(grid);
+      if (current.status === "pending") secTop.appendChild(el(doc, "p", "route", "Waiting for approval."));
+      if (current.status === "rejected") secTop.appendChild(el(doc, "p", "route", "This trip was not approved."));
+      if (current.status === "cancelled") secTop.appendChild(el(doc, "p", "route", "This trip was cancelled."));
+      if (current.status === "completed") {
+        secTop.appendChild(el(doc, "p", "route", "Trip completed — hope you had a great ride!"));
+        if (supportNote) secTop.appendChild(supportCard(doc, supportNote));
+      }
+      if (current.status === "open" && ride.seatsLeft === 0) secTop.appendChild(el(doc, "p", "route", "Full"));
+      card.appendChild(secTop);
+      const secPeople = el(doc, "div", "ride-sec");
       if (ride.driverName) {
         const dRow = el(doc, "div", "rider-row");
         dRow.appendChild(el(doc, "span", "mini-av", ride.driverName.charAt(0).toUpperCase()));
-        dRow.appendChild(el(doc, "span", "", "Driver: " + ride.driverName));
-        card.appendChild(dRow);
+        dRow.appendChild(el(doc, "span", "", ride.driverName));
+        dRow.appendChild(el(doc, "span", "driver-tag", "Driver"));
+        secPeople.appendChild(dRow);
       }
       if (ride.riders && ride.riders.length) {
         const totalReserved = ride.riders.reduce(function (sum, r) { return sum + (Number(r.seats) || 1); }, 0);
-        card.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
+        secPeople.appendChild(el(doc, "div", "section-lbl", "Passengers (" + totalReserved + ")"));
         ride.riders.forEach(function (rider) {
           const seatSuffix = rider.seats > 1 ? " (" + rider.seats + " seats)" : "";
           const dropSuffix = rider.dropoff ? " · Drop off: " + rider.dropoff : "";
@@ -550,95 +564,83 @@
           } else {
             rRow.appendChild(el(doc, "span", "rider-ack-pill " + (seen ? "seen" : "unseen"), seen ? "✓ Confirmed" : "⏳ Pending"));
           }
-          card.appendChild(rRow);
+          secPeople.appendChild(rRow);
         });
       }
+      if (secPeople.children.length) card.appendChild(secPeople);
+      const secChat = el(doc, "div", "ride-sec");
       if (ride.messages && ride.messages.length) {
-        card.appendChild(el(doc, "div", "section-lbl", "Trip Updates"));
+        secChat.appendChild(el(doc, "div", "section-lbl", "Trip Updates"));
         ride.messages.forEach(function (message) {
           const who = message.authorName || "";
-          card.appendChild(el(doc, "div", "msg-row", (who ? who + ": " : "") + (message.text || "")));
+          secChat.appendChild(el(doc, "div", "msg-row", (who ? who + ": " : "") + (message.text || "")));
         });
       }
-      if (current.status === "pending") card.appendChild(el(doc, "p", "route", "Waiting for approval."));
-      if (current.status === "rejected") card.appendChild(el(doc, "p", "route", "This trip was not approved."));
-      if (current.status === "cancelled") card.appendChild(el(doc, "p", "route", "This trip was cancelled."));
-      if (current.status === "completed") {
-        card.appendChild(el(doc, "p", "route", "Trip completed — hope you had a great ride!"));
-        if (supportNote) card.appendChild(supportCard(doc, supportNote));
-      }
-      if (current.status === "open" && ride.seatsLeft === 0) card.appendChild(el(doc, "p", "route", "Full"));
       if (current.reserveOpen) {
+        const secRes = el(doc, "div", "ride-sec");
         const saved = current.role === "driver" ? { name: "", phone: "" } : loadProfile();
         const draft = current.reserveDraft || {};
-        card.appendChild(el(doc, "div", "reserve-head", current.role === "driver" ? "Add a passenger" : "Reserve your seat"));
-        card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger name" : "Your name"));
+        secRes.appendChild(el(doc, "div", "reserve-head", current.role === "driver" ? "Add a passenger" : "Reserve your seat"));
+        secRes.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger name" : "Your name"));
         const name = el(doc, "input");
         name.name = "name";
         name.value = draft.name != null ? draft.name : (saved.name || "");
         if (current.error && current.field === "name") name.className = "input-invalid";
-        card.appendChild(name);
-        if (current.error && current.field === "name") card.appendChild(el(doc, "p", "error", current.error));
-        card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone (US/Canada)" : "Phone (US/Canada)"));
+        secRes.appendChild(name);
+        if (current.error && current.field === "name") secRes.appendChild(el(doc, "p", "error", current.error));
+        secRes.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Passenger phone (US/Canada)" : "Phone (US/Canada)"));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
         phone.value = draft.phone != null ? draft.phone : (saved.phone || "");
         if (current.error && current.field === "phone") phone.className = "input-invalid";
-        card.appendChild(phone);
-        if (current.error && current.field === "phone") card.appendChild(el(doc, "p", "error", current.error));
+        secRes.appendChild(phone);
+        if (current.error && current.field === "phone") secRes.appendChild(el(doc, "p", "error", current.error));
         if ((Number(ride.seatsLeft) || 1) > 1) {
-          card.appendChild(el(doc, "label", "lbl", "Seats"));
-          const seatSel = el(doc, "select");
-          seatSel.name = "seats";
-          const maxPick = Math.min(6, Number(ride.seatsLeft) || 1);
-          const pickedSeats = Number(draft.seats || 1);
-          for (let s = 1; s <= maxPick; s++) {
-            const opt = el(doc, "option", "", String(s));
-            opt.value = String(s);
-            if (s === pickedSeats) opt.selected = true;
-            seatSel.appendChild(opt);
-          }
-          card.appendChild(seatSel);
+          secRes.appendChild(el(doc, "label", "lbl", "Seats"));
+          buildSeatPills(doc, secRes, "seats", Math.min(6, Number(ride.seatsLeft) || 1), draft.seats || 1);
         }
-        card.appendChild(el(doc, "label", "lbl", "Drop off location, optional"));
+        secRes.appendChild(el(doc, "label", "lbl", "Drop off location, optional"));
         const dropoff = el(doc, "input");
         dropoff.name = "dropoff";
         dropoff.type = "text";
         dropoff.placeholder = "e.g. University City";
         if (draft.dropoff) dropoff.value = draft.dropoff;
-        card.appendChild(dropoff);
-        card.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage their seat, and JumpIn notices."));
-        if (current.error && current.field !== "name" && current.field !== "phone") card.appendChild(el(doc, "p", "error", current.error));
+        secRes.appendChild(dropoff);
+        secRes.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage their seat, and JumpIn notices."));
+        if (current.error && current.field !== "name" && current.field !== "phone") secRes.appendChild(el(doc, "p", "error", current.error));
         const cancelForm = el(doc, "button", "textish", "Cancel");
         on(cancelForm, "click", function () { state = Object.assign(ui.reduce(state, { type: "reserve-close" }), { reserveDraft: null }); draw(); });
         const formActions = el(doc, "div", "action-row");
         formActions.appendChild(cancelForm);
-        card.appendChild(formActions);
+        secRes.appendChild(formActions);
+        card.appendChild(secRes);
       }
       if (current.recovery) {
+        const secRec = el(doc, "div", "ride-sec");
         const recLabel = current.recovery === "driver"
           ? "Driver phone (US/Canada, used to post this trip)"
           : "Rider phone (US/Canada, used to reserve your seat)";
-        card.appendChild(el(doc, "label", "lbl", recLabel));
+        secRec.appendChild(el(doc, "label", "lbl", recLabel));
         const phone = el(doc, "input");
         phone.name = "phone";
         phone.type = "tel";
         if (current.error) phone.className = "input-invalid";
-        card.appendChild(phone);
-        if (current.error) card.appendChild(el(doc, "p", "error", current.error));
+        secRec.appendChild(phone);
+        if (current.error) secRec.appendChild(el(doc, "p", "error", current.error));
         const cancelRec = el(doc, "button", "textish", "Cancel");
         on(cancelRec, "click", function () { state = ui.reduce(state, { type: "recovery-close" }); draw(); });
         const recActions = el(doc, "div", "action-row");
         recActions.appendChild(cancelRec);
-        card.appendChild(recActions);
+        secRec.appendChild(recActions);
+        card.appendChild(secRec);
       }
       const msgClosed = !!(ride.departAt && Date.now() >= ride.departAt + ((Number(ride.durationMinutes) || 0) * 60000) + 60 * 60000);
       if (!current.reserveOpen && (current.role === "driver" || current.role === "rider") && (current.status === "open" || current.status === "pending")) {
         let box = null;
         const hasRiders = !!(ride.riders && ride.riders.length);
         if (current.status === "open" && !msgClosed && (current.role === "rider" || hasRiders)) {
-          card.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Message passengers" : "Message the driver"));
+          secChat.appendChild(el(doc, "label", "lbl", current.role === "driver" ? "Message passengers" : "Message the driver"));
           const quickRow = el(doc, "div", "chip-row");
           ["On my way", "At pickup spot", "5 min late"].forEach(function (phrase) {
             const chip = el(doc, "button", "chip-btn", phrase);
@@ -647,7 +649,7 @@
             on(chip, "click", function () { sendMessage(phrase); });
             quickRow.appendChild(chip);
           });
-          card.appendChild(quickRow);
+          secChat.appendChild(quickRow);
           const msgRow = el(doc, "div", "link-row");
           box = el(doc, "input");
           box.name = "message";
@@ -658,8 +660,10 @@
           spinText(doc, sendInline, state.busy && state.busyAction === "send", "Sending…", "Send", true);
           on(sendInline, "click", function () { sendMessage(box.value); });
           msgRow.appendChild(sendInline);
-          card.appendChild(msgRow);
+          secChat.appendChild(msgRow);
         }
+        if (secChat.children.length) card.appendChild(secChat);
+        const secActions = el(doc, "div", "ride-sec");
         const actions = el(doc, "div", "action-row");
         const departed = !!(ride.departAt && Date.now() >= ride.departAt);
         if (current.role === "driver") {
@@ -729,7 +733,7 @@
           on(cancelSeat, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "rider" }); draw(); });
           actions.appendChild(cancelSeat);
         }
-        if (actions.children.length) card.appendChild(actions);
+        if (actions.children.length) secActions.appendChild(actions);
         if (current.role === "driver") {
           const secRow = el(doc, "div", "secondary-action-row");
           const forget = el(doc, "button", "linkish", "Sign out on this device");
@@ -739,27 +743,33 @@
             draw();
           });
           secRow.appendChild(forget);
-          card.appendChild(secRow);
+          secActions.appendChild(secRow);
         }
-      } else if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
-        const recBox = el(doc, "div", "recovery-box");
-        const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
-        on(seat, "click", function () {
-          state = ui.reduce(state, { type: "recovery", role: "rider" });
-          draw();
-          const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
-          if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-        const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
-        on(trip, "click", function () {
-          state = ui.reduce(state, { type: "recovery", role: "driver" });
-          draw();
-          const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
-          if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-        recBox.appendChild(seat);
-        recBox.appendChild(trip);
-        card.appendChild(recBox);
+        if (secActions.children.length) card.appendChild(secActions);
+      } else {
+        if (secChat.children.length) card.appendChild(secChat);
+        if (!current.reserveOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
+          const secRecBox = el(doc, "div", "ride-sec");
+          const recBox = el(doc, "div", "recovery-box");
+          const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
+          on(seat, "click", function () {
+            state = ui.reduce(state, { type: "recovery", role: "rider" });
+            draw();
+            const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
+            if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
+          on(trip, "click", function () {
+            state = ui.reduce(state, { type: "recovery", role: "driver" });
+            draw();
+            const p = rootNode.querySelector && rootNode.querySelector("input[name=phone]");
+            if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          recBox.appendChild(seat);
+          recBox.appendChild(trip);
+          secRecBox.appendChild(recBox);
+          card.appendChild(secRecBox);
+        }
       }
       if (current.error && !current.reserveOpen && !current.recovery) card.appendChild(el(doc, "p", "error", current.error));
       return card;
@@ -1136,28 +1146,7 @@
         });
         secSched.appendChild(whenChips);
         secSched.appendChild(el(doc, "label", "lbl", "Seats"));
-        const seatsInput = el(doc, "input");
-        seatsInput.type = "hidden";
-        seatsInput.name = "seats";
-        let pickedSeats = Number((state.draft && state.draft.seats) || 3);
-        if (!Number.isFinite(pickedSeats) || pickedSeats < 1 || pickedSeats > 6) pickedSeats = 3;
-        seatsInput.value = String(pickedSeats);
-        const seatPills = el(doc, "div", "seat-pills");
-        const seatBtns = [];
-        for (let n = 1; n <= 6; n++) {
-          const sb = el(doc, "button", "seat-pill" + (n === pickedSeats ? " active" : ""), String(n));
-          sb.type = "button";
-          sb.setAttribute("aria-label", n === 1 ? "1 seat" : n + " seats");
-          on(sb, "click", function () {
-            pickedSeats = n;
-            seatsInput.value = String(n);
-            seatBtns.forEach(function (b, idx) { b.className = "seat-pill" + (idx + 1 === n ? " active" : ""); });
-          });
-          seatBtns.push(sb);
-          seatPills.appendChild(sb);
-        }
-        secSched.appendChild(seatsInput);
-        secSched.appendChild(seatPills);
+        buildSeatPills(doc, secSched, "seats", 6, (state.draft && state.draft.seats) || 3);
         secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
         const dur = el(doc, "input");
         dur.type = "hidden";
@@ -1626,6 +1615,32 @@
       if (cloud.prepareAppCheck) {
         try { cloud.prepareAppCheck(); } catch (err) { /* the board still works if App Check cannot start */ }
       }
+    }
+
+    function buildSeatPills(doc, host, name, maxPick, initialVal) {
+      const hidden = el(doc, "input");
+      hidden.type = "hidden";
+      hidden.name = name;
+      let picked = Number(initialVal || 1);
+      if (!Number.isFinite(picked) || picked < 1 || picked > maxPick) picked = 1;
+      hidden.value = String(picked);
+      const wrap = el(doc, "div", "seat-pills");
+      wrap.style.gridTemplateColumns = "repeat(" + maxPick + ",minmax(0,1fr))";
+      const btns = [];
+      for (let n = 1; n <= maxPick; n++) {
+        const b = el(doc, "button", "seat-pill" + (n === picked ? " active" : ""), String(n));
+        b.type = "button";
+        b.setAttribute("aria-label", n === 1 ? "1 seat" : n + " seats");
+        on(b, "click", function () {
+          picked = n;
+          hidden.value = String(n);
+          btns.forEach(function (btn, idx) { btn.className = "seat-pill" + (idx + 1 === n ? " active" : ""); });
+        });
+        btns.push(b);
+        wrap.appendChild(b);
+      }
+      host.appendChild(hidden);
+      host.appendChild(wrap);
     }
 
     function roundUp30(ms) {
