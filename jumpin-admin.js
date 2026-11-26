@@ -457,21 +457,13 @@
       const memN = (lists.members || []).length;
       const audN = lists.audienceCount || 0;
       text(doc.getElementById("jumpin-cleanup-summary"), "Upcoming: " + upN + " · Waiting: " + waitN + " · Past/Cancelled: " + oldN + " · Members: " + memN + " · Audience: " + audN);
-      text(doc.getElementById("jumpin-stat-upcoming"), String(upN));
-      const pendStat = doc.getElementById("jumpin-stat-waiting");
-      text(pendStat, String(waitN));
       const showPendingApproval = !!(waitN > 0 || (lists.config && lists.config.requireRideApproval));
-      const pendCard = pendStat && pendStat.parentNode;
-      if (pendCard) pendCard.hidden = !showPendingApproval;
       const pendFilterBtn = doc.getElementById("jumpin-filter-pending");
       if (pendFilterBtn) pendFilterBtn.hidden = !showPendingApproval;
       const pendPanel = doc.getElementById("jumpin-pending");
       if (!showPendingApproval && pendPanel && !pendPanel.hidden) {
         const upBtn = doc.getElementById("jumpin-filter-upcoming");
         if (upBtn && upBtn.click) upBtn.click();
-      }
-      if (lists.settings) {
-        text(doc.getElementById("jumpin-stat-sms"), (lists.settings.dailySmsSent || 0) + " / " + (lists.settings.dailySmsCap || 200));
       }
     }
   }
@@ -571,9 +563,7 @@
         });
       }
       function syncAdminChrome() {
-        const strip = page.getElementById("jumpin-summary-strip");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
-        if (strip) strip.hidden = !hasActiveAccess || platformViewOpen || groupsViewOpen;
         if (tabsBar) tabsBar.hidden = !hasActiveAccess || platformViewOpen || groupsViewOpen;
       }
       function setHeaderPanel(kind, open) {
@@ -757,8 +747,6 @@
           });
           groupSelect.hidden = !groups.length;
         }
-        const activeGrp = groups.find(function (g) { return g.groupId === activeGroupId; });
-        text(page.getElementById("jumpin-stat-group"), activeGrp ? activeGrp.name : activeGroupId);
         if (copyBoardBtn) copyBoardBtn.hidden = !groups.length;
         const navGuide = page.getElementById("jumpin-nav-guide");
         if (navGuide) navGuide.hidden = !groupsData.isSuperAdmin;
@@ -1209,7 +1197,6 @@
         const createBox = page.getElementById("jumpin-create-group-box");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
         const signedOutInfo = page.getElementById("jumpin-signedout-info");
-        const summaryStrip = page.getElementById("jumpin-summary-strip");
         const navGuide = page.getElementById("jumpin-nav-guide");
         if (button) button.hidden = !!user;
         if (adminBtn) adminBtn.hidden = !!user;

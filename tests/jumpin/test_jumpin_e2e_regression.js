@@ -356,7 +356,7 @@ async function run() {
     const guideHtml = fs.readFileSync(path.join(__dirname, "../../jumpin-guide.html"), "utf8");
     assert.ok(adminHtml.indexOf("[hidden] { display: none !important; }") !== -1);
     assert.ok(adminHtml.indexOf("id=\"jumpin-nav-guide\" hidden") !== -1);
-    assert.ok(adminHtml.indexOf("id=\"jumpin-signedout-info\"") !== -1 && adminHtml.indexOf("id=\"jumpin-summary-strip\"") !== -1);
+    assert.ok(adminHtml.indexOf("id=\"jumpin-signedout-info\"") !== -1 && adminHtml.indexOf("id=\"jumpin-admin-tabs\"") !== -1);
     assert.ok(adminJs.indexOf("groupsData.isSuperAdmin") !== -1 && adminJs.indexOf("senthil930@gmail.com") === -1);
     assert.ok(adminJs.indexOf("askConfirm(page, removeLabel + \" group?\"") !== -1);
     assert.ok(appSrc.indexOf("Start a Group") !== -1 && appSrc.indexOf("Offer a ride") !== -1 && appSrc.indexOf("while (cleanups.length) cleanups.pop()()") !== -1);
