@@ -180,6 +180,12 @@
     .admin-collapse summary::after { content: "▸"; font-size: 16px; color: #64748b; transition: transform .15s; }
     .admin-collapse[open] summary::after { transform: rotate(90deg); color: var(--primary); }
     .admin-collapse[open] summary { margin-bottom: 12px; }
+    .admin-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+    .admin-toggle-title { font-weight: 700; font-size: 14px; color: var(--text-main); }
+    .admin-toggle-desc { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.4; }
+    .admin-switch { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 5px; min-height: 34px; border-radius: 999px; border: 1px solid #cbd5e1; background: #e2e8f0; color: #334155; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: background-color .15s, border-color .15s, color .15s; }
+    .admin-switch-knob { width: 22px; height: 22px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25); transition: transform .15s; }
+    .admin-switch[aria-checked="true"] { background: #0891b2; border-color: #0e7490; color: #ffffff; padding: 4px 5px 4px 10px; flex-direction: row-reverse; }
   </style>
 </head>
 <body>
@@ -198,9 +204,12 @@
   </header>
   <main id="jumpin-admin">
     <div class="admin-header">
-      <div>
-        <h1 id="jumpin-console-title">Start or Manage a Carpool Group</h1>
-        <p class="lead" id="jumpin-admin-status">New organizer? Use any Google account to start a private neighborhood board or manage an existing one.</p>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;">
+        <div>
+          <h1 id="jumpin-console-title">Start or Manage a Carpool Group</h1>
+          <p class="lead" id="jumpin-admin-status">New organizer? Use any Google account to start a private neighborhood board or manage an existing one.</p>
+        </div>
+        <button type="button" class="admin-btn" id="jumpin-signout" hidden style="flex-shrink:0;">Sign out</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
         <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
@@ -209,7 +218,6 @@
         <button type="button" class="admin-btn" id="jumpin-plat-open" hidden>🔒 Platform Settings</button>
         <button type="button" class="filled" id="jumpin-signin">+ Start a New Group</button>
         <button type="button" class="admin-btn" id="jumpin-signin-admin">Existing Admin Sign In</button>
-        <button type="button" class="admin-btn" id="jumpin-signout" hidden>Sign out</button>
       </div>
     </div>
     <div id="jumpin-signedout-info">
@@ -550,13 +558,21 @@
         </div>
         <div id="jumpin-plat-tab-features" hidden>
           <p class="quiet" style="margin-bottom:12px;">Toggle experimental or UI features across JumpIn (Platform Admin only).</p>
-          <div class="admin-settings-grid">
-            <label>JumpIn Home Page iOS Theme
-              <select id="jumpin-feat-ios" aria-label="JumpIn Home Page iOS Theme">
-                <option value="off">Off (Standard theme)</option>
-                <option value="on">On (iOS native app look)</option>
-              </select>
-            </label>
+          <div style="display:grid;gap:10px;margin-bottom:14px;">
+            <div class="admin-toggle-row">
+              <div>
+                <div class="admin-toggle-title">JumpIn Home Page iOS Theme</div>
+                <div class="admin-toggle-desc">Use the iOS native app look on the public JumpIn Rides Board.</div>
+              </div>
+              <button type="button" class="admin-switch" id="jumpin-feat-ios" role="switch" aria-checked="false" aria-label="JumpIn Home Page iOS Theme"><span class="admin-switch-knob"></span><span class="admin-switch-text">Off</span></button>
+            </div>
+            <div class="admin-toggle-row">
+              <div>
+                <div class="admin-toggle-title">Broadcast SMS</div>
+                <div class="admin-toggle-desc">When On, group organizers see the Broadcast SMS button in Trips. When Off, it is hidden across all groups.</div>
+              </div>
+              <button type="button" class="admin-switch" id="jumpin-feat-broadcast" role="switch" aria-checked="true" aria-label="Broadcast SMS"><span class="admin-switch-knob"></span><span class="admin-switch-text">On</span></button>
+            </div>
           </div>
           <p class="error" id="jumpin-feat-error" hidden style="margin-bottom:10px;"></p>
           <button type="button" class="filled" id="jumpin-feat-save">Save Feature Config</button>
@@ -648,9 +664,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261126a"></script>
-  <script src="/jumpin/cloud.js?v=20261126a"></script>
-  <script src="/jumpin/admin-state.js?v=20261126a"></script>
-  <script src="/jumpin-admin.js?v=20261126a"></script>
+  <script src="/jumpin/core.js?v=20261126b"></script>
+  <script src="/jumpin/cloud.js?v=20261126b"></script>
+  <script src="/jumpin/admin-state.js?v=20261126b"></script>
+  <script src="/jumpin-admin.js?v=20261126b"></script>
 </body>
 </html>

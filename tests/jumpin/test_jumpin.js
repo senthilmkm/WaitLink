@@ -1065,7 +1065,9 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   assert.strictEqual(schedSaved.platform.retainTripsIntervalHours, 48);
   assert.strictEqual((await service.completeDue(db, NOW + 20 * 60000)).skipped, "disabled");
   assert.strictEqual((await service.retainTrips(db, NOW + 50 * core.HOUR_MS)).skipped, "disabled");
-  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { completeTripsEnabled: true, retainTripsEnabled: true }, NOW);
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { completeTripsEnabled: true, retainTripsEnabled: true, broadcastSmsEnabled: false }, NOW);
+  assert.strictEqual((await service.broadcast(db, service.SUPERADMIN_EMAIL, { scope: "all", text: "Hello" }, NOW)).error, "Broadcast SMS is disabled by platform settings.");
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { broadcastSmsEnabled: true }, NOW);
   const runAt = NOW + 15 * core.DAY_MS;
   assert.strictEqual((await service.completeDue(db, runAt)).ok, true);
   assert.strictEqual((await service.completeDue(db, runAt + 5 * 60000)).skipped, "interval");

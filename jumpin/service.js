@@ -146,6 +146,7 @@ async function loadPlatformConfig(tx, now) {
   return {
     platformEnabled: stored.platformEnabled !== false,
     iosThemeEnabled: stored.iosThemeEnabled === true,
+    broadcastSmsEnabled: stored.broadcastSmsEnabled !== false,
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
     platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
@@ -1115,6 +1116,9 @@ function broadcast(db, email, input, now) {
     const config = await loadConfig(tx, now, p);
     if (!requireAdmin(email, config, platform)) return { ok: false, error: "This page is not available." };
     const pack = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+    if ((scope === "upcoming" || scope === "all") && platform.broadcastSmsEnabled === false) {
+      return { ok: false, error: "Broadcast SMS is disabled by platform settings." };
+    }
     const phones = broadcastPlan(pack, scope, input.rideId, now);
     const left = Math.min(core.smsBudget(config, now).left, Math.max(0, platform.platformDailySmsCap - platform.dailySmsSent));
     if (!input.confirm) return { ok: true, count: phones.length, left: left, confirm: false };
@@ -1684,6 +1688,7 @@ function savePlatformConfig(db, email, input, now) {
     const nextCap = body.platformDailySmsCap != null ? Math.max(0, Math.min(10000, Math.round(Number(body.platformDailySmsCap) || 0))) : prev.platformDailySmsCap;
     const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
     const nextIos = body.iosThemeEnabled !== undefined ? body.iosThemeEnabled === true : prev.iosThemeEnabled;
+    const nextBroadcastSms = body.broadcastSmsEnabled !== undefined ? body.broadcastSmsEnabled !== false : prev.broadcastSmsEnabled;
     const nextBanner = body.maintenanceMessage !== undefined ? core.collapse(core.stripTags(body.maintenanceMessage || "")).slice(0, 200) : prev.maintenanceMessage;
     const nextSupport = body.platformSupportNote !== undefined
       ? (core.collapse(core.stripTags(body.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE)
@@ -1711,6 +1716,7 @@ function savePlatformConfig(db, email, input, now) {
     const next = {
       platformEnabled: nextEnabled,
       iosThemeEnabled: nextIos,
+      broadcastSmsEnabled: nextBroadcastSms,
       maintenanceMessage: nextBanner,
       platformSupportNote: nextSupport,
       platformAdminEmail: nextAdminEmail,

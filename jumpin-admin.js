@@ -640,6 +640,16 @@
         grpConfirm.hidden = false;
         if (shouldScroll && grpConfirm.scrollIntoView) grpConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+      function setToggleState(btn, on) {
+        if (!btn) return;
+        const val = !!on;
+        btn.setAttribute("aria-checked", val ? "true" : "false");
+        const txt = btn.querySelector ? btn.querySelector(".admin-switch-text") : null;
+        if (txt) txt.textContent = val ? "On" : "Off";
+      }
+      function getToggleState(btn) {
+        return !!(btn && btn.getAttribute && btn.getAttribute("aria-checked") === "true");
+      }
       function setCreateGroupOpen(open) {
         const cSec = page.getElementById("jumpin-create-group-section");
         const newBtn = page.getElementById("jumpin-new-group-btn");
@@ -670,6 +680,10 @@
         const platOpenBtn = page.getElementById("jumpin-plat-open");
         if (platOpenBtn) platOpenBtn.hidden = !groupsData.isSuperAdmin;
         if (!groupsData.isSuperAdmin && platformViewOpen) showPlatformView(false);
+        const broadcastEnabled = !groupsData.platform || groupsData.platform.broadcastSmsEnabled !== false;
+        const openBroadcastBtn = page.getElementById("jumpin-open-broadcast");
+        if (openBroadcastBtn) openBroadcastBtn.hidden = !broadcastEnabled;
+        if (!broadcastEnabled) showSelectedTrip(null, false);
         const pendingGrp = !groupsData.isSuperAdmin ? groups.find(function (g) { return g.status === "pending"; }) : null;
         if (pendingGrp) {
           setCreateGroupOpen(false);
@@ -701,6 +715,7 @@
           const pRetEn = page.getElementById("jumpin-plat-retain-enabled");
           const pRetInt = page.getElementById("jumpin-plat-retain-interval");
           const fIos = page.getElementById("jumpin-feat-ios");
+          const fBroadcast = page.getElementById("jumpin-feat-broadcast");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
           if (pSuper) pSuper.value = (groupsData.platform.superAdminEmails || []).join(", ");
@@ -718,7 +733,8 @@
             pRetInt.value = String(groupsData.platform.retainTripsIntervalHours || 24);
             pRetInt.disabled = groupsData.platform.retainTripsEnabled === false;
           }
-          if (fIos) fIos.value = groupsData.platform.iosThemeEnabled ? "on" : "off";
+          setToggleState(fIos, !!groupsData.platform.iosThemeEnabled);
+          setToggleState(fBroadcast, groupsData.platform.broadcastSmsEnabled !== false);
         }
         if (groupSelect) {
           groupSelect.textContent = "";
@@ -1218,14 +1234,20 @@
           paint();
         }
       });
+      ["jumpin-feat-ios", "jumpin-feat-broadcast"].forEach(function (id) {
+        const sw = page.getElementById(id);
+        if (sw) sw.addEventListener("click", function () { setToggleState(sw, !getToggleState(sw)); });
+      });
       const featSave = page.getElementById("jumpin-feat-save");
       if (featSave && api && api.savePlatformConfig) featSave.addEventListener("click", function () {
         const fIos = page.getElementById("jumpin-feat-ios");
+        const fBroadcast = page.getElementById("jumpin-feat-broadcast");
         const featErr = page.getElementById("jumpin-feat-error");
         if (featErr) { featErr.textContent = ""; featErr.hidden = true; }
         withBusy(page, featSave, "Saving…", function () {
           return api.savePlatformConfig({
-            iosThemeEnabled: !!(fIos && fIos.value === "on")
+            iosThemeEnabled: getToggleState(fIos),
+            broadcastSmsEnabled: getToggleState(fBroadcast)
           }).then(function (res) {
             if (!res || res.ok === false) {
               const msg = (res && res.error) || "Could not save feature config.";
