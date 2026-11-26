@@ -77,7 +77,18 @@
       "#jumpin-root.app-screen #jumpin-top .back-btn{flex-shrink:0}",
       "#jumpin-mid{flex:1 1 auto;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}",
       "#jumpin-root.app-screen #jumpin-mid{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:24px 20px 28px;overflow:visible}",
-      "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:460px;margin:24px auto;padding:24px 28px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.07)}",
+      "#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 32px);max-width:460px;margin:20px auto;padding:0;background:transparent;border:0;box-shadow:none}",
+      "#jumpin-mid .post-section{background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(15,23,42,.05)}",
+      "#jumpin-mid .post-section input:last-child{margin-bottom:0}",
+      "#jumpin-mid .route-field{position:relative;padding-left:22px}",
+      "#jumpin-mid .route-dot{position:absolute;left:2px;top:36px;width:10px;height:10px;border-radius:50%;background:#0891b2}",
+      "#jumpin-mid .route-dot.from::after{content:'';position:absolute;left:4px;top:12px;width:2px;height:52px;background:#cbd5e1}",
+      "#jumpin-mid .route-dot.to{top:38px;border-radius:3px;background:#0f172a}",
+      "#jumpin-mid .seat-pills{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0 0 14px}",
+      "#jumpin-mid .seat-pill{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:700;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}",
+      "#jumpin-mid .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-mid .driver-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid #f1f5f9}",
+      "#jumpin-mid .driver-summary-txt{font-size:14px;font-weight:600;color:var(--text-main,#090d16);overflow-wrap:anywhere}",
       "#jumpin-mid .wrap{width:min(1080px,100%);margin:0 auto;padding:28px 24px 16px}",
       "#jumpin-mid .hero{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin:0 0 22px;padding:28px 32px;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 58%,#e0f2fe 100%);border:1px solid #bae6fd;border-top:3px solid var(--primary,#0891b2);border-radius:var(--radius-lg,20px);box-shadow:0 12px 30px rgba(8,145,178,.09)}",
       "#jumpin-mid .hero-eyebrow{display:inline-block;padding:4px 10px;margin:0 0 10px;border-radius:999px;background:rgba(8,145,178,.12);color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}",
@@ -97,8 +108,8 @@
       "#jumpin-root .site-foot{width:min(1040px,100%);margin:0 auto;padding:16px 24px calc(16px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;color:var(--text-muted,#1e293b);font-size:14px}",
       "#jumpin-root .site-foot a{color:var(--primary,#0891b2);font-weight:600}",
       "#jumpin-root .site-foot .spacer{margin-left:auto}",
-      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:14px 20px calc(20px + env(safe-area-inset-bottom));background:var(--bg-card,#fff);border-top:1px solid var(--border-color,#cbd5e1)}",
-      "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(84px + env(safe-area-inset-bottom));background:transparent;border-top:0}",
+      "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--border-color,#cbd5e1)}",
+      "#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(84px + env(safe-area-inset-bottom));background:transparent;border-top:0;backdrop-filter:none;-webkit-backdrop-filter:none}",
       "@media (min-width:701px){#jumpin-root.app-screen #jumpin-mid{padding:36px 24px 20px}#jumpin-root.app-screen #jumpin-bottom{position:static;margin-top:0;padding:8px 24px 32px;background:transparent;border-top:0}}",
       "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .15s,filter .15s}",
       "#jumpin-mid .hero button:hover,#jumpin-bottom button:hover{filter:brightness(1.05)}",
@@ -155,7 +166,7 @@
       "#jumpin-top nav .jumpin-nav-install:hover{border-color:var(--primary,#0891b2);color:var(--primary-dark,#0e7490)}",
       "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
-      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:calc(96px + env(safe-area-inset-bottom))}#jumpin-root.portal .site-foot{display:none}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:12px auto;padding:18px 16px;border-radius:16px}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(24px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
+      "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{padding:0;min-height:44px}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 10px;font-size:13px}#jumpin-root.app-screen #jumpin-mid{padding:14px 14px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:calc(96px + env(safe-area-inset-bottom))}#jumpin-root.portal .site-foot{display:none}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:46px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:10px 14px;margin:0 0 10px;gap:4px;border-radius:14px}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero p.muted{display:none}#jumpin-mid .hero-badges{margin-bottom:2px;gap:6px}#jumpin-mid h1{font-size:18px;margin:0}#jumpin-mid .hero-org{margin:2px 0 0;font-size:12px}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(24px + env(safe-area-inset-bottom))}#jumpin-root.app-screen #jumpin-bottom .site-foot{display:none}#jumpin-root .site-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));gap:8px 14px}#jumpin-root .site-foot .spacer{margin-left:0;width:100%}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 -10px 30px rgba(0,0,0,.22)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
       "@media (max-width:480px){#jumpin-mid h1{font-size:24px}#jumpin-mid .row .route{font-size:16px}#jumpin-mid .link-row{flex-wrap:wrap}#jumpin-mid .link-copy{width:100%;justify-content:center}#jumpin-root .action-row button,#jumpin-root .action-row a{flex:1 1 100%;justify-content:center;text-align:center}}",
       "@media (max-width:380px){#jumpin-mid .confirm{padding:16px 14px}#jumpin-mid .confirm h1{font-size:20px}#jumpin-mid .info-grid{grid-template-columns:1fr}}",
       "#jumpin-sheet{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(448px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;z-index:9999;background:var(--bg-card,#fff);color:var(--text-main,#090d16);padding:20px;border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-lg,20px);box-shadow:0 0 0 100vmax rgba(9,13,22,.5),0 16px 40px rgba(0,0,0,.25)}",
@@ -257,6 +268,7 @@
     let supportNote = "";
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
+    let driverEditOpen = false;
     function syncIosTheme() {
       if (!doc.body || !doc.body.classList) return;
       if (platformNotice.iosThemeEnabled) doc.body.classList.add("jumpin-ios");
@@ -1065,7 +1077,15 @@
           host.appendChild(input);
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
-        routeFields.forEach(function (spec) { buildPostField(spec, mid); });
+        const secRoute = el(doc, "section", "post-section");
+        routeFields.forEach(function (spec) {
+          const rf = el(doc, "div", "route-field");
+          rf.appendChild(el(doc, "span", "route-dot " + spec[0]));
+          buildPostField(spec, rf);
+          secRoute.appendChild(rf);
+        });
+        mid.appendChild(secRoute);
+        const secSched = el(doc, "section", "post-section");
         const dtPair = el(doc, "div", "form-pair");
         const dateCol = el(doc, "div");
         const timeCol = el(doc, "div");
@@ -1073,7 +1093,7 @@
         buildPostField(["time", "Time", "time", ""], timeCol);
         dtPair.appendChild(dateCol);
         dtPair.appendChild(timeCol);
-        mid.appendChild(dtPair);
+        secSched.appendChild(dtPair);
         const whenChips = el(doc, "div", "chip-row");
         [
           ["Today", 0, true, false],
@@ -1092,21 +1112,31 @@
           });
           whenChips.appendChild(chip);
         });
-        mid.appendChild(whenChips);
-        const capPair = el(doc, "div", "form-pair");
-        const seatsCol = el(doc, "div");
-        seatsCol.appendChild(el(doc, "label", "lbl", "Seats"));
-        const seats = el(doc, "select");
-        seats.name = "seats";
+        secSched.appendChild(whenChips);
+        secSched.appendChild(el(doc, "label", "lbl", "Seats"));
+        const seatsInput = el(doc, "input");
+        seatsInput.type = "hidden";
+        seatsInput.name = "seats";
+        let pickedSeats = Number((state.draft && state.draft.seats) || 3);
+        if (!Number.isFinite(pickedSeats) || pickedSeats < 1 || pickedSeats > 6) pickedSeats = 3;
+        seatsInput.value = String(pickedSeats);
+        const seatPills = el(doc, "div", "seat-pills");
+        const seatBtns = [];
         for (let n = 1; n <= 6; n++) {
-          const option = el(doc, "option", "", String(n));
-          option.value = String(n);
-          if (String(n) === String((state.draft && state.draft.seats) || 3)) option.selected = true;
-          seats.appendChild(option);
+          const sb = el(doc, "button", "seat-pill" + (n === pickedSeats ? " active" : ""), String(n));
+          sb.type = "button";
+          sb.setAttribute("aria-label", n === 1 ? "1 seat" : n + " seats");
+          on(sb, "click", function () {
+            pickedSeats = n;
+            seatsInput.value = String(n);
+            seatBtns.forEach(function (b, idx) { b.className = "seat-pill" + (idx + 1 === n ? " active" : ""); });
+          });
+          seatBtns.push(sb);
+          seatPills.appendChild(sb);
         }
-        seatsCol.appendChild(seats);
-        const durCol = el(doc, "div");
-        durCol.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+        secSched.appendChild(seatsInput);
+        secSched.appendChild(seatPills);
+        secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
         const dur = el(doc, "input");
         dur.type = "hidden";
         dur.name = "durationMinutes";
@@ -1115,6 +1145,7 @@
         if (durMins > 900) durMins = 900;
         dur.value = String(durMins);
         const stepper = el(doc, "div", "dur-stepper");
+        stepper.style.marginBottom = "0";
         const minusDur = el(doc, "button", "dur-btn", "−");
         minusDur.type = "button";
         minusDur.setAttribute("aria-label", "Decrease duration by 30 minutes");
@@ -1135,13 +1166,33 @@
         stepper.appendChild(minusDur);
         stepper.appendChild(durReadout);
         stepper.appendChild(plusDur);
-        durCol.appendChild(dur);
-        durCol.appendChild(stepper);
-        capPair.appendChild(seatsCol);
-        capPair.appendChild(durCol);
-        mid.appendChild(capPair);
-        driverFields.forEach(function (spec) { buildPostField(spec, mid); });
-        mid.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
+        secSched.appendChild(dur);
+        secSched.appendChild(stepper);
+        mid.appendChild(secSched);
+        const secDriver = el(doc, "section", "post-section");
+        const hasSavedDriver = !!(saved.name && saved.phone);
+        const driverFieldErr = !!(state.error && (state.field === "name" || state.field === "phone"));
+        if (hasSavedDriver && !driverEditOpen && !driverFieldErr) {
+          const dSum = el(doc, "div", "driver-summary");
+          const dName = (state.draft && state.draft.name) || saved.name;
+          const dPhone = (state.draft && state.draft.phone) || saved.phone;
+          dSum.appendChild(el(doc, "span", "driver-summary-txt", "Posting as " + dName + " · " + dPhone));
+          const editBtn = el(doc, "button", "chip-btn", "Edit");
+          editBtn.type = "button";
+          on(editBtn, "click", function () { driverEditOpen = true; draw(); });
+          dSum.appendChild(editBtn);
+          secDriver.appendChild(dSum);
+          [["name", dName], ["phone", dPhone]].forEach(function (pair) {
+            const hi = el(doc, "input");
+            hi.type = "hidden";
+            hi.name = pair[0];
+            hi.value = pair[1];
+            secDriver.appendChild(hi);
+          });
+        } else {
+          driverFields.forEach(function (spec) { buildPostField(spec, secDriver); });
+        }
+        secDriver.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
         const rideCost = el(doc, "input");
         rideCost.name = "rideCost";
         rideCost.type = "number";
@@ -1151,16 +1202,17 @@
         rideCost.inputMode = "decimal";
         rideCost.placeholder = "Free (or e.g. 5)";
         if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
-        mid.appendChild(rideCost);
-        if (state.error && state.field === "rideCost") mid.appendChild(el(doc, "p", "error", state.error));
-        mid.appendChild(el(doc, "label", "lbl", "Note, optional"));
+        secDriver.appendChild(rideCost);
+        if (state.error && state.field === "rideCost") secDriver.appendChild(el(doc, "p", "error", state.error));
+        secDriver.appendChild(el(doc, "label", "lbl", "Note, optional"));
         const note = el(doc, "input");
         note.name = "note";
         note.type = "text";
         note.placeholder = "South door";
         if (state.draft && state.draft.note) note.value = state.draft.note;
-        mid.appendChild(note);
-        mid.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
+        secDriver.appendChild(note);
+        secDriver.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
+        mid.appendChild(secDriver);
       } else if (state.mode === "posted") {
         const card = el(doc, "section", "confirm");
         card.appendChild(el(doc, "span", "confirm-badge" + (state.status === "pending" ? " pending" : ""), state.status === "pending" ? "Pending approval" : "✓ Trip live"));

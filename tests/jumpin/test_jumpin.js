@@ -553,8 +553,22 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   postButton._listeners[0]();
   const formButton = mounted.root.children[2].children[0];
   formButton._listeners[0]();
-  const formText = mounted.root.children[1].children.map(function (child) { return child.textContent; }).join(" ");
+  const formText = mounted.root.children[1].querySelectorAll("p").map(function (child) { return child.textContent; }).join(" ");
   assert.ok(formText.indexOf("Enter your name") !== -1);
+  // Verify Swap From/To and 1-tap seat pills in Post a ride form
+  const formInputs = mounted.root.children[1].querySelectorAll("input");
+  const fromIn = formInputs.filter(function (el) { return el.name === "from"; })[0];
+  const toIn = formInputs.filter(function (el) { return el.name === "to"; })[0];
+  const seatsIn = formInputs.filter(function (el) { return el.name === "seats"; })[0];
+  fromIn.value = "Home";
+  toIn.value = "Work";
+  const swapBtn = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.textContent.indexOf("Swap") !== -1; })[0];
+  swapBtn._listeners[0]();
+  assert.strictEqual(fromIn.value, "Work");
+  assert.strictEqual(toIn.value, "Home");
+  const seat5 = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className.indexOf("seat-pill") !== -1 && b.textContent === "5"; })[0];
+  seat5._listeners[0]();
+  assert.strictEqual(seatsIn.value, "5");
   mounted.root.children[0].children[0]._listeners[0]();
   assert.strictEqual(ui.buttonLabel(mounted.getState()), "Post a ride");
   mounted.setState(ui.reduce(ui.blank(), { type: "ride", ride: { status: "open", seatsLeft: 1 }, role: "driver" }));
@@ -1218,11 +1232,11 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const blank = view.mount(fakeWindow());
   blank.setState(Object.assign(ui.blank(), { mode: "post" }));
   clickPost(blank);
-  const nameError = blank.root.children[1].children.filter(function (child) { return child.className === "error"; })[0];
+  const nameError = blank.root.children[1].querySelectorAll("p").filter(function (child) { return child.className === "error"; })[0];
   assert.strictEqual(nameError.textContent, "Enter your name.");
   fill(blank, { name: "Ann", phone: "12", from: "Library", to: "Office", date: values.date, time: values.time });
   clickPost(blank);
-  const phoneError = blank.root.children[1].children.filter(function (child) { return child.className === "error"; })[0];
+  const phoneError = blank.root.children[1].querySelectorAll("p").filter(function (child) { return child.className === "error"; })[0];
   assert.strictEqual(phoneError.textContent, "Enter a US or Canada mobile number.");
   fill(blank, { name: "Ann", phone: "5552345678", from: "", to: "Office", date: values.date, time: values.time });
   clickPost(blank);
