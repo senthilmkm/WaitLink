@@ -949,6 +949,14 @@
       if (grpEmail) grpEmail.addEventListener("input", function () { setGroupFieldError("contactEmail", ""); });
       if (grpPhone) grpPhone.addEventListener("input", function () { setGroupFieldError("contactPhone", ""); });
       const grpCreate = page.getElementById("jumpin-group-create");
+      const grpConfirm = page.getElementById("jumpin-group-confirm");
+      const grpAnother = page.getElementById("jumpin-group-another");
+      if (grpAnother) grpAnother.addEventListener("click", function () {
+        if (grpConfirm) grpConfirm.hidden = true;
+        const cBox = page.getElementById("jumpin-create-group-box");
+        if (cBox) cBox.open = true;
+        if (grpName && grpName.focus) grpName.focus();
+      });
       if (grpCreate && api && api.createGroup) grpCreate.addEventListener("click", function () {
         clearGroupFieldErrors();
         const payload = {
@@ -983,8 +991,37 @@
             } else {
               activeGroupId = res.group && res.group.groupId ? res.group.groupId : activeGroupId;
               state = admin.reduce(state, { type: "clear" });
-              const baseStatus = res.group && res.group.status === "pending" ? "Group requested — waiting for platform approval." : "Group created and active.";
+              const gObj = res.group || {};
+              const isPending = gObj.status === "pending";
+              const baseStatus = isPending ? "Group requested — waiting for platform approval." : "Group created and active.";
               text(page.getElementById("jumpin-admin-status"), res.textSent === false ? baseStatus + " (SMS notification skipped — daily cap reached or unavailable.)" : baseStatus);
+              if (grpName) grpName.value = "";
+              if (grpSlug) {
+                grpSlug.value = "";
+                if (grpSlug.dataset) delete grpSlug.dataset.edited;
+              }
+              if (grpPhone) grpPhone.value = "";
+              syncSlugPreview();
+              const cBox = page.getElementById("jumpin-create-group-box");
+              if (cBox) cBox.open = false;
+              const mBox = page.getElementById("jumpin-manage-groups-box");
+              if (mBox) mBox.open = true;
+              if (grpConfirm) {
+                const badge = page.getElementById("jumpin-group-confirm-badge");
+                const title = page.getElementById("jumpin-group-confirm-title");
+                const msg = page.getElementById("jumpin-group-confirm-msg");
+                if (badge) {
+                  badge.textContent = isPending ? "⏳ Pending Approval" : "✓ Active";
+                  badge.style.background = isPending ? "#fef3c7" : "#dcfce7";
+                  badge.style.color = isPending ? "#92400e" : "#15803d";
+                }
+                if (title) title.textContent = (gObj.name || payload.name) + (isPending ? " — Request Submitted!" : " — Group Created!");
+                if (msg) msg.textContent = isPending
+                  ? ("Your board link will be waitlink.app/?s=jumpin&g=" + (gObj.groupId || payload.groupId) + ". We'll text you as soon as it's approved.")
+                  : ("Your board is live at waitlink.app/?s=jumpin&g=" + (gObj.groupId || payload.groupId) + ".");
+                grpConfirm.hidden = false;
+                if (grpConfirm.scrollIntoView) grpConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }
               return refresh();
             }
             paint();

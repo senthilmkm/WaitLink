@@ -406,6 +406,16 @@
       </section>
     </div>
     <div id="jumpin-tab-groups" hidden>
+      <section id="jumpin-group-confirm" hidden style="background:linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%);border:1px solid #86efac;border-top:3px solid #059669;">
+        <div class="admin-card-top" style="align-items:center;">
+          <div>
+            <span class="admin-badge" id="jumpin-group-confirm-badge" style="background:#fef3c7;color:#92400e;margin-bottom:6px;display:inline-block;">⏳ Pending Approval</span>
+            <h2 id="jumpin-group-confirm-title" style="margin:0 0 4px;">Group Request Submitted!</h2>
+            <p class="quiet" id="jumpin-group-confirm-msg" style="margin:0;"></p>
+          </div>
+          <button type="button" class="admin-btn" id="jumpin-group-another">+ Request Another Group</button>
+        </div>
+      </section>
       <section>
         <details class="admin-collapse" id="jumpin-create-group-box">
           <summary>Create Neighborhood Group</summary>
@@ -426,7 +436,7 @@
         </details>
       </section>
       <section>
-        <details class="admin-collapse">
+        <details class="admin-collapse" id="jumpin-manage-groups-box">
           <summary>Manage Groups</summary>
           <p class="quiet" id="jumpin-platform-sms" style="margin-bottom:10px;"></p>
           <div id="jumpin-groups-list" class="admin-list quiet"></div>
@@ -603,9 +613,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125i"></script>
-  <script src="/jumpin/cloud.js?v=20261125i"></script>
-  <script src="/jumpin/admin-state.js?v=20261125i"></script>
-  <script src="/jumpin-admin.js?v=20261125i"></script>
+  <script src="/jumpin/core.js?v=20261125j"></script>
+  <script src="/jumpin/cloud.js?v=20261125j"></script>
+  <script src="/jumpin/admin-state.js?v=20261125j"></script>
+  <script src="/jumpin-admin.js?v=20261125j"></script>
 </body>
 </html>
