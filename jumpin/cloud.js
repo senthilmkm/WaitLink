@@ -300,6 +300,9 @@
       cancelSeat: function (rideId, secret) {
         return call("carpoolCancelSeat", { rideId: rideId, secret: secret });
       },
+      joinWaitlist: function (rideId, phone) {
+        return call("carpoolJoinWaitlist", { rideId: rideId, phone: phone });
+      },
       removeRider: function (rideId, secret, reservationId, keepSeats) {
         const body = { rideId: rideId, secret: secret, reservationId: reservationId };
         if (keepSeats != null) body.keepSeats = Number(keepSeats);

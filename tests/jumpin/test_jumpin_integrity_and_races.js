@@ -222,6 +222,40 @@ test("6. Driver Remove Passenger: Atomic Seat Release, Quota Reset, and SMS", as
   assert.strictEqual(rebook.seatsLeft, 0);
 });
 
+test("7. Seat Waitlist: 0 SMS on Join, Single-Segment SMS on Open, and No Duplicates", async function () {
+  const db = service.createMemoryDb(baseSeed());
+  const w1 = futureWall(5);
+  const posted = await handlers.call(db, "carpoolPostRide", {
+    name: "Dan", phone: "5552221111", from: "Library", to: "Station",
+    date: w1.date, time: w1.time, timeZone: TZ, seats: 2, note: ""
+  }, null, NOW);
+  const res = await handlers.call(db, "carpoolReserveSeat", {
+    rideId: posted.rideId, name: "Eva", phone: "5553334444", seats: 2
+  }, null, NOW + 1000);
+  assert.strictEqual(res.seatsLeft, 0);
+
+  const wl = await handlers.call(db, "carpoolJoinWaitlist", {
+    rideId: posted.rideId, phone: "5559998888"
+  }, null, NOW + 1500);
+  assert.strictEqual(wl.ok, true);
+  assert.strictEqual((wl.outbox || []).length, 0);
+
+  // Driver adds a seat via Edit Trip -> waitlisted rider receives 1 short SMS (< 160 chars)
+  const edited = await handlers.call(db, "carpoolEditRide", {
+    rideId: posted.rideId, secret: posted.secret, date: w1.date, time: w1.time, seats: 3, note: ""
+  }, null, NOW + 2000);
+  assert.strictEqual(edited.ok, true);
+  assert.strictEqual((edited.outbox || []).length, 1);
+  assert.ok(edited.outbox[0].body.indexOf("Seat open!") !== -1);
+  assert.ok(edited.outbox[0].body.length <= 160, "Waitlist SMS should stay <= 160 chars");
+
+  // Subsequent seat opening sends 0 duplicate SMS since waitlist was cleared
+  const cancelled = await handlers.call(db, "carpoolCancelSeat", {
+    rideId: posted.rideId, secret: res.secret
+  }, null, NOW + 3000);
+  assert.strictEqual((cancelled.outbox || []).length, 0);
+});
+
 (async function run() {
   console.log("======================================================================");
   console.log("🧪 SUITE 11: JUMPIN INTEGRITY, CONCURRENCY, RETENTION & UI CONTRACTS");

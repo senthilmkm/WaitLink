@@ -382,7 +382,7 @@
         const kept = state.rides || [];
         if (!ride) {
           state = Object.assign(ui.reduce(state, { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { rides: kept, ride: null });
-        } else if (ride.status === "open" && (state.reserveOpen || state.editOpen || state.driverSheet || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
+        } else if (ride.status === "open" && (state.reserveOpen || state.editOpen || state.waitlistOpen || state.driverSheet || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
           state = Object.assign({}, state, {
             rides: kept,
             ride: ride,
@@ -404,7 +404,7 @@
             route: ride.from + " → " + ride.to,
             when: whenOf(ride),
             link: cloud.publicRideUrl(ride.rideId),
-            notice: ride.status === "open" && (prevNotice === "You have a seat." || /^You have \d+ seats\.$/.test(prevNotice || "") || prevNotice === "Passenger added." || prevNotice === "Seat cancelled." || prevNotice === "Seats updated." || prevNotice === "Trip updated." || prevNotice === "Passenger removed." || prevNotice === "Passenger seats updated.") ? prevNotice : ""
+            notice: ride.status === "open" && (prevNotice === "You have a seat." || /^You have \d+ seats\.$/.test(prevNotice || "") || prevNotice === "Passenger added." || prevNotice === "Seat cancelled." || prevNotice === "Seats updated." || prevNotice === "Trip updated." || prevNotice === "Passenger removed." || prevNotice === "Passenger seats updated." || prevNotice === "You're on the waitlist! We'll text you if a seat opens.") ? prevNotice : ""
           });
         }
         draw();
@@ -795,6 +795,75 @@
       return sheet;
     }
 
+    function waitlistSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const head = el(doc, "div", "sheet-head");
+      head.appendChild(el(doc, "p", "", "Notify me if a seat opens"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      if (state.busy) xBtn.disabled = true;
+      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
+      head.appendChild(xBtn);
+      sheet.appendChild(head);
+      sheet.appendChild(el(doc, "p", "muted", "We'll send 1 text if a seat opens before departure."));
+      sheet.appendChild(el(doc, "label", "lbl", "Phone (US/Canada)"));
+      const saved = loadProfile();
+      const phoneIn = el(doc, "input");
+      phoneIn.name = "phone";
+      phoneIn.type = "tel";
+      phoneIn.value = state.waitlistPhone != null ? state.waitlistPhone : (saved.phone || "");
+      if (state.error && state.field === "phone") phoneIn.className = "input-invalid";
+      sheet.appendChild(phoneIn);
+      if (state.error) sheet.appendChild(el(doc, "p", "error", state.error));
+      const cancelBtn = el(doc, "button", "textish", "Cancel");
+      cancelBtn.type = "button";
+      if (state.busy) cancelBtn.disabled = true;
+      on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
+      sheet.appendChild(cancelBtn);
+      const notifyBtn = el(doc, "button", "confirm-primary");
+      notifyBtn.type = "button";
+      spinText(doc, notifyBtn, state.busy && state.busyAction === "waitlist", "Saving…", "Notify me", false);
+      on(notifyBtn, "click", function () {
+        if (!cloud || !state.ride) return;
+        const val = phoneIn.value;
+        const parsed = core.normalizePhone(val);
+        if (!parsed.ok) {
+          state = ui.reduce(state, { type: "fail", field: "phone", error: parsed.error });
+          state.waitlistPhone = val;
+          draw();
+          return;
+        }
+        state.busy = true;
+        state.busyAction = "waitlist";
+        state.waitlistPhone = val;
+        draw();
+        cloud.joinWaitlist(state.ride.rideId, val).then(function (result) {
+          state.busy = false;
+          state.busyAction = "";
+          if (!result || result.ok === false) {
+            state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not join waitlist. Check the connection and try again." });
+            openMemberModal(result);
+          } else {
+            state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), {
+              waitlistPhone: "",
+              notice: "You're on the waitlist! We'll text you if a seat opens."
+            });
+          }
+          draw();
+        }, function () {
+          state.busy = false;
+          state.busyAction = "";
+          state = ui.reduce(state, { type: "fail", error: "Could not join waitlist. Check the connection and try again." });
+          draw();
+        });
+      });
+      sheet.appendChild(notifyBtn);
+      return sheet;
+    }
+
     function managePassengersSheet(doc) {
       const sheet = el(doc, "section");
       sheet.id = "jumpin-sheet";
@@ -1016,6 +1085,75 @@
       return sheet;
     }
 
+    function waitlistSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const head = el(doc, "div", "sheet-head");
+      head.appendChild(el(doc, "p", "", "Notify me if a seat opens"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      if (state.busy) xBtn.disabled = true;
+      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
+      head.appendChild(xBtn);
+      sheet.appendChild(head);
+      sheet.appendChild(el(doc, "p", "muted", "We'll send 1 text if a seat opens before departure."));
+      sheet.appendChild(el(doc, "label", "lbl", "Phone (US/Canada)"));
+      const saved = loadProfile();
+      const phoneIn = el(doc, "input");
+      phoneIn.name = "phone";
+      phoneIn.type = "tel";
+      phoneIn.value = state.waitlistPhone != null ? state.waitlistPhone : (saved.phone || "");
+      if (state.error && state.field === "phone") phoneIn.className = "input-invalid";
+      sheet.appendChild(phoneIn);
+      if (state.error) sheet.appendChild(el(doc, "p", "error", state.error));
+      const cancelBtn = el(doc, "button", "textish", "Cancel");
+      cancelBtn.type = "button";
+      if (state.busy) cancelBtn.disabled = true;
+      on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
+      sheet.appendChild(cancelBtn);
+      const notifyBtn = el(doc, "button", "confirm-primary");
+      notifyBtn.type = "button";
+      spinText(doc, notifyBtn, state.busy && state.busyAction === "waitlist", "Saving…", "Notify me", false);
+      on(notifyBtn, "click", function () {
+        if (!cloud || !state.ride) return;
+        const val = phoneIn.value;
+        const parsed = core.normalizePhone(val);
+        if (!parsed.ok) {
+          state = ui.reduce(state, { type: "fail", field: "phone", error: parsed.error });
+          state.waitlistPhone = val;
+          draw();
+          return;
+        }
+        state.busy = true;
+        state.busyAction = "waitlist";
+        state.waitlistPhone = val;
+        draw();
+        cloud.joinWaitlist(state.ride.rideId, val).then(function (result) {
+          state.busy = false;
+          state.busyAction = "";
+          if (!result || result.ok === false) {
+            state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not join waitlist. Check the connection and try again." });
+            openMemberModal(result);
+          } else {
+            state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), {
+              waitlistPhone: "",
+              notice: "You're on the waitlist! We'll text you if a seat opens."
+            });
+          }
+          draw();
+        }, function () {
+          state.busy = false;
+          state.busyAction = "";
+          state = ui.reduce(state, { type: "fail", error: "Could not join waitlist. Check the connection and try again." });
+          draw();
+        });
+      });
+      sheet.appendChild(notifyBtn);
+      return sheet;
+    }
+
     function memberSheet(doc) {
       const sheet = el(doc, "div");
       sheet.id = "jumpin-sheet";
@@ -1141,7 +1279,18 @@
         secTop.appendChild(el(doc, "p", "route", "Trip completed — hope you had a great ride!"));
         if (supportNote) secTop.appendChild(supportCard(doc, supportNote));
       }
-      if (current.status === "open" && ride.seatsLeft === 0) secTop.appendChild(el(doc, "p", "route", "Full"));
+      if (current.status === "open" && ride.seatsLeft === 0) {
+        secTop.appendChild(el(doc, "p", "route", "Full"));
+        const fullDeparted = !!(ride.departAt && Date.now() >= ride.departAt);
+        if (!fullDeparted && !current.role && !current.reserveOpen && !current.recovery && cloud && cloud.joinWaitlist) {
+          const wlRow = el(doc, "div", "action-row");
+          const wlBtn = el(doc, "button", "textish", "Notify me if a seat opens");
+          wlBtn.type = "button";
+          on(wlBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-open" }), { waitlistPhone: null }); draw(); });
+          wlRow.appendChild(wlBtn);
+          secTop.appendChild(wlRow);
+        }
+      }
       if (!current.reserveOpen && current.role === "driver" && (current.status === "open" || current.status === "pending")) {
         const topActions = el(doc, "div", "action-row");
         const mTrip = el(doc, "button", "textish", "Manage trip");
@@ -2183,6 +2332,7 @@
         rootNode.appendChild(mbar);
       }
       if (state.sheet || (state.busy && state.busyAction === "sheet")) rootNode.appendChild(confirmSheet(doc));
+      else if (state.waitlistOpen) rootNode.appendChild(waitlistSheet(doc));
       else if (state.editOpen && state.role === "driver") rootNode.appendChild(editSheet(doc));
       else if (state.driverSheet === "trip" && state.role === "driver") rootNode.appendChild(manageTripSheet(doc));
       else if (state.driverSheet === "return" && state.role === "driver") rootNode.appendChild(returnTripSheet(doc));

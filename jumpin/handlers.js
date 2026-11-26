@@ -11,6 +11,7 @@ function call(db, name, data, auth, now) {
   if (name === "carpoolReserveSeat") return service.reserveSeat(db, body, now);
   if (name === "carpoolUpdateSeat") return service.updateSeat(db, body, now);
   if (name === "carpoolCancelSeat") return service.cancelSeat(db, body, now);
+  if (name === "carpoolJoinWaitlist") return service.joinWaitlist(db, body, now);
   if (name === "carpoolRemoveRider") return service.removeRider(db, body, now);
   if (name === "carpoolCancelTrip") return service.cancelTrip(db, body, now);
   if (name === "carpoolEditRide") return service.editRide(db, body, now);

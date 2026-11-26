@@ -107,6 +107,7 @@ exports.carpoolPostRide = guestCall("carpoolPostRide");
 exports.carpoolReserveSeat = guestCall("carpoolReserveSeat");
 exports.carpoolUpdateSeat = guestCall("carpoolUpdateSeat");
 exports.carpoolCancelSeat = guestCall("carpoolCancelSeat");
+exports.carpoolJoinWaitlist = guestCall("carpoolJoinWaitlist");
 exports.carpoolRemoveRider = guestCall("carpoolRemoveRider");
 exports.carpoolCancelTrip = guestCall("carpoolCancelTrip");
 exports.carpoolEditRide = guestCall("carpoolEditRide");

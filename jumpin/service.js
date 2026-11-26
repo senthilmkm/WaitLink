@@ -552,11 +552,60 @@ function updateSeat(db, input, now) {
   });
 }
 
+function notifyWaitlist(ride, config, platform, now, texts, p) {
+  const list = arr(ride && ride.waitlistPhones);
+  if (!list.length || (Number(ride && ride.seatsLeft) || 0) < 1) return false;
+  ride.waitlistPhones = [];
+  const body = "JumpIn (" + shortRoute(ride.from, ride.to) + "): Seat open! " + manageUrl("ride", ride.rideId, "", "", p.groupId);
+  for (let i = 0; i < list.length; i++) {
+    if (!canSendBoth(config, platform, now)) break;
+    bumpSms(config, platform);
+    queueText(texts, list[i], body, "CARPOOL_SEAT_OPEN");
+  }
+  return true;
+}
+
+function joinWaitlist(db, input, now) {
+  const parsed = core.normalizePhone(input && input.phone);
+  if (!parsed.ok) return Promise.resolve({ ok: false, field: "phone", error: parsed.error });
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
+    const config = await loadConfig(tx, now, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(p.ridePrivate(input && input.rideId));
+    if (!ride || ride.status !== "open" || ride.departAt <= now) return { ok: false, error: "This trip is no longer open." };
+    if ((Number(ride.seatsLeft) || 0) > 0) return { ok: false, error: "Seats are available now — reserve your seat!" };
+    if (await tx.get(p.block(core.phoneHash16(parsed.e164)))) return { ok: false, error: "You can't join this waitlist right now." };
+    const notMember = await memberError(tx, config, parsed.e164, p);
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
+    if (parsed.e164 === ride.driverPhoneE164) return { ok: false, error: "You are the driver of this trip." };
+    const keys = arr(ride.activeReservationDocIds);
+    for (let i = 0; i < keys.length; i++) {
+      const row = await tx.get(keys[i]);
+      if (row && row.status === "active" && row.phoneE164 === parsed.e164) {
+        return { ok: false, error: "You already have a seat on this trip." };
+      }
+    }
+    const list = arr(ride.waitlistPhones);
+    if (list.indexOf(parsed.e164) !== -1) return { ok: true, already: true };
+    if (list.length >= 15) return { ok: false, error: "Waitlist is full for this trip." };
+    ride.waitlistPhones = list.concat([parsed.e164]);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    return { ok: true };
+  });
+}
+
 function cancelSeat(db, input, now) {
   return db.runTransaction(async function (tx) {
     const p = pathsFor(gidOf(input));
     const gErr = await groupAccessError(tx, p);
     if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const key = await findReservationKey(tx, input, p);
@@ -573,6 +622,13 @@ function cancelSeat(db, input, now) {
     const phone = await tx.get(p.phone(reservation.phoneE164)) || { activeReservations: 0 };
     phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
     const pub = await tx.get(p.ridePublic(ride.rideId));
+    const riderRows = [];
+    for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
+      const docId = ride.activeReservationDocIds[i];
+      const row = docId === key ? reservation : await tx.get(docId);
+      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
+    }
+    notifyWaitlist(ride, config, platform, now, texts, p);
     if (pub) {
       pub.seatsLeft = ride.seatsLeft;
       pub.riders = arr(pub.riders).map(function (row) {
@@ -586,14 +642,11 @@ function cancelSeat(db, input, now) {
     tx.set(key, reservation);
     tx.set(p.ridePrivate(ride.rideId), ride);
     tx.set(p.phone(reservation.phoneE164), phone);
-    const riderRows = [];
-    for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
-      const docId = ride.activeReservationDocIds[i];
-      const row = docId === key ? reservation : await tx.get(docId);
-      if (row && row.status === "active") riderRows.push({ phoneE164: row.phoneE164, name: row.name || "", status: "active" });
-    }
     await rememberRide(tx, ride, riderRows, p);
-    return { ok: true };
+    if (texts.length) saveConfig(tx, config, p, platform);
+    return { ok: true, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
   });
 }
 
@@ -675,6 +728,7 @@ function removeRider(db, input, now) {
         : "JumpIn (" + shortRoute(ride.from, ride.to) + "): Driver updated your seats to " + keepSeats + ". " + manageUrl("ride", ride.rideId, "", "", p.groupId);
       queueText(texts, target.phoneE164, body, keepSeats === 0 ? "CARPOOL_RIDER_REMOVED" : "CARPOOL_RIDER_UPDATED");
     }
+    notifyWaitlist(ride, config, platform, now, texts, p);
     tx.set(targetKey, target);
     tx.set(p.ridePrivate(ride.rideId), ride);
     tx.set(p.ridePublic(ride.rideId), pub);
@@ -836,6 +890,7 @@ function editRide(db, input, now) {
         queueText(texts, activeRiders[i].phoneE164, body, "CARPOOL_TRIP_UPDATED");
       }
     }
+    notifyWaitlist(ride, config, platform, now, texts, p);
     tx.set(p.ridePrivate(ride.rideId), ride);
     tx.set(p.ridePublic(ride.rideId), pub);
     await rememberRide(tx, ride, activeRiders, p);
@@ -2044,6 +2099,7 @@ module.exports = {
   reserveSeat: reserveSeat,
   updateSeat: updateSeat,
   cancelSeat: cancelSeat,
+  joinWaitlist: joinWaitlist,
   removeRider: removeRider,
   cancelTrip: cancelTrip,
   editRide: editRide,

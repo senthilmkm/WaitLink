@@ -20,6 +20,7 @@
       seatsLeft: 0,
       reserveOpen: false,
       editOpen: false,
+      waitlistOpen: false,
       driverSheet: "",
       recovery: "",
       sheet: "",
@@ -49,6 +50,7 @@
       seatsLeft: ride.seatsLeft,
       reserveOpen: false,
       editOpen: false,
+      waitlistOpen: false,
       driverSheet: "",
       recovery: "",
       sheet: "",
@@ -88,6 +90,20 @@
     }
     if (event.type === "edit-close") {
       next.editOpen = false;
+      return next;
+    }
+    if (event.type === "waitlist-open") {
+      if (next.status !== "open" || next.role) return next;
+      next.waitlistOpen = true;
+      next.editOpen = false;
+      next.driverSheet = "";
+      next.reserveOpen = false;
+      next.recovery = "";
+      next.sheet = "";
+      return next;
+    }
+    if (event.type === "waitlist-close") {
+      next.waitlistOpen = false;
       return next;
     }
     if (event.type === "driver-sheet") {

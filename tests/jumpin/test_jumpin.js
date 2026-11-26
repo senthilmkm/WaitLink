@@ -1813,6 +1813,57 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Post return trip"; })._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().mode, "posted");
+
+  // Waitlist ("Notify me if a seat opens"): backend + UI sheet
+  const dbWl = service.createMemoryDb(seed());
+  const pWl = await service.postRide(dbWl, { name: "Dan", phone: "5552221111", from: "Town", to: "City", date: d1, time: t1, timeZone: tz, seats: 2, note: "" }, baseNow);
+  assert.strictEqual((await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "bad" }, null, baseNow + 50)).field, "phone");
+  assert.strictEqual((await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "5558881111" }, null, baseNow + 50)).ok, false); // seats available
+  const rWl = await service.reserveSeat(dbWl, { rideId: pWl.rideId, name: "Eva", phone: "5553334444", seats: 2 }, baseNow + 100);
+  assert.strictEqual((await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "5552221111" }, null, baseNow + 120)).ok, false); // driver
+  assert.strictEqual((await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "5553334444" }, null, baseNow + 130)).ok, false); // already rider
+  const wlOk = await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "5558881111" }, null, baseNow + 150);
+  assert.strictEqual(wlOk.ok, true);
+  assert.strictEqual((await handlers.call(dbWl, "carpoolJoinWaitlist", { rideId: pWl.rideId, phone: "5558881111" }, null, baseNow + 160)).already, true);
+  // Cancelling seat notifies waitlisted rider & clears waitlist
+  const cancelNotifies = await handlers.call(dbWl, "carpoolCancelSeat", { rideId: pWl.rideId, secret: rWl.secret }, null, baseNow + 200);
+  assert.strictEqual(cancelNotifies.ok, true);
+  assert.strictEqual((cancelNotifies.outbox || []).length, 1);
+  assert.ok(cancelNotifies.outbox[0].body.indexOf("Seat open!") !== -1);
+  // Waitlist UI sheet: full trip for public visitor keeps Close at bottom & opens waitlistSheet
+  const fullRide = Object.assign({}, futureRide, { seatsLeft: 0 });
+  win.JumpInCloud.joinWaitlist = function () { return Promise.resolve({ ok: true }); };
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: fullRide, role: "" }), { ride: fullRide, when: "Soon" }));
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Close");
+  const wlBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me if a seat opens"; });
+  assert.ok(wlBtn);
+  wlBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().waitlistOpen, true);
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "✕"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().waitlistOpen, false);
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me if a seat opens"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Cancel"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().waitlistOpen, false);
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me if a seat opens"; })._listeners[0]();
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "bad";
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "phone");
+  mounted.root.children[3].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "5558881111";
+  win.JumpInCloud.joinWaitlist = function () { return Promise.resolve({ ok: false, error: "Full" }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().error, "Full");
+  win.JumpInCloud.joinWaitlist = function () { return Promise.reject(new Error("net")); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.ok(mounted.getState().error.indexOf("Could not join waitlist") !== -1);
+  win.JumpInCloud.joinWaitlist = function () { return Promise.resolve({ ok: true }); };
+  mounted.root.children[3].querySelectorAll("button").find(function (b) { return b.textContent === "Notify me"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().waitlistOpen, false);
+  assert.ok(mounted.getState().notice.indexOf("waitlist") !== -1);
+  assert.strictEqual(ui.reduce(ui.reduce(ui.blank(), { type: "ride", ride: fullRide, role: "driver" }), { type: "waitlist-open" }).waitlistOpen, false);
+  cloudMod.joinWaitlist("r1", "5558881111");
   view.destroy();
 });
 
