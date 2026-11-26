@@ -616,12 +616,16 @@
         const cSec = page.getElementById("jumpin-create-group-section");
         const newBtn = page.getElementById("jumpin-new-group-btn");
         const cancelBtn = page.getElementById("jumpin-create-group-cancel");
+        const platSms = page.getElementById("jumpin-platform-sms");
+        const listNode = page.getElementById("jumpin-groups-list");
         const groups = groupsData.groups || [];
         const hasPendingBlock = !groupsData.isSuperAdmin && groups.some(function (g) { return g.status === "pending"; });
         const isOpen = !!open && !hasPendingBlock;
         if (cSec) cSec.hidden = !isOpen;
         if (newBtn) newBtn.hidden = isOpen || hasPendingBlock;
         if (cancelBtn) cancelBtn.hidden = !groups.length;
+        if (platSms) platSms.hidden = isOpen;
+        if (listNode) listNode.hidden = isOpen;
       }
       function paintGroups() {
         const listNode = page.getElementById("jumpin-groups-list");
