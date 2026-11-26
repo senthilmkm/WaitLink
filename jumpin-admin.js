@@ -523,29 +523,44 @@
       }
       let activeTab = "trips";
       let platformViewOpen = false;
+      let groupsViewOpen = false;
       let hasActiveAccess = false;
+      const GROUP_TABS = ["trips", "members", "settings", "blocked", "cleanup"];
+      function hideGroupTabs() {
+        GROUP_TABS.forEach(function (other) {
+          const p = page.getElementById("jumpin-tab-" + other);
+          if (p) p.hidden = true;
+        });
+      }
       function syncAdminChrome() {
         const strip = page.getElementById("jumpin-summary-strip");
         const tabsBar = page.getElementById("jumpin-admin-tabs");
-        if (strip) strip.hidden = !hasActiveAccess || platformViewOpen;
-        if (tabsBar) tabsBar.hidden = !hasActiveAccess || platformViewOpen;
+        if (strip) strip.hidden = !hasActiveAccess || platformViewOpen || groupsViewOpen;
+        if (tabsBar) tabsBar.hidden = !hasActiveAccess || platformViewOpen || groupsViewOpen;
       }
-      function showPlatformView(open) {
-        platformViewOpen = !!open;
-        const pv = page.getElementById("jumpin-platform-view");
-        const pBtn = page.getElementById("jumpin-plat-open");
-        if (pv) pv.hidden = !platformViewOpen;
-        if (pBtn) pBtn.className = "admin-btn" + (platformViewOpen ? " primary" : "");
-        syncAdminChrome();
-        if (platformViewOpen) {
-          ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
-            const p = page.getElementById("jumpin-tab-" + other);
-            if (p) p.hidden = true;
-          });
-        } else {
-          switchTab(activeTab);
+      function setHeaderPanel(kind, open) {
+        const isPlat = kind === "platform";
+        if (isPlat) platformViewOpen = !!open;
+        else groupsViewOpen = !!open;
+        if (open) {
+          if (isPlat && groupsViewOpen) setHeaderPanel("groups", false);
+          if (!isPlat && platformViewOpen) setHeaderPanel("platform", false);
         }
+        const panel = page.getElementById(isPlat ? "jumpin-platform-view" : "jumpin-tab-groups");
+        const btn = page.getElementById(isPlat ? "jumpin-plat-open" : "jumpin-groups-open");
+        const isOpen = isPlat ? platformViewOpen : groupsViewOpen;
+        if (panel) panel.hidden = !isOpen;
+        if (btn) btn.className = "admin-btn" + (isOpen ? " primary" : "");
+        if (!isPlat) {
+          const gBack = page.getElementById("jumpin-groups-back");
+          if (gBack) gBack.hidden = !hasActiveAccess;
+        }
+        syncAdminChrome();
+        if (isOpen) hideGroupTabs();
+        else if (!platformViewOpen && !groupsViewOpen) switchTab(activeTab);
       }
+      function showPlatformView(open) { setHeaderPanel("platform", open); }
+      function showGroupsView(open) { setHeaderPanel("groups", open); }
       function switchPlatTab(sub) {
         ["general", "features", "members"].forEach(function (k) {
           const b = page.getElementById("jumpin-plat-tab-btn-" + k);
@@ -556,8 +571,8 @@
       }
       function switchTab(name) {
         if (name) activeTab = name;
-        if (platformViewOpen) return;
-        ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (other) {
+        if (platformViewOpen || groupsViewOpen) return;
+        GROUP_TABS.forEach(function (other) {
           const b = page.getElementById("jumpin-tab-btn-" + other);
           const p = page.getElementById("jumpin-tab-" + other);
           if (b) b.className = "admin-tab" + (other === name ? " active" : "");
@@ -567,7 +582,8 @@
       (function () {
         try {
           const t = (new URLSearchParams((win.location && win.location.search) || "").get("tab") || "").toLowerCase();
-          if (["trips", "members", "settings", "blocked", "cleanup", "groups"].indexOf(t) !== -1) activeTab = t;
+          if (t === "groups") groupsViewOpen = true;
+          else if (GROUP_TABS.indexOf(t) !== -1) activeTab = t;
         } catch (err) { /* keep default tab */ }
       })();
       function showGroupConfirmCard(group, isPending, allowAnother, shouldScroll, autoPending) {
@@ -690,7 +706,8 @@
           const bar = el(page, "div", "admin-actions");
           bar.appendChild(pillBtn(page, "Open", g.groupId === activeGroupId ? "primary" : "", function () {
             activeGroupId = g.groupId;
-            switchTab("trips");
+            activeTab = "trips";
+            showGroupsView(false);
             refresh();
           }));
           bar.appendChild(pillBtn(page, "Copy Link", "", function (_e, btn) { copyUrl(shareUrl, btn); }));
@@ -754,12 +771,16 @@
             hasActiveAccess = !!(gr.isSuperAdmin || groups.some(function (g) { return g.status === "active"; }));
             if (ids.length && ids.indexOf(activeGroupId) === -1) activeGroupId = ids[0];
             if (!hasActiveAccess) {
-              switchTab("groups");
+              showGroupsView(true);
               const createBox = page.getElementById("jumpin-create-group-box");
               if (createBox) createBox.open = true;
+            } else if (groupsViewOpen) {
+              showGroupsView(true);
             }
             syncAdminChrome();
             paintGroups();
+            const grpOpenBtn = page.getElementById("jumpin-groups-open");
+            if (grpOpenBtn) grpOpenBtn.hidden = !hasActiveAccess;
             if (groupSelect) groupSelect.hidden = !hasActiveAccess || !groups.length;
             if (copyBoardBtn) copyBoardBtn.hidden = !hasActiveAccess || !groups.length;
           }
@@ -813,10 +834,17 @@
       const signOut = page.getElementById("jumpin-signout");
       if (signOut) signOut.addEventListener("click", function () {
         if (platformViewOpen) showPlatformView(false);
+        if (groupsViewOpen) showGroupsView(false);
         const platOpenBtn = page.getElementById("jumpin-plat-open");
         if (platOpenBtn) platOpenBtn.hidden = true;
+        const grpOpenBtn = page.getElementById("jumpin-groups-open");
+        if (grpOpenBtn) grpOpenBtn.hidden = true;
         firebase.auth().signOut();
       });
+      const grpOpen = page.getElementById("jumpin-groups-open");
+      if (grpOpen) grpOpen.addEventListener("click", function () { showGroupsView(true); });
+      const grpBack = page.getElementById("jumpin-groups-back");
+      if (grpBack) grpBack.addEventListener("click", function () { showGroupsView(false); });
       const platOpen = page.getElementById("jumpin-plat-open");
       if (platOpen) platOpen.addEventListener("click", function () { showPlatformView(true); });
       const platBack = page.getElementById("jumpin-plat-back");
@@ -923,7 +951,7 @@
         state = admin.reduce(state, { type: "clear" });
         paint();
       });
-      ["trips", "members", "settings", "blocked", "cleanup", "groups"].forEach(function (name) {
+      GROUP_TABS.forEach(function (name) {
         const btn = page.getElementById("jumpin-tab-btn-" + name);
         if (!btn) return;
         btn.addEventListener("click", function () { switchTab(name); });
@@ -1112,11 +1140,21 @@
         text(page.getElementById("jumpin-admin-status"), user ? "Signed in as " + (user.email || "JumpIn admin") : "New organizer? Use any Google account to start a private neighborhood board or manage an existing one.");
         if (user) {
           if (grpEmail && !grpEmail.value && user.email) grpEmail.value = user.email;
-          switchTab(activeTab);
-          if (createBox && activeTab === "groups") createBox.open = true;
+          if (groupsViewOpen) {
+            showGroupsView(true);
+            if (createBox) createBox.open = true;
+          } else {
+            switchTab(activeTab);
+          }
           refresh();
         } else {
           hasActiveAccess = false;
+          groupsViewOpen = false;
+          platformViewOpen = false;
+          const grpOpenBtn = page.getElementById("jumpin-groups-open");
+          if (grpOpenBtn) grpOpenBtn.hidden = true;
+          const gv = page.getElementById("jumpin-tab-groups");
+          if (gv) gv.hidden = true;
           syncAdminChrome();
           groupsData = { isSuperAdmin: false, groups: [], platform: null };
           switchTab("");

@@ -205,6 +205,7 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
         <select id="jumpin-group-select" aria-label="Active group" style="width:auto;min-width:170px;min-height:40px;margin:0;" hidden></select>
         <button type="button" class="admin-btn primary" id="jumpin-copy-board-link" hidden>Copy Board Link</button>
+        <button type="button" class="admin-btn" id="jumpin-groups-open" hidden>My Groups<span class="admin-count" id="jumpin-groups-count"></span></button>
         <button type="button" class="admin-btn" id="jumpin-plat-open" hidden>🔒 Platform Settings</button>
         <button type="button" class="filled" id="jumpin-signin">+ Start a New Group</button>
         <button type="button" class="admin-btn" id="jumpin-signin-admin">Existing Admin Sign In</button>
@@ -255,7 +256,6 @@
       <button type="button" class="admin-tab" id="jumpin-tab-btn-settings">Settings</button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-blocked">Blocked<span class="admin-count" id="jumpin-blocked-count"></span></button>
       <button type="button" class="admin-tab" id="jumpin-tab-btn-cleanup">Cleanup</button>
-      <button type="button" class="admin-tab" id="jumpin-tab-btn-groups">Groups<span class="admin-count" id="jumpin-groups-count"></span></button>
     </nav>
     <div id="jumpin-tab-trips" hidden>
       <section>
@@ -406,6 +406,15 @@
       </section>
     </div>
     <div id="jumpin-tab-groups" hidden>
+      <section id="jumpin-groups-header" style="padding:14px 18px;">
+        <div class="admin-card-top" style="align-items:center;margin-bottom:0;">
+          <div>
+            <h2 style="margin:0 0 2px;">My Groups</h2>
+            <p class="quiet">Create a neighborhood carpool board or manage your existing groups.</p>
+          </div>
+          <button type="button" class="admin-btn" id="jumpin-groups-back">← Back to Console</button>
+        </div>
+      </section>
       <section id="jumpin-group-confirm" hidden style="background:linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%);border:1px solid #86efac;border-top:3px solid #059669;">
         <div class="admin-card-top" style="align-items:center;">
           <div>
@@ -613,9 +622,9 @@
   <script src="/firebase-app-compat.js"></script>
   <script src="/firebase-auth-compat.js"></script>
   <script src="/firebase-firestore-compat.js"></script>
-  <script src="/jumpin/core.js?v=20261125k"></script>
-  <script src="/jumpin/cloud.js?v=20261125k"></script>
-  <script src="/jumpin/admin-state.js?v=20261125k"></script>
-  <script src="/jumpin-admin.js?v=20261125k"></script>
+  <script src="/jumpin/core.js?v=20261125l"></script>
+  <script src="/jumpin/cloud.js?v=20261125l"></script>
+  <script src="/jumpin/admin-state.js?v=20261125l"></script>
+  <script src="/jumpin-admin.js?v=20261125l"></script>
 </body>
 </html>
