@@ -2239,9 +2239,18 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual((await service.reserveSeat(compDb, { rideId: pComp2.rideId, name: "Sam", phone: "5554440004", seats: 1 }, NOW + 2 * core.DAY_MS)).ok, true);
   // setPosting blocks a ride request by rideId
   assert.strictEqual((await service.setPosting(claim2Db, service.SUPERADMIN_EMAIL, { rideId: rq2.rideId, blocked: true }, NOW)).ok, true);
-  // Today chip uses core.zonedToUtc without throwing
+  // Today chip uses core.zonedToUtc without throwing, and duration chips show active state
   const todayBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Today"; });
   if (todayBtn && todayBtn._listeners && todayBtn._listeners[0]) todayBtn._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[0]._listeners[0]();
+  const dur30 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "30m"; });
+  const dur1h = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "1h"; });
+  assert.ok(dur30.className.indexOf("active") !== -1);
+  dur1h._listeners[0]();
+  assert.ok(dur1h.className.indexOf("active") !== -1);
+  assert.strictEqual(dur30.className.indexOf("active"), -1);
+  dur30._listeners[0]();
+  assert.ok(dur30.className.indexOf("active") !== -1);
   view.destroy();
 });
 

@@ -2223,8 +2223,8 @@
           postInputs[spec[0]] = input;
           if (state.error && state.field === spec[0] && !isDt) input.className = "input-invalid";
           host.appendChild(input);
-          if (spec[0] === "date") attachDatePicker(doc, host, input, state.error && state.field === "date", function () { syncWhenChips(); }, spec[4]);
-          else if (spec[0] === "time") attachTimePicker(doc, host, input, state.error && state.field === "time", function () { syncWhenChips(); }, spec[4]);
+          if (spec[0] === "date") attachDatePicker(doc, host, input, state.error && state.field === "date", function () { pickedWhen = ""; syncWhenChips(); }, spec[4]);
+          else if (spec[0] === "time") attachTimePicker(doc, host, input, state.error && state.field === "time", function () { pickedWhen = ""; syncWhenChips(); }, spec[4]);
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
         const secRoute = el(doc, "section", "post-section");
@@ -2335,14 +2335,17 @@
           const plusDur = el(doc, "button", "dur-btn", "+");
           plusDur.type = "button";
           plusDur.setAttribute("aria-label", "Increase duration by 30 minutes");
+          const durBtns = [];
           function syncDur(next) {
             durMins = Math.max(30, Math.min(900, next));
             dur.value = String(durMins);
             durReadout.textContent = core.formatDuration(durMins);
             minusDur.disabled = durMins <= 30;
             plusDur.disabled = durMins >= 900;
+            durBtns.forEach(function (pair) {
+              pair[1].className = "chip-btn" + (durMins === pair[0] ? " active" : "");
+            });
           }
-          syncDur(durMins);
           on(minusDur, "click", function () { syncDur(durMins - 30); });
           on(plusDur, "click", function () { syncDur(durMins + 30); });
           stepper.appendChild(minusDur);
@@ -2356,8 +2359,10 @@
             const dc = el(doc, "button", "chip-btn", spec[0]);
             dc.type = "button";
             on(dc, "click", function () { syncDur(spec[1]); });
+            durBtns.push([spec[1], dc]);
             durChips.appendChild(dc);
           });
+          syncDur(durMins);
           secSched.appendChild(durChips);
         }
         mid.appendChild(secSched);
