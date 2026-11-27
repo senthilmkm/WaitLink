@@ -253,6 +253,9 @@
       "#jumpin-root .dt-col{display:flex;flex-direction:column;gap:4px;max-height:152px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px}",
       "#jumpin-root .dt-opt{min-height:34px;margin:0;padding:4px 8px;border:1px solid var(--border-color,#e2e8f0);border-radius:9px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:600;cursor:pointer;text-align:center}",
       "#jumpin-root .dt-opt.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
+      "#jumpin-root .dt-done{width:100%;min-height:36px;margin:8px 0 0;padding:6px 12px;border:0;border-radius:9px;background:var(--primary,#0891b2);color:#fff;font-size:13px;font-weight:700;cursor:pointer}",
+      "#jumpin-root .action-row.row-split{flex-wrap:nowrap;gap:10px}",
+      "#jumpin-root .action-row.row-split button{flex:1 1 0;margin:0}",
       "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
@@ -654,7 +657,7 @@
         sheet.appendChild(el(doc, "p", "hint", "Reserved riders get a short SMS if time or pickup note changes."));
       }
       if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
-      const editRow = el(doc, "div", "action-row");
+      const editRow = el(doc, "div", "action-row row-split");
       const cancelBtn = el(doc, "button", "textish", "Cancel");
       cancelBtn.type = "button";
       if (state.busy) cancelBtn.disabled = true;
@@ -2764,14 +2767,22 @@
       let curMin = "00";
       let curAp = "AM";
       let curH12 = 9;
+      let pickedH = false;
+      let pickedM = false;
+      let pickedAp = false;
       const hBtns = [];
       const mBtns = [];
       const apBtns = [];
+      function closeDrawer() {
+        drawer.style.display = "none";
+        btn.className = "dt-pill" + (invalid ? " input-invalid" : "");
+      }
       function commit() {
         const h24 = curAp === "PM" ? (curH12 === 12 ? 12 : curH12 + 12) : (curH12 === 12 ? 0 : curH12);
         input.value = String(h24).padStart(2, "0") + ":" + curMin;
         sync();
         if (onPick) onPick();
+        if (pickedH && pickedM && pickedAp) closeDrawer();
       }
       function sync() {
         const parts = String(input.value || "09:00").split(":");
@@ -2788,7 +2799,7 @@
         (function (val) {
           const b = el(doc, "button", "dt-opt", String(val));
           b.type = "button";
-          on(b, "click", function () { curH12 = val; commit(); });
+          on(b, "click", function () { curH12 = val; pickedH = true; commit(); });
           hBtns.push([val, b]);
           hCol.appendChild(b);
         })(h);
@@ -2797,7 +2808,7 @@
         (function (val) {
           const b = el(doc, "button", "dt-opt", val);
           b.type = "button";
-          on(b, "click", function () { curMin = val; commit(); });
+          on(b, "click", function () { curMin = val; pickedM = true; commit(); });
           mBtns.push([val, b]);
           mCol.appendChild(b);
         })(String(m).padStart(2, "0"));
@@ -2805,7 +2816,7 @@
       ["AM", "PM"].forEach(function (ap) {
         const b = el(doc, "button", "dt-opt", ap);
         b.type = "button";
-        on(b, "click", function () { curAp = ap; commit(); });
+        on(b, "click", function () { curAp = ap; pickedAp = true; commit(); });
         apBtns.push([ap, b]);
         apCol.appendChild(b);
       });
@@ -2813,11 +2824,16 @@
       wheel.appendChild(mCol);
       wheel.appendChild(apCol);
       drawer.appendChild(wheel);
+      const doneBtn = el(doc, "button", "dt-done", "Done");
+      doneBtn.type = "button";
+      on(doneBtn, "click", closeDrawer);
+      drawer.appendChild(doneBtn);
       sync();
       input._syncDt = sync;
       on(btn, "click", function () {
         const open = drawer.style.display !== "none";
         closeSiblingDrawers(drawerHost, drawer);
+        if (!open) { pickedH = false; pickedM = false; pickedAp = false; }
         drawer.style.display = open ? "none" : "block";
         btn.className = "dt-pill" + (open ? "" : " open") + (invalid ? " input-invalid" : "");
       });

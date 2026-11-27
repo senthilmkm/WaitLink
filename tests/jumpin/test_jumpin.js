@@ -1914,7 +1914,9 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "12"; })._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "30"; })._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "AM"; })._listeners[0]();
+  dtPills[1]._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "PM"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className === "dt-done"; })._listeners[0]();
   // Pull-to-refresh on board & Option A mobile "+ Start a Group" pill
   mounted.setState(ui.blank());
   assert.ok(mounted.root.children[1].querySelectorAll("a").some(function (a) { return a.textContent === "+ Start a Group" && a.href === "/jumpin-admin.html?tab=groups"; }));
