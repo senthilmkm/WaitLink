@@ -1883,8 +1883,9 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   assert.ok(in30Btn.className.indexOf("active") !== -1);
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "date"; })._listeners[0]();
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "time"; })._listeners[0]();
-  // Pull-to-refresh on board
+  // Pull-to-refresh on board & Option A mobile "+ Start a Group" pill
   mounted.setState(ui.blank());
+  assert.ok(mounted.root.children[1].querySelectorAll("a").some(function (a) { return a.textContent === "+ Start a Group" && a.href === "/jumpin-admin.html?tab=groups"; }));
   const ptrTouchStart = mounted.root._listeners[mounted.root._listeners.length - 3];
   const ptrTouchMove = mounted.root._listeners[mounted.root._listeners.length - 2];
   const ptrTouchEnd = mounted.root._listeners[mounted.root._listeners.length - 1];
