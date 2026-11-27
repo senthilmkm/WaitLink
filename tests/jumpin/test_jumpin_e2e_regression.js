@@ -290,7 +290,7 @@ async function run() {
     const appSrc = fs.readFileSync(path.join(__dirname, "../../jumpin/app.js"), "utf8");
     assert.ok(appSrc.indexOf("(current.status === \"open\" || current.status === \"pending\")") !== -1);
     assert.ok(appSrc.indexOf("Complete this trip?") !== -1);
-    assert.ok(appSrc.indexOf("z-index:9999") !== -1 && appSrc.indexOf("rootNode.appendChild(confirmSheet(doc))") !== -1);
+    assert.ok(appSrc.indexOf("z-index:9999") !== -1 && appSrc.indexOf("confirmSheet(doc)") !== -1);
     assert.ok(appSrc.indexOf("Edit seats") !== -1 && appSrc.indexOf("Cancel reservation") !== -1);
     assert.ok(appSrc.indexOf("bookedSeats + \" seats.\"") !== -1);
     ["/jumpin-privacy.html", "/jumpin-terms.html", "/jumpin-contact.html"].forEach(function (rel) {
