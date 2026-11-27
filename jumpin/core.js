@@ -324,7 +324,12 @@
     const rawDur = fields.durationMinutes;
     const dur = rawDur == null || rawDur === "" ? 60 : Number(rawDur);
     const durationMinutes = Number.isInteger(dur) && dur >= 15 && dur <= 900 ? dur : 60;
-    return { value: { name: res.value.name, phone: res.value.phone, seats: res.value.seats, note: res.value.dropoff, durationMinutes: durationMinutes } };
+    const rawCost = String(fields.rideCost == null ? "" : fields.rideCost).replace(/^\s*\$/, "").trim();
+    const rideCost = rawCost === "" ? 0 : Math.round(Number(rawCost) * 100) / 100;
+    if (!Number.isFinite(rideCost) || rideCost < 0 || rideCost > 500) {
+      return { field: "rideCost", error: "Enter a dollar amount from 0 to 500." };
+    }
+    return { value: { name: res.value.name, phone: res.value.phone, seats: res.value.seats, note: res.value.dropoff, durationMinutes: durationMinutes, rideCost: rideCost } };
   }
 
   function editErrors(fields) {
@@ -472,6 +477,7 @@
       rideId: ride.rideId,
       status: ride.status,
       kind: ride.kind || "offer",
+      claimedFromRequest: !!ride.claimedFromRequest,
       from: ride.from,
       to: ride.to,
       departAt: ride.departAt,

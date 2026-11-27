@@ -948,7 +948,9 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin, p, 
       const when = core.formatWhen(ride.departAt, ride.timeZone);
       const body = admin
         ? "JumpIn admin cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ")."
-        : "JumpIn trip cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").";
+        : (ride.claimedFromRequest
+          ? "JumpIn trip cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + "). Post a new request if you still need a ride."
+          : "JumpIn trip cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").");
       queueText(outbox, reservation.phoneE164, body, "CARPOOL_TRIP_CANCELLED");
     }
   }
@@ -2241,6 +2243,7 @@ function claimRideRequest(db, input, now, rng) {
       tokenHash: ride.requesterSecretHash,
       seats: ride.seatsRequested || 1,
       dropoff: ride.note || "",
+      driverSeenAt: now,
       status: "active",
       createdAt: now,
       updatedAt: now
@@ -2256,12 +2259,13 @@ function claimRideRequest(db, input, now, rng) {
     ride.seatsTotal = fields.seats;
     ride.seatsLeft = fields.seats - (ride.seatsRequested || 1);
     ride.durationMinutes = fields.durationMinutes || 60;
-    if (fields.note) ride.note = fields.note;
+    if (fields.rideCost !== undefined) ride.rideCost = fields.rideCost;
+    ride.note = fields.note || "";
     ride.activeReservationDocIds = [resKey];
     ride.updatedAt = now;
     const prevPub = await tx.get(p.ridePublic(ride.rideId)) || { messages: [] };
     const msgs = arr(prevPub.messages).concat([core.systemMessage(fields.name + " offered to drive this trip.", now, arr(prevPub.messages).length + 1)]);
-    const pub = core.publicRide(ride, [{ reservationId: resId, name: resRow.name, seats: resRow.seats, dropoff: resRow.dropoff, driverSeenAt: 0 }], msgs);
+    const pub = core.publicRide(ride, [{ reservationId: resId, name: resRow.name, seats: resRow.seats, dropoff: resRow.dropoff, driverSeenAt: now }], msgs);
     pub.updatedAt = now;
     const reqPhone = await tx.get(p.phone(ride.requesterPhoneE164)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     reqPhone.activeReservations = core.activeReservations(reqPhone) + 1;

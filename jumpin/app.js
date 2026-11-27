@@ -184,6 +184,7 @@
       "#jumpin-top nav .jumpin-nav-install:hover{border-color:var(--primary,#0891b2);color:var(--primary-dark,#0e7490)}",
       "#jumpin-top nav .jumpin-nav-info{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-size:14px;font-weight:700;cursor:pointer}",
       "#jumpin-top nav .jumpin-nav-info:hover{border-color:var(--primary,#0891b2);color:var(--primary-dark,#0e7490)}",
+      "#jumpin-root #jumpin-mid .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root .error,#jumpin-sheet .error{color:#dc2626 !important;font-weight:600;font-size:14px;margin:6px 0 12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;overflow-wrap:anywhere}",
       "#jumpin-root #jumpin-mid input.input-invalid,#jumpin-root #jumpin-mid textarea.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
       "@media (max-width:700px){#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus){padding-bottom:42vh}#jumpin-top .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:8px;min-height:52px}#jumpin-top .brand{font-size:16px}#jumpin-top nav a{display:none}#jumpin-root.app-screen #jumpin-top{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;gap:8px}#jumpin-root.app-screen #jumpin-top .bar{display:none}#jumpin-root.app-screen #jumpin-top .screen-title{display:block;flex:1;text-align:center;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:17px;font-weight:700;padding-right:54px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#jumpin-root.app-screen #jumpin-top .back-btn{min-height:36px;padding:0 4px;font-size:15px}#jumpin-root.app-screen #jumpin-mid{padding:10px 12px calc(36px + env(safe-area-inset-bottom))}#jumpin-root.portal #jumpin-mid{padding-bottom:16px}#jumpin-root.portal #jumpin-bottom{padding-bottom:calc(56px + env(safe-area-inset-bottom))}#jumpin-root .jumpin-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:5px 10px max(6px,env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #cbd5e1;box-shadow:0 -4px 18px rgba(15,23,42,.08)}#jumpin-root .jumpin-mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;padding:4px;border:0;border-radius:10px;background:transparent;color:#475569;font-size:11px;font-weight:700;cursor:pointer}#jumpin-root .jumpin-mobile-tab.active{background:#ecfeff;color:#0e7490}#jumpin-root .jumpin-mobile-tab .ico{font-size:16px;line-height:1}#jumpin-root.app-screen #jumpin-mid.post-card{width:calc(100% - 24px);margin:10px auto;padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .wrap{padding:10px 12px 12px}#jumpin-mid .hero{padding:0 2px;margin:0 0 8px;background:transparent;border:0;box-shadow:none;gap:0}#jumpin-mid .hero .copy{width:100%}#jumpin-mid .hero .hero-eyebrow,#jumpin-mid .hero h1,#jumpin-mid .hero .hero-org{display:none}#jumpin-mid .hero p.muted{font-size:12px;font-style:italic;line-height:1.3;margin:4px 0 0 2px;color:#475569}#jumpin-mid .hero-badges{width:100%;justify-content:space-between;margin-bottom:0;gap:8px}#jumpin-root .hero-start-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;white-space:nowrap;box-shadow:0 1px 3px rgba(15,23,42,.04)}#jumpin-mid .post-head{margin:0 0 10px;padding:0;border:0}#jumpin-mid .post-head h1{display:none}#jumpin-mid .board{gap:10px}#jumpin-mid .row{padding:12px 14px;gap:4px;border-radius:14px}#jumpin-mid .row .route{font-size:15px;line-height:1.25}#jumpin-mid .row .meta{font-size:12.5px;line-height:1.3}#jumpin-mid .row .card-foot{margin-top:2px;padding-top:0;border-top:0;font-size:12.5px;gap:4px 8px}#jumpin-mid .row .mini-av{display:none}#jumpin-mid .row .status-pill{padding:2px 8px;font-size:11px}#jumpin-mid .confirm{padding:20px 18px;border-radius:16px}#jumpin-mid .confirm.ride-detail{padding:0;background:transparent;border:0;box-shadow:none}#jumpin-mid .confirm.ride-detail .ride-sec{display:block;background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 3px 10px rgba(15,23,42,.04)}#jumpin-mid .confirm.ride-detail .ride-sec > *:first-child{margin-top:0}#jumpin-mid .confirm.ride-detail .ride-sec > *:last-child{margin-bottom:0}#jumpin-mid .confirm h1{font-size:22px}#jumpin-mid .confirm .route{font-size:18px}#jumpin-mid .confirm h1 + .route{margin-top:14px;padding-top:14px}#jumpin-mid .hero button.cta{display:none}#jumpin-root.app-screen #jumpin-bottom{padding:12px 14px calc(28px + env(safe-area-inset-bottom))}#jumpin-root.app-screen.form-open #jumpin-bottom{padding:8px 14px calc(96px + env(safe-area-inset-bottom))}#jumpin-root .site-foot{display:none}#jumpin-sheet{top:auto;bottom:0;left:0;right:0;transform:none;width:100%;max-width:100%;border-radius:20px 20px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(0,0,0,.18)}#jumpin-sheet.anim-in{animation:jumpin-sheet-up .18s cubic-bezier(.2,.8,.2,1)}#jumpin-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}}",
@@ -196,6 +197,7 @@
       "#jumpin-sheet .lbl{display:block;margin:0 0 4px;font-size:13px;font-weight:600;color:var(--text-muted,#1e293b)}",
       "#jumpin-sheet input{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:44px;margin:0 0 12px;padding:0 12px;color:var(--text-main,#090d16);background:var(--bg-input,#fff);border:1px solid var(--border-color,#cbd5e1);border-radius:var(--radius-sm,8px)}",
       "#jumpin-sheet .hint{font-size:13px;color:var(--text-muted,#475569);margin:-4px 0 10px}",
+      "#jumpin-sheet .error{font-size:13px;color:#be123c;margin:0 0 10px;font-weight:600}",
       "#jumpin-sheet .error{font-size:13.5px;color:#dc2626 !important;margin:4px 0 10px;font-weight:600}",
       "#jumpin-sheet button{min-height:44px;margin:6px 10px 0 0}",
       "#jumpin-sheet .seat-pills button,#jumpin-sheet .dur-stepper button{min-height:40px;margin:0}",
@@ -1327,12 +1329,25 @@
       durStep.appendChild(plusD);
       sheet.appendChild(durIn);
       sheet.appendChild(durStep);
+      sheet.appendChild(el(doc, "label", "lbl", "Ride cost per seat (optional, $)"));
+      const costIn = el(doc, "input");
+      costIn.name = "rideCost";
+      costIn.type = "number";
+      costIn.min = "0";
+      costIn.max = "500";
+      costIn.step = "0.01";
+      costIn.inputMode = "decimal";
+      costIn.placeholder = "Free (or e.g. 5)";
+      costIn.value = draft.rideCost != null ? draft.rideCost : (ride.rideCost > 0 ? String(ride.rideCost) : "");
+      if (state.error && state.field === "rideCost") costIn.className = "input-invalid";
+      sheet.appendChild(costIn);
+      if (state.error && state.field === "rideCost") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
       const noteIn = el(doc, "input");
       noteIn.name = "note";
       noteIn.type = "text";
-      noteIn.placeholder = "e.g. Meet at main entrance";
-      noteIn.value = draft.note != null ? draft.note : (ride.note || "");
+      noteIn.placeholder = "e.g. Blue Honda at main entrance";
+      noteIn.value = draft.note != null ? draft.note : "";
       sheet.appendChild(noteIn);
       if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
       const row = el(doc, "div", "action-row row-split");
@@ -1703,7 +1718,7 @@
         mTrip.type = "button";
         on(mTrip, "click", function () { state = ui.reduce(state, { type: "driver-sheet", which: "trip" }); draw(); });
         topActions.appendChild(mTrip);
-        if (current.status === "open") {
+        if (current.status === "open" && !(ride.claimedFromRequest && ride.seatsLeft === 0 && (!ride.riders || ride.riders.length <= 1))) {
           const mPax = el(doc, "button", "textish", "Manage passengers");
           mPax.type = "button";
           on(mPax, "click", function () { state = ui.reduce(state, { type: "driver-sheet", which: "passengers" }); draw(); });
@@ -2062,6 +2077,10 @@
           wrap.appendChild(banner);
         }
         const rides = state.rides || [];
+        const visibleRides = rides.filter(function (ride) {
+          if (ride.claimedFromRequest && ride.seatsLeft === 0 && !(cloud && cloud.roleFor && cloud.roleFor(ride))) return false;
+          return true;
+        });
         const list = el(doc, "div", "board");
         const pager = el(doc, "div", "pager");
         function matchesDateFilter(ride, filter, nowMs) {
@@ -2082,7 +2101,7 @@
           pager.textContent = "";
           const q = boardQuery.trim().toLowerCase();
           const nowMs = Date.now();
-          const shown = rides.filter(function (ride) {
+          const shown = visibleRides.filter(function (ride) {
             if (!matchesDateFilter(ride, boardDateFilter, nowMs)) return false;
             if (!q) return true;
             return [ride.from, ride.to, ride.driverName, ride.requesterName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
@@ -2186,18 +2205,18 @@
             addPageBtn("Last", totalPages, boardPage >= totalPages, true);
           }
         }
-        if (rides.length) {
+        if (visibleRides.length) {
           const tools = el(doc, "div", "board-tools");
           const filterRow = el(doc, "div", "filter-row");
           const filterNow = Date.now();
           const filterSpecs = [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]];
-          if (platformNotice.needARideEnabled || rides.some(function (ride) { return ride.kind === "request"; })) {
+          if (platformNotice.needARideEnabled || visibleRides.some(function (ride) { return ride.kind === "request"; })) {
             filterSpecs.splice(1, 0, ["need_driver", "Need a driver"]);
           }
-          const myCount = cloud && cloud.roleFor ? rides.filter(function (ride) { return !!cloud.roleFor(ride); }).length : 0;
+          const myCount = cloud && cloud.roleFor ? visibleRides.filter(function (ride) { return !!cloud.roleFor(ride); }).length : 0;
           if (myCount > 0) filterSpecs.splice(1, 0, ["mine", "My Trips"]);
           filterSpecs.forEach(function (spec) {
-            const count = rides.filter(function (ride) { return matchesDateFilter(ride, spec[0], filterNow); }).length;
+            const count = visibleRides.filter(function (ride) { return matchesDateFilter(ride, spec[0], filterNow); }).length;
             const chip = el(doc, "button", "filter-chip" + (boardDateFilter === spec[0] ? " active" : ""), spec[1] + " (" + count + ")");
             chip.type = "button";
             on(chip, "click", function () {
@@ -2638,6 +2657,7 @@
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
+      if (label === "Copy link" && state.mode === "ride" && state.role === "driver" && state.ride && Number(state.ride.seatsLeft) === 0) label = "Close";
       if (!label && state.mode === "ride") label = "Close";
       if (state.mode === "board" && groupMeta.status && groupMeta.status !== "active") label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
@@ -2918,7 +2938,7 @@
           boardLoaded = true;
           try {
             state.rides = (rides || []).map(function (ride) {
-              return { rideId: ride.rideId, kind: ride.kind || "offer", from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), seatsRequested: Number(ride.seatsRequested) || 0, departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "", requesterName: ride.requesterName || "", requesterReservationId: ride.requesterReservationId || "" };
+              return { rideId: ride.rideId, kind: ride.kind || "offer", claimedFromRequest: !!ride.claimedFromRequest, from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), seatsLeft: ride.seatsLeft == null ? 0 : Number(ride.seatsLeft), seatsRequested: Number(ride.seatsRequested) || 0, departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "", requesterName: ride.requesterName || "", requesterReservationId: ride.requesterReservationId || "" };
             });
             if (state.mode === "board") draw();
           } catch (err) { /* leave the board that is already on screen */ }
