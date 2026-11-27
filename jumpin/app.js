@@ -344,7 +344,10 @@
     let state = Object.assign(ui.blank(), { platform: platform, rides: cloud ? [] : loadRides(secrets) });
     let stopRide = function () { };
     let supportNote = "";
-    let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
+    let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true, maxSeats: 6 };
+    function groupMaxSeats() {
+      return Math.max(1, Math.min(6, Number(groupMeta && groupMeta.maxSeats) || 6));
+    }
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
     let extrasOpen = false;
@@ -642,8 +645,9 @@
       editPair.appendChild(editTimeCol);
       sheet.appendChild(editPair);
       sheet.appendChild(editDrawerHost);
+      const maxSeats = groupMaxSeats();
       const curLeft = ride.seatsLeft != null ? Number(ride.seatsLeft) : Math.max(0, (Number(ride.seatsTotal) || 1) - bookedSeats);
-      const maxLeft = Math.max(0, 6 - bookedSeats);
+      const maxLeft = Math.max(0, maxSeats - bookedSeats);
       const minLeft = bookedSeats > 0 ? 0 : 1;
       sheet.appendChild(el(doc, "label", "lbl", bookedSeats > 0 ? "Seats left" : "Total seats"));
       buildSeatStepper(doc, sheet, "seatsLeft", minLeft, maxLeft, draft.seatsLeft != null ? draft.seatsLeft : curLeft, function (v) {
@@ -651,7 +655,7 @@
         return v === 1 ? "1 seat" : v + " seats";
       });
       if (bookedSeats > 0) {
-        sheet.appendChild(el(doc, "p", "hint", (bookedSeats === 1 ? "1 seat already reserved" : bookedSeats + " seats already reserved") + " · max 6 total."));
+        sheet.appendChild(el(doc, "p", "hint", (bookedSeats === 1 ? "1 seat already reserved" : bookedSeats + " seats already reserved") + " · max " + maxSeats + " total."));
       }
       if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
@@ -1306,8 +1310,9 @@
       sheet.appendChild(phoneIn);
       if (state.error && state.field === "phone") sheet.appendChild(el(doc, "p", "error", state.error));
       const minSeats = Math.max(1, Number(ride.seatsRequested) || 1);
+      const claimMaxSeats = Math.max(minSeats, groupMaxSeats());
       sheet.appendChild(el(doc, "label", "lbl", "Total seats in car (min " + minSeats + ")"));
-      buildSeatPills(doc, sheet, "seats", 6, draft.seats != null ? draft.seats : Math.max(minSeats, 3), minSeats);
+      buildSeatPills(doc, sheet, "seats", claimMaxSeats, draft.seats != null ? draft.seats : Math.min(claimMaxSeats, Math.max(minSeats, 3)), minSeats);
       if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Estimated duration"));
       const durIn = el(doc, "input");
@@ -2466,8 +2471,9 @@
         if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); });
         syncWhenChips();
         secSched.appendChild(whenChips);
+        const maxSeats = groupMaxSeats();
         secSched.appendChild(el(doc, "label", "lbl", postRole === "rider" ? "Seats needed" : "Seats"));
-        buildSeatPills(doc, secSched, "seats", postRole === "rider" ? 4 : 6, (state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3));
+        buildSeatPills(doc, secSched, "seats", maxSeats, Math.min(maxSeats, Number((state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3))));
         if (postRole !== "rider") {
           secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
           const dur = el(doc, "input");
@@ -2740,7 +2746,7 @@
             const isReqPost = label === "Post ride request";
             const values = {};
             mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
-            if (!values.seats) values.seats = isReqPost ? 1 : 3;
+            if (!values.seats) values.seats = isReqPost ? 1 : Math.min(groupMaxSeats(), 3);
             values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
             const errors = isReqPost ? core.requestErrors(values) : core.postErrors(values);
             const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);

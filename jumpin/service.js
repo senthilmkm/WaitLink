@@ -318,7 +318,6 @@ function postRide(db, input, now, rng) {
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
-    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
     if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "You can't post a ride right now." };
     const notMember = await memberError(tx, config, fields.phone, p);
     if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
@@ -1680,6 +1679,7 @@ function saveAdminConfig(db, email, input, now) {
         meta.contactEmail = next.contactEmail;
         meta.supportNote = next.supportNote;
         meta.enabled = next.enabled;
+        meta.maxSeats = next.maxSeats;
         meta.updatedAt = now || Date.now();
         tx.set(p.groupMeta, meta);
         const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
@@ -1808,6 +1808,7 @@ function createGroup(db, email, input, now) {
       name: name,
       status: status,
       enabled: enabled,
+      maxSeats: cfg.maxSeats,
       contactEmail: cfg.contactEmail,
       contactPhoneE164: parsedPhone.e164,
       supportNote: cfg.supportNote,

@@ -1944,7 +1944,8 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   const cloudMod = require("../../jumpin/cloud.js");
   // 1. Core validation helpers
   assert.strictEqual(core.requestErrors({ name: "", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 1 }).field, "name");
-  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 5 }).field, "seats");
+  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 6 }).value.seats, 6);
+  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 7 }).field, "seats");
   assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 2, rideCost: 5 }).value.rideCost, 5);
   assert.strictEqual(core.claimErrors({ name: "", phone: "5551112222", seats: 3 }, 2).field, "name");
   assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5551112222", seats: 1 }, 2).field, "seats");
@@ -2207,6 +2208,20 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(mounted.root.children[2].querySelectorAll("button").length, 0);
   noticeCb({ platformEnabled: false, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "Upgrading servers until 10 PM." });
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Upgrading servers until 10 PM."; }));
+  // groupMeta.maxSeats caps seat pills for both Driver and Rider (1-6)
+  noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" });
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 6, contactEmail: "" });
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[1]._listeners[0]();
+  assert.ok(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.className && b.className.indexOf("seat-pill") !== -1 && b.textContent === "6"; }));
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 4, contactEmail: "" });
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[1]._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.className && b.className.indexOf("seat-pill") !== -1 && b.textContent === "5"; }), false);
+  const reqMax6Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 6 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
+  assert.strictEqual((await service.postRideRequest(reqMax6Db, postInput({ seats: 6 }), NOW)).ok, true);
+  const reqMax4Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 4 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
+  assert.strictEqual((await service.postRideRequest(reqMax4Db, postInput({ seats: 5 }), NOW)).field, "seats");
   view.destroy();
 });
 
