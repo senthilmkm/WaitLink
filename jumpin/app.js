@@ -1952,7 +1952,7 @@
         badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
         copy.appendChild(badges);
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
-        copy.appendChild(el(doc, "p", "muted", "Post a trip. Reserve your seats. No app fees."));
+        copy.appendChild(el(doc, "p", "muted", platformNotice.needARideEnabled ? "Post or request a ride. Reserve seats. No app fees." : "Post a trip. Reserve your seats. No app fees."));
         if (!groupMeta.groupId || groupMeta.groupId === "default") {
           const startPill = el(doc, "a", "hero-start-pill", "+ Start a Group");
           startPill.href = "/jumpin-admin.html?tab=groups";

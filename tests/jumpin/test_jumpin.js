@@ -2269,6 +2269,12 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   sheet.querySelectorAll("button").find(function (b) { return b.textContent === "About JumpIn"; })._listeners[0]();
   const aboutSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
   assert.ok(aboutSheet.querySelectorAll("strong").some(function (s) { return s.textContent === "Our Goal"; }));
+  // Hero subtitle reflects needARideEnabled flag
+  aboutSheet.querySelectorAll("button").find(function (b) { return b.textContent === "✕"; })._listeners[0]();
+  noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" });
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Post or request a ride. Reserve seats. No app fees."; }));
+  noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Post a trip. Reserve your seats. No app fees."; }));
   view.destroy();
 });
 
