@@ -658,12 +658,15 @@
       }
       if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
       const editRow = el(doc, "div", "action-row row-split");
+      editRow.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px;";
       const cancelBtn = el(doc, "button", "textish", "Cancel");
       cancelBtn.type = "button";
+      cancelBtn.style.cssText = "width:100%;min-width:0;margin:0;";
       if (state.busy) cancelBtn.disabled = true;
       on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "edit-close" }), { editDraft: null }); draw(); });
       const saveBtn = el(doc, "button", "confirm-primary");
       saveBtn.type = "button";
+      saveBtn.style.cssText = "width:100%;min-width:0;margin:0;";
       spinText(doc, saveBtn, state.busy && state.busyAction === "edit", "Saving…", "Save changes", false);
       editRow.appendChild(saveBtn);
       editRow.appendChild(cancelBtn);

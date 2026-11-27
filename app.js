@@ -1013,7 +1013,7 @@ document.addEventListener("DOMContentLoaded", () => {
     root.id = "jumpin-root";
     document.body.appendChild(root);
     const script = document.createElement("script");
-    const jumpV = "20261126d";
+    const jumpV = "20261126e";
     script.src = "/jumpin/core.js?v=" + jumpV;
     script.onload = function () {
       const uiScript = document.createElement("script");
