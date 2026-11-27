@@ -1969,6 +1969,10 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(reqPosted.ok, true);
   assert.strictEqual(reqPosted.kind, "request");
   assert.strictEqual((reqPosted.outbox || []).length, 1);
+  // Requester recovery via sendManageLink
+  const reqRec = await handlers.call(db, "carpoolSendManageLink", { rideId: reqPosted.rideId, phone: "5552223333", role: "rider" }, null, baseNow + 60000);
+  assert.strictEqual(reqRec.ok, true);
+  assert.strictEqual((reqRec.outbox || []).length, 1);
   // Cannot reserveSeat on an unclaimed request
   assert.strictEqual((await handlers.call(db, "carpoolReserveSeat", { rideId: reqPosted.rideId, name: "Bob", phone: "5554445555", seats: 1 }, null, baseNow + 10)).ok, false);
   // Cannot self-claim own request
@@ -2029,7 +2033,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   win.JumpInCloud = mockCloud;
   const mounted = view.mount(win);
   // Board renders request card and Need a driver filter chip
-  const reqCardRide = { rideId: "ride_req1", kind: "request", status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsRequested: 2, seatsLeft: 2, requesterName: "Sam", requesterReservationId: "res_req1", note: "" };
+  const reqCardRide = { rideId: "ride_req1", kind: "request", status: "open", from: "Lib", to: "Off", departAt: Date.now() + core.DAY_MS, seatsRequested: 2, seatsLeft: 2, requesterName: "Sam", requesterReservationId: "res_req1", note: "" };
   boardCb([reqCardRide]);
   const needChip = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("Need a driver") !== -1; });
   assert.ok(needChip);
@@ -2048,14 +2052,18 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().mode, "posted");
 
-  // Public visitor views request -> taps "I can drive" -> submits claimRequestSheet
+  // Public visitor views request -> verifies request recovery link only, taps "I can drive", exercises duration stepper, submits claimRequestSheet
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "" }), { ride: reqCardRide, when: "Tomorrow" }));
+  assert.ok(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.textContent === "Posted this request? Text me a manage link"; }));
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Driver? Manage this trip"; }), undefined);
   const driveBtn = mounted.root.children[2].children[0];
   assert.strictEqual(driveBtn.children[0].textContent, "🚗 I can drive");
   driveBtn._listeners[0]();
   assert.strictEqual(mounted.getState().claimOpen, true);
   const claimSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
   assert.ok(claimSheet);
+  claimSheet.querySelectorAll("button").find(function (b) { return b.textContent === "+"; })._listeners[0]();
+  claimSheet.querySelectorAll("button").find(function (b) { return b.textContent === "−"; })._listeners[0]();
   // Validation error then success (clear prefilled name first)
   claimSheet.querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "";
   claimSheet.querySelectorAll("button").find(function (b) { return b.textContent === "Confirm & offer ride"; })._listeners[0]();

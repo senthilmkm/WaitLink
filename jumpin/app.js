@@ -1297,6 +1297,35 @@
       sheet.appendChild(el(doc, "label", "lbl", "Total seats in car (min " + minSeats + ")"));
       buildSeatPills(doc, sheet, "seats", 6, draft.seats != null ? draft.seats : Math.max(minSeats, 3), minSeats);
       if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+      const durIn = el(doc, "input");
+      durIn.type = "hidden";
+      durIn.name = "durationMinutes";
+      let durMins = Number(draft.durationMinutes || 60);
+      if (!Number.isFinite(durMins) || durMins < 30) durMins = 30;
+      if (durMins > 900) durMins = 900;
+      durIn.value = String(durMins);
+      const durStep = el(doc, "div", "dur-stepper");
+      const minusD = el(doc, "button", "dur-btn", "−");
+      minusD.type = "button";
+      const durVal = el(doc, "div", "dur-val");
+      const plusD = el(doc, "button", "dur-btn", "+");
+      plusD.type = "button";
+      function syncClaimDur(next) {
+        durMins = Math.max(30, Math.min(900, next));
+        durIn.value = String(durMins);
+        durVal.textContent = core.formatDuration(durMins);
+        minusD.disabled = durMins <= 30;
+        plusD.disabled = durMins >= 900;
+      }
+      syncClaimDur(durMins);
+      on(minusD, "click", function () { syncClaimDur(durMins - 30); });
+      on(plusD, "click", function () { syncClaimDur(durMins + 30); });
+      durStep.appendChild(minusD);
+      durStep.appendChild(durVal);
+      durStep.appendChild(plusD);
+      sheet.appendChild(durIn);
+      sheet.appendChild(durStep);
       sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
       const noteIn = el(doc, "input");
       noteIn.name = "note";
@@ -1557,7 +1586,7 @@
       if (badgeMap[current.status]) secTop.appendChild(el(doc, "span", "confirm-badge" + badgeMap[current.status][1], badgeMap[current.status][0]));
       if (current.notice) secTop.appendChild(el(doc, "h1", "", current.notice));
       secTop.appendChild(el(doc, "p", "route", (ride.from || "") + " → " + (ride.to || "")));
-      const whenText = (current.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
+      const whenText = (current.when || whenOf(ride)) + (ride.kind !== "request" && ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "");
       const grid = el(doc, "div", "info-grid");
       function addTile(k, v) {
         const tile = el(doc, "div", "info-tile");
@@ -1843,22 +1872,24 @@
         if (!current.reserveOpen && !current.editOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
           const secRecBox = el(doc, "div", "ride-sec");
           const recBox = el(doc, "div", "recovery-box");
-          const seat = el(doc, "button", "linkish", "Rider? Manage seat or message driver");
+          const seat = el(doc, "button", "linkish", ride.kind === "request" ? "Posted this request? Text me a manage link" : "Rider? Manage seat or message driver");
           on(seat, "click", function () {
             state = ui.reduce(state, { type: "recovery", role: "rider" });
             draw();
             const b = rootNode.querySelector && rootNode.querySelector("#jumpin-bottom");
             if (b && b.scrollIntoView) b.scrollIntoView({ behavior: "smooth", block: "end" });
           });
-          const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
-          on(trip, "click", function () {
-            state = ui.reduce(state, { type: "recovery", role: "driver" });
-            draw();
-            const b = rootNode.querySelector && rootNode.querySelector("#jumpin-bottom");
-            if (b && b.scrollIntoView) b.scrollIntoView({ behavior: "smooth", block: "end" });
-          });
           recBox.appendChild(seat);
-          recBox.appendChild(trip);
+          if (ride.kind !== "request") {
+            const trip = el(doc, "button", "linkish", "Driver? Manage this trip");
+            on(trip, "click", function () {
+              state = ui.reduce(state, { type: "recovery", role: "driver" });
+              draw();
+              const b = rootNode.querySelector && rootNode.querySelector("#jumpin-bottom");
+              if (b && b.scrollIntoView) b.scrollIntoView({ behavior: "smooth", block: "end" });
+            });
+            recBox.appendChild(trip);
+          }
           secRecBox.appendChild(recBox);
           card.appendChild(secRecBox);
         }

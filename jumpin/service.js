@@ -1091,7 +1091,12 @@ function sendManageLink(db, input, now, rng) {
     if (!ride || (ride.status !== "open" && ride.status !== "pending") || completionDeadline(ride) <= now) return { ok: true, phrase: core.recoveryPhrase() };
     let target = null;
     let kind = "";
-    if (input.role === "driver" && ride.driverPhoneE164 === phone.e164) {
+    if (ride.kind === "request") {
+      if (input.role === "rider" && ride.requesterPhoneE164 === phone.e164) {
+        target = ride;
+        kind = "request";
+      }
+    } else if (input.role === "driver" && ride.driverPhoneE164 === phone.e164) {
       target = ride;
       kind = "trip";
     } else if (input.role === "rider") {
@@ -1110,13 +1115,17 @@ function sendManageLink(db, input, now, rng) {
     const secret = core.randomSecret(rng);
     const hashed = core.hashSecret(secret);
     if (kind === "trip") target.driverTokenHash = hashed;
+    else if (kind === "request") target.requesterSecretHash = core.sha256Hex(secret);
     else target.tokenHash = hashed;
     target.tokenIssuedAt = now;
     target.smsSent = (target.smsSent || 0) + 1;
     target.idempotencySecret = "";
     bumpSms(config, platform);
-    queueText(texts, phone.e164, "JumpIn " + (kind === "trip" ? "driver" : "seat") + " link (" + shortRoute(ride.from, ride.to) + "): " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId, p.groupId), "CARPOOL_DRIVER_LINK");
-    if (kind === "trip") tx.set(p.ridePrivate(ride.rideId), target);
+    const linkBody = kind === "request"
+      ? "JumpIn request (" + shortRoute(ride.from, ride.to) + "): " + manageUrl("seat", ride.requesterReservationId, secret, ride.rideId, p.groupId)
+      : "JumpIn " + (kind === "trip" ? "driver" : "seat") + " link (" + shortRoute(ride.from, ride.to) + "): " + manageUrl(kind, kind === "trip" ? ride.rideId : target.reservationId, secret, ride.rideId, p.groupId);
+    queueText(texts, phone.e164, linkBody, "CARPOOL_DRIVER_LINK");
+    if (kind === "trip" || kind === "request") tx.set(p.ridePrivate(ride.rideId), target);
     else tx.set(p.reservation(ride.rideId, phone.e164), target);
     saveConfig(tx, config, p, platform);
     return { ok: true, phrase: core.recoveryPhrase(), texts: texts };
@@ -2159,7 +2168,7 @@ function postRideRequest(db, input, now, rng) {
     if (sent) {
       ride.smsSent = 1;
       bumpSms(config, platform);
-      const body = "JumpIn request (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", rideId, secret, reservationId, p.groupId);
+      const body = "JumpIn request (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", reservationId, secret, rideId, p.groupId);
       queueText(texts, fields.phone, body, "CARPOOL_REQUEST_LINK");
     }
     phone.postsDay = core.utcDay(now);
@@ -2236,6 +2245,7 @@ function claimRideRequest(db, input, now, rng) {
     ride.tokenIssuedAt = now;
     ride.seatsTotal = fields.seats;
     ride.seatsLeft = fields.seats - (ride.seatsRequested || 1);
+    ride.durationMinutes = fields.durationMinutes || 60;
     if (fields.note) ride.note = fields.note;
     ride.activeReservationDocIds = [resKey];
     ride.updatedAt = now;
