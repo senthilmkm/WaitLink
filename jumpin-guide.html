@@ -893,7 +893,7 @@
               <td>
                 <ul class="clean">
                   <li><strong>Organizers:</strong> Sign in with Google on <code>jumpin-admin.html?tab=groups</code> (or click <strong>My Groups</strong> in the console header), click <strong>+ New Group</strong>, enter group name, slug (<code>?g=&lt;slug&gt;</code>), and required US/Canada phone, then click <strong>Copy Link</strong> / <strong>Copy Board Link</strong> once approved.</li>
-                  <li><strong>Platform Admin:</strong> Approve, <strong>Suspend</strong>, <strong>Resume</strong>, reject, or delete non-default groups (with clear confirmation popups), monitor platform-wide SMS usage, manage <strong>Platform Settings</strong> (Maintenance Mode, Home Banner Message, Daily SMS Cap, Auto-Complete &amp; Auto-Cleanup schedules), and toggle <strong>Feature Config</strong> switches (<strong>JumpIn Home Page iOS Theme</strong> &amp; <strong>Broadcast SMS</strong>).</li>
+                  <li><strong>Platform Admin:</strong> Approve, <strong>Suspend</strong>, <strong>Resume</strong>, reject, or delete non-default groups (with clear confirmation popups), monitor platform-wide SMS usage, manage <strong>Platform Settings</strong> (Maintenance Mode, Home Banner Message, Daily SMS Cap, Auto-Complete &amp; Auto-Cleanup schedules), and toggle <strong>Feature Config</strong> switches (<strong>JumpIn Home Page iOS Theme</strong>, <strong>Broadcast SMS</strong>, &amp; <strong>Need a Ride (Rider Requests)</strong>).</li>
                 </ul>
               </td>
               <td>
@@ -971,6 +971,20 @@
               <td><strong>All Active Riders</strong></td>
               <td><code>JumpIn trip cancelled (From-To, &lt;When&gt;).</code></td>
               <td>No link sent; all driver &amp; rider manage links for the trip stop working immediately.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Rider Flow</span></td>
+              <td>Post a Ride Request (<em>Need a Ride</em>, when enabled in Feature Config)</td>
+              <td><strong>Requester</strong></td>
+              <td><code>JumpIn request (From-To): &lt;link&gt;</code> (<code>view=seat</code>; 0 broadcast SMS).</td>
+              <td>Appears on the board as <em>Needs a driver</em>; requester can cancel anytime or auto-expires silently at departure.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Driver Flow</span></td>
+              <td>Claim a Ride Request (<em>I can drive</em>)</td>
+              <td><strong>Requester &amp; Driver</strong></td>
+              <td>Requester: <code>JumpIn: &lt;Driver&gt; offered to drive (From-To). View: &lt;link&gt;</code>; Driver: <code>JumpIn driving (From-To): &lt;link&gt;</code>.</td>
+              <td>Atomically converts the request into an open trip, books the requester's seat(s), and opens remaining seats on the board.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>

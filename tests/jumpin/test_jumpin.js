@@ -1937,6 +1937,154 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   view.destroy();
 });
 
+it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flows, and UI", async function () {
+  const handlers = require("../../jumpin/handlers.js");
+  const cloudMod = require("../../jumpin/cloud.js");
+  // 1. Core validation helpers
+  assert.strictEqual(core.requestErrors({ name: "", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 1 }).field, "name");
+  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 5 }).field, "seats");
+  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 2 }).value.seats, 2);
+  assert.strictEqual(core.claimErrors({ name: "", phone: "5551112222", seats: 3 }, 2).field, "name");
+  assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5551112222", seats: 1 }, 2).field, "seats");
+  assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5551112222", seats: 4, note: "Main gate" }, 2).value.seats, 4);
+
+  // 2. Service + handlers + Platform Admin feature flag gating
+  const db = service.createMemoryDb(seed());
+  const baseNow = NOW;
+  const tz = "America/New_York";
+  const w = core.partsInZone(baseNow + 2 * core.DAY_MS, tz);
+  const d1 = w.year + "-" + String(w.month).padStart(2, "0") + "-" + String(w.day).padStart(2, "0");
+  const t1 = String(w.hour).padStart(2, "0") + ":" + String(w.minute).padStart(2, "0");
+  // Disabled by default
+  const disRes = await handlers.call(db, "carpoolPostRideRequest", { name: "Sam", phone: "5552223333", from: "Lib", to: "Off", date: d1, time: t1, timeZone: tz, seats: 2 }, null, baseNow);
+  assert.strictEqual(disRes.ok, false);
+  assert.ok(disRes.error.indexOf("disabled") !== -1);
+  // Enable Need a Ride via Super Admin savePlatformConfig
+  const enRes = await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { needARideEnabled: true }, baseNow);
+  assert.strictEqual(enRes.ok, true);
+  assert.strictEqual(enRes.platform.needARideEnabled, true);
+  // Validation & post request
+  assert.strictEqual((await handlers.call(db, "carpoolPostRideRequest", { name: "Sam", phone: "5552223333", from: "Lib", to: "Off", date: "bad", time: t1, timeZone: tz, seats: 1 }, null, baseNow)).field, "time");
+  const reqPosted = await handlers.call(db, "carpoolPostRideRequest", { name: "Sam", phone: "5552223333", from: "Lib", to: "Off", date: d1, time: t1, timeZone: tz, seats: 2, note: "Gate" }, null, baseNow);
+  assert.strictEqual(reqPosted.ok, true);
+  assert.strictEqual(reqPosted.kind, "request");
+  assert.strictEqual((reqPosted.outbox || []).length, 1);
+  // Cannot reserveSeat on an unclaimed request
+  assert.strictEqual((await handlers.call(db, "carpoolReserveSeat", { rideId: reqPosted.rideId, name: "Bob", phone: "5554445555", seats: 1 }, null, baseNow + 10)).ok, false);
+  // Cannot self-claim own request
+  assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: reqPosted.rideId, name: "Sam", phone: "5552223333", seats: 3 }, null, baseNow + 20)).ok, false);
+  // Driver claims request -> converts to open offer, reserves requester seats, sends 2 SMS
+  const claimed = await handlers.call(db, "carpoolClaimRideRequest", { rideId: reqPosted.rideId, name: "Alex", phone: "5558889999", seats: 4, note: "Blue car" }, null, baseNow + 30);
+  assert.strictEqual(claimed.ok, true);
+  assert.strictEqual(claimed.ride.kind, "offer");
+  assert.strictEqual(claimed.ride.seatsLeft, 2);
+  assert.strictEqual((claimed.outbox || []).length, 2);
+  // Second driver cannot claim already-claimed request
+  assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: reqPosted.rideId, name: "Dan", phone: "5557778888", seats: 4 }, null, baseNow + 40)).ok, false);
+  // Cancel request flow + error branches
+  const req2 = await handlers.call(db, "carpoolPostRideRequest", { name: "Eva", phone: "5556667777", from: "Park", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow + 50);
+  assert.strictEqual((await handlers.call(db, "carpoolCancelRideRequest", { rideId: req2.rideId, secret: "wrong" }, null, baseNow + 60)).ok, false);
+  assert.strictEqual((await handlers.call(db, "carpoolCancelRideRequest", { rideId: req2.rideId, secret: req2.secret }, null, baseNow + 70)).ok, true);
+  assert.strictEqual((await handlers.call(db, "carpoolCancelRideRequest", { rideId: req2.rideId, secret: req2.secret }, null, baseNow + 80)).already, true);
+  assert.strictEqual((await handlers.call(db, "carpoolCancelRideRequest", { rideId: "missing", secret: "x" }, null, baseNow + 85)).ok, false);
+  assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: "missing", name: "Alex", phone: "5558889999", seats: 4 }, null, baseNow + 90)).ok, false);
+  assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: req2.rideId, name: "Alex", phone: "5558889999", seats: 4 }, null, baseNow + 95)).ok, false);
+  const req3 = await handlers.call(db, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow + 98);
+  assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: req3.rideId, name: "Alex", phone: "5558889999", seats: 7 }, null, baseNow + 99)).field, "seats");
+  const disPlat = service.createMemoryDb(Object.assign(seed(), { "carpool_platform/config": { platformEnabled: false, needARideEnabled: true } }));
+  assert.strictEqual((await handlers.call(disPlat, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow)).ok, false);
+  assert.strictEqual((await handlers.call(disPlat, "carpoolClaimRideRequest", { rideId: "x", name: "Alex", phone: "5558889999", seats: 3 }, null, baseNow)).ok, false);
+  const memDb = service.createMemoryDb({
+    "settings/carpool_config": enabledConfig({ membersOnly: true, dailySmsSent: 9999 }),
+    "carpool_platform/config": { platformEnabled: true, needARideEnabled: true }
+  });
+  assert.strictEqual((await handlers.call(memDb, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow)).memberDenied, true);
+  const closedDb = service.createMemoryDb({
+    "settings/carpool_config": enabledConfig({ enabled: false }),
+    "carpool_platform/config": { platformEnabled: true, needARideEnabled: true }
+  });
+  assert.strictEqual((await handlers.call(closedDb, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow)).ok, false);
+  assert.strictEqual((await handlers.call(closedDb, "carpoolClaimRideRequest", { rideId: "x", name: "Alex", phone: "5558889999", seats: 3 }, null, baseNow)).ok, false);
+
+  // 3. UI state + Cloud + App UI flows
+  const st0 = ui.blank();
+  assert.strictEqual(ui.reduce(st0, { type: "claim-open" }).claimOpen, false);
+  const stReq = ui.reduce(st0, { type: "ride", ride: { status: "open", seatsLeft: 2 }, role: "" });
+  const stClaim = ui.reduce(stReq, { type: "claim-open" });
+  assert.strictEqual(stClaim.claimOpen, true);
+  assert.strictEqual(ui.reduce(stClaim, { type: "claim-close" }).claimOpen, false);
+
+  const win = fakeWindow();
+  win.location = { search: "", origin: "https://waitlink.app", href: "https://waitlink.app/jumpin" };
+  let noticeCb = null;
+  let boardCb = null;
+  const mockCloud = Object.assign(cloudMod.attach(win), {
+    watchBoard: function (cb) { boardCb = cb; cb([]); return function () {}; },
+    watchGroup: function (cb) { cb({ groupId: "default", name: "Its-OK", status: "active", enabled: true }); return function () {}; },
+    watchPlatformNotice: function (cb) { noticeCb = cb; cb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" }); return function () {}; },
+    postRideRequest: function () { return Promise.resolve({ ok: true, rideId: "ride_req1", reservationId: "res_req1", secret: "sec_req1", status: "open", kind: "request" }); },
+    claimRideRequest: function (id, vals) { return Promise.resolve({ ok: true, rideId: id, secret: "drv_sec", ride: { rideId: id, kind: "offer", status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsTotal: Number(vals.seats || 4), seatsLeft: 2, driverName: vals.name } }); },
+    cancelRideRequest: function () { return Promise.resolve({ ok: true }); }
+  });
+  win.JumpInCloud = mockCloud;
+  const mounted = view.mount(win);
+  // Board renders request card and Need a driver filter chip
+  const reqCardRide = { rideId: "ride_req1", kind: "request", status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsRequested: 2, seatsLeft: 2, requesterName: "Sam", requesterReservationId: "res_req1", note: "" };
+  boardCb([reqCardRide]);
+  const needChip = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("Need a driver") !== -1; });
+  assert.ok(needChip);
+  needChip._listeners[0]();
+  // Post screen with "I need a ride" toggle
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  const riderModeBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("I need a ride") !== -1; });
+  assert.ok(riderModeBtn);
+  riderModeBtn._listeners[0]();
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Post ride request");
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "from"; }).value = "Lib";
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "to"; }).value = "Off";
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "Sam";
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "5552223333";
+  mounted.root.children[2].children[0]._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().mode, "posted");
+
+  // Public visitor views request -> taps "I can drive" -> submits claimRequestSheet
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "" }), { ride: reqCardRide, when: "Tomorrow" }));
+  const driveBtn = mounted.root.children[2].children[0];
+  assert.strictEqual(driveBtn.children[0].textContent, "🚗 I can drive");
+  driveBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().claimOpen, true);
+  const claimSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(claimSheet);
+  // Validation error then success (clear prefilled name first)
+  claimSheet.querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "";
+  claimSheet.querySelectorAll("button").find(function (b) { return b.textContent === "Confirm & offer ride"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().field, "name");
+  const cs2 = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  cs2.querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "Alex";
+  cs2.querySelectorAll("input").find(function (i) { return i.name === "phone"; }).value = "5558889999";
+  cs2.querySelectorAll("button").find(function (b) { return b.textContent === "Confirm & offer ride"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().role, "driver");
+  assert.strictEqual(mounted.getState().claimOpen, false);
+
+  // Requester views own request and cancels it
+  cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
+  assert.strictEqual(mockCloud.roleFor(reqCardRide), "requester");
+  assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "sec_req1");
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Share on WhatsApp");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel request"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().status, "cancelled");
+
+  // Disable feature flag -> mode switch hidden
+  noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("I need a ride") !== -1; }), undefined);
+  view.destroy();
+});
+
 function fakeWindow() {
   const listeners = {};
   function node(tag) {

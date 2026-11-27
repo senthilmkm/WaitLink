@@ -256,6 +256,35 @@ test("7. Seat Waitlist: 0 SMS on Join, Single-Segment SMS on Open, and No Duplic
   assert.strictEqual((cancelled.outbox || []).length, 0);
 });
 
+test("8. Need a Ride: Feature Flag, Concurrent Claim Race, and Single-Segment SMS", async function () {
+  const adminHtml = fs.readFileSync(path.join(ROOT, "jumpin-admin.html"), "utf8");
+  const adminJs = fs.readFileSync(path.join(ROOT, "jumpin-admin.js"), "utf8");
+  assert.ok(adminHtml.indexOf("jumpin-feat-need-ride") !== -1, "jumpin-admin.html must have Need a Ride toggle");
+  assert.ok(adminJs.indexOf("needARideEnabled") !== -1, "jumpin-admin.js must persist needARideEnabled");
+
+  const db = service.createMemoryDb({ "settings/carpool_config": { enabled: true } });
+  await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { needARideEnabled: true }, NOW);
+  const w1 = futureWall(1);
+  const req = await handlers.call(db, "carpoolPostRideRequest", {
+    name: "Sam", phone: "5552223333", from: "Library", to: "Office", date: w1.date, time: w1.time, timeZone: TZ, seats: 2, note: ""
+  }, null, NOW);
+  assert.strictEqual(req.ok, true);
+  assert.ok(req.outbox[0].body.length <= 160, "Request SMS must stay <= 160 chars");
+
+  const [c1, c2] = await Promise.all([
+    handlers.call(db, "carpoolClaimRideRequest", { rideId: req.rideId, name: "Driver1", phone: "5558881111", seats: 4 }, null, NOW + 100),
+    handlers.call(db, "carpoolClaimRideRequest", { rideId: req.rideId, name: "Driver2", phone: "5559992222", seats: 4 }, null, NOW + 100)
+  ]);
+  const wins = [c1, c2].filter(function (r) { return r.ok; });
+  const losses = [c1, c2].filter(function (r) { return !r.ok; });
+  assert.strictEqual(wins.length, 1, "Exactly one driver can win concurrent claim race");
+  assert.strictEqual(losses.length, 1);
+  assert.strictEqual(wins[0].ride.seatsLeft, 2);
+  wins[0].outbox.forEach(function (sms) {
+    assert.ok(sms.body.length <= 160, "Claim SMS must stay <= 160 chars");
+  });
+});
+
 (async function run() {
   console.log("======================================================================");
   console.log("🧪 SUITE 11: JUMPIN INTEGRITY, CONCURRENCY, RETENTION & UI CONTRACTS");

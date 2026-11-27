@@ -334,7 +334,7 @@
     let stopRide = function () { };
     let supportNote = "";
     let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true };
-    let platformNotice = { platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" };
+    let platformNotice = { platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
     let extrasOpen = false;
     let updatesOpen = false;
@@ -1256,6 +1256,114 @@
     let infoView = "";
     let prevMode = "";
     let prevSheetOpen = false;
+    let postRole = "driver";
+
+    function claimRequestSheet(doc) {
+      const sheet = el(doc, "section");
+      sheet.id = "jumpin-sheet";
+      sheet.setAttribute("aria-modal", "true");
+      const ride = state.ride || {};
+      const draft = state.claimDraft || {};
+      const saved = loadProfile();
+      const head = el(doc, "div", "sheet-head");
+      head.appendChild(el(doc, "p", "", "Offer to drive"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      if (state.busy) xBtn.disabled = true;
+      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "claim-close" }), { claimDraft: null }); draw(); });
+      head.appendChild(xBtn);
+      sheet.appendChild(head);
+      sheet.appendChild(el(doc, "p", "muted", (ride.from || "") + " → " + (ride.to || "") + " · " + (state.when || whenOf(ride))));
+      sheet.appendChild(el(doc, "label", "lbl", "Your name"));
+      const nameIn = el(doc, "input");
+      nameIn.name = "name";
+      nameIn.type = "text";
+      nameIn.placeholder = "Alex";
+      nameIn.value = draft.name != null ? draft.name : (saved.name || "");
+      if (state.error && state.field === "name") nameIn.className = "input-invalid";
+      sheet.appendChild(nameIn);
+      if (state.error && state.field === "name") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Phone (US/Canada)"));
+      const phoneIn = el(doc, "input");
+      phoneIn.name = "phone";
+      phoneIn.type = "tel";
+      phoneIn.placeholder = "555 234 5678";
+      phoneIn.value = draft.phone != null ? draft.phone : (saved.phone || "");
+      if (state.error && state.field === "phone") phoneIn.className = "input-invalid";
+      sheet.appendChild(phoneIn);
+      if (state.error && state.field === "phone") sheet.appendChild(el(doc, "p", "error", state.error));
+      const minSeats = Math.max(1, Number(ride.seatsRequested) || 1);
+      sheet.appendChild(el(doc, "label", "lbl", "Total seats in car (min " + minSeats + ")"));
+      buildSeatPills(doc, sheet, "seats", 6, draft.seats != null ? draft.seats : Math.max(minSeats, 3), minSeats);
+      if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
+      const noteIn = el(doc, "input");
+      noteIn.name = "note";
+      noteIn.type = "text";
+      noteIn.placeholder = "e.g. Meet at main entrance";
+      noteIn.value = draft.note != null ? draft.note : (ride.note || "");
+      sheet.appendChild(noteIn);
+      if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
+      const row = el(doc, "div", "action-row row-split");
+      row.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px;";
+      const offerBtn = el(doc, "button", "confirm-primary");
+      offerBtn.type = "button";
+      offerBtn.style.cssText = "width:100%;min-width:0;margin:0;";
+      spinText(doc, offerBtn, state.busy && state.busyAction === "claim", "Confirming…", "Confirm & offer ride", false);
+      const cancelBtn = el(doc, "button", "textish", "Cancel");
+      cancelBtn.type = "button";
+      cancelBtn.style.cssText = "width:100%;min-width:0;margin:0;";
+      if (state.busy) cancelBtn.disabled = true;
+      on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "claim-close" }), { claimDraft: null }); draw(); });
+      row.appendChild(offerBtn);
+      row.appendChild(cancelBtn);
+      sheet.appendChild(row);
+      on(offerBtn, "click", function () {
+        if (!cloud || !state.ride) return;
+        const values = {};
+        sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
+        const errors = core.claimErrors(values, minSeats);
+        if (errors.error) {
+          state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
+          state.claimDraft = values;
+          draw();
+          return;
+        }
+        state.busy = true;
+        state.busyAction = "claim";
+        state.claimDraft = values;
+        draw();
+        cloud.claimRideRequest(state.ride.rideId, values).then(function (result) {
+          state.busy = false;
+          state.busyAction = "";
+          if (!result || result.ok === false) {
+            state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not claim request. Check the connection and try again." });
+            state.claimDraft = values;
+            openMemberModal(result);
+          } else {
+            saveProfile(values.name, values.phone);
+            const updatedRide = Object.assign({}, state.ride, result.ride || {});
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: updatedRide, role: "driver" }), {
+              ride: updatedRide,
+              rides: state.rides || [],
+              claimDraft: null,
+              when: whenOf(updatedRide),
+              link: cloud.publicRideUrl(updatedRide.rideId),
+              notice: "You're driving! Rider notified."
+            });
+          }
+          draw();
+        }, function () {
+          state.busy = false;
+          state.busyAction = "";
+          state = ui.reduce(state, { type: "fail", error: "Could not claim request. Check the connection and try again." });
+          state.claimDraft = values;
+          draw();
+        });
+      });
+      return sheet;
+    }
     function canInstallApp() {
       const ua = (win.navigator && win.navigator.userAgent) || "";
       const standalone = !!((win.matchMedia && win.matchMedia("(display-mode: standalone)").matches) || (win.navigator && win.navigator.standalone));
@@ -1458,7 +1566,13 @@
         grid.appendChild(tile);
       }
       addTile("Departure", whenText);
-      if (ride.seatsLeft != null) addTile("Availability", seatsLabel(ride.seatsLeft));
+      if (ride.kind === "request") {
+        addTile("Requested by", ride.requesterName || "Rider");
+        const reqSeats = Number(ride.seatsRequested) || 1;
+        addTile("Seats needed", reqSeats === 1 ? "1 seat" : reqSeats + " seats");
+      } else if (ride.seatsLeft != null) {
+        addTile("Availability", seatsLabel(ride.seatsLeft));
+      }
       if (ride.rideCost > 0) addTile("Ride cost", core.formatCost(ride.rideCost) + " / seat (direct)");
       const tripCode = shortTripId(ride.rideId);
       if (tripCode) addTile("Trip ID", tripCode);
@@ -1471,7 +1585,42 @@
         secTop.appendChild(el(doc, "p", "route", "Trip completed — hope you had a great ride!"));
         if (supportNote) secTop.appendChild(supportCard(doc, supportNote));
       }
-      if (current.status === "open" && ride.seatsLeft === 0) {
+      if (ride.kind === "request" && current.status === "open") {
+        if (current.role === "requester") {
+          secTop.appendChild(el(doc, "p", "muted", "Waiting for a driver — share this link so a driver can offer a ride."));
+          const reqRow = el(doc, "div", "action-row");
+          const cancelReqBtn = el(doc, "button", "textish");
+          cancelReqBtn.type = "button";
+          spinText(doc, cancelReqBtn, state.busy && state.busyAction === "cancel-req", "Cancelling…", "✕ Cancel request", false);
+          on(cancelReqBtn, "click", function () {
+            if (!cloud || !cloud.cancelRideRequest) return;
+            state.busy = true;
+            state.busyAction = "cancel-req";
+            draw();
+            cloud.cancelRideRequest(ride.rideId, cloud.seatSecretFor(ride)).then(function (res) {
+              state.busy = false;
+              state.busyAction = "";
+              if (!res || res.ok === false) {
+                state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not cancel request." });
+              } else {
+                const nextRide = Object.assign({}, ride, { status: "cancelled", seatsLeft: 0 });
+                state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: "" }), { ride: nextRide, notice: "Request cancelled." });
+              }
+              draw();
+            }, function () {
+              state.busy = false;
+              state.busyAction = "";
+              state = ui.reduce(state, { type: "fail", error: "Could not cancel request." });
+              draw();
+            });
+          });
+          reqRow.appendChild(cancelReqBtn);
+          secTop.appendChild(reqRow);
+        } else if (!current.role) {
+          secTop.appendChild(el(doc, "p", "muted", "No driver yet — tap I can drive below to offer a ride."));
+        }
+      }
+      if (current.status === "open" && ride.seatsLeft === 0 && ride.kind !== "request") {
         secTop.appendChild(el(doc, "p", "route", "Full"));
         const fullDeparted = !!(ride.departAt && Date.now() >= ride.departAt);
         if (!fullDeparted && !current.role && !current.reserveOpen && !current.recovery && cloud && cloud.joinWaitlist) {
@@ -1850,6 +1999,7 @@
         const pager = el(doc, "div", "pager");
         function matchesDateFilter(ride, filter, nowMs) {
           if (filter === "all") return true;
+          if (filter === "need_driver") return ride.kind === "request";
           if (filter === "mine") return !!(cloud && cloud.roleFor && cloud.roleFor(ride));
           const ts = Number(ride.departAt || 0);
           if (!ts) return false;
@@ -1911,28 +2061,34 @@
           const pageItems = shown.slice(start, start + PAGE_SIZE);
           pageItems.forEach(function (ride) {
             const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
-            const row = el(doc, "button", "row" + (myRole ? " role-" + myRole : ""));
+            const isReq = ride.kind === "request";
+            const row = el(doc, "button", "row" + (isReq ? " role-rider" : (myRole ? " role-" + myRole : "")));
             const head = el(doc, "div", "row-head");
             head.appendChild(el(doc, "div", "route", ride.from + " → " + ride.to));
             const pills = el(doc, "span", "pill-group");
-            if (myRole === "driver" || myRole === "rider") {
-              pills.appendChild(el(doc, "span", "status-pill " + myRole, myRole === "driver" ? "Your trip" : "Seat booked"));
+            if (isReq) {
+              pills.appendChild(el(doc, "span", "status-pill rider", "🙋 Needs a driver"));
+            } else {
+              if (myRole === "driver" || myRole === "rider") {
+                pills.appendChild(el(doc, "span", "status-pill " + myRole, myRole === "driver" ? "Your trip" : "Seat booked"));
+              }
+              const left = ride.seatsLeft == null ? 2 : Number(ride.seatsLeft);
+              const pillKind = left === 0 ? "full" : (left === 1 ? "last" : "open");
+              const pillText = left === 0 ? "Full" : (left === 1 ? "Last seat" : "Open");
+              pills.appendChild(el(doc, "span", "status-pill " + pillKind, pillText));
             }
-            const left = ride.seatsLeft == null ? 2 : Number(ride.seatsLeft);
-            const pillKind = left === 0 ? "full" : (left === 1 ? "last" : "open");
-            const pillText = left === 0 ? "Full" : (left === 1 ? "Last seat" : "Open");
-            pills.appendChild(el(doc, "span", "status-pill " + pillKind, pillText));
             head.appendChild(pills);
             row.appendChild(head);
-            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "")));
+            row.appendChild(el(doc, "div", "meta", (ride.when || whenOf(ride)) + (!isReq && ride.durationMinutes ? " · Est. " + core.formatDuration(ride.durationMinutes) : "")));
             const foot = el(doc, "div", "card-foot");
-            const dName = ride.driverName || "Driver";
+            const dName = isReq ? ("Requested by " + (ride.requesterName || "Rider")) : (ride.driverName || "Driver");
             const dWrap = el(doc, "span", "foot-driver");
             dWrap.appendChild(el(doc, "span", "mini-av", dName.charAt(0).toUpperCase()));
             dWrap.appendChild(el(doc, "span", "", dName));
             foot.appendChild(dWrap);
             const right = el(doc, "span", "foot-right");
-            right.appendChild(el(doc, "span", "", ride.seats || seatsLabel(ride.seatsLeft)));
+            const reqSeats = Number(ride.seatsRequested) || 1;
+            right.appendChild(el(doc, "span", "", isReq ? (reqSeats === 1 ? "1 seat needed" : reqSeats + " seats needed") : (ride.seats || seatsLabel(ride.seatsLeft))));
             if (ride.rideCost > 0) right.appendChild(el(doc, "span", "cost-tag", core.formatCost(ride.rideCost) + "/seat"));
             foot.appendChild(right);
             row.appendChild(foot);
@@ -1968,6 +2124,9 @@
           const filterRow = el(doc, "div", "filter-row");
           const filterNow = Date.now();
           const filterSpecs = [["all", "All"], ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "This week"]];
+          if (platformNotice.needARideEnabled || rides.some(function (ride) { return ride.kind === "request"; })) {
+            filterSpecs.splice(1, 0, ["need_driver", "Need a driver"]);
+          }
           const myCount = cloud && cloud.roleFor ? rides.filter(function (ride) { return !!cloud.roleFor(ride); }).length : 0;
           if (myCount > 0) filterSpecs.splice(1, 0, ["mine", "My Trips"]);
           filterSpecs.forEach(function (spec) {
@@ -1998,13 +2157,25 @@
         wrap.appendChild(pager);
         mid.appendChild(wrap);
       } else if (state.mode === "post") {
+        if (!platformNotice.needARideEnabled) postRole = "driver";
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
         const postHead = el(doc, "div", "post-head");
         const postBadges = el(doc, "div", "hero-badges");
-        postBadges.appendChild(el(doc, "span", "hero-eyebrow", "New Trip"));
+        postBadges.appendChild(el(doc, "span", "hero-eyebrow", postRole === "rider" ? "Ride Request" : "New Trip"));
         postBadges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
         postHead.appendChild(postBadges);
-        postHead.appendChild(el(doc, "h1", "", "Post a ride"));
+        postHead.appendChild(el(doc, "h1", "", postRole === "rider" ? "Request a ride" : "Post a ride"));
+        if (platformNotice.needARideEnabled) {
+          const rolePills = el(doc, "div", "seat-pills");
+          rolePills.style.cssText = "grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0 0;";
+          [["driver", "🚗 I'm driving"], ["rider", "🙋 I need a ride"]].forEach(function (pair) {
+            const rb = el(doc, "button", "seat-pill" + (postRole === pair[0] ? " active" : ""), pair[1]);
+            rb.type = "button";
+            on(rb, "click", function () { postRole = pair[0]; draw(); });
+            rolePills.appendChild(rb);
+          });
+          postHead.appendChild(rolePills);
+        }
         if (groupMeta.membersOnly) {
           const sub = el(doc, "p", "muted", "For approved " + (groupMeta.name || "Its-OK") + " members only");
           sub.style.fontStyle = "italic";
@@ -2149,49 +2320,51 @@
         if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); });
         syncWhenChips();
         secSched.appendChild(whenChips);
-        secSched.appendChild(el(doc, "label", "lbl", "Seats"));
-        buildSeatPills(doc, secSched, "seats", 6, (state.draft && state.draft.seats) || 3);
-        secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
-        const dur = el(doc, "input");
-        dur.type = "hidden";
-        dur.name = "durationMinutes";
-        let durMins = Number((state.draft && state.draft.durationMinutes) || 30);
-        if (!Number.isFinite(durMins) || durMins < 30) durMins = 30;
-        if (durMins > 900) durMins = 900;
-        dur.value = String(durMins);
-        const stepper = el(doc, "div", "dur-stepper");
-        stepper.style.marginBottom = "0";
-        const minusDur = el(doc, "button", "dur-btn", "−");
-        minusDur.type = "button";
-        minusDur.setAttribute("aria-label", "Decrease duration by 30 minutes");
-        const durReadout = el(doc, "div", "dur-val");
-        const plusDur = el(doc, "button", "dur-btn", "+");
-        plusDur.type = "button";
-        plusDur.setAttribute("aria-label", "Increase duration by 30 minutes");
-        function syncDur(next) {
-          durMins = Math.max(30, Math.min(900, next));
+        secSched.appendChild(el(doc, "label", "lbl", postRole === "rider" ? "Seats needed" : "Seats"));
+        buildSeatPills(doc, secSched, "seats", postRole === "rider" ? 4 : 6, (state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3));
+        if (postRole !== "rider") {
+          secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+          const dur = el(doc, "input");
+          dur.type = "hidden";
+          dur.name = "durationMinutes";
+          let durMins = Number((state.draft && state.draft.durationMinutes) || 30);
+          if (!Number.isFinite(durMins) || durMins < 30) durMins = 30;
+          if (durMins > 900) durMins = 900;
           dur.value = String(durMins);
-          durReadout.textContent = core.formatDuration(durMins);
-          minusDur.disabled = durMins <= 30;
-          plusDur.disabled = durMins >= 900;
+          const stepper = el(doc, "div", "dur-stepper");
+          stepper.style.marginBottom = "0";
+          const minusDur = el(doc, "button", "dur-btn", "−");
+          minusDur.type = "button";
+          minusDur.setAttribute("aria-label", "Decrease duration by 30 minutes");
+          const durReadout = el(doc, "div", "dur-val");
+          const plusDur = el(doc, "button", "dur-btn", "+");
+          plusDur.type = "button";
+          plusDur.setAttribute("aria-label", "Increase duration by 30 minutes");
+          function syncDur(next) {
+            durMins = Math.max(30, Math.min(900, next));
+            dur.value = String(durMins);
+            durReadout.textContent = core.formatDuration(durMins);
+            minusDur.disabled = durMins <= 30;
+            plusDur.disabled = durMins >= 900;
+          }
+          syncDur(durMins);
+          on(minusDur, "click", function () { syncDur(durMins - 30); });
+          on(plusDur, "click", function () { syncDur(durMins + 30); });
+          stepper.appendChild(minusDur);
+          stepper.appendChild(durReadout);
+          stepper.appendChild(plusDur);
+          secSched.appendChild(dur);
+          secSched.appendChild(stepper);
+          const durChips = el(doc, "div", "chip-row");
+          durChips.style.marginBottom = "0";
+          [["30m", 30], ["1h", 60], ["2h", 120], ["3h", 180]].forEach(function (spec) {
+            const dc = el(doc, "button", "chip-btn", spec[0]);
+            dc.type = "button";
+            on(dc, "click", function () { syncDur(spec[1]); });
+            durChips.appendChild(dc);
+          });
+          secSched.appendChild(durChips);
         }
-        syncDur(durMins);
-        on(minusDur, "click", function () { syncDur(durMins - 30); });
-        on(plusDur, "click", function () { syncDur(durMins + 30); });
-        stepper.appendChild(minusDur);
-        stepper.appendChild(durReadout);
-        stepper.appendChild(plusDur);
-        secSched.appendChild(dur);
-        secSched.appendChild(stepper);
-        const durChips = el(doc, "div", "chip-row");
-        durChips.style.marginBottom = "0";
-        [["30m", 30], ["1h", 60], ["2h", 120], ["3h", 180]].forEach(function (spec) {
-          const dc = el(doc, "button", "chip-btn", spec[0]);
-          dc.type = "button";
-          on(dc, "click", function () { syncDur(spec[1]); });
-          durChips.appendChild(dc);
-        });
-        secSched.appendChild(durChips);
         mid.appendChild(secSched);
         const secDriver = el(doc, "section", "post-section");
         const hasSavedDriver = !!(saved.name && saved.phone);
@@ -2366,7 +2539,12 @@
         mid.appendChild(card);
       }
       let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
-      if (label === "Post") label = "Post ride";
+      if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
+      if (state.mode === "ride" && state.ride && state.ride.kind === "request") {
+        if (state.status === "open" && !state.role && platformNotice.needARideEnabled) label = "🚗 I can drive";
+        else if (state.role === "requester" && state.link) label = "Share on WhatsApp";
+        else label = "Close";
+      }
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
@@ -2387,12 +2565,16 @@
             state = ui.reduce(state, { type: "post" });
             state.rides = kept;
           }
-          else if (label === "Post" || label === "Post ride") {
+          else if (label === "🚗 I can drive") {
+            state = Object.assign(ui.reduce(state, { type: "claim-open" }), { claimDraft: null });
+          }
+          else if (label === "Post" || label === "Post ride" || label === "Post ride request") {
+            const isReqPost = label === "Post ride request";
             const values = {};
             mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
-            if (!values.seats) values.seats = 3;
+            if (!values.seats) values.seats = isReqPost ? 1 : 3;
             values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
-            const errors = core.postErrors(values);
+            const errors = isReqPost ? core.requestErrors(values) : core.postErrors(values);
             const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
             if (errors.error) {
               state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
@@ -2404,7 +2586,7 @@
               state.busy = true;
               state.draft = values;
               draw();
-              Promise.resolve().then(function () { return cloud.postRide(values); }).then(function (result) {
+              Promise.resolve().then(function () { return isReqPost ? cloud.postRideRequest(values) : cloud.postRide(values); }).then(function (result) {
                 state.busy = false;
                 if (!result || result.ok === false) {
                   state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
@@ -2416,6 +2598,7 @@
                   saveRecentRoute(values.from, values.to);
                   extrasOpen = false;
                   driverEditOpen = false;
+                  postRole = "driver";
                   state = postedFromServer(state, result, values, when.departAt);
                 }
                 draw();
@@ -2570,6 +2753,7 @@
       let activeSheet = null;
       if (state.sheet || (state.busy && state.busyAction === "sheet")) activeSheet = confirmSheet(doc);
       else if (state.waitlistOpen) activeSheet = waitlistSheet(doc);
+      else if (state.claimOpen && !state.role) activeSheet = claimRequestSheet(doc);
       else if (state.editOpen && state.role === "driver") activeSheet = editSheet(doc);
       else if (state.driverSheet === "trip" && state.role === "driver") activeSheet = manageTripSheet(doc);
       else if (state.driverSheet === "return" && state.role === "driver") activeSheet = returnTripSheet(doc);
@@ -2639,7 +2823,7 @@
           boardLoaded = true;
           try {
             state.rides = (rides || []).map(function (ride) {
-              return { rideId: ride.rideId, from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "" };
+              return { rideId: ride.rideId, kind: ride.kind || "offer", from: ride.from, to: ride.to, when: whenOf(ride), seats: (ride.seatsLeft == null ? "" : seatsLabel(ride.seatsLeft)), seatsRequested: Number(ride.seatsRequested) || 0, departAt: ride.departAt, durationMinutes: Number(ride.durationMinutes) || 0, rideCost: Number(ride.rideCost) || 0, note: ride.note || "", driverName: ride.driverName || "", requesterName: ride.requesterName || "", requesterReservationId: ride.requesterReservationId || "" };
             });
             if (state.mode === "board") draw();
           } catch (err) { /* leave the board that is already on screen */ }
@@ -2929,7 +3113,7 @@
     let ptrPull = 0;
     on(rootNode, "touchstart", function (e) {
       const topY = win.scrollY || (doc.documentElement && doc.documentElement.scrollTop) || 0;
-      const modalOpen = !!(state.sheet || state.waitlistOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoView);
+      const modalOpen = !!(state.sheet || state.waitlistOpen || state.claimOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoView);
       ptrY = state.mode === "board" && topY <= 0 && !modalOpen && e && e.touches && e.touches[0] ? e.touches[0].clientY : 0;
       ptrPull = 0;
     });

@@ -718,6 +718,7 @@
           const pRetInt = page.getElementById("jumpin-plat-retain-interval");
           const fIos = page.getElementById("jumpin-feat-ios");
           const fBroadcast = page.getElementById("jumpin-feat-broadcast");
+          const fNeedRide = page.getElementById("jumpin-feat-need-ride");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
           if (pSuper) pSuper.value = (groupsData.platform.superAdminEmails || []).join(", ");
@@ -737,6 +738,7 @@
           }
           setToggleState(fIos, !!groupsData.platform.iosThemeEnabled);
           setToggleState(fBroadcast, groupsData.platform.broadcastSmsEnabled !== false);
+          setToggleState(fNeedRide, !!groupsData.platform.needARideEnabled);
         }
         if (groupSelect) {
           groupSelect.textContent = "";
@@ -1266,7 +1268,7 @@
           paint();
         }
       });
-      ["jumpin-feat-ios", "jumpin-feat-broadcast"].forEach(function (id) {
+      ["jumpin-feat-ios", "jumpin-feat-broadcast", "jumpin-feat-need-ride"].forEach(function (id) {
         const sw = page.getElementById(id);
         if (sw) sw.addEventListener("click", function () { setToggleState(sw, !getToggleState(sw)); });
       });
@@ -1274,12 +1276,14 @@
       if (featSave && api && api.savePlatformConfig) featSave.addEventListener("click", function () {
         const fIos = page.getElementById("jumpin-feat-ios");
         const fBroadcast = page.getElementById("jumpin-feat-broadcast");
+        const fNeedRide = page.getElementById("jumpin-feat-need-ride");
         const featErr = page.getElementById("jumpin-feat-error");
         if (featErr) { featErr.textContent = ""; featErr.hidden = true; }
         withBusy(page, featSave, "Saving…", function () {
           return api.savePlatformConfig({
             iosThemeEnabled: getToggleState(fIos),
-            broadcastSmsEnabled: getToggleState(fBroadcast)
+            broadcastSmsEnabled: getToggleState(fBroadcast),
+            needARideEnabled: getToggleState(fNeedRide)
           }).then(function (res) {
             if (!res || res.ok === false) {
               const msg = (res && res.error) || "Could not save feature config.";

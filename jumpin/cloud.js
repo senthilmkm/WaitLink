@@ -43,6 +43,9 @@
 
   function roleFor(storage, ride) {
     if (!ride) return "";
+    if (ride.kind === "request") {
+      return ride.requesterReservationId && seatSecret(storage, ride.requesterReservationId) ? "requester" : "";
+    }
     if (tripSecret(storage, ride.rideId)) return "driver";
     const riders = ride.riders || [];
     for (let i = 0; i < riders.length; i++) {
@@ -52,6 +55,9 @@
   }
 
   function seatSecretFor(storage, ride) {
+    if (ride && ride.kind === "request" && ride.requesterReservationId) {
+      return seatSecret(storage, ride.requesterReservationId);
+    }
     const riders = (ride && ride.riders) || [];
     for (let i = 0; i < riders.length; i++) {
       const secret = seatSecret(storage, riders[i].reservationId);
@@ -248,9 +254,10 @@
       onNotice({
         platformEnabled: !data || data.platformEnabled !== false,
         iosThemeEnabled: !!(data && data.iosThemeEnabled === true),
+        needARideEnabled: !!(data && data.needARideEnabled === true),
         maintenanceMessage: (data && typeof data.maintenanceMessage === "string") ? data.maintenanceMessage : ""
       });
-    }, function () { onNotice({ platformEnabled: true, iosThemeEnabled: false, maintenanceMessage: "" }); });
+    }, function () { onNotice({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" }); });
   }
 
   function attach(win) {
@@ -279,6 +286,25 @@
           }
           return result;
         });
+      },
+      postRideRequest: function (values) {
+        return call("carpoolPostRideRequest", values).then(function (result) {
+          if (result && result.ok && result.secret && result.reservationId) {
+            saveSeat(storage, result.reservationId, result.secret);
+          }
+          return result;
+        });
+      },
+      claimRideRequest: function (rideId, values) {
+        return call("carpoolClaimRideRequest", Object.assign({ rideId: rideId }, values || {})).then(function (result) {
+          if (result && result.ok && result.secret) {
+            saveTrip(storage, result.rideId || rideId, result.secret);
+          }
+          return result;
+        });
+      },
+      cancelRideRequest: function (rideId, secret) {
+        return call("carpoolCancelRideRequest", { rideId: rideId, secret: secret });
       },
       reserveSeat: function (rideId, values, options) {
         return call("carpoolReserveSeat", {

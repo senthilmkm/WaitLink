@@ -21,6 +21,7 @@
       reserveOpen: false,
       editOpen: false,
       waitlistOpen: false,
+      claimOpen: false,
       driverSheet: "",
       recovery: "",
       sheet: "",
@@ -51,6 +52,7 @@
       reserveOpen: false,
       editOpen: false,
       waitlistOpen: false,
+      claimOpen: false,
       driverSheet: "",
       recovery: "",
       sheet: "",
@@ -104,6 +106,21 @@
     }
     if (event.type === "waitlist-close") {
       next.waitlistOpen = false;
+      return next;
+    }
+    if (event.type === "claim-open") {
+      if (next.status !== "open" || next.role) return next;
+      next.claimOpen = true;
+      next.editOpen = false;
+      next.driverSheet = "";
+      next.reserveOpen = false;
+      next.waitlistOpen = false;
+      next.recovery = "";
+      next.sheet = "";
+      return next;
+    }
+    if (event.type === "claim-close") {
+      next.claimOpen = false;
       return next;
     }
     if (event.type === "driver-sheet") {

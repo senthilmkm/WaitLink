@@ -91,6 +91,18 @@
         "function": { "functionId": "carpoolPostRide", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolPostRideRequest",
+        "function": { "functionId": "carpoolPostRideRequest", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolClaimRideRequest",
+        "function": { "functionId": "carpoolClaimRideRequest", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolCancelRideRequest",
+        "function": { "functionId": "carpoolCancelRideRequest", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolReserveSeat",
         "function": { "functionId": "carpoolReserveSeat", "region": "us-central1" }
       },

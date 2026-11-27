@@ -307,6 +307,23 @@
     return { value: { name: name.value, phone: phone.e164, seats: seats, dropoff: dropoff.value } };
   }
 
+  function requestErrors(fields) {
+    const base = postErrors(Object.assign({}, fields, { durationMinutes: 60, rideCost: 0 }));
+    if (base.error) return base;
+    if (base.value.seats > 4) return { field: "seats", error: "Choose seats from 1 to 4." };
+    return base;
+  }
+
+  function claimErrors(fields, minSeats) {
+    const floor = Math.max(1, Number(minSeats) || 1);
+    const res = reserveErrors({ name: fields.name, phone: fields.phone, seats: fields.seats, dropoff: fields.note });
+    if (res.error) return res;
+    if (res.value.seats < floor || res.value.seats > 6) {
+      return { field: "seats", error: "Choose seats from " + floor + " to 6." };
+    }
+    return { value: { name: res.value.name, phone: res.value.phone, seats: res.value.seats, note: res.value.dropoff } };
+  }
+
   function editErrors(fields) {
     if (!fields.date) return { field: "date", error: "Choose a date." };
     if (!fields.time) return { field: "time", error: "Choose a time." };
@@ -451,6 +468,7 @@
     return {
       rideId: ride.rideId,
       status: ride.status,
+      kind: ride.kind || "offer",
       from: ride.from,
       to: ride.to,
       departAt: ride.departAt,
@@ -458,9 +476,12 @@
       timeZone: ride.timeZone,
       seatsTotal: ride.seatsTotal,
       seatsLeft: ride.seatsLeft,
+      seatsRequested: Number(ride.seatsRequested) || 0,
       rideCost: Number(ride.rideCost) || 0,
       note: ride.note,
       driverName: ride.driverName,
+      requesterName: ride.requesterName || "",
+      requesterReservationId: ride.requesterReservationId || "",
       riders: riders || [],
       messages: messages || [],
       createdAt: ride.createdAt,
@@ -533,6 +554,8 @@
     clampConfig: clampConfig,
     configFieldError: configFieldError,
     postErrors: postErrors,
+    requestErrors: requestErrors,
+    claimErrors: claimErrors,
     reserveErrors: reserveErrors,
     editErrors: editErrors,
     messageError: messageError,

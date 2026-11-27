@@ -147,6 +147,7 @@ async function loadPlatformConfig(tx, now) {
     platformEnabled: stored.platformEnabled !== false,
     iosThemeEnabled: stored.iosThemeEnabled === true,
     broadcastSmsEnabled: stored.broadcastSmsEnabled !== false,
+    needARideEnabled: stored.needARideEnabled === true,
     maintenanceMessage: maintenanceMessage,
     platformSupportNote: supportNote,
     platformAdminEmail: core.cleanEmail(stored.platformAdminEmail) || SUPERADMIN_EMAIL,
@@ -402,6 +403,7 @@ function reserveSeat(db, input, now, rng) {
     if (ride.status === "rejected") return { ok: false, error: "This trip was not approved." };
     if (ride.status === "pending") return { ok: false, error: "Waiting for approval." };
     if (ride.status !== "open" || ride.departAt <= now) return { ok: false, error: "This trip has already left." };
+    if (ride.kind === "request") return { ok: false, error: "This ride still needs a driver." };
     if (fields.phone === ride.driverPhoneE164) return { ok: false, error: "The driver already has this trip." };
     const requested = fields.seats || 1;
     if (ride.seatsLeft < requested) {
@@ -1924,6 +1926,7 @@ function savePlatformConfig(db, email, input, now) {
     const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
     const nextIos = body.iosThemeEnabled !== undefined ? body.iosThemeEnabled === true : prev.iosThemeEnabled;
     const nextBroadcastSms = body.broadcastSmsEnabled !== undefined ? body.broadcastSmsEnabled !== false : prev.broadcastSmsEnabled;
+    const nextNeedARide = body.needARideEnabled !== undefined ? body.needARideEnabled === true : prev.needARideEnabled;
     const nextBanner = body.maintenanceMessage !== undefined ? core.collapse(core.stripTags(body.maintenanceMessage || "")).slice(0, 200) : prev.maintenanceMessage;
     const nextSupport = body.platformSupportNote !== undefined
       ? (core.collapse(core.stripTags(body.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE)
@@ -1952,6 +1955,7 @@ function savePlatformConfig(db, email, input, now) {
       platformEnabled: nextEnabled,
       iosThemeEnabled: nextIos,
       broadcastSmsEnabled: nextBroadcastSms,
+      needARideEnabled: nextNeedARide,
       maintenanceMessage: nextBanner,
       platformSupportNote: nextSupport,
       platformAdminEmail: nextAdminEmail,
@@ -1971,6 +1975,7 @@ function savePlatformConfig(db, email, input, now) {
     tx.set("carpool_platform/public_notice", {
       platformEnabled: nextEnabled,
       iosThemeEnabled: nextIos,
+      needARideEnabled: nextNeedARide,
       maintenanceMessage: nextBanner,
       updatedAt: clock
     });
@@ -2090,12 +2095,219 @@ function searchMembers(db, email, input, now) {
   });
 }
 
+function postRideRequest(db, input, now, rng) {
+  const checked = core.requestErrors(input || {});
+  if (checked.error) return Promise.resolve({ ok: false, field: checked.field, error: checked.error });
+  const fields = checked.value;
+  let parsed = null;
+  try { parsed = core.zonedToUtc(fields.date, fields.time, input.timeZone); } catch (err) { parsed = null; }
+  if (parsed == null) return Promise.resolve({ ok: false, field: "time", error: "Choose a later time." });
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
+    if (!platform.needARideEnabled) return { ok: false, error: "Need a Ride is currently disabled." };
+    const config = await loadConfig(tx, now, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
+    if (depart.error) return { ok: false, field: "time", error: depart.error };
+    const notMember = await memberError(tx, config, fields.phone, p);
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
+    if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "This number cannot post right now." };
+    const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
+    const today = core.postsToday(phone, now);
+    if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You reached today's post limit." };
+    const rideId = core.randomId("ride_", rng);
+    const reservationId = core.randomId("res_", rng);
+    const secret = core.randomSecret(rng);
+    const ride = {
+      rideId: rideId,
+      groupId: p.groupId,
+      kind: "request",
+      status: "open",
+      from: fields.from,
+      to: fields.to,
+      departAt: parsed,
+      durationMinutes: 60,
+      timeZone: input.timeZone || "UTC",
+      seatsTotal: fields.seats,
+      seatsLeft: fields.seats,
+      seatsRequested: fields.seats,
+      rideCost: 0,
+      note: fields.note,
+      driverName: "",
+      driverPhoneE164: "",
+      driverPhoneHash: "",
+      requesterName: fields.name,
+      requesterPhoneE164: fields.phone,
+      requesterPhoneHash: core.phoneHash16(fields.phone),
+      requesterReservationId: reservationId,
+      requesterSecretHash: core.sha256Hex(secret),
+      editSecretHash: core.sha256Hex(secret),
+      activeReservationDocIds: [],
+      smsSent: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    const msg = core.systemMessage("Ride request posted — waiting for a driver.", now, 1);
+    const pub = core.publicRide(ride, [], [msg]);
+    pub.updatedAt = now;
+    const sent = canSendBoth(config, platform, now);
+    if (sent) {
+      ride.smsSent = 1;
+      bumpSms(config, platform);
+      const body = "JumpIn request (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", rideId, secret, reservationId, p.groupId);
+      queueText(texts, fields.phone, body, "CARPOOL_REQUEST_LINK");
+    }
+    phone.postsDay = core.utcDay(now);
+    phone.postsToday = today + 1;
+    phone.updatedAt = now;
+    tx.set(p.ridePrivate(rideId), ride);
+    tx.set(p.ridePublic(rideId), pub);
+    tx.set(p.phone(fields.phone), phone);
+    await touchAudience(tx, fields.phone, fields.name, "rider", now, p);
+    await rememberRide(tx, ride, [], p);
+    saveConfig(tx, config, p, sent ? platform : null);
+    return {
+      ok: true,
+      rideId: rideId,
+      reservationId: reservationId,
+      secret: secret,
+      status: "open",
+      kind: "request",
+      textSent: sent,
+      texts: texts,
+      error: sent ? "" : "Request posted on this browser. Text could not be sent right now."
+    };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
+  });
+}
+
+function claimRideRequest(db, input, now, rng) {
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
+    if (!platform.needARideEnabled) return { ok: false, error: "Need a Ride is currently disabled." };
+    const config = await loadConfig(tx, now, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const ride = await tx.get(p.ridePrivate(input && input.rideId));
+    if (!ride || ride.kind !== "request" || ride.status !== "open" || ride.departAt <= now) {
+      return { ok: false, error: "This ride request is no longer open." };
+    }
+    const checked = core.claimErrors(input || {}, ride.seatsRequested || 1);
+    if (checked.error) return { ok: false, field: checked.field, error: checked.error };
+    const fields = checked.value;
+    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from " + (ride.seatsRequested || 1) + " to " + config.maxSeats + "." };
+    if (fields.phone === ride.requesterPhoneE164) return { ok: false, error: "You cannot drive your own ride request." };
+    const notMember = await memberError(tx, config, fields.phone, p);
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
+    if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "This number cannot post right now." };
+    const driverSecret = core.randomSecret(rng);
+    const resKey = p.reservation(ride.rideId, ride.requesterPhoneE164);
+    const resId = ride.requesterReservationId || core.randomId("res_", rng);
+    const resRow = {
+      reservationId: resId,
+      rideId: ride.rideId,
+      name: ride.requesterName,
+      phoneE164: ride.requesterPhoneE164,
+      phoneHash: ride.requesterPhoneHash,
+      secretHash: ride.requesterSecretHash,
+      seats: ride.seatsRequested || 1,
+      dropoff: ride.note || "",
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    };
+    ride.kind = "offer";
+    ride.claimedFromRequest = true;
+    ride.claimedAt = now;
+    ride.driverName = fields.name;
+    ride.driverPhoneE164 = fields.phone;
+    ride.driverPhoneHash = core.phoneHash16(fields.phone);
+    ride.driverTokenHash = core.hashSecret(driverSecret);
+    ride.tokenIssuedAt = now;
+    ride.seatsTotal = fields.seats;
+    ride.seatsLeft = fields.seats - (ride.seatsRequested || 1);
+    if (fields.note) ride.note = fields.note;
+    ride.activeReservationDocIds = [resKey];
+    ride.updatedAt = now;
+    const prevPub = await tx.get(p.ridePublic(ride.rideId)) || { messages: [] };
+    const msgs = arr(prevPub.messages).concat([core.systemMessage(fields.name + " offered to drive this trip.", now, arr(prevPub.messages).length + 1)]);
+    const pub = core.publicRide(ride, [{ reservationId: resId, name: resRow.name, seats: resRow.seats, dropoff: resRow.dropoff, driverSeenAt: 0 }], msgs);
+    pub.updatedAt = now;
+    const reqPhone = await tx.get(p.phone(ride.requesterPhoneE164)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
+    reqPhone.activeReservations = core.activeReservations(reqPhone) + 1;
+    reqPhone.updatedAt = now;
+    const routeTag = shortRoute(ride.from, ride.to);
+    const firstName = String(fields.name || "A driver").split(/\s+/)[0];
+    let sentAny = false;
+    if (canSendBoth(config, platform, now)) {
+      bumpSms(config, platform);
+      sentAny = true;
+      queueText(texts, ride.requesterPhoneE164, "JumpIn: " + firstName + " offered to drive (" + routeTag + "). View: " + manageUrl("seat", ride.rideId, "", resId, p.groupId), "CARPOOL_REQUEST_CLAIMED");
+    }
+    if (canSendBoth(config, platform, now)) {
+      bumpSms(config, platform);
+      sentAny = true;
+      queueText(texts, fields.phone, "JumpIn driving (" + routeTag + "): " + manageUrl("trip", ride.rideId, driverSecret, ride.rideId, p.groupId), "CARPOOL_DRIVER_LINK");
+    }
+    tx.set(resKey, resRow);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), pub);
+    tx.set(p.phone(ride.requesterPhoneE164), reqPhone);
+    await touchAudience(tx, fields.phone, fields.name, "driver", now, p);
+    await rememberRide(tx, ride, [resRow], p);
+    saveConfig(tx, config, p, sentAny ? platform : null);
+    return { ok: true, rideId: ride.rideId, secret: driverSecret, ride: pub, textSent: sentAny, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
+  });
+}
+
+function cancelRideRequest(db, input, now) {
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const ride = await tx.get(p.ridePrivate(input && input.rideId));
+    if (!ride || ride.kind !== "request") return { ok: false, error: "This ride request is not available." };
+    if (!input || !core.timingSafeEqual(core.sha256Hex(input.secret || ""), ride.requesterSecretHash || "")) {
+      return { ok: false, error: "That manage link is not valid." };
+    }
+    if (ride.status === "cancelled") return { ok: true, already: true };
+    ride.status = "cancelled";
+    ride.cancelledAt = now;
+    ride.seatsLeft = 0;
+    ride.updatedAt = now;
+    const prevPub = await tx.get(p.ridePublic(ride.rideId)) || { messages: [] };
+    prevPub.status = "cancelled";
+    prevPub.seatsLeft = 0;
+    prevPub.updatedAt = now;
+    prevPub.messages = arr(prevPub.messages).concat([core.systemMessage("Ride request cancelled.", now, arr(prevPub.messages).length + 1)]);
+    tx.set(p.ridePrivate(ride.rideId), ride);
+    tx.set(p.ridePublic(ride.rideId), prevPub);
+    await rememberRide(tx, ride, [], p);
+    return { ok: true, ride: prevPub };
+  });
+}
+
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
   PLATFORM_SUPPORT_NOTE: PLATFORM_SUPPORT_NOTE,
   GENERIC_LINK: GENERIC_LINK,
   createMemoryDb: createMemoryDb,
   postRide: postRide,
+  postRideRequest: postRideRequest,
+  claimRideRequest: claimRideRequest,
+  cancelRideRequest: cancelRideRequest,
   reserveSeat: reserveSeat,
   updateSeat: updateSeat,
   cancelSeat: cancelSeat,
