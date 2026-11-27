@@ -1880,7 +1880,8 @@
           const mySeats = (myInfo && Number(myInfo.seats)) || 1;
           const maxTotal = Math.min(6, mySeats + (Number(ride.seatsLeft) || 0));
           if (maxTotal > 1 && cloud.updateSeat) {
-            const mySeatInput = buildSeatPills(doc, actions, "mySeats", maxTotal, mySeats);
+            secActions.appendChild(el(doc, "label", "lbl", "Your seats"));
+            const mySeatInput = buildSeatPills(doc, secActions, "mySeats", maxTotal, mySeats);
             const saveSeats = el(doc, "button", "textish");
             spinText(doc, saveSeats, state.busy && state.busyAction === "update-seats", "Updating…", "Update seats", true);
             on(saveSeats, "click", function () {

@@ -1281,8 +1281,8 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const rUpRide = { rideId: "r_up", from: "A", to: "B", status: "open", departAt: Date.now() + 600000, seatsLeft: 2, riders: [{ reservationId: "r1", name: "Sam", seats: 1 }] };
   rUpMount.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: rUpRide, role: "rider" }), { ride: rUpRide }));
   const rActions = rUpMount.root.children[1].querySelectorAll("div").find(function (c) { return c.className === "action-row"; });
-  const rSeat1 = rActions.querySelectorAll("button").find(function (c) { return c.className.indexOf("seat-pill") !== -1 && c.textContent === "1"; });
-  const rSeat2 = rActions.querySelectorAll("button").find(function (c) { return c.className.indexOf("seat-pill") !== -1 && c.textContent === "2"; });
+  const rSeat1 = rUpMount.root.children[1].querySelectorAll("button").find(function (c) { return c.className.indexOf("seat-pill") !== -1 && c.textContent === "1"; });
+  const rSeat2 = rUpMount.root.children[1].querySelectorAll("button").find(function (c) { return c.className.indexOf("seat-pill") !== -1 && c.textContent === "2"; });
   const rBtn = rActions.children.find(function (c) { return c.textContent === "Update seats"; });
   rSeat1._listeners[0]();
   rBtn._listeners[0]();
