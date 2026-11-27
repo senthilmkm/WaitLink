@@ -2120,6 +2120,12 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().recovery, "rider");
   assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "");
+  // Requester can sign out on this device
+  cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Sign out on this device"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().role, "");
+  assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "");
   mockCloud.cancelRideRequest = origCancelReq;
   cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));

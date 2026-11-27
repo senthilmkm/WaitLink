@@ -1700,6 +1700,18 @@
           const reqRow = el(doc, "div", "action-row");
           reqRow.appendChild(buildCancelRequestButton(doc, ride, current.when, current.link));
           secTop.appendChild(reqRow);
+          if (cloud && cloud.forget) {
+            const reqOutRow = el(doc, "div", "secondary-action-row");
+            const reqOutBtn = el(doc, "button", "linkish", "Sign out on this device");
+            reqOutBtn.type = "button";
+            on(reqOutBtn, "click", function () {
+              cloud.forget(ride);
+              state = Object.assign(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { ride: ride, rides: state.rides || [], when: current.when, link: current.link });
+              draw();
+            });
+            reqOutRow.appendChild(reqOutBtn);
+            secTop.appendChild(reqOutRow);
+          }
         } else if (!current.role) {
           secTop.appendChild(el(doc, "p", "muted", "No driver yet — tap I can drive below to offer a ride."));
         }
