@@ -426,7 +426,7 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   assert.strictEqual(core.formatCost(5), "$5");
   assert.strictEqual(core.formatCost(0), "");
   const disabledManual = service.createMemoryDb({ "settings/carpool_config": { enabled: false } });
-  assert.strictEqual((await service.completeTrip(disabledManual, { rideId: longRide.rideId, secret: longRide.secret }, longDepart + 1000)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.completeTrip(disabledManual, { rideId: longRide.rideId, secret: longRide.secret }, longDepart + 1000)).error, service.GENERIC_LINK);
   assert.strictEqual((await service.completeTrip(manualDb, { rideId: "missing", secret: "nope" }, longDepart + 1000)).error, service.GENERIC_LINK);
   await service.cancelTrip(manualDb, { rideId: (await service.postRide(manualDb, postInput({ idempotencyKey: "cancel-then-complete", phone: "5553334444" }), NOW + 50)).rideId, secret: "nope" }, NOW + 60);
   const soloRide = await service.postRide(manualDb, postInput({ idempotencyKey: "solo-1", phone: "5554445555", name: "Solo" }), NOW + 60);
@@ -445,7 +445,9 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   assert.ok(famSeat.outbox[0].body.indexOf("2 seats") !== -1);
   assert.strictEqual((await service.reserveSeat(manualDb, { rideId: famRide.rideId, name: "Bo", phone: "5558881111", seats: 2 }, NOW + 95)).error, "That seat was just taken.");
   assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 0 }, NOW + 95)).error, "Choose seats from 1 to 6.");
-  assert.strictEqual((await service.updateSeat(disabledManual, { rideId: famRide.rideId, secret: famSeat.secret, seats: 1 }, NOW + 95)).error, "JumpIn is not open yet.");
+  const pausedUp = service.createMemoryDb(Object.assign(manualDb.snapshot(), { "settings/carpool_config": { enabled: false } }));
+  assert.strictEqual((await service.updateSeat(pausedUp, { rideId: famRide.rideId, secret: famSeat.secret, seats: 3 }, NOW + 95)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.updateSeat(pausedUp, { rideId: famRide.rideId, secret: famSeat.secret, seats: 1 }, NOW + 95)).ok, true);
   assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: "bad", seats: 1 }, NOW + 95)).error, service.GENERIC_LINK);
   assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 2 }, NOW + 95)).already, true);
   assert.strictEqual((await service.updateSeat(manualDb, { rideId: famRide.rideId, secret: famSeat.secret, seats: 4 }, NOW + 95)).error, "No extra seats are left.");
@@ -662,7 +664,7 @@ it("exercises every callable, the confirm sheet, and a posted form", async funct
   assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId, seen: false }, NOW + 150)).driverSeenAt, 0);
   assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId, seen: true }, NOW + 160)).driverSeenAt, NOW + 160);
   await ackDb.runTransaction(async function (tx) { const c = await tx.get("settings/carpool_config"); c.enabled = false; tx.set("settings/carpool_config", c); });
-  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId }, NOW + 170)).ok, false);
+  assert.strictEqual((await service.ackRider(ackDb, { rideId: ackPosted.rideId, secret: ackPosted.secret, reservationId: ackRes.reservationId }, NOW + 170)).ok, true);
   assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, null, NOW)).ok, false);
   assert.strictEqual((await handlers.call(db, "carpoolListPending", {}, {}, NOW)).ok, false);
   const memberDb = service.createMemoryDb(seed());
@@ -795,9 +797,9 @@ it("rejects posts, cancels, and texts that break the rules", async function () {
   assert.strictEqual((await handlers.call(service.createMemoryDb(seed()), "carpoolListPending", {}, { token: {} }, NOW)).ok, false);
   const quiet = service.createMemoryDb({ "settings/carpool_config": core.defaultConfig() });
   assert.strictEqual((await service.reserveSeat(quiet, { rideId: "x", name: "Sam", phone: "5559876543" }, NOW)).error, "JumpIn is not open yet.");
-  assert.strictEqual((await service.cancelSeat(quiet, { rideId: "x", secret: "nope" }, NOW)).error, "JumpIn is not open yet.");
-  assert.strictEqual((await service.cancelTrip(quiet, { rideId: "x", secret: "nope" }, NOW)).error, "JumpIn is not open yet.");
-  assert.strictEqual((await service.postMessage(quiet, { rideId: "x", secret: "nope", text: "hi" }, NOW)).error, "JumpIn is not open yet.");
+  assert.strictEqual((await service.cancelSeat(quiet, { rideId: "x", secret: "nope" }, NOW)).error, service.GENERIC_LINK);
+  assert.strictEqual((await service.cancelTrip(quiet, { rideId: "x", secret: "nope" }, NOW)).error, service.GENERIC_LINK);
+  assert.strictEqual((await service.postMessage(quiet, { rideId: "x", secret: "nope", text: "hi" }, NOW)).error, service.GENERIC_LINK);
   assert.strictEqual((await service.sendManageLink(quiet, { rideId: "x", phone: "5552345678", role: "driver" }, NOW)).phrase, core.recoveryPhrase());
   assert.strictEqual((await service.postMessage(service.createMemoryDb(seed()), { rideId: "x", text: "  " }, NOW)).error, "Enter a message.");
   assert.strictEqual((await service.markOptOut(service.createMemoryDb(seed()), "12", NOW)).ok, false);

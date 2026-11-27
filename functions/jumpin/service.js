@@ -516,7 +516,6 @@ function updateSeat(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const key = await findReservationKey(tx, input, p);
     const reservation = key ? await tx.get(key) : null;
     if (!reservation || !assertSecret(input.secret, reservation.tokenHash)) return { ok: false, error: GENERIC_LINK };
@@ -526,6 +525,7 @@ function updateSeat(db, input, now) {
     const oldSeats = Number(reservation.seats) || 1;
     const delta = seats - oldSeats;
     if (delta === 0) return { ok: true, already: true, seats: seats };
+    if (delta > 0 && !config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     if (delta > 0 && ride.seatsLeft < delta) {
       return {
         ok: false,
@@ -624,7 +624,6 @@ function cancelSeat(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const key = await findReservationKey(tx, input, p);
     const reservation = key ? await tx.get(key) : null;
     if (!reservation || !assertSecret(input.secret, reservation.tokenHash)) return { ok: false, error: GENERIC_LINK };
@@ -678,7 +677,6 @@ function removeRider(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (ride.departAt <= now) return { ok: false, error: "This trip has already left." };
@@ -782,7 +780,6 @@ function completeTrip(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (ride.status === "completed") return { ok: true, already: true, texts: [] };
@@ -845,7 +842,6 @@ function editRide(db, input, now) {
     const platform = await loadPlatformConfig(tx, now);
     if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (ride.status !== "open" && ride.status !== "pending") return { ok: false, error: "This trip can no longer be edited." };
@@ -926,7 +922,6 @@ function cancelTrip(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || !assertSecret(input.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     if (completionDeadline(ride) <= now) return { ok: false, error: "This trip has already left." };
@@ -1003,7 +998,6 @@ function postMessage(db, input, now) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input.rideId));
     if (!ride || ride.status !== "open" || completionDeadline(ride) <= now) return { ok: false, error: GENERIC_LINK };
     let authorName = "";
@@ -1063,7 +1057,6 @@ function ackRider(db, input, now) {
     const gErr = await groupAccessError(tx, p);
     if (gErr) return { ok: false, error: gErr };
     const config = await loadConfig(tx, clock, p);
-    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(body.rideId));
     if (!ride || !assertSecret(body.secret, ride.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
     const pub = await tx.get(p.ridePublic(ride.rideId));
@@ -1095,7 +1088,6 @@ function sendManageLink(db, input, now, rng) {
     const texts = freshTexts();
     const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
-    if (!config.enabled) return { ok: true, phrase: core.recoveryPhrase() };
     const limitId = p.limit(core.phoneHash16(input.ip || "unknown") + "_" + core.utcDay(now) + "T" + new Date(now).getUTCHours());
     const limit = await tx.get(limitId) || { recoveryCalls: 0, expiresAt: now + core.DAY_MS };
     if (limit.recoveryCalls >= 10) return { ok: true, phrase: core.recoveryPhrase() };
