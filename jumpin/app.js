@@ -721,7 +721,6 @@
           });
         }
       });
-      sheet.appendChild(saveBtn);
       return sheet;
     }
 
