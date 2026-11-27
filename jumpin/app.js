@@ -2081,10 +2081,7 @@
           wrap.appendChild(banner);
         }
         const rides = state.rides || [];
-        const visibleRides = rides.filter(function (ride) {
-          if (ride.claimedFromRequest && ride.seatsLeft === 0 && !(cloud && cloud.roleFor && cloud.roleFor(ride))) return false;
-          return true;
-        });
+        const visibleRides = rides;
         const list = el(doc, "div", "board");
         const pager = el(doc, "div", "pager");
         function matchesDateFilter(ride, filter, nowMs) {

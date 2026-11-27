@@ -2094,13 +2094,17 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().role, "driver");
   assert.strictEqual(mounted.getState().claimOpen, false);
-  // Full claimed request hides "Manage passengers" and shows "Close" instead of "Copy link", and hides from stranger board
+  // Full claimed request hides "Manage passengers" and shows "Close" instead of "Copy link", stays visible on board for recovery (no Reserve / I can drive)
   const fullClaimed = { rideId: "ride_full1", kind: "offer", claimedFromRequest: true, status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsTotal: 2, seatsLeft: 0, driverName: "Alex", riders: [{ reservationId: "res_x", name: "Sam", seats: 2, driverSeenAt: baseNow }] };
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: fullClaimed, role: "driver" }), { ride: fullClaimed, when: "Tomorrow" }));
   assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Manage passengers"; }), undefined);
   assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Close");
   mounted.setState(Object.assign(ui.blank(), { rides: [fullClaimed] }));
-  assert.strictEqual(mounted.root.children[1].querySelectorAll("button.row").length, 0);
+  const allChip = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("All (") === 0; });
+  if (allChip) allChip._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("row") !== -1; }).length, 1);
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: fullClaimed, role: "" }), { ride: fullClaimed, when: "Tomorrow" }));
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Close");
 
   // Requester views own request (no redundant recovery link) and handles stale link or cancels it
   cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
