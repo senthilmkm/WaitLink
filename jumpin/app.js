@@ -1314,7 +1314,7 @@
           ["Free community tool", "JumpIn charges zero app or booking fees. Any optional ride cost shown is settled directly between driver and rider."],
           ["Drivers: Edit, Confirm, Return", "Tap Manage trip or Manage passengers on your ride to edit time/seats, confirm riders, post a return trip, or complete/cancel."],
           ["Riders: Reserve, Waitlist, Message", "Tap a trip to reserve seats, join the seat-open waitlist on full trips, or message the driver before or during the ride."],
-          ["Phone privacy & SMS opt-out", "Phone numbers are hashed and hidden from riders and visitors. Reply STOP to any JumpIn text to opt out anytime."]
+          ["Phone privacy & SMS opt-out", "Phone numbers are hashed and hidden from riders and visitors. Reply STOP to any JumpIn text to opt out, or START (or UNSTOP) to resume anytime."]
         ]
       },
       privacy: {
@@ -1324,7 +1324,7 @@
         items: [
           ["1. Information we collect", "Trip route, departure time, seats, optional notes, and phone numbers used solely for seat coordination and SMS manage links."],
           ["2. Phone protection", "Phone numbers are stored securely with SHA-256 hashes for lookups and are never displayed publicly on the board or ride pages."],
-          ["3. SMS alerts & opt-out", "Texts are sent only for trip/seat confirmations, updates, and driver-rider messages. Reply STOP anytime to stop SMS alerts."],
+          ["3. SMS alerts & opt-out", "Texts are sent only for trip/seat confirmations, updates, and driver-rider messages. Reply STOP anytime to stop SMS alerts, or START (or UNSTOP) to resume."],
           ["4. Automatic retention", "Completed and expired trips and associated rider records are automatically purged after the retention window."],
           ["5. Privacy questions", "Email senthil930@gmail.com for any data or privacy request."]
         ]
@@ -1337,7 +1337,7 @@
           ["1. Community carpool", "JumpIn is a volunteer coordination board for local communities. Always verify who you ride with."],
           ["2. Offline settlements", "WaitLink does not process payments. Any gas-share or cost note is arranged directly between driver and rider."],
           ["3. Driver & rider conduct", "Drivers and riders are responsible for accurate trip details, timely cancellations, and respectful communication."],
-          ["4. SMS & carrier rates", "Standard carrier message rates may apply. Reply STOP to opt out of SMS notifications."],
+          ["4. SMS & carrier rates", "Standard carrier message rates may apply. Reply STOP to opt out, or START (or UNSTOP) to resume SMS notifications."],
           ["5. Moderation & liability", "Group organizers and platform admins may remove trips or block abusive numbers. WaitLink provides the tool as-is without liability for rides."]
         ]
       }
@@ -1409,7 +1409,7 @@
         [
           ["Direct Support Email", "senthil930@gmail.com — reach out for help, feedback, or to report a safety concern."],
           ["Lost Manage Link?", "Open the trip page and tap \"Driver? Manage this trip\" or \"Rider? Manage seat\" to get a fresh SMS link."],
-          ["SMS Opt-Out", "Reply STOP to any JumpIn text message to stop receiving SMS alerts immediately."],
+          ["SMS Opt-Out & Resume", "Reply STOP to any JumpIn text message to stop SMS alerts, or reply START (or UNSTOP) to resume texts anytime."],
           ["Start a Private Group", "Want an isolated board for your neighborhood, HOA, or school? Tap below to set one up."]
         ].forEach(function (entry) {
           const card = el(doc, "div", "info-card");
