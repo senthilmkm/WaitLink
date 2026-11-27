@@ -1344,7 +1344,6 @@
       const box = el(doc, "div", infoView === "menu" ? "compact-info" : "info-detail");
       box.id = "jumpin-sheet";
       if (infoView === "menu") {
-        box.appendChild(el(doc, "p", "", "About JumpIn"));
         const menu = el(doc, "div", "sheet-menu");
         [["About JumpIn", "about"], ["How It Works", "how"], ["FAQ", "faq"], ["Privacy", "privacy"], ["Terms", "terms"], ["Contact", "contact"]].forEach(function (item) {
           const b = el(doc, "button", "sheet-item", item[0]);
