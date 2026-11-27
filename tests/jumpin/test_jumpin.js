@@ -1900,6 +1900,21 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   assert.ok(in30Btn.className.indexOf("active") !== -1);
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "date"; })._listeners[0]();
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "time"; })._listeners[0]();
+  // Custom Date & Time wheel pickers (toggle open, pick day/hour/min/AM-PM)
+  const dtPills = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className.indexOf("dt-pill") !== -1; });
+  assert.strictEqual(dtPills.length, 2);
+  dtPills[0]._listeners[0]();
+  dtPills[0]._listeners[0]();
+  dtPills[0]._listeners[0]();
+  const dayOpts = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "Tomorrow"; });
+  dayOpts[0]._listeners[0]();
+  dtPills[1]._listeners[0]();
+  dtPills[1]._listeners[0]();
+  dtPills[1]._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "12"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "30"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "AM"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "PM"; })._listeners[0]();
   // Pull-to-refresh on board & Option A mobile "+ Start a Group" pill
   mounted.setState(ui.blank());
   assert.ok(mounted.root.children[1].querySelectorAll("a").some(function (a) { return a.textContent === "+ Start a Group" && a.href === "/jumpin-admin.html?tab=groups"; }));

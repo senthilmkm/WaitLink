@@ -242,6 +242,15 @@
       "@media (min-width:701px){#jumpin-root .hero-start-pill{display:none}}",
       "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;min-height:30px;cursor:pointer}",
       "#jumpin-root .chip-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-root .dt-pill{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;margin:0 0 8px;padding:0 12px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:600;text-align:left;cursor:pointer}",
+      "#jumpin-root .dt-pill.open{border-color:var(--primary,#0891b2);background:#ecfeff}",
+      "#jumpin-root .dt-pill.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
+      "#jumpin-root .dt-drawer{margin:0 0 12px;padding:8px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);box-shadow:0 6px 18px rgba(15,23,42,.08)}",
+      "#jumpin-root .dt-days{display:flex;flex-wrap:wrap;gap:6px;max-height:144px;overflow-y:auto;-webkit-overflow-scrolling:touch}",
+      "#jumpin-root .dt-wheel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}",
+      "#jumpin-root .dt-col{display:flex;flex-direction:column;gap:4px;max-height:152px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px}",
+      "#jumpin-root .dt-opt{min-height:34px;margin:0;padding:4px 8px;border:1px solid var(--border-color,#e2e8f0);border-radius:9px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:600;cursor:pointer;text-align:center}",
+      "#jumpin-root .dt-opt.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
       "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
@@ -596,18 +605,18 @@
       sheet.appendChild(el(doc, "label", "lbl", "Date"));
       const dateIn = el(doc, "input");
       dateIn.name = "date";
-      dateIn.type = "date";
+      dateIn.type = "hidden";
       dateIn.value = draft.date != null ? draft.date : core.formatDateInput(ride.departAt, tz);
-      if (state.error && state.field === "date") dateIn.className = "input-invalid";
       sheet.appendChild(dateIn);
+      attachDatePicker(doc, sheet, dateIn, state.error && state.field === "date");
       if (state.error && state.field === "date") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Departure time"));
       const timeIn = el(doc, "input");
       timeIn.name = "time";
-      timeIn.type = "time";
+      timeIn.type = "hidden";
       timeIn.value = draft.time != null ? draft.time : core.formatTimeInput(ride.departAt, tz);
-      if (state.error && state.field === "time") timeIn.className = "input-invalid";
       sheet.appendChild(timeIn);
+      attachTimePicker(doc, sheet, timeIn, state.error && state.field === "time");
       if (state.error && state.field === "time") sheet.appendChild(el(doc, "p", "error", state.error));
       const curLeft = ride.seatsLeft != null ? Number(ride.seatsLeft) : Math.max(0, (Number(ride.seatsTotal) || 1) - bookedSeats);
       const maxLeft = Math.max(0, 6 - bookedSeats);
@@ -754,11 +763,13 @@
         sheet.appendChild(el(doc, "label", "lbl", label));
         const inp = el(doc, "input");
         inp.name = name;
-        if (type) inp.type = type;
+        if (type) inp.type = type === "date" || type === "time" ? "hidden" : type;
         if (ph) inp.placeholder = ph;
         inp.value = val || "";
-        if (state.error && state.field === name) inp.className = "input-invalid";
+        if (state.error && state.field === name && type !== "date" && type !== "time") inp.className = "input-invalid";
         sheet.appendChild(inp);
+        if (type === "date") attachDatePicker(doc, sheet, inp, state.error && state.field === name);
+        else if (type === "time") attachTimePicker(doc, sheet, inp, state.error && state.field === name);
         if (state.error && state.field === name) sheet.appendChild(el(doc, "p", "error", state.error));
       }
       addField("Your name", "name", "text", draft.name);
@@ -1044,11 +1055,13 @@
         sheet.appendChild(el(doc, "label", "lbl", label));
         const inp = el(doc, "input");
         inp.name = name;
-        if (type) inp.type = type;
+        if (type) inp.type = type === "date" || type === "time" ? "hidden" : type;
         if (ph) inp.placeholder = ph;
         inp.value = val || "";
-        if (state.error && state.field === name) inp.className = "input-invalid";
+        if (state.error && state.field === name && type !== "date" && type !== "time") inp.className = "input-invalid";
         sheet.appendChild(inp);
+        if (type === "date") attachDatePicker(doc, sheet, inp, state.error && state.field === name);
+        else if (type === "time") attachTimePicker(doc, sheet, inp, state.error && state.field === name);
         if (state.error && state.field === name) sheet.appendChild(el(doc, "p", "error", state.error));
       }
       addField("Your name", "name", "text", draft.name);
@@ -2007,7 +2020,8 @@
           }
           const input = el(doc, "input");
           input.name = spec[0];
-          input.type = spec[2];
+          const isDt = spec[0] === "date" || spec[0] === "time";
+          input.type = isDt ? "hidden" : spec[2];
           if (spec[3]) input.placeholder = spec[3];
           input.autocomplete = spec[0] === "phone" ? "tel" : "on";
           if (state.draft && state.draft[spec[0]]) input.value = state.draft[spec[0]];
@@ -2015,8 +2029,10 @@
           else if (defaultParts && spec[0] === "date") input.value = defaultParts.year + "-" + String(defaultParts.month).padStart(2, "0") + "-" + String(defaultParts.day).padStart(2, "0");
           else if (defaultParts && spec[0] === "time") input.value = String(defaultParts.hour).padStart(2, "0") + ":" + String(defaultParts.minute).padStart(2, "0");
           postInputs[spec[0]] = input;
-          if (state.error && state.field === spec[0]) input.className = "input-invalid";
+          if (state.error && state.field === spec[0] && !isDt) input.className = "input-invalid";
           host.appendChild(input);
+          if (spec[0] === "date") attachDatePicker(doc, host, input, state.error && state.field === "date", function () { syncWhenChips(); });
+          else if (spec[0] === "time") attachTimePicker(doc, host, input, state.error && state.field === "time", function () { syncWhenChips(); });
           if (state.error && state.field === spec[0]) host.appendChild(el(doc, "p", "error", state.error));
         }
         const secRoute = el(doc, "section", "post-section");
@@ -2093,6 +2109,8 @@
               }
             }
             pickedWhen = spec[0];
+            if (postInputs.date && postInputs.date._syncDt) postInputs.date._syncDt();
+            if (postInputs.time && postInputs.time._syncDt) postInputs.time._syncDt();
             syncWhenChips();
           });
           whenBtns.push([spec[0], chip]);
@@ -2624,6 +2642,144 @@
       if (cloud.prepareAppCheck) {
         try { cloud.prepareAppCheck(); } catch (err) { /* the board still works if App Check cannot start */ }
       }
+    }
+
+    function formatDatePill(ymd) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ""))) return "📅 Select date";
+      const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+      const now = Date.now();
+      const tP = core.partsInZone(now, zone);
+      const mP = core.partsInZone(now + 24 * 60 * 60000, zone);
+      const tStr = tP.year + "-" + String(tP.month).padStart(2, "0") + "-" + String(tP.day).padStart(2, "0");
+      const mStr = mP.year + "-" + String(mP.month).padStart(2, "0") + "-" + String(mP.day).padStart(2, "0");
+      if (ymd === tStr) return "📅 Today";
+      if (ymd === mStr) return "📅 Tomorrow";
+      const p = ymd.split("-");
+      const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const mos = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return "📅 " + days[dt.getDay()] + ", " + mos[dt.getMonth()] + " " + Number(p[2]);
+    }
+
+    function formatTimePill(hm) {
+      if (!/^\d{2}:\d{2}$/.test(String(hm || ""))) return "🕒 Select time";
+      const parts = hm.split(":");
+      const h24 = Number(parts[0]);
+      const m = parts[1];
+      return "🕒 " + (h24 % 12 || 12) + ":" + m + " " + (h24 >= 12 ? "PM" : "AM");
+    }
+
+    function attachDatePicker(doc, host, input, invalid, onPick) {
+      const btn = el(doc, "button", "dt-pill" + (invalid ? " input-invalid" : ""), formatDatePill(input.value));
+      btn.type = "button";
+      const drawer = el(doc, "div", "dt-drawer");
+      drawer.style.display = "none";
+      const daysWrap = el(doc, "div", "dt-days");
+      const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+      const now = Date.now();
+      const opts = [];
+      for (let i = 0; i < 14; i++) {
+        const p = core.partsInZone(now + i * 24 * 60 * 60000, zone);
+        const ymd = p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
+        const label = i === 0 ? "Today" : (i === 1 ? "Tomorrow" : formatDatePill(ymd).replace("📅 ", ""));
+        const opt = el(doc, "button", "dt-opt" + (input.value === ymd ? " active" : ""), label);
+        opt.type = "button";
+        on(opt, "click", function () {
+          input.value = ymd;
+          sync();
+          drawer.style.display = "none";
+          btn.className = "dt-pill";
+          if (onPick) onPick();
+        });
+        opts.push([ymd, opt]);
+        daysWrap.appendChild(opt);
+      }
+      drawer.appendChild(daysWrap);
+      function sync() {
+        btn.textContent = formatDatePill(input.value);
+        opts.forEach(function (pair) { pair[1].className = "dt-opt" + (input.value === pair[0] ? " active" : ""); });
+      }
+      input._syncDt = sync;
+      on(btn, "click", function () {
+        const open = drawer.style.display !== "none";
+        drawer.style.display = open ? "none" : "block";
+        btn.className = "dt-pill" + (open ? "" : " open") + (invalid ? " input-invalid" : "");
+      });
+      host.appendChild(btn);
+      host.appendChild(drawer);
+    }
+
+    function attachTimePicker(doc, host, input, invalid, onPick) {
+      const btn = el(doc, "button", "dt-pill" + (invalid ? " input-invalid" : ""), formatTimePill(input.value));
+      btn.type = "button";
+      const drawer = el(doc, "div", "dt-drawer");
+      drawer.style.display = "none";
+      const wheel = el(doc, "div", "dt-wheel");
+      const hCol = el(doc, "div", "dt-col");
+      const mCol = el(doc, "div", "dt-col");
+      const apCol = el(doc, "div", "dt-col");
+      let curH24 = Number(String(input.value || "09:00").split(":")[0]) || 9;
+      let curMin = String(input.value || "09:00").split(":")[1] || "00";
+      let curAp = curH24 >= 12 ? "PM" : "AM";
+      let curH12 = curH24 % 12 || 12;
+      const hBtns = [];
+      const mBtns = [];
+      const apBtns = [];
+      function commit() {
+        const h24 = curAp === "PM" ? (curH12 === 12 ? 12 : curH12 + 12) : (curH12 === 12 ? 0 : curH12);
+        input.value = String(h24).padStart(2, "0") + ":" + curMin;
+        sync();
+        if (onPick) onPick();
+      }
+      function sync() {
+        const parts = String(input.value || "09:00").split(":");
+        curH24 = Number(parts[0]) || 0;
+        curMin = parts[1] || "00";
+        curAp = curH24 >= 12 ? "PM" : "AM";
+        curH12 = curH24 % 12 || 12;
+        btn.textContent = formatTimePill(input.value);
+        hBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curH12 ? " active" : ""); });
+        mBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curMin ? " active" : ""); });
+        apBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curAp ? " active" : ""); });
+      }
+      for (let h = 1; h <= 12; h++) {
+        (function (val) {
+          const b = el(doc, "button", "dt-opt", String(val));
+          b.type = "button";
+          on(b, "click", function () { curH12 = val; commit(); });
+          hBtns.push([val, b]);
+          hCol.appendChild(b);
+        })(h);
+      }
+      for (let m = 0; m < 60; m += 5) {
+        (function (val) {
+          const b = el(doc, "button", "dt-opt", val);
+          b.type = "button";
+          on(b, "click", function () { curMin = val; commit(); });
+          mBtns.push([val, b]);
+          mCol.appendChild(b);
+        })(String(m).padStart(2, "0"));
+      }
+      ["AM", "PM"].forEach(function (ap) {
+        const b = el(doc, "button", "dt-opt", ap);
+        b.type = "button";
+        on(b, "click", function () { curAp = ap; commit(); });
+        apBtns.push([ap, b]);
+        apCol.appendChild(b);
+      });
+      wheel.appendChild(hCol);
+      wheel.appendChild(mCol);
+      wheel.appendChild(apCol);
+      drawer.appendChild(wheel);
+      sync();
+      input._syncDt = sync;
+      on(btn, "click", function () {
+        const open = drawer.style.display !== "none";
+        drawer.style.display = open ? "none" : "block";
+        btn.className = "dt-pill" + (open ? "" : " open") + (invalid ? " input-invalid" : "");
+      });
+      host.appendChild(btn);
+      host.appendChild(drawer);
     }
 
     function buildSeatPills(doc, host, name, maxPick, initialVal, minPick) {
