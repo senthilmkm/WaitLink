@@ -2082,9 +2082,15 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   const needChip = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("Need a driver") !== -1; });
   assert.ok(needChip);
   needChip._listeners[0]();
-  // Post screen with "I need a ride" toggle
+  // Post screen with Step 1 radio cards ("I'm driving" / "I need a ride")
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
-  const riderModeBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("I need a ride") !== -1; });
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("input").length, 0);
+  assert.strictEqual(mounted.root.children[2].children.length, 1); // only footer note, no submit button until Step 1 chosen
+  const roleBtns = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; });
+  assert.strictEqual(roleBtns.length, 2);
+  roleBtns[0]._listeners[0]();
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Post ride");
+  const riderModeBtn = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[1];
   assert.ok(riderModeBtn);
   riderModeBtn._listeners[0]();
   assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Post ride request");

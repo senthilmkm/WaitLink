@@ -94,6 +94,15 @@
       "#jumpin-root .seat-pill{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:700;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}",
       "#jumpin-root .seat-pill.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-root .seat-pill:disabled{opacity:.35;cursor:not-allowed;background:#f1f5f9}",
+      "#jumpin-mid .role-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0 4px}",
+      "@media (max-width:420px){#jumpin-mid .role-cards{grid-template-columns:1fr}}",
+      "#jumpin-mid .role-card{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1.5px solid var(--border-color,#cbd5e1);border-radius:14px;background:var(--bg-input,#f8fafc);text-align:left;cursor:pointer;transition:border-color .15s,background-color .15s,box-shadow .15s}",
+      "#jumpin-mid .role-card.active{border-color:var(--primary,#0891b2);background:#ecfeff;box-shadow:0 2px 10px rgba(8,145,178,.16)}",
+      "#jumpin-mid .role-radio{width:18px;height:18px;border-radius:50%;border:2px solid #94a3b8;flex-shrink:0;margin-top:2px;display:inline-flex;align-items:center;justify-content:center;background:#fff}",
+      "#jumpin-mid .role-card.active .role-radio{border-color:var(--primary,#0891b2)}",
+      "#jumpin-mid .role-card.active .role-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--primary,#0891b2)}",
+      "#jumpin-mid .role-title{font-size:15px;font-weight:700;color:var(--text-main,#090d16);line-height:1.25}",
+      "#jumpin-mid .role-sub{font-size:12.5px;color:var(--text-muted,#475569);margin-top:2px;line-height:1.3}",
       "#jumpin-mid .ride-sec{display:contents}",
       "#jumpin-mid .driver-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;margin-left:auto}",
       "@keyframes jumpin-shimmer{0%,100%{opacity:.5}50%{opacity:1}}",
@@ -1258,7 +1267,7 @@
     let infoView = "";
     let prevMode = "";
     let prevSheetOpen = false;
-    let postRole = "driver";
+    let postRole = "";
 
     function claimRequestSheet(doc) {
       const sheet = el(doc, "section");
@@ -2136,6 +2145,7 @@
                 draw();
               } else {
                 const kept = state.rides || [];
+                postRole = "";
                 state = ui.reduce(state, { type: "post" });
                 state.rides = kept;
                 draw();
@@ -2258,20 +2268,33 @@
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
         const postHead = el(doc, "div", "post-head");
         const postBadges = el(doc, "div", "hero-badges");
-        postBadges.appendChild(el(doc, "span", "hero-eyebrow", postRole === "rider" ? "Ride Request" : "New Trip"));
+        postBadges.appendChild(el(doc, "span", "hero-eyebrow", postRole === "rider" ? "Ride Request" : (postRole === "driver" ? "New Trip" : "New Post")));
         postBadges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
         postHead.appendChild(postBadges);
-        postHead.appendChild(el(doc, "h1", "", postRole === "rider" ? "Request a ride" : "Post a ride"));
+        postHead.appendChild(el(doc, "h1", "", postRole === "rider" ? "Request a ride" : (postRole === "driver" ? "Offer a ride" : "Post a ride")));
         if (platformNotice.needARideEnabled) {
-          const rolePills = el(doc, "div", "seat-pills");
-          rolePills.style.cssText = "grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0 0;";
-          [["driver", "🚗 I'm driving"], ["rider", "🙋 I need a ride"]].forEach(function (pair) {
-            const rb = el(doc, "button", "seat-pill" + (postRole === pair[0] ? " active" : ""), pair[1]);
+          const stepLbl = el(doc, "label", "lbl", "Step 1 · What are you posting?");
+          stepLbl.style.marginTop = "10px";
+          postHead.appendChild(stepLbl);
+          const roleCards = el(doc, "div", "role-cards");
+          [["driver", "🚗 I'm driving", "Offer seats in your car"], ["rider", "🙋 I need a ride", "Ask a driver for a ride"]].forEach(function (spec) {
+            const active = postRole === spec[0];
+            const rb = el(doc, "button", "role-card" + (active ? " active" : ""));
             rb.type = "button";
-            on(rb, "click", function () { savePostDraft(); postRole = pair[0]; draw(); });
-            rolePills.appendChild(rb);
+            rb.setAttribute("aria-pressed", active ? "true" : "false");
+            rb.appendChild(el(doc, "span", "role-radio"));
+            const textWrap = el(doc, "span");
+            textWrap.appendChild(el(doc, "div", "role-title", spec[1]));
+            textWrap.appendChild(el(doc, "div", "role-sub", spec[2]));
+            rb.appendChild(textWrap);
+            on(rb, "click", function () {
+              if (postRole) savePostDraft();
+              postRole = spec[0];
+              draw();
+            });
+            roleCards.appendChild(rb);
           });
-          postHead.appendChild(rolePills);
+          postHead.appendChild(roleCards);
         }
         if (groupMeta.membersOnly) {
           const sub = el(doc, "p", "muted", "For approved " + (groupMeta.name || "Its-OK") + " members only");
@@ -2280,6 +2303,11 @@
           postHead.appendChild(sub);
         }
         mid.appendChild(postHead);
+        if (!postRole) {
+          const pickHint = el(doc, "section", "post-section");
+          pickHint.appendChild(el(doc, "p", "muted", "Choose I'm driving or I need a ride above to continue."));
+          mid.appendChild(pickHint);
+        } else {
         const routeFields = [
           ["from", "From", "text", "Library"],
           ["to", "To", "text", "Office"]
@@ -2523,6 +2551,7 @@
         }
         secDriver.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
         mid.appendChild(secDriver);
+        }
       } else if (state.mode === "posted") {
         const isReqPosted = state.role === "requester" || (state.ride && state.ride.kind === "request");
         const card = el(doc, "section", "confirm");
@@ -2653,6 +2682,7 @@
         mid.appendChild(card);
       }
       let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
+      if (state.mode === "post" && platformNotice.needARideEnabled && !postRole) label = null;
       if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
       if (state.mode === "ride" && state.ride && state.ride.kind === "request" && !state.recovery && !state.claimOpen && !state.sheet && !state.editOpen && !state.waitlistOpen && !state.driverSheet) {
         if (state.status === "open" && !state.role && platformNotice.needARideEnabled) label = "🚗 I can drive";
@@ -2677,6 +2707,7 @@
         on(button, "click", function () {
           if (label === "Post a ride") {
             const kept = state.rides || [];
+            postRole = "";
             state = ui.reduce(state, { type: "post" });
             state.rides = kept;
           }
@@ -2858,6 +2889,7 @@
         postTab.appendChild(el(doc, "span", "", "Post Ride"));
         on(postTab, "click", function () {
           const kept = state.rides || [];
+          postRole = "";
           state = ui.reduce(state, { type: "post" });
           state.rides = kept;
           draw();
@@ -3202,6 +3234,7 @@
       if (state.mode === "ride" && state.role === "driver" && r.rideId) {
         state = ui.reduce(state, { type: "driver-sheet", which: "return" });
       } else {
+        postRole = "driver";
         state = ui.reduce(state, { type: "post" });
       }
       state.rides = kept;
