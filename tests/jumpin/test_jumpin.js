@@ -2093,12 +2093,22 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(mounted.getState().role, "driver");
   assert.strictEqual(mounted.getState().claimOpen, false);
 
-  // Requester views own request and cancels it
+  // Requester views own request (no redundant recovery link) and handles stale link or cancels it
   cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
   assert.strictEqual(mockCloud.roleFor(reqCardRide), "requester");
   assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "sec_req1");
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Posted this request? Text me a manage link"; }), undefined);
   assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Share on WhatsApp");
+  const origCancelReq = mockCloud.cancelRideRequest;
+  mockCloud.cancelRideRequest = function () { return Promise.resolve({ ok: false, error: "That manage link is not valid." }); };
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel request"; })._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.strictEqual(mounted.getState().recovery, "rider");
+  assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "");
+  mockCloud.cancelRideRequest = origCancelReq;
+  cloudMod.saveSeat(win.localStorage, "res_req1", "sec_req1");
+  mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel request"; })._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().status, "cancelled");

@@ -69,6 +69,7 @@
   function forget(storage, ride) {
     if (!storage || !storage.removeItem || !ride) return;
     storage.removeItem(tripKey(ride.rideId));
+    if (ride.requesterReservationId) storage.removeItem(seatKey(ride.requesterReservationId));
     (ride.riders || []).forEach(function (row) { storage.removeItem(seatKey(row.reservationId)); });
   }
 

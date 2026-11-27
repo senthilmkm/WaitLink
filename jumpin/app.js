@@ -1631,7 +1631,19 @@
               state.busy = false;
               state.busyAction = "";
               if (!res || res.ok === false) {
-                state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not cancel request." });
+                const errText = (res && res.error) || "Could not cancel request.";
+                if (errText.indexOf("manage link") !== -1 && cloud.forget) {
+                  cloud.forget(ride);
+                  state = Object.assign(ui.reduce(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { type: "recovery", role: "rider" }), {
+                    ride: ride,
+                    rides: state.rides || [],
+                    when: current.when,
+                    link: current.link,
+                    error: "Your manage link was refreshed elsewhere. Enter your phone to get a fresh link."
+                  });
+                } else {
+                  state = ui.reduce(state, { type: "fail", error: errText });
+                }
               } else {
                 const nextRide = Object.assign({}, ride, { status: "cancelled", seatsLeft: 0 });
                 state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: "" }), { ride: nextRide, notice: "Request cancelled." });
@@ -1870,7 +1882,7 @@
         if (secActions.children.length) card.appendChild(secActions);
       } else {
         if (secChat.children.length) card.appendChild(secChat);
-        if (!current.reserveOpen && !current.editOpen && !msgClosed && (current.status === "open" || current.status === "pending")) {
+        if (!current.reserveOpen && !current.editOpen && !current.recovery && current.role !== "requester" && !msgClosed && (current.status === "open" || current.status === "pending")) {
           const secRecBox = el(doc, "div", "ride-sec");
           const recBox = el(doc, "div", "recovery-box");
           const seat = el(doc, "button", "linkish", ride.kind === "request" ? "Posted this request? Text me a manage link" : "Rider? Manage seat or message driver");
