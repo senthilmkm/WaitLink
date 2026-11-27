@@ -706,9 +706,7 @@
           state.busy = true;
           state.busyAction = "edit";
           state.editDraft = values;
-          saveBtn.disabled = true;
-          cancelBtn.disabled = true;
-          saveBtn.textContent = "Saving…";
+          draw();
           cloud.editRide(state.ride.rideId, cloud.tripSecret(state.ride.rideId), values).then(function (result) {
             state.busy = false;
             state.busyAction = "";
@@ -778,162 +776,6 @@
       closeBtn.type = "button";
       on(closeBtn, "click", function () { state = ui.reduce(state, { type: "driver-sheet-close" }); draw(); });
       sheet.appendChild(closeBtn);
-      return sheet;
-    }
-
-    function returnTripSheet(doc) {
-      const sheet = el(doc, "section");
-      sheet.id = "jumpin-sheet";
-      sheet.setAttribute("aria-modal", "true");
-      const draft = state.draft || {};
-      const head = el(doc, "div", "sheet-head");
-      head.appendChild(el(doc, "p", "", "Post return trip"));
-      const xBtn = el(doc, "button", "sheet-x", "✕");
-      xBtn.type = "button";
-      xBtn.setAttribute("aria-label", "Close");
-      if (state.busy) xBtn.disabled = true;
-      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "driver-sheet-close" }), { draft: null }); draw(); });
-      head.appendChild(xBtn);
-      sheet.appendChild(head);
-      function addField(label, name, type, val, ph) {
-        sheet.appendChild(el(doc, "label", "lbl", label));
-        const inp = el(doc, "input");
-        inp.name = name;
-        if (type) inp.type = type === "date" || type === "time" ? "hidden" : type;
-        if (ph) inp.placeholder = ph;
-        inp.value = val || "";
-        if (state.error && state.field === name && type !== "date" && type !== "time") inp.className = "input-invalid";
-        sheet.appendChild(inp);
-        if (type === "date") attachDatePicker(doc, sheet, inp, state.error && state.field === name);
-        else if (type === "time") attachTimePicker(doc, sheet, inp, state.error && state.field === name);
-        if (state.error && state.field === name) sheet.appendChild(el(doc, "p", "error", state.error));
-      }
-      addField("Your name", "name", "text", draft.name);
-      addField("Phone (US/Canada)", "phone", "tel", draft.phone);
-      addField("From", "from", "text", draft.from);
-      addField("To", "to", "text", draft.to);
-      addField("Date", "date", "date", draft.date);
-      addField("Departure time", "time", "time", draft.time);
-      sheet.appendChild(el(doc, "label", "lbl", "Seats"));
-      buildSeatStepper(doc, sheet, "seats", 1, 6, Number(draft.seats || 3), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
-      addField("Pickup note, optional", "note", "text", draft.note, "e.g. Meet by North entrance");
-      addField("Ride cost per seat (optional, $)", "rideCost", "number", draft.rideCost, "0");
-      if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
-      const postBtn = el(doc, "button", "confirm-primary");
-      postBtn.type = "button";
-      postBtn.style.width = "100%";
-      spinText(doc, postBtn, state.busy && state.busyAction === "return-post", "Posting…", "Post return trip", false);
-      on(postBtn, "click", function () {
-        const values = { durationMinutes: String(draft.durationMinutes || 60) };
-        sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
-        values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
-        const errors = core.postErrors(values);
-        const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
-        if (errors.error) {
-          state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
-          state.draft = values;
-          draw();
-        } else if (when.error) {
-          state = ui.reduce(state, { type: "fail", field: "time", error: when.error });
-          state.draft = values;
-          draw();
-        } else if (cloud) {
-          state.busy = true;
-          state.busyAction = "return-post";
-          state.draft = values;
-          draw();
-          Promise.resolve().then(function () { return cloud.postRide(values); }).then(function (result) {
-            state.busy = false;
-            state.busyAction = "";
-            if (!result || result.ok === false) {
-              state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
-              state.draft = values;
-              openMemberModal(result);
-            } else {
-              saveProfile(values.name, values.phone);
-              saveRecentRoute(values.from, values.to);
-              state = postedFromServer(state, result, values, when.departAt);
-            }
-            draw();
-          }, function () {
-            state.busy = false;
-            state.busyAction = "";
-            state = ui.reduce(state, { type: "fail", error: "Could not post. Check the connection and try again." });
-            state.draft = values;
-            draw();
-          });
-        }
-      });
-      sheet.appendChild(postBtn);
-      return sheet;
-    }
-
-    function waitlistSheet(doc) {
-      const sheet = el(doc, "section");
-      sheet.id = "jumpin-sheet";
-      sheet.setAttribute("aria-modal", "true");
-      const head = el(doc, "div", "sheet-head");
-      head.appendChild(el(doc, "p", "", "Notify me if a seat opens"));
-      const xBtn = el(doc, "button", "sheet-x", "✕");
-      xBtn.type = "button";
-      xBtn.setAttribute("aria-label", "Close");
-      if (state.busy) xBtn.disabled = true;
-      on(xBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
-      head.appendChild(xBtn);
-      sheet.appendChild(head);
-      sheet.appendChild(el(doc, "p", "muted", "We'll send 1 text if a seat opens before departure."));
-      sheet.appendChild(el(doc, "label", "lbl", "Phone (US/Canada)"));
-      const saved = loadProfile();
-      const phoneIn = el(doc, "input");
-      phoneIn.name = "phone";
-      phoneIn.type = "tel";
-      phoneIn.value = state.waitlistPhone != null ? state.waitlistPhone : (saved.phone || "");
-      if (state.error && state.field === "phone") phoneIn.className = "input-invalid";
-      sheet.appendChild(phoneIn);
-      if (state.error) sheet.appendChild(el(doc, "p", "error", state.error));
-      const cancelBtn = el(doc, "button", "textish", "Cancel");
-      cancelBtn.type = "button";
-      if (state.busy) cancelBtn.disabled = true;
-      on(cancelBtn, "click", function () { state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), { waitlistPhone: "" }); draw(); });
-      sheet.appendChild(cancelBtn);
-      const notifyBtn = el(doc, "button", "confirm-primary");
-      notifyBtn.type = "button";
-      spinText(doc, notifyBtn, state.busy && state.busyAction === "waitlist", "Saving…", "Notify me", false);
-      on(notifyBtn, "click", function () {
-        if (!cloud || !state.ride) return;
-        const val = phoneIn.value;
-        const parsed = core.normalizePhone(val);
-        if (!parsed.ok) {
-          state = ui.reduce(state, { type: "fail", field: "phone", error: parsed.error });
-          state.waitlistPhone = val;
-          draw();
-          return;
-        }
-        state.busy = true;
-        state.busyAction = "waitlist";
-        state.waitlistPhone = val;
-        draw();
-        cloud.joinWaitlist(state.ride.rideId, val).then(function (result) {
-          state.busy = false;
-          state.busyAction = "";
-          if (!result || result.ok === false) {
-            state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not join waitlist. Check the connection and try again." });
-            openMemberModal(result);
-          } else {
-            state = Object.assign(ui.reduce(state, { type: "waitlist-close" }), {
-              waitlistPhone: "",
-              notice: "You're on the waitlist! We'll text you if a seat opens."
-            });
-          }
-          draw();
-        }, function () {
-          state.busy = false;
-          state.busyAction = "";
-          state = ui.reduce(state, { type: "fail", error: "Could not join waitlist. Check the connection and try again." });
-          draw();
-        });
-      });
-      sheet.appendChild(notifyBtn);
       return sheet;
     }
 
@@ -1106,8 +948,9 @@
       addField("To", "to", "text", draft.to);
       addField("Date", "date", "date", draft.date);
       addField("Departure time", "time", "time", draft.time);
+      const maxSeats = groupMaxSeats();
       sheet.appendChild(el(doc, "label", "lbl", "Seats"));
-      buildSeatStepper(doc, sheet, "seats", 1, 6, Number(draft.seats || 3), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
+      buildSeatStepper(doc, sheet, "seats", 1, maxSeats, Math.min(maxSeats, Number(draft.seats || 3)), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
       addField("Pickup note, optional", "note", "text", draft.note, "e.g. Meet by North entrance");
       addField("Ride cost per seat (optional, $)", "rideCost", "number", draft.rideCost, "0");
       if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
@@ -2453,7 +2296,7 @@
             if (spec[3] && postInputs.time) {
               postInputs.time.value = String(p.hour).padStart(2, "0") + ":" + String(p.minute).padStart(2, "0");
             } else if (spec[0] === "Today" && postInputs.time) {
-              const chosen = postInputs.time.value ? core.wallTimeToUtc(dateStr, postInputs.time.value, zone) : 0;
+              const chosen = postInputs.time.value ? core.zonedToUtc(dateStr, postInputs.time.value, zone) : 0;
               if (!chosen || chosen <= nowMs) {
                 const fp = core.partsInZone(roundUp30(nowMs + 30 * 60000), zone);
                 postInputs.time.value = String(fp.hour).padStart(2, "0") + ":" + String(fp.minute).padStart(2, "0");
@@ -2901,7 +2744,7 @@
       rootNode.appendChild(top);
       rootNode.appendChild(mid);
       rootNode.appendChild(bottom);
-      if (state.mode === "board" && (!groupMeta.status || groupMeta.status === "active") && groupMeta.enabled !== false) {
+      if (!isPlatformPaused && state.mode === "board" && (!groupMeta.status || groupMeta.status === "active") && groupMeta.enabled !== false) {
         const mbar = el(doc, "nav", "jumpin-mobile-bar");
         mbar.setAttribute("aria-label", "Quick navigation");
         const ridesTab = el(doc, "button", "jumpin-mobile-tab active");

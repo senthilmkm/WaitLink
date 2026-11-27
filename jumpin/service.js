@@ -787,16 +787,26 @@ function completeTrip(db, input, now) {
     const pub = await tx.get(p.ridePublic(ride.rideId));
     const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
     const phones = [];
+    const activeResDocs = [];
     let activeRiderCount = 0;
     const keys = arr(ride.activeReservationDocIds);
     for (let k = 0; k < keys.length; k++) {
       const res = await tx.get(keys[k]);
       if (res && res.status === "active") {
         activeRiderCount += 1;
+        activeResDocs.push(res);
         if (!ride.thankYouSentAt && config.postRideThankYouSms && config.supportNote && res.phoneE164 && phones.indexOf(res.phoneE164) === -1) phones.push(res.phoneE164);
       }
     }
     if (!activeRiderCount) return { ok: false, error: "No active passengers remain on this trip. Use Cancel trip instead." };
+    for (let k = 0; k < activeResDocs.length; k++) {
+      const rDoc = activeResDocs[k];
+      if (rDoc.phoneE164) {
+        const rPhone = await tx.get(p.phone(rDoc.phoneE164)) || { activeReservations: 0 };
+        rPhone.activeReservations = Math.max(0, core.activeReservations(rPhone) - 1);
+        tx.set(p.phone(rDoc.phoneE164), rPhone);
+      }
+    }
     if (phones.length && ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.unshift(ride.driverPhoneE164);
     ride.status = "completed";
     ride.completedAt = now;
@@ -1244,8 +1254,8 @@ function setPosting(db, email, input, now) {
     if (input.rideId) {
       const ride = await tx.get(p.ridePrivate(input.rideId));
       if (!ride) return { ok: false, error: "This ride is not available." };
-      e164 = ride.driverPhoneE164;
-      name = ride.driverName;
+      e164 = ride.driverPhoneE164 || (ride.kind === "request" ? ride.requesterPhoneE164 : "");
+      name = ride.driverName || (ride.kind === "request" ? ride.requesterName : "");
     } else {
       const phone = core.normalizePhone(input.phone);
       if (!phone.ok) return { ok: false, error: phone.error };
@@ -1415,7 +1425,14 @@ async function completeDueGroup(tx, p, now, texts, platform) {
       const keys = arr(ride.activeReservationDocIds);
       for (let k = 0; k < keys.length; k++) {
         const res = await tx.get(keys[k]);
-        if (res && res.status === "active" && res.phoneE164 && riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
+        if (res && res.status === "active" && res.phoneE164) {
+          if (riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
+          if (ride.status === "open") {
+            const rPhone = await tx.get(p.phone(res.phoneE164)) || { activeReservations: 0 };
+            rPhone.activeReservations = Math.max(0, core.activeReservations(rPhone) - 1);
+            tx.set(p.phone(res.phoneE164), rPhone);
+          }
+        }
       }
       const hasRiders = ride.status === "open" && riderPhones.length > 0;
       const phones = [];
@@ -2275,7 +2292,7 @@ function claimRideRequest(db, input, now, rng) {
     ride.updatedAt = now;
     const prevPub = await tx.get(p.ridePublic(ride.rideId)) || { messages: [] };
     const msgs = arr(prevPub.messages).concat([core.systemMessage(fields.name + " offered to drive this trip.", now, arr(prevPub.messages).length + 1)]);
-    const pub = core.publicRide(ride, [{ reservationId: resId, name: resRow.name, seats: resRow.seats, dropoff: resRow.dropoff, driverSeenAt: now }], msgs);
+    const pub = core.publicRide(ride, [{ reservationId: resId, name: resRow.name, seats: resRow.seats, dropoff: resRow.dropoff, driverSeenAt: now, status: "active" }], msgs);
     pub.updatedAt = now;
     const reqPhone = await tx.get(p.phone(ride.requesterPhoneE164)) || { postsDay: core.utcDay(now), postsToday: 0, activeReservations: 0 };
     reqPhone.activeReservations = core.activeReservations(reqPhone) + 1;
@@ -2317,6 +2334,7 @@ function cancelRideRequest(db, input, now) {
       return { ok: false, error: "That manage link is not valid." };
     }
     if (ride.status === "cancelled") return { ok: true, already: true };
+    if (ride.status !== "open" && ride.status !== "pending") return { ok: false, error: GENERIC_LINK };
     ride.status = "cancelled";
     ride.cancelledAt = now;
     ride.seatsLeft = 0;

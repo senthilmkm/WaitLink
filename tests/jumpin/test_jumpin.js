@@ -2222,6 +2222,26 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual((await service.postRideRequest(reqMax6Db, postInput({ seats: 6 }), NOW)).ok, true);
   const reqMax4Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 4 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
   assert.strictEqual((await service.postRideRequest(reqMax4Db, postInput({ seats: 5 }), NOW)).field, "seats");
+  // Claimed request keeps requester active when another rider reserves, and Today chip works
+  const claim2Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 6 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
+  const rq2 = await service.postRideRequest(claim2Db, postInput({ seats: 2, phone: "5551110001", name: "Req1" }), NOW);
+  const cl2 = await service.claimRideRequest(claim2Db, { rideId: rq2.rideId, name: "Drv1", phone: "5552220002", seats: 4 }, NOW);
+  assert.strictEqual(cl2.ride.riders[0].status, "active");
+  const rs2 = await service.reserveSeat(claim2Db, { rideId: rq2.rideId, name: "Pax2", phone: "5553330003", seats: 1 }, NOW);
+  assert.strictEqual(rs2.ok, true);
+  assert.strictEqual(claim2Db.snapshot()["carpool_public/rides/" + rq2.rideId].riders.length, 2);
+  // completeTrip decrements activeReservations so riders are never permanently capped
+  const compDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxActiveReservationsPerPhone: 1 }) });
+  const pComp = await service.postRide(compDb, postInput(), NOW);
+  await service.reserveSeat(compDb, { rideId: pComp.rideId, name: "Sam", phone: "5554440004", seats: 1 }, NOW);
+  assert.strictEqual((await service.completeTrip(compDb, { rideId: pComp.rideId, secret: pComp.secret }, NOW + 2 * core.DAY_MS)).ok, true);
+  const pComp2 = await service.postRide(compDb, postInput({ date: core.formatDateInput(NOW + 3 * core.DAY_MS, "America/New_York"), time: "10:00" }), NOW + 2 * core.DAY_MS);
+  assert.strictEqual((await service.reserveSeat(compDb, { rideId: pComp2.rideId, name: "Sam", phone: "5554440004", seats: 1 }, NOW + 2 * core.DAY_MS)).ok, true);
+  // setPosting blocks a ride request by rideId
+  assert.strictEqual((await service.setPosting(claim2Db, service.SUPERADMIN_EMAIL, { rideId: rq2.rideId, blocked: true }, NOW)).ok, true);
+  // Today chip uses core.zonedToUtc without throwing
+  const todayBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Today"; });
+  if (todayBtn && todayBtn._listeners && todayBtn._listeners[0]) todayBtn._listeners[0]();
   view.destroy();
 });
 
