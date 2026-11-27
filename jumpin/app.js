@@ -2009,11 +2009,14 @@
       const prevMsgEl = !state.busy && rootNode.querySelector ? rootNode.querySelector("input[name=message]") : null;
       const unsentMessage = prevMsgEl && prevMsgEl.value ? prevMsgEl.value : "";
       rootNode.textContent = "";
-      const isFormOpen = state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.editOpen || state.recovery));
-      rootNode.className = state.mode === "board" ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
+      const isPlatformPaused = platformNotice.platformEnabled === false;
+      const isFormOpen = !isPlatformPaused && (state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.editOpen || state.recovery)));
+      rootNode.className = (isPlatformPaused || state.mode === "board") ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
       const top = el(doc, "header");
       top.id = "jumpin-top";
-      if (state.mode === "board") brandBar(doc, top, groupMeta, canInstallApp() ? function () {
+      if (isPlatformPaused) {
+        brandBar(doc, top, groupMeta);
+      } else if (state.mode === "board") brandBar(doc, top, groupMeta, canInstallApp() ? function () {
         if (deferredInstall && deferredInstall.prompt) {
           deferredInstall.prompt();
           deferredInstall = null;
@@ -2053,7 +2056,16 @@
       const bottom = el(doc, "footer");
       bottom.id = "jumpin-bottom";
       let hero = null;
-      if (state.mode === "board") {
+      if (isPlatformPaused) {
+        const wrap = el(doc, "div", "wrap");
+        const card = el(doc, "div", "empty");
+        card.style.marginTop = "24px";
+        card.appendChild(el(doc, "div", "empty-icon", "🛠️"));
+        card.appendChild(el(doc, "p", "route", "Maintenance Mode"));
+        card.appendChild(el(doc, "p", "muted", platformNotice.maintenanceMessage || "JumpIn is currently undergoing scheduled maintenance to improve your experience. Please check back shortly."));
+        wrap.appendChild(card);
+        mid.appendChild(wrap);
+      } else if (state.mode === "board") {
         const ptr = el(doc, "div");
         ptr.id = "jumpin-ptr";
         top.appendChild(ptr);
@@ -2690,7 +2702,7 @@
         card.appendChild(el(doc, "p", "muted", "This trip link has expired or the trip is no longer available."));
         mid.appendChild(card);
       }
-      let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
+      let label = isPlatformPaused ? null : (state.mode === "reserved" ? "View trip" : ui.buttonLabel(state));
       if (state.mode === "post" && platformNotice.needARideEnabled && !postRole) label = null;
       if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
       if (state.mode === "ride" && state.ride && state.ride.kind === "request" && !state.recovery && !state.claimOpen && !state.sheet && !state.editOpen && !state.waitlistOpen && !state.driverSheet) {
@@ -2702,13 +2714,14 @@
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
       if (label === "Reserve a seat" && !state.reserveOpen && ((state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) || groupMeta.enabled === false)) label = null;
       if (label === "Copy link" && state.mode === "ride" && state.role === "driver" && state.ride && Number(state.ride.seatsLeft) === 0) label = "Close";
-      if (!label && state.mode === "ride") label = "Close";
+      if (!isPlatformPaused && !label && state.mode === "ride") label = "Close";
       if (state.mode === "board" && ((groupMeta.status && groupMeta.status !== "active") || groupMeta.enabled === false)) label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && label === "Save changes") label = "Saving…";
       if (state.busy && (label === "Confirm seat" || label === "Confirm passenger")) label = "Reserving…";
       if (state.busy && (label === "Text me a link" || label === "Send message")) label = "Sending…";
+      if (isPlatformPaused) label = null;
       if (label) {
         const button = el(doc, "button", "");
         if (state.busy) button.appendChild(el(doc, "span", "jumpin-spin"));

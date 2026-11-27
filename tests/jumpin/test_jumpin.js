@@ -2197,6 +2197,16 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent.indexOf("org@oak.org") !== -1; }));
   groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: false, contactEmail: "" });
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent.indexOf("contact your Group Admin for carpool access.") !== -1; }));
+  // Platform enabled === false -> hides board/rides/buttons and shows only Maintenance Mode
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, contactEmail: "" });
+  mounted.setState(Object.assign(ui.blank(), { rides: [reqCardRide] }));
+  noticeCb({ platformEnabled: false, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Maintenance Mode"; }));
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent.indexOf("scheduled maintenance") !== -1; }));
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").length, 0);
+  assert.strictEqual(mounted.root.children[2].querySelectorAll("button").length, 0);
+  noticeCb({ platformEnabled: false, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "Upgrading servers until 10 PM." });
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Upgrading servers until 10 PM."; }));
   view.destroy();
 });
 
