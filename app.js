@@ -1012,7 +1012,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const root = document.createElement("div");
     root.id = "jumpin-root";
     document.body.appendChild(root);
-    const jumpV = "20261127a";
+    const jumpV = "20261127b";
     ["core.js", "ui-state.js", "cloud.js", "app.js"].forEach(function (file) {
       const s = document.createElement("script");
       s.src = "/jumpin/" + file + "?v=" + jumpV;

@@ -2084,6 +2084,15 @@
           notice.appendChild(el(doc, "p", "route", groupMeta.status === "pending" ? "Waiting for approval" : (groupMeta.status === "suspended" ? "Group paused" : "Group not found")));
           notice.appendChild(el(doc, "p", "muted", groupMeta.status === "pending" ? "This community group is waiting for platform approval before rides can be posted." : "Check the group link with your community organizer."));
           wrap.appendChild(notice);
+        } else if (groupMeta.enabled === false) {
+          const notice = el(doc, "div", "empty");
+          notice.style.marginBottom = "14px";
+          notice.appendChild(el(doc, "p", "route", "JumpIn is not open yet for " + (groupMeta.name || "Its-OK")));
+          const msg = groupMeta.contactEmail
+            ? ("Your Group Admin hasn't opened this carpool board yet. Please contact your Group Admin (" + groupMeta.contactEmail + ") for carpool access.")
+            : "Your Group Admin hasn't opened this carpool board yet. Please contact your Group Admin for carpool access.";
+          notice.appendChild(el(doc, "p", "muted", msg));
+          wrap.appendChild(notice);
         }
         if (platformNotice.platformEnabled === false || platformNotice.maintenanceMessage) {
           const banner = el(doc, "div", "support-card");
@@ -2120,7 +2129,7 @@
             return [ride.from, ride.to, ride.driverName, ride.requesterName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
           });
           if (!shown.length) {
-            if (groupMeta.status && groupMeta.status !== "active") return;
+            if ((groupMeta.status && groupMeta.status !== "active") || groupMeta.enabled === false) return;
             if (!boardLoaded && !q && boardDateFilter === "all") {
               for (let s = 0; s < 3; s++) {
                 const sk = el(doc, "div", "skel-card");
@@ -2685,16 +2694,16 @@
       if (state.mode === "post" && platformNotice.needARideEnabled && !postRole) label = null;
       if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
       if (state.mode === "ride" && state.ride && state.ride.kind === "request" && !state.recovery && !state.claimOpen && !state.sheet && !state.editOpen && !state.waitlistOpen && !state.driverSheet) {
-        if (state.status === "open" && !state.role && platformNotice.needARideEnabled) label = "🚗 I can drive";
+        if (state.status === "open" && !state.role && platformNotice.needARideEnabled && groupMeta.enabled !== false) label = "🚗 I can drive";
         else if (state.status === "open" && state.role === "requester" && state.link) label = "Share on WhatsApp";
         else label = "Close";
       }
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
       if (label === "Send" && state.role === "rider" && state.mode === "ride" && !state.recovery && !state.reserveOpen) label = "Sign out on this device";
-      if (label === "Reserve a seat" && !state.reserveOpen && state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) label = null;
+      if (label === "Reserve a seat" && !state.reserveOpen && ((state.ride && state.ride.departAt && Date.now() >= state.ride.departAt) || groupMeta.enabled === false)) label = null;
       if (label === "Copy link" && state.mode === "ride" && state.role === "driver" && state.ride && Number(state.ride.seatsLeft) === 0) label = "Close";
       if (!label && state.mode === "ride") label = "Close";
-      if (state.mode === "board" && groupMeta.status && groupMeta.status !== "active") label = null;
+      if (state.mode === "board" && ((groupMeta.status && groupMeta.status !== "active") || groupMeta.enabled === false)) label = null;
       if (label === "Reserve a seat" && state.reserveOpen) label = state.role === "driver" ? "Confirm passenger" : "Confirm seat";
       if (state.busy && state.mode === "post") label = "Posting…";
       if (state.busy && label === "Save changes") label = "Saving…";
@@ -2873,7 +2882,7 @@
       rootNode.appendChild(top);
       rootNode.appendChild(mid);
       rootNode.appendChild(bottom);
-      if (state.mode === "board" && (!groupMeta.status || groupMeta.status === "active")) {
+      if (state.mode === "board" && (!groupMeta.status || groupMeta.status === "active") && groupMeta.enabled !== false) {
         const mbar = el(doc, "nav", "jumpin-mobile-bar");
         mbar.setAttribute("aria-label", "Quick navigation");
         const ridesTab = el(doc, "button", "jumpin-mobile-tab active");

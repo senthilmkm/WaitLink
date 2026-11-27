@@ -2068,9 +2068,10 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   win.location = { search: "", origin: "https://waitlink.app", href: "https://waitlink.app/jumpin" };
   let noticeCb = null;
   let boardCb = null;
+  let groupCb = null;
   const mockCloud = Object.assign(cloudMod.attach(win), {
     watchBoard: function (cb) { boardCb = cb; cb([]); return function () { }; },
-    watchGroup: function (cb) { cb({ groupId: "default", name: "Its-OK", status: "active", enabled: true }); return function () { }; },
+    watchGroup: function (cb) { groupCb = cb; cb({ groupId: "default", name: "Its-OK", status: "active", enabled: true }); return function () { }; },
     watchPlatformNotice: function (cb) { noticeCb = cb; cb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" }); return function () { }; },
     postRideRequest: function () { return Promise.resolve({ ok: true, rideId: "ride_req1", reservationId: "res_req1", secret: "sec_req1", status: "open", kind: "request" }); },
     claimRideRequest: function (id, vals) { return Promise.resolve({ ok: true, rideId: id, secret: "drv_sec", ride: { rideId: id, kind: "offer", status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsTotal: Number(vals.seats || 4), seatsLeft: 2, driverName: vals.name } }); },
@@ -2187,6 +2188,13 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
   assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("I need a ride") !== -1; }), undefined);
+  // Group enabled === false -> shows Option 2 banner and hides Post a ride CTA
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: false, contactEmail: "org@oak.org" });
+  mounted.setState(Object.assign(ui.blank(), { rides: [] }));
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "JumpIn is not open yet for Oak Hills"; }));
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent.indexOf("org@oak.org") !== -1; }));
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: false, contactEmail: "" });
+  assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent.indexOf("contact your Group Admin for carpool access.") !== -1; }));
   view.destroy();
 });
 
