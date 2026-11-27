@@ -2112,6 +2112,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel request"; })._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().status, "cancelled");
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Close");
 
   // Disable feature flag -> mode switch hidden
   noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });

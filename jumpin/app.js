@@ -2607,7 +2607,7 @@
       if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
       if (state.mode === "ride" && state.ride && state.ride.kind === "request" && !state.recovery && !state.claimOpen && !state.sheet && !state.editOpen && !state.waitlistOpen && !state.driverSheet) {
         if (state.status === "open" && !state.role && platformNotice.needARideEnabled) label = "🚗 I can drive";
-        else if (state.role === "requester" && state.link) label = "Share on WhatsApp";
+        else if (state.status === "open" && state.role === "requester" && state.link) label = "Share on WhatsApp";
         else label = "Close";
       }
       if (state.mode === "posted" && state.link) label = "Share on WhatsApp";
