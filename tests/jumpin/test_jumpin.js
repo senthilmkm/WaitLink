@@ -243,7 +243,7 @@ it("keeps the shop guard and the hosted core copies identical", function () {
   const guardAt = app.indexOf('jumpSlug === "jumpin"');
   const shopAt = app.indexOf("state.config.slug = shopParam");
   assert.ok(guardAt > 0 && guardAt < shopAt);
-    ["core.js", "service.js", "ui-state.js", "handlers.js", "admin-state.js"].forEach(function (file) {
+  ["core.js", "service.js", "ui-state.js", "handlers.js", "admin-state.js"].forEach(function (file) {
     const hosted = fs.readFileSync(path.join(__dirname, "../../jumpin", file));
     const deployed = fs.readFileSync(path.join(__dirname, "../../functions/jumpin", file));
     assert.ok(hosted.equals(deployed), file);
@@ -1184,7 +1184,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   win.JumpInCloud = {
     postRide: function () { return Promise.resolve({ ok: true, rideId: "ride_live", secret: "sek", status: "open", textSent: true }); },
     publicRideUrl: function (id) { return "https://waitlink.app?s=jumpin&view=ride&ride=" + id; },
-    watchBoard: function () { return function () {}; }
+    watchBoard: function () { return function () { }; }
   };
   const mounted = view.mount(win);
   mounted.setState(Object.assign(ui.blank(), { mode: "post", rides: [] }));
@@ -1205,7 +1205,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   pendingWin.JumpInCloud = {
     postRide: function () { return Promise.resolve({ ok: true, rideId: "ride_wait", secret: "sek", status: "pending", textSent: true }); },
     publicRideUrl: function (id) { return "https://waitlink.app?s=jumpin&view=ride&ride=" + id; },
-    watchBoard: function () { return function () {}; }
+    watchBoard: function () { return function () { }; }
   };
   const pending = view.mount(pendingWin);
   pending.setState(Object.assign(ui.blank(), { mode: "post", rides: [] }));
@@ -1219,7 +1219,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const failWin = fakeWindow();
   failWin.JumpInCloud = {
     postRide: function () { return Promise.resolve({ ok: false, error: "Could not post. Check the connection and try again." }); },
-    watchBoard: function () { return function () {}; }
+    watchBoard: function () { return function () { }; }
   };
   const failed = view.mount(failWin);
   failed.setState(Object.assign(ui.blank(), { mode: "post" }));
@@ -1272,7 +1272,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   assert.ok(famMount.root.children[1].querySelectorAll("input").some(function (c) { return c.name === "seats"; }));
   const rUpWin = fakeWindow();
   rUpWin.JumpInCloud = {
-    watchBoard: function () { return function () {}; },
+    watchBoard: function () { return function () { }; },
     seatSecretFor: function () { return "r_sec"; },
     seatInfoFor: function () { return { reservationId: "r1", name: "Sam", seats: 1 }; },
     updateSeat: function () { return Promise.resolve({ ok: true, seats: 2 }); }
@@ -1305,7 +1305,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const addWin = fakeWindow();
   let ackCalls = [];
   addWin.JumpInCloud = {
-    watchBoard: function () { return function () {}; },
+    watchBoard: function () { return function () { }; },
     tripSecret: function () { return "sec_drv"; },
     ackRider: function (rideId, secret, resId, seen) { ackCalls.push({ rideId: rideId, secret: secret, resId: resId, seen: seen }); return Promise.resolve({ ok: true }); },
     reserveSeat: function () { return Promise.resolve({ ok: true, reservationId: "rsv_dup", seatsLeft: 2, textSent: true }); }
@@ -1385,7 +1385,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   addMount.setState(Object.assign(ui.blank(), { mode: "board", rides: pagedRides }));
   const boardNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; });
   const pagerNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "pager"; });
-  boardNode.scrollIntoView = function () {};
+  boardNode.scrollIntoView = function () { };
   assert.strictEqual(boardNode.children.length, 12);
   assert.ok(pagerNode.children.some(function (c) { return c.textContent === "Page 1 of 2"; }));
   pagerNode.children.find(function (c) { return c.textContent === "Next ›"; })._listeners[0]();
@@ -1541,7 +1541,7 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   let editCalls = 0;
   const futureDepart = Date.now() + 2 * core.DAY_MS;
   win.JumpInCloud = {
-    watchBoard: function () { return function () {}; },
+    watchBoard: function () { return function () { }; },
     tripSecret: function () { return posted.secret; },
     editRide: function (rideId, secret, fields) {
       editCalls++;
@@ -2028,9 +2028,9 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   let noticeCb = null;
   let boardCb = null;
   const mockCloud = Object.assign(cloudMod.attach(win), {
-    watchBoard: function (cb) { boardCb = cb; cb([]); return function () {}; },
-    watchGroup: function (cb) { cb({ groupId: "default", name: "Its-OK", status: "active", enabled: true }); return function () {}; },
-    watchPlatformNotice: function (cb) { noticeCb = cb; cb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" }); return function () {}; },
+    watchBoard: function (cb) { boardCb = cb; cb([]); return function () { }; },
+    watchGroup: function (cb) { cb({ groupId: "default", name: "Its-OK", status: "active", enabled: true }); return function () { }; },
+    watchPlatformNotice: function (cb) { noticeCb = cb; cb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" }); return function () { }; },
     postRideRequest: function () { return Promise.resolve({ ok: true, rideId: "ride_req1", reservationId: "res_req1", secret: "sec_req1", status: "open", kind: "request" }); },
     claimRideRequest: function (id, vals) { return Promise.resolve({ ok: true, rideId: id, secret: "drv_sec", ride: { rideId: id, kind: "offer", status: "open", from: "Lib", to: "Off", departAt: baseNow + core.DAY_MS, seatsTotal: Number(vals.seats || 4), seatsLeft: 2, driverName: vals.name } }); },
     cancelRideRequest: function () { return Promise.resolve({ ok: true }); }

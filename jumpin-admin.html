@@ -62,8 +62,8 @@
     button.filled:hover { filter: brightness(1.05); box-shadow: 0 6px 18px rgba(8,145,178,.3); }
     button.filled:active { transform: translateY(1px); }
     button.textish { display: block; width: 100%; text-align: left; background: transparent; color: var(--primary); border: 0; font-weight: 600; padding: 0; cursor: pointer; }
-    p.error { color: var(--accent-rose); font-size: 14px; font-weight: 600; }
-    p.error:empty { display: none; }
+    p.error, .error { color: #dc2626 !important; font-size: 14px; font-weight: 600; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
+    p.error:empty, .error:empty { display: none; }
     #jumpin-count:empty, .admin-count:empty { display: none; }
     .admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 3px solid var(--primary); border-radius: 16px; padding: 20px 24px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05); margin-bottom: 16px; }
     .admin-header .filled { width: auto; min-height: 42px; padding: 0 22px; }
