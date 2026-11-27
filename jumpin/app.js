@@ -221,7 +221,7 @@
       "#jumpin-root .form-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;box-sizing:border-box;align-items:start}",
       "#jumpin-root .form-pair>div{min-width:0;width:100%}",
       "#jumpin-root .form-pair input,#jumpin-root .form-pair select{width:100%;max-width:100%;min-width:0;height:44px;box-sizing:border-box}",
-      "#jumpin-root .form-pair input[type=\"date\"],#jumpin-root .form-pair input[type=\"time\"]{display:block;width:100%;min-width:0;max-width:100%;height:44px;line-height:42px;-webkit-appearance:none;appearance:none}",
+      "#jumpin-root .form-pair input[type=\"date\"],#jumpin-root .form-pair input[type=\"time\"]{display:block;width:100%;min-width:0;max-width:100%;height:44px;line-height:42px;-webkit-appearance:none;appearance:none;background:var(--bg-input,#f8fafc);border:1px solid var(--border-color,#cbd5e1);border-radius:12px;font-weight:600;padding:0 12px;text-align:left}",
       "#jumpin-root .form-pair .dur-stepper{width:100%;gap:6px}",
       "#jumpin-root .form-pair .dur-btn{min-width:40px;padding:0 10px}",
       "#jumpin-root .form-pair .dur-val{min-width:0;padding:0 6px;font-size:14px}",
@@ -233,6 +233,8 @@
       "#jumpin-root .hero-badges .hero-eyebrow{margin:0}",
       "#jumpin-root .hero-group-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.01em;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;min-height:30px;cursor:pointer}",
+      "#jumpin-root .chip-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
+      "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
       "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
       "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
@@ -1655,6 +1657,9 @@
       bottom.id = "jumpin-bottom";
       let hero = null;
       if (state.mode === "board") {
+        const ptr = el(doc, "div");
+        ptr.id = "jumpin-ptr";
+        top.appendChild(ptr);
         const wrap = el(doc, "div", "wrap");
         hero = el(doc, "section", "hero");
         const copy = el(doc, "div", "copy");
@@ -1933,6 +1938,22 @@
         dtPair.appendChild(timeCol);
         secSched.appendChild(dtPair);
         const whenChips = el(doc, "div", "chip-row");
+        const whenBtns = [];
+        let pickedWhen = "";
+        function syncWhenChips() {
+          const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+          const nowMs = Date.now();
+          const todayP = core.partsInZone(nowMs, zone);
+          const tomP = core.partsInZone(nowMs + 24 * 60 * 60000, zone);
+          const todayStr = todayP.year + "-" + String(todayP.month).padStart(2, "0") + "-" + String(todayP.day).padStart(2, "0");
+          const tomStr = tomP.year + "-" + String(tomP.month).padStart(2, "0") + "-" + String(tomP.day).padStart(2, "0");
+          const curDate = postInputs.date ? postInputs.date.value : "";
+          whenBtns.forEach(function (pair) {
+            const isDay = (pair[0] === "Today" && curDate === todayStr) || (pair[0] === "Tomorrow" && curDate === tomStr);
+            const active = pickedWhen ? pair[0] === pickedWhen : isDay;
+            pair[1].className = "chip-btn" + (active ? " active" : "");
+          });
+        }
         [
           ["Today", 0, true, false],
           ["Tomorrow", 24 * 60, true, false],
@@ -1958,9 +1979,15 @@
                 postInputs.time.value = String(fp.hour).padStart(2, "0") + ":" + String(fp.minute).padStart(2, "0");
               }
             }
+            pickedWhen = spec[0];
+            syncWhenChips();
           });
+          whenBtns.push([spec[0], chip]);
           whenChips.appendChild(chip);
         });
+        if (postInputs.date) on(postInputs.date, "change", function () { pickedWhen = ""; syncWhenChips(); });
+        if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); });
+        syncWhenChips();
         secSched.appendChild(whenChips);
         secSched.appendChild(el(doc, "label", "lbl", "Seats"));
         buildSeatPills(doc, secSched, "seats", 6, (state.draft && state.draft.seats) || 3);
@@ -2568,6 +2595,34 @@
     on(win, "resize", function () { applyShell(win, rootNode, state.mode); });
     if (win.visualViewport) on(win.visualViewport, "resize", function () { applyShell(win, rootNode, state.mode); keepFocusedVisible(doc.activeElement); });
     if (win.visualViewport) on(win.visualViewport, "scroll", function () { applyShell(win, rootNode, state.mode); });
+    let ptrY = 0;
+    let ptrPull = 0;
+    on(rootNode, "touchstart", function (e) {
+      const topY = win.scrollY || (doc.documentElement && doc.documentElement.scrollTop) || 0;
+      const modalOpen = !!(state.sheet || state.waitlistOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoModal);
+      ptrY = state.mode === "board" && topY <= 0 && !modalOpen && e && e.touches && e.touches[0] ? e.touches[0].clientY : 0;
+      ptrPull = 0;
+    });
+    on(rootNode, "touchmove", function (e) {
+      if (!ptrY || !e || !e.touches || !e.touches[0]) return;
+      const dy = e.touches[0].clientY - ptrY;
+      ptrPull = dy > 0 ? Math.min(dy * 0.45, 52) : 0;
+      const ptrEl = rootNode.querySelector ? rootNode.querySelector("#jumpin-ptr") : null;
+      if (ptrEl) {
+        ptrEl.style.height = Math.round(ptrPull) + "px";
+        ptrEl.style.opacity = ptrPull > 10 ? "1" : "0";
+        ptrEl.textContent = ptrPull >= 36 ? "↻ Release to refresh" : (ptrPull > 0 ? "↓ Pull to refresh" : "");
+      }
+    });
+    on(rootNode, "touchend", function () {
+      if (!ptrY) return;
+      const shouldRefresh = ptrPull >= 36;
+      ptrY = 0;
+      ptrPull = 0;
+      const ptrEl = rootNode.querySelector ? rootNode.querySelector("#jumpin-ptr") : null;
+      if (ptrEl) { ptrEl.style.height = "0"; ptrEl.style.opacity = "0"; ptrEl.textContent = ""; }
+      if (shouldRefresh) { draw(); showToast("Rides up to date"); }
+    });
     draw();
     connectCloud();
     return { getState: function () { return state; }, setState: function (next) { state = next; draw(); }, root: rootNode };

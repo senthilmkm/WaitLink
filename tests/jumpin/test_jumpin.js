@@ -1877,6 +1877,24 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   // Sub-screen native header titles
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
   assert.strictEqual(mounted.root.children[0].children[1].textContent, "Post a ride");
+  // Date/time quick-chips active highlight + manual date/time change
+  const in30Btn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
+  in30Btn._listeners[0]();
+  assert.ok(in30Btn.className.indexOf("active") !== -1);
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "date"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "time"; })._listeners[0]();
+  // Pull-to-refresh on board
+  mounted.setState(ui.blank());
+  const ptrTouchStart = mounted.root._listeners[mounted.root._listeners.length - 3];
+  const ptrTouchMove = mounted.root._listeners[mounted.root._listeners.length - 2];
+  const ptrTouchEnd = mounted.root._listeners[mounted.root._listeners.length - 1];
+  ptrTouchStart({ touches: [{ clientY: 100 }] });
+  ptrTouchMove({ touches: [{ clientY: 140 }] });
+  ptrTouchMove({ touches: [{ clientY: 220 }] });
+  ptrTouchEnd();
+  ptrTouchStart({ touches: [{ clientY: 100 }] });
+  ptrTouchMove({ touches: [{ clientY: 80 }] });
+  ptrTouchEnd();
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: futureRide, role: "" }), { ride: futureRide, when: "Soon" }));
   assert.strictEqual(mounted.root.children[0].children[1].textContent, "Trip details");
   mounted.setState(Object.assign(ui.blank(), { mode: "posted", route: "A → B", when: "Soon", seatsText: "2 seats left" }));
