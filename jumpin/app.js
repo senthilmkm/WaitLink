@@ -1310,7 +1310,7 @@
         label: "Open full FAQ page ↗",
         items: [
           ["No app or login needed", "Post a ride or reserve seats in seconds — no download or password required. Manage links arrive by SMS."],
-          ["Neighborhood ?g= boards", "Each community can use its own private ?g= link. Open boards allow anyone; Members-Only boards restrict posting and booking to approved phones."],
+          ["Neighborhood ?g= boards & joining", "Each community can use its own private ?g= link. Open boards allow anyone; Members-Only boards require your Group Admin to add your phone number before you can post or reserve."],
           ["Free community tool", "JumpIn charges zero app or booking fees. Any optional ride cost shown is settled directly between driver and rider."],
           ["Drivers: Edit, Confirm, Return", "Tap Manage trip or Manage passengers on your ride to edit time/seats, confirm riders, post a return trip, or complete/cancel."],
           ["Riders: Reserve, Waitlist, Message", "Tap a trip to reserve seats, join the seat-open waitlist on full trips, or message the driver before or during the ride."],
