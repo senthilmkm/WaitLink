@@ -1871,8 +1871,25 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   infoBtn._listeners[0]();
   const openedInfo = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
   assert.ok(openedInfo);
-  assert.ok(openedInfo.querySelectorAll("a").some(function (a) { return a.textContent === "FAQ" && a.href === "/jumpin-faq.html"; }));
-  openedInfo.querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
+  // Open FAQ inside native sheet, go Back, open Privacy, Terms, Contact (Copy Email), and Close
+  openedInfo.querySelectorAll("button").find(function (b) { return b.textContent === "FAQ"; })._listeners[0]();
+  const faqSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(faqSheet.querySelectorAll("a").some(function (a) { return a.href === "/jumpin-faq.html"; }));
+  faqSheet.querySelectorAll("button").find(function (b) { return b.textContent === "‹ Back"; })._listeners[0]();
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "Privacy"; })._listeners[0]();
+  assert.ok(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("a").some(function (a) { return a.href === "/jumpin-privacy.html"; }));
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "‹ Back"; })._listeners[0]();
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "Terms"; })._listeners[0]();
+  assert.ok(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("a").some(function (a) { return a.href === "/jumpin-terms.html"; }));
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "‹ Back"; })._listeners[0]();
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "Contact"; })._listeners[0]();
+  const contactSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  contactSheet.querySelectorAll("button").find(function (b) { return b.textContent === "Copy Email"; })._listeners[0]();
+  contactSheet.querySelectorAll("button").find(function (b) { return b.textContent === "✕"; })._listeners[0]();
+  assert.strictEqual(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }), undefined);
+  // Re-open menu and verify Close button
+  mounted.root.children[0].querySelectorAll("button").find(function (b) { return b.textContent === "?"; })._listeners[0]();
+  mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }).querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
   assert.strictEqual(mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; }), undefined);
   // Sub-screen native header titles
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));

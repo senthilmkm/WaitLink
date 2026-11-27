@@ -209,6 +209,13 @@
       "#jumpin-sheet.compact-info .hint,#jumpin-sheet.compact-info p.muted{font-size:12px;line-height:1.35;margin:0 0 8px}",
       "#jumpin-sheet.compact-info .action-row{margin-top:8px}",
       "#jumpin-sheet.compact-info .action-row button{min-height:38px;font-size:14px;border-radius:10px}",
+      "#jumpin-sheet.info-detail{max-height:82dvh;display:flex;flex-direction:column}",
+      "#jumpin-sheet .sheet-back{min-height:34px;margin:0;padding:0 4px;border:0;background:transparent;color:var(--primary,#0891b2);font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:2px}",
+      "#jumpin-sheet .info-body{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:58dvh;padding-right:2px}",
+      "#jumpin-sheet .info-card{padding:10px 12px;margin:0 0 8px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc)}",
+      "#jumpin-sheet .info-card strong{display:block;font-size:13px;margin:0 0 3px;color:var(--text-main,#090d16)}",
+      "#jumpin-sheet .info-card span{display:block;font-size:12.5px;line-height:1.45;color:var(--text-muted,#475569)}",
+      "#jumpin-sheet .info-ext{display:inline-block;margin:4px 0 0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2)}",
       "#jumpin-sheet .sheet-pax-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc)}",
       "#jumpin-sheet .sheet-pax-info{min-width:0;flex:1;font-size:14px;font-weight:600;overflow-wrap:anywhere}",
       "#jumpin-sheet .sheet-pax-actions{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}",
@@ -1212,7 +1219,7 @@
 
     let deferredInstall = null;
     let installModal = false;
-    let infoModal = false;
+    let infoView = "";
     function canInstallApp() {
       const ua = (win.navigator && win.navigator.userAgent) || "";
       const standalone = !!((win.matchMedia && win.matchMedia("(display-mode: standalone)").matches) || (win.navigator && win.navigator.standalone));
@@ -1243,30 +1250,132 @@
       return box;
     }
 
-    function infoSheet(doc) {
-      const box = el(doc, "div", "compact-info");
-      box.id = "jumpin-sheet";
-      box.appendChild(el(doc, "p", "", "About JumpIn"));
-      const menu = el(doc, "div", "sheet-menu");
-      [["FAQ", "/jumpin-faq.html"], ["Privacy", "/jumpin-privacy.html"], ["Terms", "/jumpin-terms.html"], ["Contact", "/jumpin-contact.html"], ["Start a Group", "/jumpin-admin.html?tab=groups"]].forEach(function (item) {
-        const a = el(doc, "a", "sheet-item", item[0]);
-        a.href = item[1];
-        menu.appendChild(a);
-      });
-      box.appendChild(menu);
-      if (groupMeta && groupMeta.supportNote) {
-        box.appendChild(el(doc, "p", "hint", "Free community tool — chip in $1–$2 via " + groupMeta.supportNote + " to help cover text costs."));
+    const INFO_DOCS = {
+      faq: {
+        title: "FAQ",
+        href: "/jumpin-faq.html",
+        label: "Open full FAQ page ↗",
+        items: [
+          ["No app or login needed", "Post a ride or reserve seats in seconds — no download or password required. Manage links arrive by SMS."],
+          ["Neighborhood ?g= boards", "Each community can use its own private ?g= link. Open boards allow anyone; Members-Only boards restrict posting and booking to approved phones."],
+          ["Free community tool", "JumpIn charges zero app or booking fees. Any optional ride cost shown is settled directly between driver and rider."],
+          ["Drivers: Edit, Confirm, Return", "Tap Manage trip or Manage passengers on your ride to edit time/seats, confirm riders, post a return trip, or complete/cancel."],
+          ["Riders: Reserve, Waitlist, Message", "Tap a trip to reserve seats, join the seat-open waitlist on full trips, or message the driver before or during the ride."],
+          ["Phone privacy & SMS opt-out", "Phone numbers are hashed and hidden from riders and visitors. Reply STOP to any JumpIn text to opt out anytime."]
+        ]
+      },
+      privacy: {
+        title: "Privacy Policy",
+        href: "/jumpin-privacy.html",
+        label: "Open full Privacy page ↗",
+        items: [
+          ["1. Information we collect", "Trip route, departure time, seats, optional notes, and phone numbers used solely for seat coordination and SMS manage links."],
+          ["2. Phone protection", "Phone numbers are stored securely with SHA-256 hashes for lookups and are never displayed publicly on the board or ride pages."],
+          ["3. SMS alerts & opt-out", "Texts are sent only for trip/seat confirmations, updates, and driver-rider messages. Reply STOP anytime to stop SMS alerts."],
+          ["4. Automatic retention", "Completed and expired trips and associated rider records are automatically purged after the retention window."],
+          ["5. Privacy questions", "Email senthil930@gmail.com for any data or privacy request."]
+        ]
+      },
+      terms: {
+        title: "Terms of Use",
+        href: "/jumpin-terms.html",
+        label: "Open full Terms page ↗",
+        items: [
+          ["1. Community carpool", "JumpIn is a volunteer coordination board for local communities. Always verify who you ride with."],
+          ["2. Offline settlements", "WaitLink does not process payments. Any gas-share or cost note is arranged directly between driver and rider."],
+          ["3. Driver & rider conduct", "Drivers and riders are responsible for accurate trip details, timely cancellations, and respectful communication."],
+          ["4. SMS & carrier rates", "Standard carrier message rates may apply. Reply STOP to opt out of SMS notifications."],
+          ["5. Moderation & liability", "Group organizers and platform admins may remove trips or block abusive numbers. WaitLink provides the tool as-is without liability for rides."]
+        ]
       }
-      box.appendChild(el(doc, "p", "muted", "JumpIn by WaitLink · © 2026 WaitLink"));
-      const row = el(doc, "div", "action-row");
-      const ok = el(doc, "button", "confirm-primary", "Close");
-      ok.type = "button";
-      ok.style.width = "100%";
-      ok.style.margin = "0";
-      ok.style.cursor = "pointer";
-      on(ok, "click", function () { infoModal = false; draw(); });
-      row.appendChild(ok);
-      box.appendChild(row);
+    };
+
+    function infoSheet(doc) {
+      const box = el(doc, "div", infoView === "menu" ? "compact-info" : "info-detail");
+      box.id = "jumpin-sheet";
+      if (infoView === "menu") {
+        box.appendChild(el(doc, "p", "", "About JumpIn"));
+        const menu = el(doc, "div", "sheet-menu");
+        [["FAQ", "faq"], ["Privacy", "privacy"], ["Terms", "terms"], ["Contact", "contact"]].forEach(function (item) {
+          const b = el(doc, "button", "sheet-item", item[0]);
+          b.type = "button";
+          on(b, "click", function () { infoView = item[1]; draw(); });
+          menu.appendChild(b);
+        });
+        const start = el(doc, "a", "sheet-item", "Start a Group");
+        start.href = "/jumpin-admin.html?tab=groups";
+        menu.appendChild(start);
+        box.appendChild(menu);
+        if (groupMeta && groupMeta.supportNote) {
+          box.appendChild(el(doc, "p", "hint", "Free community tool — chip in $1–$2 via " + groupMeta.supportNote + " to help cover text costs."));
+        }
+        box.appendChild(el(doc, "p", "muted", "JumpIn by WaitLink · © 2026 WaitLink"));
+        const row = el(doc, "div", "action-row");
+        const ok = el(doc, "button", "confirm-primary", "Close");
+        ok.type = "button";
+        ok.style.width = "100%";
+        ok.style.margin = "0";
+        ok.style.cursor = "pointer";
+        on(ok, "click", function () { infoView = ""; draw(); });
+        row.appendChild(ok);
+        box.appendChild(row);
+        return box;
+      }
+      const head = el(doc, "div", "sheet-head");
+      const backBtn = el(doc, "button", "sheet-back", "‹ Back");
+      backBtn.type = "button";
+      on(backBtn, "click", function () { infoView = "menu"; draw(); });
+      head.appendChild(backBtn);
+      const spec = INFO_DOCS[infoView];
+      head.appendChild(el(doc, "p", "", spec ? spec.title : "Contact & Support"));
+      const xBtn = el(doc, "button", "sheet-x", "✕");
+      xBtn.type = "button";
+      xBtn.setAttribute("aria-label", "Close");
+      on(xBtn, "click", function () { infoView = ""; draw(); });
+      head.appendChild(xBtn);
+      box.appendChild(head);
+      const body = el(doc, "div", "info-body");
+      if (spec) {
+        spec.items.forEach(function (entry) {
+          const card = el(doc, "div", "info-card");
+          card.appendChild(el(doc, "strong", "", entry[0]));
+          card.appendChild(el(doc, "span", "", entry[1]));
+          body.appendChild(card);
+        });
+        const ext = el(doc, "a", "info-ext", spec.label);
+        ext.href = spec.href;
+        body.appendChild(ext);
+      } else {
+        [
+          ["Direct Support Email", "senthil930@gmail.com — reach out for help, feedback, or to report a safety concern."],
+          ["Lost Manage Link?", "Open the trip page and tap \"Driver? Manage this trip\" or \"Rider? Manage seat\" to get a fresh SMS link."],
+          ["SMS Opt-Out", "Reply STOP to any JumpIn text message to stop receiving SMS alerts immediately."],
+          ["Start a Private Group", "Want an isolated board for your neighborhood, HOA, or school? Tap below to set one up."]
+        ].forEach(function (entry) {
+          const card = el(doc, "div", "info-card");
+          card.appendChild(el(doc, "strong", "", entry[0]));
+          card.appendChild(el(doc, "span", "", entry[1]));
+          body.appendChild(card);
+        });
+        const cRow = el(doc, "div", "action-row");
+        cRow.style.marginTop = "10px";
+        const mailBtn = el(doc, "a", "confirm-primary", "Email Support");
+        mailBtn.href = "mailto:senthil930@gmail.com";
+        const copyBtn = el(doc, "button", "textish", "Copy Email");
+        copyBtn.type = "button";
+        on(copyBtn, "click", function () {
+          const clip = win.navigator && win.navigator.clipboard;
+          if (clip && clip.writeText) clip.writeText("senthil930@gmail.com");
+          showToast("Email copied");
+        });
+        cRow.appendChild(mailBtn);
+        cRow.appendChild(copyBtn);
+        body.appendChild(cRow);
+        const grpLink = el(doc, "a", "info-ext", "Continue to Group Setup ↗");
+        grpLink.href = "/jumpin-admin.html?tab=groups";
+        body.appendChild(grpLink);
+      }
+      box.appendChild(body);
       return box;
     }
 
@@ -1631,7 +1740,7 @@
           draw();
         }
       } : null, function () {
-        infoModal = true;
+        infoView = "menu";
         draw();
       });
       else {
@@ -2419,7 +2528,7 @@
       else if ((state.driverSheet === "passengers" || state.driverSheet === "passengers-add") && state.role === "driver") rootNode.appendChild(managePassengersSheet(doc));
       else if (memberModal) rootNode.appendChild(memberSheet(doc));
       else if (installModal) rootNode.appendChild(installSheet(doc));
-      else if (infoModal) rootNode.appendChild(infoSheet(doc));
+      else if (infoView) rootNode.appendChild(infoSheet(doc));
       applyShell(win, rootNode, state.mode);
       if (unsentMessage && rootNode.querySelector) {
         const nextMsgEl = rootNode.querySelector("input[name=message]");
@@ -2603,7 +2712,7 @@
     let ptrPull = 0;
     on(rootNode, "touchstart", function (e) {
       const topY = win.scrollY || (doc.documentElement && doc.documentElement.scrollTop) || 0;
-      const modalOpen = !!(state.sheet || state.waitlistOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoModal);
+      const modalOpen = !!(state.sheet || state.waitlistOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoView);
       ptrY = state.mode === "board" && topY <= 0 && !modalOpen && e && e.touches && e.touches[0] ? e.touches[0].clientY : 0;
       ptrPull = 0;
     });
