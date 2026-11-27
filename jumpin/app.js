@@ -328,7 +328,7 @@
       "body.jumpin-ios #jumpin-mid .confirm,body.jumpin-ios #jumpin-root.app-screen #jumpin-mid.post-card{border:0.5px solid rgba(60,60,67,.16);border-radius:16px;box-shadow:none}",
       "body.jumpin-ios #jumpin-mid .hero button,body.jumpin-ios #jumpin-bottom button{background:#0891b2;border-radius:14px;box-shadow:none}",
       "body.jumpin-ios #jumpin-root.portal #jumpin-bottom{background:rgba(249,249,249,.86);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,.2)}",
-      "@media (max-width:700px){body.jumpin-ios #jumpin-sheet{top:auto;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}body.jumpin-ios #jumpin-sheet::before{content:\"\";display:block;width:38px;height:4px;border-radius:999px;background:#d1d1d6;margin:-10px auto 14px}}"
+      "@media (max-width:700px){body.jumpin-ios #jumpin-sheet{top:auto;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}body.jumpin-ios #jumpin-sheet.compact-info{padding:12px 16px calc(18px + env(safe-area-inset-bottom))}body.jumpin-ios #jumpin-sheet::before{content:\"\";display:block;width:38px;height:4px;border-radius:999px;background:#d1d1d6;margin:-10px auto 14px}}"
     ].join("");
     doc.head.appendChild(style);
   }
@@ -1442,22 +1442,31 @@
     function buildAckButton(doc, ride, rider) {
       const seen = !!rider.driverSeenAt;
       const rName = rider.name || "Passenger";
-      const ackBtn = el(doc, "button", "rider-ack-btn " + (seen ? "seen" : "unseen"), seen ? "✓ Confirmed" : "Tap to confirm");
+      const ackKey = "ack-" + (rider.reservationId || "");
+      const spinning = !!(state.busy && state.busyAction === ackKey);
+      const ackBtn = el(doc, "button", "rider-ack-btn " + (seen ? "seen" : "unseen"));
       ackBtn.type = "button";
+      spinText(doc, ackBtn, spinning, "Saving…", seen ? "✓ Confirmed" : "Tap to confirm", true);
       ackBtn.setAttribute("title", seen ? "Confirmed — tap to mark pending" : "New rider — tap to confirm");
       ackBtn.setAttribute("aria-label", seen ? (rName + " confirmed") : ("Confirm " + rName));
       on(ackBtn, "click", function () {
         const prevSeen = rider.driverSeenAt || 0;
         const nextSeen = !prevSeen;
         rider.driverSeenAt = nextSeen ? Date.now() : 0;
+        state.busy = true;
+        state.busyAction = ackKey;
         draw();
         Promise.resolve(cloud.ackRider(ride.rideId, cloud.tripSecret(ride.rideId), rider.reservationId, nextSeen)).then(function (res) {
+          state.busy = false;
+          state.busyAction = "";
           if (!res || res.ok === false) {
             rider.driverSeenAt = prevSeen;
             state = ui.reduce(state, { type: "fail", error: (res && res.error) || "Could not update rider status." });
-            draw();
           }
+          draw();
         }, function () {
+          state.busy = false;
+          state.busyAction = "";
           rider.driverSeenAt = prevSeen;
           draw();
         });

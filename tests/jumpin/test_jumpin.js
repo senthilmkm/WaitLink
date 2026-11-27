@@ -1318,9 +1318,14 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const ackBtn1 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
   assert.strictEqual(ackBtn1.textContent, "Tap to confirm");
   ackBtn1._listeners[0]();
+  const ackSpin = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
+  assert.strictEqual(ackSpin.disabled, true);
+  assert.ok(ackSpin.children.some(function (c) { return c.className && c.className.indexOf("jumpin-spin") !== -1; }));
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
   const ackBtn2 = addMount.root.children[1].querySelectorAll("div").filter(function (c) { return c.className === "rider-row"; })[0].children.filter(function (c) { return c.tag === "button"; })[0];
   assert.strictEqual(ackBtn2.textContent, "✓ Confirmed");
   ackBtn2._listeners[0]();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(ackCalls.length, 2);
   assert.strictEqual(ackCalls[0].seen, true);
   assert.strictEqual(ackCalls[1].seen, false);

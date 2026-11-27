@@ -969,17 +969,25 @@
         text(page.getElementById("jumpin-detail-meta"), "Group: " + (m.groupName || m.groupId) + " (?" + "g=" + m.groupId + ") · Organizer: " + [m.organizerEmail, m.organizerPhone].filter(Boolean).join(" / "));
         const note = page.getElementById("jumpin-detail-note");
         if (note) note.hidden = true;
-        const riders = page.getElementById("jumpin-detail-riders");
+        const trips = m.trips || [];
+        text(page.getElementById("jumpin-detail-pax-count"), String(trips.length));
+        const riders = page.getElementById("jumpin-detail-pax");
         if (riders) {
           riders.textContent = "";
-          const trips = m.trips || [];
-          if (!trips.length) riders.appendChild(el(page, "div", "admin-meta muted", "No trips or reservations found for this member."));
+          if (!trips.length) riders.appendChild(el(page, "p", "quiet", "No trips or reservations found for this member."));
           else trips.forEach(function (t) {
-            riders.appendChild(el(page, "div", "admin-detail-row", t.role + " · " + t.from + " → " + t.to + " (" + t.when + ") [" + t.status + "]"));
+            const row = el(page, "div", "admin-subrow");
+            row.appendChild(el(page, "span", "", t.role + " · " + t.from + " → " + t.to + (t.when ? " (" + t.when + ")" : "")));
+            row.appendChild(el(page, "span", "admin-badge", t.status || ""));
+            riders.appendChild(row);
           });
         }
-        const msgs = page.getElementById("jumpin-detail-messages");
-        if (msgs) msgs.textContent = "";
+        text(page.getElementById("jumpin-detail-msg-count"), "0");
+        const msgs = page.getElementById("jumpin-detail-msgs");
+        if (msgs) {
+          msgs.textContent = "";
+          msgs.appendChild(el(page, "p", "quiet", "No messages yet."));
+        }
         modal.hidden = false;
       }
       function runMemberSearch() {
