@@ -4,13 +4,13 @@
    Enables standalone tablet installation & offline queue shell resilience
    ========================================================================== */
 
-const CACHE_NAME = 'waitlink-shell-v53';
+const CACHE_NAME = 'waitlink-shell-v54';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/style.css?v=5.5',
-  '/app.js?v=12.7',
+  '/app.js?v=12.8',
   '/qrcode.min.js',
   '/firebase-app-compat.js',
   '/firebase-firestore-compat.js',

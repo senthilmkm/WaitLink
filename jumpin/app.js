@@ -2190,6 +2190,13 @@
         mid.appendChild(wrap);
       } else if (state.mode === "post") {
         if (!platformNotice.needARideEnabled) postRole = "driver";
+        function savePostDraft() {
+          const draft = Object.assign({}, state.draft || {});
+          mid.querySelectorAll("input, select").forEach(function (inp) {
+            if (inp.name) draft[inp.name] = inp.value;
+          });
+          state.draft = draft;
+        }
         if (state.error && !state.field) mid.appendChild(el(doc, "p", "error", state.error));
         const postHead = el(doc, "div", "post-head");
         const postBadges = el(doc, "div", "hero-badges");
@@ -2203,7 +2210,7 @@
           [["driver", "🚗 I'm driving"], ["rider", "🙋 I need a ride"]].forEach(function (pair) {
             const rb = el(doc, "button", "seat-pill" + (postRole === pair[0] ? " active" : ""), pair[1]);
             rb.type = "button";
-            on(rb, "click", function () { postRole = pair[0]; draw(); });
+            on(rb, "click", function () { savePostDraft(); postRole = pair[0]; draw(); });
             rolePills.appendChild(rb);
           });
           postHead.appendChild(rolePills);
@@ -2408,7 +2415,7 @@
           dSum.appendChild(el(doc, "span", "driver-summary-txt", "Posting as " + dName + " · " + dPhone));
           const editBtn = el(doc, "button", "chip-btn", "Edit");
           editBtn.type = "button";
-          on(editBtn, "click", function () { driverEditOpen = true; draw(); });
+          on(editBtn, "click", function () { savePostDraft(); driverEditOpen = true; draw(); });
           dSum.appendChild(editBtn);
           secDriver.appendChild(dSum);
           [["name", dName], ["phone", dPhone]].forEach(function (pair) {
@@ -2446,7 +2453,7 @@
           const exBtn = el(doc, "button", "chip-btn", "+ Add price or pickup note");
           exBtn.type = "button";
           exBtn.style.marginBottom = "8px";
-          on(exBtn, "click", function () { extrasOpen = true; draw(); });
+          on(exBtn, "click", function () { savePostDraft(); extrasOpen = true; draw(); });
           secDriver.appendChild(exBtn);
           [["rideCost", ""], ["note", ""]].forEach(function (pair) {
             const hi = el(doc, "input");
