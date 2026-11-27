@@ -1894,7 +1894,10 @@
                 state.busy = false;
                 state.busyAction = "";
                 if (result && result.ok === false) state = ui.reduce(state, { type: "fail", error: result.error });
-                else state = ui.reduce(state, { type: "notice", notice: "Seats updated." });
+                else {
+                  const nextRide = (result && result.ride) ? Object.assign({}, ride, result.ride) : ride;
+                  state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: current.role }), { ride: nextRide, rides: state.rides || [], when: current.when, link: current.link, notice: "Seats updated." });
+                }
                 draw();
               }, function () {
                 state.busy = false;

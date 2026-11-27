@@ -512,6 +512,8 @@ function updateSeat(db, input, now) {
     const p = pathsFor(gidOf(input));
     const gErr = await groupAccessError(tx, p);
     if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, now);
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const key = await findReservationKey(tx, input, p);
@@ -534,7 +536,7 @@ function updateSeat(db, input, now) {
     const pub = await tx.get(p.ridePublic(ride.rideId));
     const riderRows = [];
     reservation.seats = seats;
-    ride.seatsLeft -= delta;
+    ride.seatsLeft = Math.max(0, Math.min(Number(ride.seatsTotal) || 0, (Number(ride.seatsLeft) || 0) - delta));
     for (let i = 0; i < ride.activeReservationDocIds.length; i++) {
       const docId = ride.activeReservationDocIds[i];
       const row = docId === key ? reservation : await tx.get(docId);
@@ -543,7 +545,7 @@ function updateSeat(db, input, now) {
     if (pub) {
       pub.seatsLeft = ride.seatsLeft;
       pub.riders = arr(pub.riders).map(function (row) {
-        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, dropoff: reservation.dropoff || row.dropoff || "", driverSeenAt: row.driverSeenAt || 0, status: "active" };
+        if (row.reservationId === reservation.reservationId) return { reservationId: row.reservationId, name: row.name, seats: seats, dropoff: reservation.dropoff || row.dropoff || "", driverSeenAt: delta > 0 ? 0 : (row.driverSeenAt || 0), status: "active" };
         return row;
       });
       const word = seats === 1 ? "1 seat." : (seats + " seats.");
@@ -551,10 +553,18 @@ function updateSeat(db, input, now) {
       pub.updatedAt = now;
       tx.set(p.ridePublic(ride.rideId), pub);
     }
+    if (ride.driverPhoneE164 && canSendBoth(config, platform, now)) {
+      bumpSms(config, platform);
+      queueText(texts, ride.driverPhoneE164, "JumpIn (" + shortRoute(ride.from, ride.to) + "): " + reservation.name + " updated seats to " + seats + ". " + manageUrl("ride", ride.rideId, "", "", p.groupId), "CARPOOL_SEAT_UPDATED");
+    }
+    notifyWaitlist(ride, config, platform, now, texts, p);
     tx.set(key, reservation);
     tx.set(p.ridePrivate(ride.rideId), ride);
     await rememberRide(tx, ride, riderRows, p);
-    return { ok: true, seats: seats };
+    if (texts.length) saveConfig(tx, config, p, platform);
+    return { ok: true, seats: seats, seatsLeft: ride.seatsLeft, ride: pub, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts);
   });
 }
 
@@ -624,7 +634,7 @@ function cancelSeat(db, input, now) {
     reservation.status = "cancelled";
     reservation.cancelledAt = now;
     reservation.idempotencySecret = "";
-    ride.seatsLeft += (Number(reservation.seats) || 1);
+    ride.seatsLeft = Math.min(Number(ride.seatsTotal) || 0, (Number(ride.seatsLeft) || 0) + (Number(reservation.seats) || 1));
     const phone = await tx.get(p.phone(reservation.phoneE164)) || { activeReservations: 0 };
     phone.activeReservations = Math.max(0, core.activeReservations(phone) - 1);
     const pub = await tx.get(p.ridePublic(ride.rideId));
@@ -1174,22 +1184,24 @@ function reviewRide(db, email, input, now) {
     if (!ride || ride.status !== "pending") return { ok: true, already: true, texts: texts };
     const pub = await tx.get(p.ridePublic(ride.rideId));
     if (!pub) return { ok: false, error: "This ride is not available." };
+    const ownerPhone = ride.kind === "request" ? ride.requesterPhoneE164 : ride.driverPhoneE164;
+    const noun = ride.kind === "request" ? "request" : "trip";
     if (input.decision === "approve") {
       ride.status = "open";
       pub.status = "open";
       pub.updatedAt = now;
-      if (canSendBoth(config, platform, now)) {
+      if (ownerPhone && canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
         const gPrefix = p.groupId !== "default" ? "g=" + encodeURIComponent(p.groupId) + "&" : "";
-        queueText(texts, ride.driverPhoneE164, "JumpIn trip on the board (" + shortRoute(ride.from, ride.to) + "). Share: https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
+        queueText(texts, ownerPhone, "JumpIn " + noun + " on the board (" + shortRoute(ride.from, ride.to) + "). Share: https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + ride.rideId, "CARPOOL_DRIVER_LINK");
       }
     } else if (input.decision === "decline") {
       ride.status = "rejected";
       pub.status = "rejected";
       pub.updatedAt = now;
-      if (canSendBoth(config, platform, now)) {
+      if (ownerPhone && canSendBoth(config, platform, now)) {
         bumpSms(config, platform);
-        queueText(texts, ride.driverPhoneE164, "JumpIn trip not approved (" + shortRoute(ride.from, ride.to) + ").", "CARPOOL_DRIVER_LINK");
+        queueText(texts, ownerPhone, "JumpIn " + noun + " not approved (" + shortRoute(ride.from, ride.to) + ").", "CARPOOL_DRIVER_LINK");
       }
     } else return { ok: false, error: "Enter a decision." };
     tx.set(p.ridePrivate(ride.rideId), ride);
@@ -2144,11 +2156,12 @@ function postRideRequest(db, input, now, rng) {
     const rideId = core.randomId("ride_", rng);
     const reservationId = core.randomId("res_", rng);
     const secret = core.randomSecret(rng);
+    const status = config.requireRideApproval ? "pending" : "open";
     const ride = {
       rideId: rideId,
       groupId: p.groupId,
       kind: "request",
-      status: "open",
+      status: status,
       from: fields.from,
       to: fields.to,
       departAt: parsed,
@@ -2173,14 +2186,16 @@ function postRideRequest(db, input, now, rng) {
       createdAt: now,
       updatedAt: now
     };
-    const msg = core.systemMessage("Ride request posted — waiting for a driver.", now, 1);
+    const msg = core.systemMessage(status === "pending" ? "Ride request submitted for approval." : "Ride request posted — waiting for a driver.", now, 1);
     const pub = core.publicRide(ride, [], [msg]);
     pub.updatedAt = now;
     const sent = canSendBoth(config, platform, now);
     if (sent) {
       ride.smsSent = 1;
       bumpSms(config, platform);
-      const body = "JumpIn request (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", reservationId, secret, rideId, p.groupId);
+      const body = status === "pending"
+        ? "JumpIn request pending (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", reservationId, secret, rideId, p.groupId)
+        : "JumpIn request (" + shortRoute(fields.from, fields.to) + "): " + manageUrl("seat", reservationId, secret, rideId, p.groupId);
       queueText(texts, fields.phone, body, "CARPOOL_REQUEST_LINK");
     }
     phone.postsDay = core.utcDay(now);
@@ -2197,7 +2212,7 @@ function postRideRequest(db, input, now, rng) {
       rideId: rideId,
       reservationId: reservationId,
       secret: secret,
-      status: "open",
+      status: status,
       kind: "request",
       textSent: sent,
       texts: texts,

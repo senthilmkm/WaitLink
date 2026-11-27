@@ -2016,6 +2016,44 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual((await handlers.call(closedDb, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow)).ok, false);
   assert.strictEqual((await handlers.call(closedDb, "carpoolClaimRideRequest", { rideId: "x", name: "Alex", phone: "5558889999", seats: 3 }, null, baseNow)).ok, false);
 
+  // 2b. requireRideApproval + Admin list/review/cancel + updateSeat waitlist/driver SMS + claimed cancel SMS
+  const appDb = service.createMemoryDb({
+    "settings/carpool_config": enabledConfig({ requireRideApproval: true }),
+    "carpool_platform/config": { platformEnabled: true, needARideEnabled: true }
+  });
+  const pendReq = await handlers.call(appDb, "carpoolPostRideRequest", { name: "Nia", phone: "5552224444", from: "North", to: "South", date: d1, time: t1, timeZone: tz, seats: 2 }, null, baseNow);
+  assert.strictEqual(pendReq.ok, true);
+  assert.strictEqual(pendReq.status, "pending");
+  const admList = await service.listAdmin(appDb, service.SUPERADMIN_EMAIL, baseNow + 5);
+  assert.strictEqual(admList.pending[0].kind, "request");
+  assert.strictEqual(admList.pending[0].requesterName, "Nia");
+  const admApp = await service.reviewRide(appDb, service.SUPERADMIN_EMAIL, { rideId: pendReq.rideId, decision: "approve" }, baseNow + 10);
+  assert.strictEqual(admApp.ok, true);
+  assert.strictEqual(admApp.outbox[0].to, "+15552224444");
+  const admCan = await service.adminCancelTrip(appDb, service.SUPERADMIN_EMAIL, pendReq.rideId, baseNow + 15);
+  assert.strictEqual(admCan.ok, true);
+  assert.strictEqual(admCan.outbox[0].to, "+15552224444");
+
+  // Full claimed request -> updateSeat increase/shrink notifies driver & waitlist -> driver cancel sends re-request SMS
+  const reqFull = await handlers.call(db, "carpoolPostRideRequest", { name: "Mia", phone: "5551112222", from: "East", to: "West", date: d1, time: t1, timeZone: tz, seats: 2 }, null, baseNow + 110);
+  const recMatchFull = /k=([^&\s]+)/.exec(reqFull.outbox[0].body);
+  const reqFullSecret = recMatchFull[1];
+  const claimFull = await handlers.call(db, "carpoolClaimRideRequest", { rideId: reqFull.rideId, name: "Ben", phone: "5559990000", seats: 3 }, null, baseNow + 120);
+  assert.strictEqual(claimFull.ride.seatsLeft, 1);
+  const upInc = await handlers.call(db, "carpoolUpdateSeat", { rideId: reqFull.rideId, secret: reqFullSecret, seats: 3 }, null, baseNow + 125);
+  assert.strictEqual(upInc.ok, true);
+  assert.strictEqual(upInc.seatsLeft, 0);
+  assert.strictEqual(upInc.ride.riders[0].driverSeenAt, 0);
+  assert.ok(upInc.outbox.some(function (m) { return m.triggerType === "CARPOOL_SEAT_UPDATED" && m.to === "+15559990000"; }));
+  await handlers.call(db, "carpoolJoinWaitlist", { rideId: reqFull.rideId, phone: "5557771234" }, null, baseNow + 130);
+  const upDec = await handlers.call(db, "carpoolUpdateSeat", { rideId: reqFull.rideId, secret: reqFullSecret, seats: 1 }, null, baseNow + 135);
+  assert.strictEqual(upDec.ok, true);
+  assert.strictEqual(upDec.seatsLeft, 2);
+  assert.ok(upDec.outbox.some(function (m) { return m.triggerType === "CARPOOL_SEAT_OPEN" && m.to === "+15557771234"; }));
+  const drvCan = await handlers.call(db, "carpoolCancelTrip", { rideId: reqFull.rideId, secret: claimFull.secret }, null, baseNow + 140);
+  assert.strictEqual(drvCan.ok, true);
+  assert.ok(drvCan.outbox[0].body.indexOf("Post a new request if you still need a ride.") !== -1);
+
   // 3. UI state + Cloud + App UI flows
   const st0 = ui.blank();
   assert.strictEqual(ui.reduce(st0, { type: "claim-open" }).claimOpen, false);
