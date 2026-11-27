@@ -215,14 +215,18 @@ function shortRoute(from, to) {
   return f && t ? f + "-" + t : (f || t || "trip");
 }
 
-function queueText(outbox, to, body, triggerType) {
-  outbox.push({ to: to, body: body, triggerType: triggerType, shopSlug: "jumpin" });
+function queueText(outbox, to, body, triggerType, groupId) {
+  const msg = { to: to, body: body, triggerType: triggerType, shopSlug: "jumpin" };
+  if (groupId) msg.groupId = groupId;
+  outbox.push(msg);
 }
 
 function freshTexts() { return []; }
 
-function withOutbox(result, texts) {
-  result.outbox = arr(texts);
+function withOutbox(result, texts, groupId) {
+  result.outbox = arr(texts).map(function (item) {
+    return groupId && !item.groupId ? Object.assign({}, item, { groupId: groupId }) : item;
+  });
   return result;
 }
 
@@ -384,7 +388,7 @@ function postRide(db, input, now, rng) {
       error: sent ? "" : "Trip posted on this browser. Text could not be sent right now."
     };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -494,7 +498,7 @@ function reserveSeat(db, input, now, rng) {
       error: sent ? "" : "Seat saved on this browser. Text could not be sent right now."
     };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -564,7 +568,7 @@ function updateSeat(db, input, now) {
     if (texts.length) saveConfig(tx, config, p, platform);
     return { ok: true, seats: seats, seatsLeft: ride.seatsLeft, ride: pub, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -661,7 +665,7 @@ function cancelSeat(db, input, now) {
     if (texts.length) saveConfig(tx, config, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -750,7 +754,7 @@ function removeRider(db, input, now) {
     saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, seatsLeft: ride.seatsLeft, keepSeats: keepSeats, ride: pub, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -816,7 +820,7 @@ function completeTrip(db, input, now) {
       phones.forEach(function (ph) {
         if (canSendBoth(config, platform, now)) {
           bumpSms(config, platform);
-          queueText(texts, ph, body, "CARPOOL_THANKYOU");
+          queueText(texts, ph, body, "CARPOOL_THANKYOU", p.groupId);
         }
       });
     }
@@ -835,7 +839,7 @@ function completeTrip(db, input, now) {
     if (texts.length) saveConfig(tx, config, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -919,7 +923,7 @@ function editRide(db, input, now) {
     saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, ride: pub, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -941,7 +945,7 @@ function cancelTrip(db, input, now) {
     await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", false, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -1054,7 +1058,7 @@ function postMessage(db, input, now) {
     saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -1149,7 +1153,7 @@ function sendManageLink(db, input, now, rng) {
     saveConfig(tx, config, p, platform);
     return { ok: true, phrase: core.recoveryPhrase(), texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -1212,7 +1216,7 @@ function reviewRide(db, email, input, now) {
     saveConfig(tx, config, p, texts.length ? platform : null);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -1231,7 +1235,7 @@ function adminCancelTrip(db, email, rideId, now, groupId) {
     await releaseRide(tx, ride, now, texts, config, "Trip cancelled.", true, p, platform);
     return { ok: true, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf({ groupId: groupId }));
   });
 }
 
@@ -1398,13 +1402,15 @@ function broadcast(db, email, input, now) {
       bumpSms(config, platform);
     });
     saveConfig(tx, config, p, phones.length ? platform : null);
-    return { ok: true, count: phones.length, phones: phones, body: "JumpIn: " + text.value };
+    return { ok: true, count: phones.length, phones: phones, body: "JumpIn: " + text.value, groupId: p.groupId };
   }).then(function (result) {
     if (result.phones) {
+      const gid = result.groupId || "default";
       result.outbox = result.phones.map(function (e164) {
-        return { to: e164, body: result.body, triggerType: "CARPOOL_BROADCAST", shopSlug: "jumpin" };
+        return { to: e164, body: result.body, triggerType: "CARPOOL_BROADCAST", shopSlug: "jumpin", groupId: gid };
       });
       delete result.phones;
+      delete result.groupId;
     } else result.outbox = [];
     return result;
   });
@@ -1462,7 +1468,7 @@ async function completeDueGroup(tx, p, now, texts, platform) {
         if (canSendBoth(config, platform, now)) {
           bumpSms(config, platform);
           groupSent += 1;
-          queueText(texts, ph, body, "CARPOOL_THANKYOU");
+          queueText(texts, ph, body, "CARPOOL_THANKYOU", p.groupId);
         }
       });
     }
@@ -1512,7 +1518,7 @@ function completeDue(db, now, groupId) {
     }
     return { ok: true, completed: total, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, groupId ? gidOf({ groupId: groupId }) : undefined);
   });
 }
 
@@ -1697,6 +1703,7 @@ function saveAdminConfig(db, email, input, now) {
         meta.supportNote = next.supportNote;
         meta.enabled = next.enabled;
         meta.maxSeats = next.maxSeats;
+        meta.horizonDays = next.horizonDays;
         meta.updatedAt = now || Date.now();
         tx.set(p.groupMeta, meta);
         const gi = await tx.get("carpool_platform/groups_index") || { groups: [] };
@@ -1750,6 +1757,18 @@ function purgeData(db, email, input, now) {
       tx.del(p.ridePrivate(r.rideId));
       tx.del(p.ridePublic(r.rideId));
     });
+    if (scope === "trips" || scope === "past") {
+      const resDocs = [];
+      for (let i = 0; i < resKeys.length; i++) {
+        const rd = await tx.get(resKeys[i]);
+        if (rd && rd.status === "active" && rd.phoneE164) resDocs.push(rd);
+      }
+      for (let i = 0; i < resDocs.length; i++) {
+        const rp = await tx.get(p.phone(resDocs[i].phoneE164)) || { activeReservations: 0 };
+        rp.activeReservations = Math.max(0, core.activeReservations(rp) - 1);
+        tx.set(p.phone(resDocs[i].phoneE164), rp);
+      }
+    }
     resKeys.forEach(function (k) { tx.del(k); });
     if (scope === "past") {
       const dropIds = targetRides.map(function (r) { return r.rideId; });
@@ -1826,6 +1845,7 @@ function createGroup(db, email, input, now) {
       status: status,
       enabled: enabled,
       maxSeats: cfg.maxSeats,
+      horizonDays: cfg.horizonDays,
       contactEmail: cfg.contactEmail,
       contactPhoneE164: parsedPhone.e164,
       supportNote: cfg.supportNote,
@@ -1858,7 +1878,7 @@ function createGroup(db, email, input, now) {
     gi.groups = groups.concat([entry]);
     tx.set("carpool_platform/groups_index", gi);
     return { ok: true, group: entry, textSent: isSuper ? true : texts.length > 0, texts: texts };
-  }).then(function (result) { return withOutbox(result, result.texts); });
+  }).then(function (result) { return withOutbox(result, result.texts, gid); });
 }
 
 function listGroups(db, email, now) {
@@ -1956,7 +1976,7 @@ function reviewGroup(db, email, input, now) {
     tx.set("carpool_platform/groups_index", gi);
     const orgTextSent = decision !== "approve" || !wasPending || !(meta && meta.contactPhoneE164) || texts.length > 0;
     return { ok: true, decision: decision, groupId: gid, status: nextStatus, dailySmsCap: cfg.dailySmsCap, textSent: orgTextSent, texts: texts };
-  }).then(function (result) { return withOutbox(result, result.texts); });
+  }).then(function (result) { return withOutbox(result, result.texts, gid); });
 }
 
 function savePlatformConfig(db, email, input, now) {
@@ -2232,7 +2252,7 @@ function postRideRequest(db, input, now, rng) {
       error: sent ? "" : "Request posted on this browser. Text could not be sent right now."
     };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 
@@ -2248,6 +2268,9 @@ function claimRideRequest(db, input, now, rng) {
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const ride = await tx.get(p.ridePrivate(input && input.rideId));
+    if (ride && ride.claimedFromRequest && input && input.idempotencyKey && ride.claimIdempotencyKey === input.idempotencyKey && ride.claimIdempotencySecret && ride.claimIdempotencyExpiresAt > now) {
+      return { ok: true, rideId: ride.rideId, secret: ride.claimIdempotencySecret, already: true, ride: await tx.get(p.ridePublic(ride.rideId)), textSent: false, texts: [] };
+    }
     if (!ride || ride.kind !== "request" || ride.status !== "open" || ride.departAt <= now) {
       return { ok: false, error: "This ride request is no longer open." };
     }
@@ -2283,6 +2306,9 @@ function claimRideRequest(db, input, now, rng) {
     ride.driverPhoneE164 = fields.phone;
     ride.driverPhoneHash = core.phoneHash16(fields.phone);
     ride.driverTokenHash = core.hashSecret(driverSecret);
+    ride.claimIdempotencyKey = (input && input.idempotencyKey) || "";
+    ride.claimIdempotencySecret = driverSecret;
+    ride.claimIdempotencyExpiresAt = now + core.IDEMPOTENCY_MS;
     ride.tokenIssuedAt = now;
     ride.seatsTotal = fields.seats;
     ride.seatsLeft = fields.seats - (ride.seatsRequested || 1);
@@ -2319,7 +2345,7 @@ function claimRideRequest(db, input, now, rng) {
     saveConfig(tx, config, p, sentAny ? platform : null);
     return { ok: true, rideId: ride.rideId, secret: driverSecret, ride: pub, textSent: sentAny, texts: texts };
   }).then(function (result) {
-    return withOutbox(result, result.texts);
+    return withOutbox(result, result.texts, gidOf(input));
   });
 }
 

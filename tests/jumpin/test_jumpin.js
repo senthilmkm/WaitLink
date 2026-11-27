@@ -2275,6 +2275,29 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Post or request a ride. Reserve seats. No app fees."; }));
   noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" });
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Post a trip. Reserve your seats. No app fees."; }));
+  // claimRideRequest idempotencyKey returns already: true with same secret
+  const clIdem = await service.claimRideRequest(claim2Db, { rideId: rq2.rideId, name: "Drv1", phone: "5552220002", seats: 4, idempotencyKey: "idem_claim_1" }, NOW);
+  assert.strictEqual(clIdem.ok, false);
+  const rqIdem = await service.postRideRequest(claim2Db, postInput({ seats: 1, phone: "5551110099", name: "ReqIdem" }), NOW);
+  const clFirst = await service.claimRideRequest(claim2Db, { rideId: rqIdem.rideId, name: "DrvIdem", phone: "5552220099", seats: 3, idempotencyKey: "idem_claim_2" }, NOW);
+  const clRetry = await service.claimRideRequest(claim2Db, { rideId: rqIdem.rideId, name: "DrvIdem", phone: "5552220099", seats: 3, idempotencyKey: "idem_claim_2" }, NOW);
+  assert.strictEqual(clRetry.ok, true);
+  assert.strictEqual(clRetry.already, true);
+  assert.strictEqual(clRetry.secret, clFirst.secret);
+  // purgeData(scope: "trips") decrements activeReservations so riders can book again
+  const purgeDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxActiveReservationsPerPhone: 1 }) });
+  const pPurge = await service.postRide(purgeDb, postInput(), NOW);
+  await service.reserveSeat(purgeDb, { rideId: pPurge.rideId, name: "Sam", phone: "5557770001", seats: 1 }, NOW);
+  await service.purgeData(purgeDb, service.SUPERADMIN_EMAIL, { scope: "trips", confirm: true }, NOW);
+  const pPurge2 = await service.postRide(purgeDb, postInput(), NOW);
+  assert.strictEqual((await service.reserveSeat(purgeDb, { rideId: pPurge2.rideId, name: "Sam", phone: "5557770001", seats: 1 }, NOW)).ok, true);
+  // Outbox includes groupId for named-group Twilio 21610 opt-out routing
+  assert.strictEqual(pPurge2.outbox[0].groupId, "default");
+  // groupMeta.horizonDays drives date picker option count (e.g. 7 days)
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 6, horizonDays: 7, contactEmail: "" });
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  const dayOpts = mounted.root.children[1].querySelectorAll("div").find(function (d) { return d.className === "dt-days"; }).children;
+  assert.strictEqual(dayOpts.length, 7);
   view.destroy();
 });
 

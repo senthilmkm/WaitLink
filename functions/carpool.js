@@ -63,7 +63,7 @@ async function deliver(db, result) {
   for (let i = 0; i < outbox.length; i++) {
     const outcome = await sendText(outbox[i]);
     if (outcome.ok) sent += 1;
-    else if (Number(outcome.code) === 21610) await handlers.call(db, "carpoolMarkOptOut", { phone: outbox[i].to }, null, Date.now());
+    else if (Number(outcome.code) === 21610) await handlers.call(db, "carpoolMarkOptOut", { phone: outbox[i].to, groupId: outbox[i].groupId || "default" }, null, Date.now());
   }
   if (result && result.ok && result.textSent && outbox.length && sent === 0) {
     result.textSent = false;

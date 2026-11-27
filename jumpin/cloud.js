@@ -221,15 +221,16 @@
           enabled: !data || data.enabled !== false,
           membersOnly: !!(data && data.membersOnly === true),
           maxSeats: Math.max(1, Math.min(6, Number(data && data.maxSeats) || 6)),
+          horizonDays: Math.max(1, Math.min(60, Number(data && data.horizonDays) || 30)),
           contactEmail: (data && typeof data.contactEmail === "string") ? data.contactEmail : "",
           supportNote: (data && typeof data.supportNote === "string") ? data.supportNote : ""
         });
-      }, function () { onMeta({ groupId: "default", name: "Its-OK", status: "active", enabled: true, membersOnly: false, maxSeats: 6, contactEmail: "", supportNote: "" }); });
+      }, function () { onMeta({ groupId: "default", name: "Its-OK", status: "active", enabled: true, membersOnly: false, maxSeats: 6, horizonDays: 30, contactEmail: "", supportNote: "" }); });
     }
     return firebase.firestore().collection("carpool_groups").doc(gid).onSnapshot(function (snap) {
       const data = snap.exists ? snap.data() : null;
       if (!data) {
-        onMeta({ groupId: gid, name: gid, status: "missing", enabled: false, membersOnly: false, maxSeats: 6, contactEmail: "", supportNote: "" });
+        onMeta({ groupId: gid, name: gid, status: "missing", enabled: false, membersOnly: false, maxSeats: 6, horizonDays: 30, contactEmail: "", supportNote: "" });
         return;
       }
       onMeta({
@@ -239,10 +240,11 @@
         enabled: data.enabled === true,
         membersOnly: data.membersOnly === true,
         maxSeats: Math.max(1, Math.min(6, Number(data.maxSeats) || 6)),
+        horizonDays: Math.max(1, Math.min(60, Number(data.horizonDays) || 30)),
         contactEmail: typeof data.contactEmail === "string" ? data.contactEmail : "",
         supportNote: typeof data.supportNote === "string" ? data.supportNote : ""
       });
-    }, function () { onMeta({ groupId: gid, name: gid, status: "pending", enabled: false, membersOnly: false, maxSeats: 6, contactEmail: "", supportNote: "" }); });
+    }, function () { onMeta({ groupId: gid, name: gid, status: "pending", enabled: false, membersOnly: false, maxSeats: 6, horizonDays: 30, contactEmail: "", supportNote: "" }); });
   }
 
   function watchSupportNote(win, onNote, groupId) {
@@ -300,9 +302,10 @@
         });
       },
       claimRideRequest: function (rideId, values) {
-        return call("carpoolClaimRideRequest", Object.assign({ rideId: rideId }, values || {})).then(function (result) {
+        return call("carpoolClaimRideRequest", Object.assign({ rideId: rideId, idempotencyKey: once("claim_" + rideId) }, values || {})).then(function (result) {
           if (result && result.ok && result.secret) {
             saveTrip(storage, result.rideId || rideId, result.secret);
+            keys["claim_" + rideId] = "";
           }
           return result;
         });

@@ -346,9 +346,12 @@
     let state = Object.assign(ui.blank(), { platform: platform, rides: cloud ? [] : loadRides(secrets) });
     let stopRide = function () { };
     let supportNote = "";
-    let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true, maxSeats: 6 };
+    let groupMeta = { groupId: (cloud && cloud.groupId) || "default", name: "", status: "active", enabled: true, maxSeats: 6, horizonDays: 30 };
     function groupMaxSeats() {
       return Math.max(1, Math.min(6, Number(groupMeta && groupMeta.maxSeats) || 6));
+    }
+    function groupHorizonDays() {
+      return Math.max(1, Math.min(60, Number(groupMeta && groupMeta.horizonDays) || 30));
     }
     let platformNotice = { platformEnabled: true, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "" };
     let driverEditOpen = false;
@@ -695,7 +698,7 @@
         values.seats = String(bookedSeats + Number(values.seatsLeft != null ? values.seatsLeft : curLeft));
         values.timeZone = tz;
         const errors = core.editErrors(values);
-        const when = errors.error ? null : core.departureError(values.date, values.time, tz, Date.now(), 30);
+        const when = errors.error ? null : core.departureError(values.date, values.time, tz, Date.now(), groupHorizonDays());
         if (errors.error) {
           state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
           state.editDraft = values;
@@ -965,7 +968,7 @@
         sheet.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
         values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
         const errors = core.postErrors(values);
-        const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
+        const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), groupHorizonDays());
         if (errors.error) {
           state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
           state.draft = values;
@@ -2624,7 +2627,7 @@
             if (!values.seats) values.seats = isReqPost ? 1 : Math.min(groupMaxSeats(), 3);
             values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
             const errors = isReqPost ? core.requestErrors(values) : core.postErrors(values);
-            const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), 30);
+            const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), groupHorizonDays());
             if (errors.error) {
               state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
               state.draft = values;
@@ -2964,7 +2967,8 @@
       const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
       const now = Date.now();
       const opts = [];
-      for (let i = 0; i < 60; i++) {
+      const horizon = groupHorizonDays();
+      for (let i = 0; i < horizon; i++) {
         const p = core.partsInZone(now + i * 24 * 60 * 60000, zone);
         const ymd = p.year + "-" + String(p.month).padStart(2, "0") + "-" + String(p.day).padStart(2, "0");
         const label = i === 0 ? "Today" : (i === 1 ? "Tomorrow" : formatDatePill(ymd).replace("📅 ", ""));

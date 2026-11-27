@@ -289,7 +289,7 @@
 
   function matchesQuery(ride, q) {
     if (!q) return true;
-    const parts = [ride.from, ride.to, ride.driverName, ride.phoneLast4, ride.note, shortTripId(ride.rideId)].concat((ride.riders || []).map(function (r) { return r.name + " " + (r.phoneLast4 || ""); }));
+    const parts = [ride.from, ride.to, ride.driverName, ride.requesterName, ride.phoneLast4, ride.note, shortTripId(ride.rideId)].concat((ride.riders || []).map(function (r) { return r.name + " " + (r.phoneLast4 || ""); }));
     return parts.join(" ").toLowerCase().indexOf(q) !== -1;
   }
 
@@ -304,9 +304,11 @@
     const filterBy = function (arr) { return (arr || []).filter(function (r) { return matchesQuery(r, q); }); };
     const detailsAct = function (ride) { return { label: "Details", tone: "", onClick: function () { openDetailModal(doc, ride); } }; };
     const blockRideAct = function (ride) {
-      const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" ");
+      const isReq = ride.kind === "request";
+      const roleWord = isReq ? "rider" : "driver";
+      const who = [(isReq ? ride.requesterName : ride.driverName) || (isReq ? "Rider" : "Driver"), ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" ");
       return { label: "Block", tone: "warn", onClick: function () {
-        askConfirm(doc, "Block driver from posting?", who + " won't be able to post new trips. No SMS will be sent to the driver.", "Block driver", function () {
+        askConfirm(doc, "Block " + roleWord + " from posting?", who + " won't be able to post new trips. No SMS will be sent to the " + roleWord + ".", "Block " + roleWord, function () {
           return cloud.setPosting({ rideId: ride.rideId, blocked: true }).then(cloud.refresh);
         });
       } };
@@ -1660,7 +1662,7 @@
     if (enabled) enabled.value = config.enabled ? "yes" : "no";
     if (review) review.value = config.requireRideApproval ? "yes" : "no";
     if (membersOnly) membersOnly.value = config.membersOnly ? "yes" : "no";
-    if (contactEmail && config.contactEmail) contactEmail.value = config.contactEmail;
+    if (contactEmail) contactEmail.value = config.contactEmail || "";
     if (supportNote) supportNote.value = config.supportNote || "";
     if (thankYou) thankYou.value = config.postRideThankYouSms ? "yes" : "no";
     if (adminEmails && Array.isArray(config.adminEmails)) adminEmails.value = config.adminEmails.join(", ");
