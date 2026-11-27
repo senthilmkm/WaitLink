@@ -231,11 +231,15 @@ async function rememberRide(tx, ride, riders, p) {
   const index = await tx.get(idxPath) || { rides: [], audience: [] };
   const summary = {
     rideId: ride.rideId,
+    kind: ride.kind || "offer",
     status: ride.status,
     departAt: ride.departAt,
     driverName: ride.driverName,
     phoneLast4: core.last4(ride.driverPhoneE164),
     driverPhoneE164: ride.driverPhoneE164,
+    requesterName: ride.requesterName || "",
+    requesterPhoneE164: ride.requesterPhoneE164 || "",
+    seatsRequested: Number(ride.seatsRequested) || 0,
     from: ride.from || "",
     to: ride.to || "",
     note: ride.note || "",
@@ -948,10 +952,11 @@ async function releaseRide(tx, ride, now, outbox, config, systemText, admin, p, 
       queueText(outbox, reservation.phoneE164, body, "CARPOOL_TRIP_CANCELLED");
     }
   }
-  if (admin && canSendBoth(config, platform, now)) {
+  const notifyOwnerPhone = ride.kind === "request" ? ride.requesterPhoneE164 : ride.driverPhoneE164;
+  if (admin && notifyOwnerPhone && canSendBoth(config, platform, now)) {
     bumpSms(config, platform);
     const when = core.formatWhen(ride.departAt, ride.timeZone);
-    queueText(outbox, ride.driverPhoneE164, "JumpIn admin cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").", "CARPOOL_TRIP_CANCELLED");
+    queueText(outbox, notifyOwnerPhone, "JumpIn admin cancelled (" + shortRoute(ride.from, ride.to) + ", " + when + ").", "CARPOOL_TRIP_CANCELLED");
   }
   ride.status = "cancelled";
   ride.cancelledAt = now;
@@ -1137,6 +1142,7 @@ function sendManageLink(db, input, now, rng) {
 function manageUrl(kind, id, secret, rideId, groupId) {
   const gPrefix = groupId && groupId !== "default" ? "g=" + encodeURIComponent(groupId) + "&" : "";
   if (kind === "trip") return "https://waitlink.app/jumpin?" + gPrefix + "view=trip&ride=" + id + "&k=" + secret;
+  if (kind === "ride") return "https://waitlink.app/jumpin?" + gPrefix + "view=ride&ride=" + id;
   return "https://waitlink.app/jumpin?" + gPrefix + "view=seat&r=" + id + "&k=" + secret + "&ride=" + rideId;
 }
 
@@ -1282,10 +1288,13 @@ function listAdmin(db, email, now, groupId) {
       });
       return {
         rideId: ride.rideId,
+        kind: ride.kind || "offer",
         status: ride.status,
         departAt: ride.departAt,
         driverName: ride.driverName || "",
-        phoneLast4: ride.phoneLast4 || core.last4(ride.driverPhoneE164),
+        requesterName: ride.requesterName || "",
+        seatsRequested: Number(ride.seatsRequested) || 0,
+        phoneLast4: ride.phoneLast4 || core.last4(ride.driverPhoneE164 || ride.requesterPhoneE164),
         from: ride.from || "",
         to: ride.to || "",
         note: ride.note || "",
@@ -2228,7 +2237,7 @@ function claimRideRequest(db, input, now, rng) {
       name: ride.requesterName,
       phoneE164: ride.requesterPhoneE164,
       phoneHash: ride.requesterPhoneHash,
-      secretHash: ride.requesterSecretHash,
+      tokenHash: ride.requesterSecretHash,
       seats: ride.seatsRequested || 1,
       dropoff: ride.note || "",
       status: "active",
@@ -2262,7 +2271,7 @@ function claimRideRequest(db, input, now, rng) {
     if (canSendBoth(config, platform, now)) {
       bumpSms(config, platform);
       sentAny = true;
-      queueText(texts, ride.requesterPhoneE164, "JumpIn: " + firstName + " offered to drive (" + routeTag + "). View: " + manageUrl("seat", ride.rideId, "", resId, p.groupId), "CARPOOL_REQUEST_CLAIMED");
+      queueText(texts, ride.requesterPhoneE164, "JumpIn: " + firstName + " offered to drive (" + routeTag + "). View: " + manageUrl("ride", ride.rideId, "", "", p.groupId), "CARPOOL_REQUEST_CLAIMED");
     }
     if (canSendBoth(config, platform, now)) {
       bumpSms(config, platform);

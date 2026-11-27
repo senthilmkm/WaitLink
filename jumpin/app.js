@@ -1776,7 +1776,7 @@
         const secRec = el(doc, "div", "ride-sec");
         const recLabel = current.recovery === "driver"
           ? "Driver phone (US/Canada, used to post this trip)"
-          : "Rider phone (US/Canada, used to reserve your seat)";
+          : (ride.kind === "request" ? "Rider phone (US/Canada, used to post this request)" : "Rider phone (US/Canada, used to reserve your seat)");
         secRec.appendChild(el(doc, "label", "lbl", recLabel));
         const phone = el(doc, "input");
         phone.name = "phone";
@@ -1970,7 +1970,7 @@
           draw();
         });
         top.appendChild(back);
-        const screenTitle = state.mode === "post" ? "Post a ride" : (state.mode === "posted" ? "Trip posted" : "Trip details");
+        const screenTitle = state.mode === "post" ? "Post a ride" : (state.mode === "posted" ? ((state.role === "requester" || (state.ride && state.ride.kind === "request")) ? "Request posted" : "Trip posted") : "Trip details");
         top.appendChild(el(doc, "span", "screen-title", screenTitle));
         brandBar(doc, top, groupMeta);
       }
@@ -2050,7 +2050,7 @@
           const shown = rides.filter(function (ride) {
             if (!matchesDateFilter(ride, boardDateFilter, nowMs)) return false;
             if (!q) return true;
-            return [ride.from, ride.to, ride.driverName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
+            return [ride.from, ride.to, ride.driverName, ride.requesterName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
           });
           if (!shown.length) {
             if (groupMeta.status && groupMeta.status !== "active") return;
@@ -2466,16 +2466,17 @@
         secDriver.appendChild(el(doc, "p", "hint", "WaitLink will text this number a link to manage this trip, and JumpIn notices."));
         mid.appendChild(secDriver);
       } else if (state.mode === "posted") {
+        const isReqPosted = state.role === "requester" || (state.ride && state.ride.kind === "request");
         const card = el(doc, "section", "confirm");
-        card.appendChild(el(doc, "span", "confirm-badge" + (state.status === "pending" ? " pending" : ""), state.status === "pending" ? "Pending approval" : "✓ Trip live"));
-        card.appendChild(el(doc, "h1", "", state.notice || "Trip posted."));
+        card.appendChild(el(doc, "span", "confirm-badge" + (state.status === "pending" ? " pending" : ""), state.status === "pending" ? "Pending approval" : (isReqPosted ? "✓ Request live" : "✓ Trip live")));
+        card.appendChild(el(doc, "h1", "", state.notice || (isReqPosted ? "Ride request posted." : "Trip posted.")));
         card.appendChild(el(doc, "p", "route", state.route || ""));
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
         const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
         if (tripCode) card.appendChild(el(doc, "p", "muted", "Trip ID: " + tripCode));
         if (state.link) {
-          const shareLbl = el(doc, "p", "section-lbl link-box-sep", "Share trip link");
+          const shareLbl = el(doc, "p", "section-lbl link-box-sep", isReqPosted ? "Share request link" : "Share trip link");
           card.appendChild(shareLbl);
           const linkRow = el(doc, "div", "link-row");
           const link = el(doc, "input");
@@ -2497,13 +2498,28 @@
           });
           linkRow.appendChild(copyBtn);
           card.appendChild(linkRow);
-          card.appendChild(el(doc, "p", "hint", "Share this link with riders. Use your texted link if opening from another app."));
+          card.appendChild(el(doc, "p", "hint", isReqPosted ? "Share this link with drivers so someone can offer a ride. Use your texted link if opening from another app." : "Share this link with riders. Use your texted link if opening from another app."));
         }
         if (state.smsNote) card.appendChild(el(doc, "p", "hint", state.smsNote));
         else if (!state.link) card.appendChild(el(doc, "p", "hint", "Use your texted link if opening from another app."));
         if (supportNote) card.appendChild(supportCard(doc, supportNote));
         if (state.error) card.appendChild(el(doc, "p", "error", state.error));
-        if (state.role === "driver" && state.status !== "cancelled") {
+        if (isReqPosted && state.ride && state.status !== "cancelled") {
+          const actions = el(doc, "div", "action-row");
+          const viewReq = el(doc, "button", "textish", "View request");
+          on(viewReq, "click", function () {
+            const r = state.ride;
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: r, role: "requester" }), {
+              ride: r,
+              rides: state.rides || [],
+              when: state.when,
+              link: state.link
+            });
+            draw();
+          });
+          actions.appendChild(viewReq);
+          card.appendChild(actions);
+        } else if (state.role === "driver" && state.status !== "cancelled") {
           const actions = el(doc, "div", "action-row");
           if (state.ride && (state.status === "open" || state.status === "pending")) {
             const editPosted = el(doc, "button", "textish", "Edit trip");
@@ -2579,7 +2595,7 @@
       }
       let label = state.mode === "reserved" ? "View trip" : ui.buttonLabel(state);
       if (label === "Post") label = postRole === "rider" ? "Post ride request" : "Post ride";
-      if (state.mode === "ride" && state.ride && state.ride.kind === "request") {
+      if (state.mode === "ride" && state.ride && state.ride.kind === "request" && !state.recovery && !state.claimOpen && !state.sheet && !state.editOpen && !state.waitlistOpen && !state.driverSheet) {
         if (state.status === "open" && !state.role && platformNotice.needARideEnabled) label = "🚗 I can drive";
         else if (state.role === "requester" && state.link) label = "Share on WhatsApp";
         else label = "Close";
@@ -2739,7 +2755,8 @@
             return;
           } else if (label === "Share on WhatsApp" && state.link) {
             const groupLabel = groupMeta.name ? groupMeta.name + " carpool: " : "JumpIn carpool: ";
-            const msg = encodeURIComponent(groupLabel + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + " — Reserve a seat: " + state.link);
+            const actionPrompt = (state.ride && state.ride.kind === "request") ? " — Can anyone drive? " : " — Reserve a seat: ";
+            const msg = encodeURIComponent(groupLabel + (state.route || "") + (state.when ? " (" + state.when + ")" : "") + actionPrompt + state.link);
             const isMobile = platform === "android" || platform === "ios";
             if (isMobile && win.location) win.location.href = "whatsapp://send?text=" + msg;
             else if (win.open) win.open("https://wa.me/?text=" + msg, "_blank", "noopener,noreferrer");
@@ -2839,18 +2856,22 @@
       let when = values.date + " " + values.time;
       try { when = core.formatWhen(departAt, values.timeZone || "UTC"); } catch (err) { /* keep the typed date */ }
       const kept = current.rides || [];
-      return Object.assign(ui.reduce(current, { type: "notice", notice: result.status === "pending" ? "Waiting for approval." : "Trip posted." }), {
+      const isReq = result.kind === "request";
+      const reqSeats = Number(values.seats || 1);
+      return Object.assign(ui.reduce(current, { type: "notice", notice: isReq ? "Ride request posted." : (result.status === "pending" ? "Waiting for approval." : "Trip posted.") }), {
         mode: "posted",
-        role: "driver",
+        role: isReq ? "requester" : "driver",
         status: result.status || "open",
         route: values.from + " → " + values.to,
         when: when,
-        seatsText: seatsLabel(Number(values.seats || 3)),
+        seatsText: isReq ? (reqSeats === 1 ? "1 seat needed" : reqSeats + " seats needed") : seatsLabel(Number(values.seats || 3)),
         link: result.status === "pending" || !result.rideId || !cloud || !cloud.publicRideUrl ? "" : cloud.publicRideUrl(result.rideId),
         rideId: result.rideId,
-        ride: { rideId: result.rideId, from: values.from, to: values.to, status: result.status || "open", seatsLeft: Number(values.seats || 3), note: values.note || "", driverName: values.name || "" },
+        ride: isReq
+          ? { rideId: result.rideId, kind: "request", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: reqSeats, seatsRequested: reqSeats, rideCost: Number(values.rideCost) || 0, note: values.note || "", requesterName: values.name || "", requesterReservationId: result.reservationId || "" }
+          : { rideId: result.rideId, kind: "offer", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: Number(values.seats || 3), rideCost: Number(values.rideCost) || 0, note: values.note || "", driverName: values.name || "" },
         rides: kept,
-        smsNote: result.textSent === false ? (result.error || "Trip posted on this browser. Text could not be sent right now.") : ""
+        smsNote: result.textSent === false ? (result.error || (isReq ? "Request posted on this browser. Text could not be sent right now." : "Trip posted on this browser. Text could not be sent right now.")) : ""
       });
     }
 

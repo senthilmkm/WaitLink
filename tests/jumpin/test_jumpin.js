@@ -1983,6 +1983,11 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(claimed.ride.kind, "offer");
   assert.strictEqual(claimed.ride.seatsLeft, 2);
   assert.strictEqual((claimed.outbox || []).length, 2);
+  assert.ok(claimed.outbox[0].body.indexOf("view=ride&ride=" + reqPosted.rideId) !== -1);
+  // Recovered requester secret still works to message driver after request is claimed
+  const recSecretMatch = /k=([^&\s]+)/.exec(reqRec.outbox[0].body);
+  const reqMsgRes = await handlers.call(db, "carpoolPostMessage", { rideId: reqPosted.rideId, secret: recSecretMatch[1], text: "On my way" }, null, baseNow + 35);
+  assert.strictEqual(reqMsgRes.ok, true);
   // Second driver cannot claim already-claimed request
   assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: reqPosted.rideId, name: "Dan", phone: "5557778888", seats: 4 }, null, baseNow + 40)).ok, false);
   // Cancel request flow + error branches
@@ -2055,11 +2060,19 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   mounted.root.children[2].children[0]._listeners[0]();
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().mode, "posted");
+  assert.strictEqual(mounted.getState().role, "requester");
+  assert.strictEqual(mounted.getState().notice, "Ride request posted.");
 
-  // Public visitor views request -> verifies request recovery link only, taps "I can drive", exercises duration stepper, submits claimRequestSheet
+  // Public visitor views request -> verifies request recovery link only, recovery shows "Text me a link" (not "I can drive"), then taps "I can drive", exercises duration stepper, submits claimRequestSheet
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "" }), { ride: reqCardRide, when: "Tomorrow" }));
-  assert.ok(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.textContent === "Posted this request? Text me a manage link"; }));
+  const recReqBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Posted this request? Text me a manage link"; });
+  assert.ok(recReqBtn);
   assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Driver? Manage this trip"; }), undefined);
+  recReqBtn._listeners[0]();
+  assert.strictEqual(mounted.getState().recovery, "rider");
+  assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Text me a link");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Cancel"; })._listeners[0]();
+  assert.strictEqual(mounted.getState().recovery, "");
   const driveBtn = mounted.root.children[2].children[0];
   assert.strictEqual(driveBtn.children[0].textContent, "🚗 I can drive");
   driveBtn._listeners[0]();

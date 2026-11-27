@@ -75,7 +75,9 @@
     const when = formatWhen(ride.departAt);
     const code = shortTripId(ride.rideId);
     if (when || code) card.appendChild(el(doc, "div", "admin-meta", [code ? "Trip ID: " + code : "", when].filter(Boolean).join(" · ")));
-    const who = [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
+    const who = ride.kind === "request"
+      ? ["🙋 Needs driver", ride.requesterName || "Rider", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ")
+      : [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
     if (who) card.appendChild(el(doc, "div", "admin-meta muted", who));
     const paxCount = (ride.riders && ride.riders.length) || 0;
     const msgCount = (ride.messages && ride.messages.length) || 0;
@@ -109,7 +111,9 @@
       if (rowCode || ride.note) tdRoute.appendChild(el(doc, "div", "admin-meta muted", [rowCode ? "Trip ID: " + rowCode : "", ride.note || ""].filter(Boolean).join(" · ")));
       tr.appendChild(tdRoute);
       tr.appendChild(el(doc, "td", "", formatWhen(ride.departAt) || "—"));
-      const who = [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
+      const who = ride.kind === "request"
+        ? ["🙋 Needs driver", ride.requesterName || "Rider", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ")
+        : [ride.driverName || "Driver", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
       tr.appendChild(el(doc, "td", "", who));
       const paxCount = (ride.riders && ride.riders.length) || 0;
       const tdSeats = doc.createElement("td");
@@ -135,7 +139,10 @@
     if (!modal || !ride) return;
     const route = ride.from && ride.to ? ride.from + " → " + ride.to : ride.rideId;
     text(doc.getElementById("jumpin-detail-route"), route);
-    const meta = [formatWhen(ride.departAt), [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ")].filter(Boolean).join(" · ");
+    const whoDetail = ride.kind === "request"
+      ? ["🙋 Needs driver", ride.requesterName || "Rider", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ")
+      : [ride.driverName || "", ride.phoneLast4 ? "····" + ride.phoneLast4 : ""].filter(Boolean).join(" · ");
+    const meta = [formatWhen(ride.departAt), whoDetail].filter(Boolean).join(" · ");
     text(doc.getElementById("jumpin-detail-meta"), meta);
     const noteNode = doc.getElementById("jumpin-detail-note");
     if (noteNode) {
