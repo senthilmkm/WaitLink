@@ -4,7 +4,7 @@
    Enables standalone tablet installation & offline queue shell resilience
    ========================================================================== */
 
-const CACHE_NAME = 'waitlink-shell-v37';
+const CACHE_NAME = 'waitlink-shell-v38';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
