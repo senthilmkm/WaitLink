@@ -2145,7 +2145,7 @@ function postRideRequest(db, input, now, rng) {
       seatsTotal: fields.seats,
       seatsLeft: fields.seats,
       seatsRequested: fields.seats,
-      rideCost: 0,
+      rideCost: fields.rideCost || 0,
       note: fields.note,
       driverName: "",
       driverPhoneE164: "",

@@ -1275,6 +1275,7 @@
       head.appendChild(xBtn);
       sheet.appendChild(head);
       sheet.appendChild(el(doc, "p", "muted", (ride.from || "") + " → " + (ride.to || "") + " · " + (state.when || whenOf(ride))));
+      if (ride.rideCost > 0) sheet.appendChild(el(doc, "p", "hint", "Rider offered: " + core.formatCost(ride.rideCost) + " / seat (direct)"));
       sheet.appendChild(el(doc, "label", "lbl", "Your name"));
       const nameIn = el(doc, "input");
       nameIn.name = "name";
@@ -1602,7 +1603,7 @@
       } else if (ride.seatsLeft != null) {
         addTile("Availability", seatsLabel(ride.seatsLeft));
       }
-      if (ride.rideCost > 0) addTile("Ride cost", core.formatCost(ride.rideCost) + " / seat (direct)");
+      if (ride.rideCost > 0) addTile(ride.kind === "request" ? "Willing to chip in" : "Ride cost", core.formatCost(ride.rideCost) + " / seat (direct)");
       const tripCode = shortTripId(ride.rideId);
       if (tripCode) addTile("Trip ID", tripCode);
       if (ride.note) addTile("Pickup / Note", ride.note);
@@ -2422,7 +2423,7 @@
         }
         const showExtras = extrasOpen || !!(state.draft && (state.draft.rideCost || state.draft.note)) || !!(state.error && state.field === "rideCost");
         if (showExtras) {
-          secDriver.appendChild(el(doc, "label", "lbl", "Ride cost per seat ($), optional"));
+          secDriver.appendChild(el(doc, "label", "lbl", postRole === "rider" ? "Willing to chip in ($ / seat), optional" : "Ride cost per seat ($), optional"));
           const rideCost = el(doc, "input");
           rideCost.name = "rideCost";
           rideCost.type = "number";

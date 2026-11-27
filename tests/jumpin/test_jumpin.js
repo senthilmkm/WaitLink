@@ -1943,7 +1943,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   // 1. Core validation helpers
   assert.strictEqual(core.requestErrors({ name: "", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 1 }).field, "name");
   assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 5 }).field, "seats");
-  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 2 }).value.seats, 2);
+  assert.strictEqual(core.requestErrors({ name: "Sam", phone: "5551112222", from: "Lib", to: "Off", date: "2026-12-01", time: "10:00", seats: 2, rideCost: 5 }).value.rideCost, 5);
   assert.strictEqual(core.claimErrors({ name: "", phone: "5551112222", seats: 3 }, 2).field, "name");
   assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5551112222", seats: 1 }, 2).field, "seats");
   assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5551112222", seats: 4, note: "Main gate" }, 2).value.seats, 4);
@@ -2033,7 +2033,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   win.JumpInCloud = mockCloud;
   const mounted = view.mount(win);
   // Board renders request card and Need a driver filter chip
-  const reqCardRide = { rideId: "ride_req1", kind: "request", status: "open", from: "Lib", to: "Off", departAt: Date.now() + core.DAY_MS, seatsRequested: 2, seatsLeft: 2, requesterName: "Sam", requesterReservationId: "res_req1", note: "" };
+  const reqCardRide = { rideId: "ride_req1", kind: "request", status: "open", from: "Lib", to: "Off", departAt: Date.now() + core.DAY_MS, seatsRequested: 2, seatsLeft: 2, rideCost: 5, requesterName: "Sam", requesterReservationId: "res_req1", note: "" };
   boardCb([reqCardRide]);
   const needChip = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("Need a driver") !== -1; });
   assert.ok(needChip);

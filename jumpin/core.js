@@ -308,7 +308,7 @@
   }
 
   function requestErrors(fields) {
-    const base = postErrors(Object.assign({}, fields, { durationMinutes: 60, rideCost: 0 }));
+    const base = postErrors(Object.assign({}, fields, { durationMinutes: 60 }));
     if (base.error) return base;
     if (base.value.seats > 4) return { field: "seats", error: "Choose seats from 1 to 4." };
     return base;
