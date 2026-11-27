@@ -18,7 +18,7 @@
   function on(target, type, fn) {
     if (!target || !target.addEventListener) return;
     target.addEventListener(type, fn);
-    cleanups.push(function () { target.removeEventListener(type, fn); });
+    if (!target.tagName) cleanups.push(function () { target.removeEventListener(type, fn); });
   }
 
   function el(doc, tag, className, text) {
@@ -1400,13 +1400,11 @@
       const isIos = /iPad|iPhone|iPod/i.test(ua);
       return !standalone && !!(deferredInstall || isIos);
     }
-    if (win.addEventListener) {
-      win.addEventListener("beforeinstallprompt", function (e) {
-        if (e && e.preventDefault) e.preventDefault();
-        deferredInstall = e;
-        draw();
-      });
-    }
+    on(win, "beforeinstallprompt", function (e) {
+      if (e && e.preventDefault) e.preventDefault();
+      deferredInstall = e;
+      draw();
+    });
     function installSheet(doc) {
       const box = el(doc, "div");
       box.id = "jumpin-sheet";
@@ -1621,7 +1619,7 @@
           const reqRow = el(doc, "div", "action-row");
           const cancelReqBtn = el(doc, "button", "textish");
           cancelReqBtn.type = "button";
-          spinText(doc, cancelReqBtn, state.busy && state.busyAction === "cancel-req", "Cancelling…", "✕ Cancel request", false);
+          spinText(doc, cancelReqBtn, state.busy && state.busyAction === "cancel-req", "Cancelling…", "✕ Cancel request", true);
           on(cancelReqBtn, "click", function () {
             if (!cloud || !cloud.cancelRideRequest) return;
             state.busy = true;

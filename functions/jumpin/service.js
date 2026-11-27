@@ -1447,7 +1447,8 @@ async function completeDueGroup(tx, p, now, texts, platform) {
       item.pub.status = item.hasRiders ? "completed" : "cancelled";
       if (!item.hasRiders) {
         item.pub.seatsLeft = 0;
-        item.pub.messages = arr(item.pub.messages).concat([core.systemMessage("Trip cancelled — no passengers joined.", now, arr(item.pub.messages).length + 1)]);
+        const expireMsg = item.ride.kind === "request" ? "Request expired — no driver offered a ride." : "Trip cancelled — no passengers joined.";
+        item.pub.messages = arr(item.pub.messages).concat([core.systemMessage(expireMsg, now, arr(item.pub.messages).length + 1)]);
       }
       item.pub.updatedAt = now;
       tx.set(p.ridePublic(item.ride.rideId), item.pub);
