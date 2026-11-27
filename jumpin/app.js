@@ -220,6 +220,8 @@
       "#jumpin-sheet.compact-info .sheet-item{min-height:36px;padding:6px 10px;border-radius:10px;font-size:13px;justify-content:center;text-align:center}",
       "#jumpin-sheet.compact-info .sheet-item:last-child{grid-column:1 / -1}",
       "#jumpin-sheet.compact-info .hint,#jumpin-sheet.compact-info p.muted{font-size:12px;line-height:1.35;margin:0 0 8px}",
+      "#jumpin-sheet.compact-info .support-foot{padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-weight:600;font-size:12.5px;line-height:1.4;margin:0 0 8px}",
+      "#jumpin-sheet.compact-info .foot-link{color:var(--primary,#0891b2);font-weight:600;text-decoration:none}",
       "#jumpin-sheet.compact-info .action-row{margin-top:8px}",
       "#jumpin-sheet.compact-info .action-row button{min-height:38px;font-size:14px;border-radius:10px}",
       "#jumpin-sheet.info-detail{max-height:82dvh;display:flex;flex-direction:column}",
@@ -268,7 +270,7 @@
       "#jumpin-root .action-row.row-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}",
       "#jumpin-root .action-row.row-split button{width:100%;min-width:0;margin:0;justify-content:center;text-align:center}",
       "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
-      "#jumpin-root .chip-btn:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-root .chip-btn:not(.active):hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
       "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
       "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
       "#jumpin-mid .filter-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}",
@@ -1115,6 +1117,7 @@
     let prevMode = "";
     let prevSheetOpen = false;
     let postRole = "";
+    let pickedWhen = "";
 
     function claimRequestSheet(doc) {
       const sheet = el(doc, "section");
@@ -1282,6 +1285,22 @@
     }
 
     const INFO_DOCS = {
+      about: {
+        title: "About JumpIn",
+        items: [
+          ["Our Goal", "Help neighbors, friends, and local communities share rides easily without messy group chats, logins, or app fees."],
+          ["Quick Features", "Post a ride or request a ride in seconds — no account needed. Reserve 1–6 seats with instant SMS manage links."],
+          ["Private & Safe", "Message your driver or riders without sharing personal phone numbers. Join a seat-open waitlist on full trips, or use private ?g= boards for neighborhoods & groups."]
+        ]
+      },
+      how: {
+        title: "How It Works",
+        items: [
+          ["1. Post or Find a Ride", "Drivers post open seats (or claim a ride request). Riders reserve 1–6 seats or post a request in seconds."],
+          ["2. Get Your Text Link", "JumpIn texts you a private manage link right away — no passwords or app downloads needed."],
+          ["3. Message & Ride Together", "Share pickup updates in Trip Updates, adjust or cancel seats before departure, and complete the trip when done."]
+        ]
+      },
       faq: {
         title: "FAQ",
         href: "/jumpin-faq.html",
@@ -1327,7 +1346,7 @@
       if (infoView === "menu") {
         box.appendChild(el(doc, "p", "", "About JumpIn"));
         const menu = el(doc, "div", "sheet-menu");
-        [["FAQ", "faq"], ["Privacy", "privacy"], ["Terms", "terms"], ["Contact", "contact"]].forEach(function (item) {
+        [["About JumpIn", "about"], ["How It Works", "how"], ["FAQ", "faq"], ["Privacy", "privacy"], ["Terms", "terms"], ["Contact", "contact"]].forEach(function (item) {
           const b = el(doc, "button", "sheet-item", item[0]);
           b.type = "button";
           on(b, "click", function () { infoView = item[1]; draw(); });
@@ -1338,9 +1357,15 @@
         menu.appendChild(start);
         box.appendChild(menu);
         if (groupMeta && groupMeta.supportNote) {
-          box.appendChild(el(doc, "p", "hint", "Free community tool — chip in $1–$2 via " + groupMeta.supportNote + " to help cover text costs."));
+          box.appendChild(el(doc, "div", "support-foot", "Free community tool — chip in $1–$2 via " + groupMeta.supportNote + " to help cover text costs."));
         }
-        box.appendChild(el(doc, "p", "muted", "JumpIn by WaitLink · © 2026 WaitLink"));
+        const credit = el(doc, "p", "muted");
+        credit.appendChild(doc.createTextNode("JumpIn by "));
+        const wl = el(doc, "a", "foot-link", "WaitLink");
+        wl.href = "https://waitlink.app";
+        credit.appendChild(wl);
+        credit.appendChild(doc.createTextNode(" · © 2026 WaitLink"));
+        box.appendChild(credit);
         const row = el(doc, "div", "action-row");
         const ok = el(doc, "button", "confirm-primary", "Close");
         ok.type = "button";
@@ -1373,9 +1398,11 @@
           card.appendChild(el(doc, "span", "", entry[1]));
           body.appendChild(card);
         });
-        const ext = el(doc, "a", "info-ext", spec.label);
-        ext.href = spec.href;
-        body.appendChild(ext);
+        if (spec.href) {
+          const ext = el(doc, "a", "info-ext", spec.label);
+          ext.href = spec.href;
+          body.appendChild(ext);
+        }
       } else {
         [
           ["Direct Support Email", "senthil930@gmail.com — reach out for help, feedback, or to report a safety concern."],
@@ -2015,6 +2042,7 @@
               } else {
                 const kept = state.rides || [];
                 postRole = "";
+                pickedWhen = "";
                 state = ui.reduce(state, { type: "post" });
                 state.rides = kept;
                 draw();
@@ -2262,7 +2290,6 @@
         secSched.appendChild(dtDrawerHost);
         const whenChips = el(doc, "div", "chip-row");
         const whenBtns = [];
-        let pickedWhen = "";
         function syncWhenChips() {
           const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
           const nowMs = Date.now();
@@ -2584,6 +2611,7 @@
           if (label === "Post a ride") {
             const kept = state.rides || [];
             postRole = "";
+            pickedWhen = "";
             state = ui.reduce(state, { type: "post" });
             state.rides = kept;
           }
@@ -2766,6 +2794,7 @@
         on(postTab, "click", function () {
           const kept = state.rides || [];
           postRole = "";
+          pickedWhen = "";
           state = ui.reduce(state, { type: "post" });
           state.rides = kept;
           draw();

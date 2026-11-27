@@ -2251,6 +2251,24 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(dur30.className.indexOf("active"), -1);
   dur30._listeners[0]();
   assert.ok(dur30.className.indexOf("active") !== -1);
+  // "In 30m" chip stays active across re-renders (e.g. opening extras)
+  const in30 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
+  in30._listeners[0]();
+  assert.ok(in30.className.indexOf("active") !== -1);
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add price or pickup note"; })._listeners[0]();
+  const in30After = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
+  assert.ok(in30After.className.indexOf("active") !== -1);
+  // Info sheet ("?") renders About JumpIn, How It Works, support banner, and WaitLink link
+  groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 6, supportNote: "Zelle:oak@oak.org", contactEmail: "" });
+  mounted.setState(Object.assign(ui.blank(), { rides: [] }));
+  mounted.root.children[0].querySelectorAll("button").find(function (b) { return b.textContent === "?"; })._listeners[0]();
+  const sheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(sheet.querySelectorAll("button").some(function (b) { return b.textContent === "About JumpIn"; }));
+  assert.ok(sheet.querySelectorAll("button").some(function (b) { return b.textContent === "How It Works"; }));
+  assert.ok(sheet.querySelectorAll("a").some(function (a) { return a.textContent === "WaitLink" && a.href === "https://waitlink.app"; }));
+  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "About JumpIn"; })._listeners[0]();
+  const aboutSheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(aboutSheet.querySelectorAll("strong").some(function (s) { return s.textContent === "Our Goal"; }));
   view.destroy();
 });
 
