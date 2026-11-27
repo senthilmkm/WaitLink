@@ -318,6 +318,7 @@ function postRide(db, input, now, rng) {
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
+    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
     if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "You can't post a ride right now." };
     const notMember = await memberError(tx, config, fields.phone, p);
     if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
@@ -2147,6 +2148,7 @@ function postRideRequest(db, input, now, rng) {
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
+    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
     const notMember = await memberError(tx, config, fields.phone, p);
     if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
     if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "This number cannot post right now." };
@@ -2181,6 +2183,7 @@ function postRideRequest(db, input, now, rng) {
       requesterReservationId: reservationId,
       requesterSecretHash: core.sha256Hex(secret),
       editSecretHash: core.sha256Hex(secret),
+      tokenIssuedAt: now,
       activeReservationDocIds: [],
       smsSent: 0,
       createdAt: now,

@@ -289,9 +289,10 @@
         });
       },
       postRideRequest: function (values) {
-        return call("carpoolPostRideRequest", values).then(function (result) {
+        return call("carpoolPostRideRequest", Object.assign({}, values, { idempotencyKey: once("post") })).then(function (result) {
           if (result && result.ok && result.secret && result.reservationId) {
             saveSeat(storage, result.reservationId, result.secret);
+            keys.post = "";
           }
           return result;
         });

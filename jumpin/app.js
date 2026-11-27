@@ -433,7 +433,7 @@
         const kept = state.rides || [];
         if (!ride) {
           state = Object.assign(ui.reduce(state, { type: "ride", ride: { status: "missing", seatsLeft: 0 }, role: "" }), { rides: kept, ride: null });
-        } else if (ride.status === "open" && (state.reserveOpen || state.editOpen || state.waitlistOpen || state.driverSheet || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
+        } else if (ride.status === "open" && (state.reserveOpen || state.editOpen || state.waitlistOpen || state.claimOpen || state.driverSheet || state.recovery || state.sheet || state.busy || state.mode === "reserved")) {
           state = Object.assign({}, state, {
             rides: kept,
             ride: ride,

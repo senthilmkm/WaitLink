@@ -2001,6 +2001,8 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: req2.rideId, name: "Alex", phone: "5558889999", seats: 4 }, null, baseNow + 95)).ok, false);
   const req3 = await handlers.call(db, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow + 98);
   assert.strictEqual((await handlers.call(db, "carpoolClaimRideRequest", { rideId: req3.rideId, name: "Alex", phone: "5558889999", seats: 7 }, null, baseNow + 99)).field, "seats");
+  const max2Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 2 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
+  assert.strictEqual((await handlers.call(max2Db, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 3 }, null, baseNow)).field, "seats");
   const disPlat = service.createMemoryDb(Object.assign(seed(), { "carpool_platform/config": { platformEnabled: false, needARideEnabled: true } }));
   assert.strictEqual((await handlers.call(disPlat, "carpoolPostRideRequest", { name: "Zoe", phone: "5553339999", from: "Lib", to: "Mall", date: d1, time: t1, timeZone: tz, seats: 1 }, null, baseNow)).ok, false);
   assert.strictEqual((await handlers.call(disPlat, "carpoolClaimRideRequest", { rideId: "x", name: "Alex", phone: "5558889999", seats: 3 }, null, baseNow)).ok, false);
