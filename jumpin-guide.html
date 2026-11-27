@@ -715,6 +715,20 @@
               </td>
             </tr>
             <tr>
+              <td><span class="tag tag-open">Requesting a Ride</span><br><small><em>Need a Ride</em> enabled</small></td>
+              <td>
+                <ul class="clean">
+                  <li>Tap <strong>Post a ride</strong> → choose <strong>Step 1 · 🙋 I need a ride</strong> (neither option is pre-selected so every post is intentional).</li>
+                  <li>Enter route, date/time, <strong>Seats needed</strong> (1–4, up to group max), optional <strong>Willing to chip in ($ / seat)</strong>, and optional pickup note.</li>
+                  <li>Confirmation screen &amp; request details include a shareable link with inline <strong>📋</strong> copy icon, <strong>Share on WhatsApp</strong>, <strong>✕ Cancel request</strong>, and <strong>Sign out on this device</strong>.</li>
+                  <li>Once a driver taps <strong>🚗 I can drive</strong>, your seats are automatically <strong>✓ Confirmed</strong>, and you can message the driver, update seats, or cancel your seat.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Texts requester their manage link (respects <em>New rides wait for approval</em> if enabled). When a driver claims the request, texts both the requester (<code>view=ride</code>) and driver (<code>view=trip</code>).
+              </td>
+            </tr>
+            <tr>
               <td><span class="tag tag-sms">Another Phone / Recovery</span></td>
               <td>
                 <ul class="clean">
@@ -765,9 +779,9 @@
               <td><span class="tag tag-open">Reserved (Before Departure)</span><br><small><code>now &lt; departAt</code></small></td>
               <td>
                 <ul class="clean">
-                  <li><strong>Live seat status:</strong> After reserving, your row under <strong>Passengers</strong> shows <strong>⏳ Pending</strong> until the driver taps <strong>🔔</strong>, when it updates in real time to <strong>✓ Confirmed</strong>.</li>
+                  <li><strong>Live seat status:</strong> After reserving, your row under <strong>Passengers</strong> shows <strong>⏳ Pending</strong> until the driver taps <strong>Tap to confirm</strong> (or automatically <strong>✓ Confirmed</strong> when a driver claims your Ride Request).</li>
                   <li><strong>Message the driver</strong> using 1-tap quick pills (<em>On my way</em>, <em>At pickup spot</em>, <em>5 min late</em>) or custom text + inline <strong>Send</strong> button right beside the input (with spinner).</li>
-                  <li>Change seat count using the <strong>My seats</strong> dropdown + <strong>Update seats</strong> (enabled once changed; increase or decrease within available seats).</li>
+                  <li>Change seat count using the <strong>Your seats</strong> pill selector + <strong>Update seats</strong> (increase or decrease within available seats; notifies the driver and any waitlisted riders).</li>
                   <li><strong>Cancel my seat</strong> (opens centered <em>Cancel your seat?</em> confirmation modal).</li>
                   <li><strong>Sign out on this device</strong> (bottom button).</li>
                 </ul>
@@ -799,6 +813,20 @@
               </td>
               <td>
                 <span class="tag tag-sms">SMS Sent</span> If enabled by Admin, rider receives one post-ride thank-you SMS with the community tip handle after trip completion.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Requesting a Ride</span><br><small><em>Need a Ride</em> enabled</small></td>
+              <td>
+                <ul class="clean">
+                  <li>Tap <strong>Post a ride</strong> → choose <strong>Step 1 · 🙋 I need a ride</strong> (neither option is pre-selected so every post is intentional).</li>
+                  <li>Enter route, date/time, <strong>Seats needed</strong> (1–4, up to group max), optional <strong>Willing to chip in ($ / seat)</strong>, and optional pickup note.</li>
+                  <li>Confirmation screen &amp; request details include a shareable link with inline <strong>📋</strong> copy icon, <strong>Share on WhatsApp</strong>, <strong>✕ Cancel request</strong>, and <strong>Sign out on this device</strong>.</li>
+                  <li>Once a driver taps <strong>🚗 I can drive</strong>, your seats are automatically <strong>✓ Confirmed</strong>, and you can message the driver, update seats, or cancel your seat.</li>
+                </ul>
+              </td>
+              <td>
+                <span class="tag tag-sms">SMS Sent</span> Texts requester their manage link (respects <em>New rides wait for approval</em> if enabled). When a driver claims the request, texts both the requester (<code>view=ride</code>) and driver (<code>view=trip</code>).
               </td>
             </tr>
             <tr>
@@ -976,15 +1004,22 @@
               <td><span class="tag tag-open">Rider Flow</span></td>
               <td>Post a Ride Request (<em>Need a Ride</em>, when enabled in Feature Config)</td>
               <td><strong>Requester</strong></td>
-              <td><code>JumpIn request (From-To): &lt;link&gt;</code> (<code>view=seat</code>; 0 broadcast SMS).</td>
-              <td>Appears on the board as <em>Needs a driver</em>; requester can cancel anytime or auto-expires silently at departure.</td>
+              <td><code>JumpIn request (From-To): &lt;link&gt;</code> (<code>view=seat</code>; or <code>JumpIn request pending...</code> if approval is required).</td>
+              <td>Appears on the board as <em>Needs a driver</em> once open; requester can cancel anytime or it auto-expires after the completion deadline.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Driver Flow</span></td>
               <td>Claim a Ride Request (<em>I can drive</em>)</td>
               <td><strong>Requester &amp; Driver</strong></td>
               <td>Requester: <code>JumpIn: &lt;Driver&gt; offered to drive (From-To). View: &lt;link&gt;</code>; Driver: <code>JumpIn driving (From-To): &lt;link&gt;</code>.</td>
-              <td>Atomically converts the request into an open trip, books the requester's seat(s), and opens remaining seats on the board.</td>
+              <td>Atomically converts the request into an open trip, marks the requester's seat(s) as <strong>✓ Confirmed</strong>, and opens any remaining seats on the board.</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-open">Rider Flow</span></td>
+              <td>Update seat count (<em>Update seats</em>)</td>
+              <td><strong>Driver &amp; Waitlist</strong></td>
+              <td>Driver: <code>JumpIn (From-To): &lt;Rider&gt; updated seats to N.</code>; Waitlist (if seats freed): <code>Seat open!</code></td>
+              <td>Resets <code>driverSeenAt</code> if seats increased; frees seats and notifies waitlist if seats decreased.</td>
             </tr>
             <tr>
               <td><span class="tag tag-open">Rider Flow</span></td>
