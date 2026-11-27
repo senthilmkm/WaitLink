@@ -1983,7 +1983,6 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(claimed.ride.kind, "offer");
   assert.strictEqual(claimed.ride.seatsLeft, 2);
   assert.ok(claimed.ride.riders[0].driverSeenAt > 0);
-  assert.strictEqual(core.claimErrors({ name: "Alex", phone: "5558889999", seats: 4, rideCost: 999 }, 1).field, "rideCost");
   assert.strictEqual((claimed.outbox || []).length, 2);
   assert.ok(claimed.outbox[0].body.indexOf("view=ride&ride=" + reqPosted.rideId) !== -1);
   // Recovered requester secret still works to message driver after request is claimed

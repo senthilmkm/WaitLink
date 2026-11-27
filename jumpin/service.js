@@ -2259,7 +2259,6 @@ function claimRideRequest(db, input, now, rng) {
     ride.seatsTotal = fields.seats;
     ride.seatsLeft = fields.seats - (ride.seatsRequested || 1);
     ride.durationMinutes = fields.durationMinutes || 60;
-    if (fields.rideCost !== undefined) ride.rideCost = fields.rideCost;
     ride.note = fields.note || "";
     ride.activeReservationDocIds = [resKey];
     ride.updatedAt = now;
