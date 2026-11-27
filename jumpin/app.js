@@ -1592,6 +1592,47 @@
       return ackBtn;
     }
 
+    function buildCancelRequestButton(doc, ride, whenVal, linkVal) {
+      const cancelReqBtn = el(doc, "button", "textish");
+      cancelReqBtn.type = "button";
+      spinText(doc, cancelReqBtn, state.busy && state.busyAction === "cancel-req", "Cancelling…", "✕ Cancel request", true);
+      on(cancelReqBtn, "click", function () {
+        if (!cloud || !cloud.cancelRideRequest) return;
+        state.busy = true;
+        state.busyAction = "cancel-req";
+        draw();
+        cloud.cancelRideRequest(ride.rideId, cloud.seatSecretFor(ride)).then(function (res) {
+          state.busy = false;
+          state.busyAction = "";
+          if (!res || res.ok === false) {
+            const errText = (res && res.error) || "Could not cancel request.";
+            if (errText.indexOf("manage link") !== -1 && cloud.forget) {
+              cloud.forget(ride);
+              state = Object.assign(ui.reduce(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { type: "recovery", role: "rider" }), {
+                ride: ride,
+                rides: state.rides || [],
+                when: whenVal,
+                link: linkVal,
+                error: "Your manage link was refreshed elsewhere. Enter your phone to get a fresh link."
+              });
+            } else {
+              state = ui.reduce(state, { type: "fail", error: errText });
+            }
+          } else {
+            const nextRide = Object.assign({}, ride, { status: "cancelled", seatsLeft: 0 });
+            state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: "" }), { ride: nextRide, notice: "Request cancelled." });
+          }
+          draw();
+        }, function () {
+          state.busy = false;
+          state.busyAction = "";
+          state = ui.reduce(state, { type: "fail", error: "Could not cancel request." });
+          draw();
+        });
+      });
+      return cancelReqBtn;
+    }
+
     function rideCard(doc, current) {
       const ride = current.ride;
       const card = el(doc, "section", "confirm ride-detail");
@@ -1657,44 +1698,7 @@
             secTop.appendChild(linkRow);
           }
           const reqRow = el(doc, "div", "action-row");
-          const cancelReqBtn = el(doc, "button", "textish");
-          cancelReqBtn.type = "button";
-          spinText(doc, cancelReqBtn, state.busy && state.busyAction === "cancel-req", "Cancelling…", "✕ Cancel request", true);
-          on(cancelReqBtn, "click", function () {
-            if (!cloud || !cloud.cancelRideRequest) return;
-            state.busy = true;
-            state.busyAction = "cancel-req";
-            draw();
-            cloud.cancelRideRequest(ride.rideId, cloud.seatSecretFor(ride)).then(function (res) {
-              state.busy = false;
-              state.busyAction = "";
-              if (!res || res.ok === false) {
-                const errText = (res && res.error) || "Could not cancel request.";
-                if (errText.indexOf("manage link") !== -1 && cloud.forget) {
-                  cloud.forget(ride);
-                  state = Object.assign(ui.reduce(ui.reduce(state, { type: "ride", ride: ride, role: "" }), { type: "recovery", role: "rider" }), {
-                    ride: ride,
-                    rides: state.rides || [],
-                    when: current.when,
-                    link: current.link,
-                    error: "Your manage link was refreshed elsewhere. Enter your phone to get a fresh link."
-                  });
-                } else {
-                  state = ui.reduce(state, { type: "fail", error: errText });
-                }
-              } else {
-                const nextRide = Object.assign({}, ride, { status: "cancelled", seatsLeft: 0 });
-                state = Object.assign(ui.reduce(state, { type: "ride", ride: nextRide, role: "" }), { ride: nextRide, notice: "Request cancelled." });
-              }
-              draw();
-            }, function () {
-              state.busy = false;
-              state.busyAction = "";
-              state = ui.reduce(state, { type: "fail", error: "Could not cancel request." });
-              draw();
-            });
-          });
-          reqRow.appendChild(cancelReqBtn);
+          reqRow.appendChild(buildCancelRequestButton(doc, ride, current.when, current.link));
           secTop.appendChild(reqRow);
         } else if (!current.role) {
           secTop.appendChild(el(doc, "p", "muted", "No driver yet — tap I can drive below to offer a ride."));
@@ -2572,6 +2576,7 @@
             draw();
           });
           actions.appendChild(viewReq);
+          actions.appendChild(buildCancelRequestButton(doc, state.ride, state.when, state.link));
           card.appendChild(actions);
         } else if (state.role === "driver" && state.status !== "cancelled") {
           const actions = el(doc, "div", "action-row");

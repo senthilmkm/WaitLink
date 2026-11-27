@@ -2064,6 +2064,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(mounted.getState().mode, "posted");
   assert.strictEqual(mounted.getState().role, "requester");
   assert.strictEqual(mounted.getState().notice, "Ride request posted.");
+  assert.ok(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel request"; }));
 
   // Public visitor views request -> verifies request recovery link only, recovery shows "Text me a link" (not "I can drive"), then taps "I can drive", exercises duration stepper, submits claimRequestSheet
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "" }), { ride: reqCardRide, when: "Tomorrow" }));
