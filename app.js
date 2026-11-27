@@ -19,7 +19,7 @@ function refreshSuperHash(email) {
     const hex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
     _superHashCache[e] = (hex === SUPERADMIN_HASH);
     if (_superHashCache[e] && typeof render === "function") render();
-  }).catch(function () {});
+  }).catch(function () { });
 }
 function isSuperEmail(email) {
   const e = String(email || "").trim().toLowerCase();
@@ -1013,7 +1013,7 @@ document.addEventListener("DOMContentLoaded", () => {
     root.id = "jumpin-root";
     document.body.appendChild(root);
     const script = document.createElement("script");
-    const jumpV = "20261126o";
+    const jumpV = "20261126p";
     script.src = "/jumpin/core.js?v=" + jumpV;
     script.onload = function () {
       const uiScript = document.createElement("script");
@@ -1339,7 +1339,7 @@ if (typeof window !== "undefined") {
 
 function toggleSoundAlerts() {
   initAudioContext();
-  
+
   // If sound was muted, turn it on and play confirmation test chime
   if (state.soundEnabled === false) {
     state.soundEnabled = true;
@@ -1910,11 +1910,11 @@ function subscribeFirestore(forceResubscribe = false) {
       updatePosterUI();
       renderAll();
 
-      const isDeskOrHome = state.activeView === "desk" || 
-                           state.activeView === "home" || 
-                           state.currentView === "desk" || 
-                           state.currentView === "home" ||
-                           (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
+      const isDeskOrHome = state.activeView === "desk" ||
+        state.activeView === "home" ||
+        state.currentView === "desk" ||
+        state.currentView === "home" ||
+        (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
 
       if (newCheckInDetected && isDeskOrHome) {
         playFrontDeskChime();
@@ -3328,17 +3328,17 @@ async function triggerSurveyForTicket(ticketOrId, triggerSource = "manual_desk")
   const targetId = localRecord ? localRecord.id : decodeURIComponent(String(ticketId || ''));
 
   const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
-    let item = serverHistory.find(h => 
-      h.id === ticketId || 
-      h.id === targetId || 
+    let item = serverHistory.find(h =>
+      h.id === ticketId ||
+      h.id === targetId ||
       (localRecord && h.id === localRecord.id) ||
       (localRecord && localRecord.customerName && h.customerName === localRecord.customerName && Math.abs((h.checkedInAt || 0) - (localRecord.checkedInAt || 0)) < 120000)
     );
 
     if (!item) {
-      const qIdx = serverQueue.findIndex(q => 
-        q.id === ticketId || 
-        q.id === targetId || 
+      const qIdx = serverQueue.findIndex(q =>
+        q.id === ticketId ||
+        q.id === targetId ||
         (localRecord && q.id === localRecord.id)
       );
       if (qIdx !== -1) {
@@ -3445,17 +3445,17 @@ async function completeService(id) {
   let completedItem = null;
 
   const mutationResult = await mutateQueueAtomic((serverQueue, serverHistory) => {
-    let target = serverHistory.find(h => 
-      h.id === targetId || 
-      h.id === id || 
+    let target = serverHistory.find(h =>
+      h.id === targetId ||
+      h.id === id ||
       (item && h.id === item.id) ||
       (item && item.customerName && h.customerName === item.customerName && Math.abs((h.checkedInAt || 0) - (item.checkedInAt || 0)) < 120000)
     );
 
     if (!target) {
-      const qIdx = serverQueue.findIndex(q => 
-        q.id === targetId || 
-        q.id === id || 
+      const qIdx = serverQueue.findIndex(q =>
+        q.id === targetId ||
+        q.id === id ||
         (item && q.id === item.id) ||
         (item && item.customerName && q.customerName === item.customerName)
       );
@@ -5823,11 +5823,11 @@ function renderQueue() {
           </div>
           <div class="in-service-grid">
             ${inServiceItems.map(item => {
-              const startTs = item.serviceStartedAt || item.calledAt || Date.now();
-              const elapsedMin = Math.max(1, Math.round((Date.now() - startTs) / 60000));
-              const serviceName = item.selectedServiceName ? ` — ${escapeHtml(item.selectedServiceName)}` : "";
-              const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
-              return `
+        const startTs = item.serviceStartedAt || item.calledAt || Date.now();
+        const elapsedMin = Math.max(1, Math.round((Date.now() - startTs) / 60000));
+        const serviceName = item.selectedServiceName ? ` — ${escapeHtml(item.selectedServiceName)}` : "";
+        const safeId = encodeURIComponent(String(item.id || item.customerName || '')).replace(/'/g, "%27");
+        return `
                 <div class="in-service-card">
                   <div>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem;">
@@ -5843,7 +5843,7 @@ function renderQueue() {
                   </button>
                 </div>
               `;
-            }).join("")}
+      }).join("")}
           </div>
         </div>
       `;
@@ -5862,9 +5862,9 @@ function renderQueue() {
           ${isClinical ? 'Waiting Room is Clear' : 'Lobby is Clear! All caught up.'}
         </h3>
         <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 440px; margin: 0 auto 1.15rem auto; line-height: 1.45;">
-          ${isClinical 
-            ? 'Ready for your next patient. Enter their name above to check them in, or share your QR check-in flyer.' 
-            : 'Ready for your next walk-in. Enter their name above to check them in, or share your storefront QR flyer.'}
+          ${isClinical
+        ? 'Ready for your next patient. Enter their name above to check them in, or share your QR check-in flyer.'
+        : 'Ready for your next walk-in. Enter their name above to check them in, or share your storefront QR flyer.'}
         </p>
         <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
           <button type="button" class="btn btn-primary btn-sm" onclick="focusDeskCustomerInput()" style="font-weight: 700; gap: 0.35rem;">
@@ -7233,7 +7233,7 @@ function updateActiveTicketTimer() {
   } else {
     updateTicketStepTracker(3);
     const isCompleted = state.myTicket && (
-      state.myTicket.status === "completed" || 
+      state.myTicket.status === "completed" ||
       state.myTicket.surveySent ||
       (state.history.some(h => h.id === state.myTicket.id && (h.status === "completed" || h.surveySent)))
     );
@@ -7265,7 +7265,7 @@ function updateActiveTicketTimer() {
         // or if customer has focused / started typing into the feedback textarea!
         const feedbackTextarea = document.getElementById("customer-feedback-text");
         const isUserFocusedOrTyping = feedbackTextarea && (
-          document.activeElement === feedbackTextarea || 
+          document.activeElement === feedbackTextarea ||
           (feedbackTextarea.value && feedbackTextarea.value.trim().length > 0)
         );
 
@@ -11355,7 +11355,7 @@ async function executeDeleteShop(shopSlug, shopName, shopDocId, allDocIds) {
             }, 1200);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (state.activeView === "owner-directory") {
         await loadOwnerDirectory(true);
@@ -15810,9 +15810,9 @@ function addQueueItemAtomic(newItem, isSelfCheckIn = false) {
     state.myTicket = newItem;
     SafeStorage.set(`waitlink_ticket_${state.config.slug}`, newItem);
 
-    const isDeskActive = state.activeView === "desk" || 
-                         state.currentView === "desk" || 
-                         (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
+    const isDeskActive = state.activeView === "desk" ||
+      state.currentView === "desk" ||
+      (typeof document !== "undefined" && document.getElementById("view-desk") && !document.getElementById("view-desk").classList.contains("hidden"));
     if (isDeskActive) {
       playFrontDeskChime();
     }
@@ -18631,4 +18631,3 @@ if (typeof module !== "undefined" && module.exports) {
     shareSocialStoryStatus
   };
 }
-

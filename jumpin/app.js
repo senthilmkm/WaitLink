@@ -1616,6 +1616,31 @@
       if (ride.kind === "request" && current.status === "open") {
         if (current.role === "requester") {
           secTop.appendChild(el(doc, "p", "muted", "Waiting for a driver — share this link so a driver can offer a ride."));
+          const shareUrl = current.link || (cloud && cloud.publicRideUrl && ride.rideId ? cloud.publicRideUrl(ride.rideId) : "");
+          if (shareUrl) {
+            const linkRow = el(doc, "div", "link-row");
+            linkRow.style.marginTop = "8px";
+            const linkIn = el(doc, "input");
+            linkIn.readOnly = true;
+            linkIn.value = shareUrl;
+            linkRow.appendChild(linkIn);
+            const copyIcon = el(doc, "button", "link-copy", "📋");
+            copyIcon.type = "button";
+            copyIcon.setAttribute("aria-label", "Copy link");
+            copyIcon.title = "Copy link";
+            on(copyIcon, "click", function () {
+              const clip = win.navigator && win.navigator.clipboard;
+              if (clip && clip.writeText) clip.writeText(shareUrl);
+              copyIcon.textContent = "✓";
+              showToast("Link copied!");
+              if (win.setTimeout) {
+                const tid = win.setTimeout(function () { copyIcon.textContent = "📋"; }, 2000);
+                cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
+              }
+            });
+            linkRow.appendChild(copyIcon);
+            secTop.appendChild(linkRow);
+          }
           const reqRow = el(doc, "div", "action-row");
           const cancelReqBtn = el(doc, "button", "textish");
           cancelReqBtn.type = "button";
