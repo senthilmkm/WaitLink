@@ -232,7 +232,7 @@
       "#jumpin-root .hero-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}",
       "#jumpin-root .hero-badges .hero-eyebrow{margin:0}",
       "#jumpin-root .hero-group-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.01em;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
-      "#jumpin-root .hero-start-pill{display:none}",
+      "@media (min-width:701px){#jumpin-root .hero-start-pill{display:none}}",
       "#jumpin-root .chip-btn{background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);border:1px solid var(--border-color,#cbd5e1);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;min-height:30px;cursor:pointer}",
       "#jumpin-root .chip-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.22)}",
       "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
