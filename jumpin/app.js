@@ -128,7 +128,7 @@
       "#jumpin-mid .board-group-hdr{grid-column:1 / -1;display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569}",
       "#jumpin-mid .board-group-hdr:first-child{margin-top:0}",
       "#jumpin-mid .board-group-cnt{padding:1px 7px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:11px;font-weight:700}",
-      "#jumpin-root .hero-invite-pill{display:inline-flex;align-items:center;gap:4px;width:auto;min-width:0;min-height:28px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:border-color .15s,background-color .15s}",
+      "#jumpin-mid .hero button.hero-invite-pill,#jumpin-root .hero-invite-pill{display:inline-flex;align-items:center;gap:4px;width:auto;min-width:0;min-height:28px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:border-color .15s,background-color .15s}",
       "#jumpin-root .hero-invite-pill:hover{border-color:var(--primary,#0891b2);background:#ecfeff}",
       "#jumpin-sheet .invite-qr{display:block;width:168px;height:168px;margin:8px auto 14px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
@@ -230,6 +230,12 @@
       "#jumpin-sheet .error{font-size:13.5px;color:#dc2626 !important;margin:4px 0 10px;font-weight:600}",
       "#jumpin-sheet button{min-height:44px;margin:6px 10px 0 0}",
       "#jumpin-sheet .seat-pills button,#jumpin-sheet .dur-stepper button{min-height:40px;margin:0}",
+      "#jumpin-sheet .link-row{display:flex;align-items:center;gap:8px;margin:0 0 14px}",
+      "#jumpin-sheet .link-row input{flex:1 1 auto;min-width:0;margin:0}",
+      "#jumpin-sheet .link-row .link-copy{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;min-height:44px;margin:0;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-input,#f8fafc);color:var(--primary,#0891b2);font-size:15px;font-weight:700;cursor:pointer}",
+      "#jumpin-sheet .link-row .link-copy:hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
+      "#jumpin-sheet .action-row{display:flex;align-items:center;gap:10px;margin:4px 0 0}",
+      "#jumpin-sheet .action-row button{flex:1 1 0;margin:0}",
       "#jumpin-sheet .sheet-menu{display:grid;gap:8px;margin:0 0 12px}",
       "#jumpin-sheet .sheet-item{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin:0;padding:12px 14px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:15px;font-weight:600;text-align:left;cursor:pointer}",
       "#jumpin-sheet .sheet-item.danger{color:#be123c;background:#fff1f2;border-color:#fecdd3}",
@@ -533,26 +539,31 @@
       inp.readOnly = true;
       inp.value = inviteUrl;
       row.appendChild(inp);
-      const copyBtn = el(doc, "button", "link-copy", "📋 Copy");
+      const copyBtn = el(doc, "button", "link-copy");
       copyBtn.type = "button";
+      copyBtn.setAttribute("aria-label", "Copy link");
+      copyBtn.title = "Copy link";
+      copyBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
       on(copyBtn, "click", function () {
         const clip = win.navigator && win.navigator.clipboard;
         if (clip && clip.writeText) clip.writeText(inviteUrl);
-        copyBtn.textContent = "✓ Copied";
+        copyBtn.textContent = "✓";
         showToast("Link copied!");
       });
       row.appendChild(copyBtn);
       sheet.appendChild(row);
+      const actRow = el(doc, "div", "action-row");
       const shareBtn = el(doc, "button", "confirm-primary", "📤 Share invite");
       shareBtn.type = "button";
       on(shareBtn, "click", function () {
         shareUrl("Join " + gName + " on JumpIn", "Join our " + gName + " carpool board:", inviteUrl);
       });
-      sheet.appendChild(shareBtn);
+      actRow.appendChild(shareBtn);
       const doneBtn = el(doc, "button", "textish", "Close");
       doneBtn.type = "button";
       on(doneBtn, "click", function () { inviteModal = false; draw(); });
-      sheet.appendChild(doneBtn);
+      actRow.appendChild(doneBtn);
+      sheet.appendChild(actRow);
       return sheet;
     }
 

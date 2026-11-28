@@ -2400,7 +2400,7 @@ it("groups board by Today/Tomorrow/Upcoming, opens Invite QR sheet, and shares r
   const sheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
   assert.ok(sheet);
   assert.ok(sheet.querySelectorAll("img").some(function (img) { return img.className === "invite-qr" && img.src.indexOf("oak") !== -1; }));
-  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "📋 Copy"; })._listeners[0]();
+  sheet.querySelectorAll("button").find(function (b) { return b.className === "link-copy"; })._listeners[0]();
   assert.ok(copiedText.indexOf("oak") !== -1);
   sheet.querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share invite"; })._listeners[0]();
   assert.ok(copiedText.indexOf("Oak Hills") !== -1);
