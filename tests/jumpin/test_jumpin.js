@@ -2313,6 +2313,42 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   view.destroy();
 });
 
+it("renders stacked route cards on board with spinner on tap and desktop 640px post-card CSS", async function () {
+  const win = fakeWindow();
+  win.JumpInCloud = {
+    watchBoard: function () { return function () { }; },
+    watchRide: function () { return function () { }; },
+    roleFor: function () { return ""; },
+    publicRideUrl: function (id) { return "https://waitlink.app?s=jumpin&view=ride&ride=" + id; }
+  };
+  const mounted = view.mount(win);
+  mounted.setState(Object.assign(ui.blank(), {
+    rides: [
+      { rideId: "r_offer", kind: "offer", from: "Fort Mill SC 29715", to: "800 West Trade St, Charlotte NC 28255", when: "Mon 8:00 AM", seatsLeft: 3, driverName: "Senthil", durationMinutes: 60 },
+      { rideId: "r_req", kind: "request", from: "Morrisville 27560", to: "Bank of America Gateway", when: "Tue 6:30 AM", seatsRequested: 1, requesterName: "Arvind" }
+    ]
+  }));
+  const rows = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("row") !== -1; });
+  assert.strictEqual(rows.length, 2);
+  rows.forEach(function (row) {
+    const divs = row.querySelectorAll("div");
+    assert.ok(divs.some(function (d) { return d.className === "route-stack"; }));
+    assert.ok(divs.some(function (d) { return d.className === "route-stop route-stop-from"; }));
+    assert.ok(divs.some(function (d) { return d.className === "route-stop"; }));
+  });
+  const firstStops = rows[0].querySelectorAll("div").filter(function (d) { return d.className === "route-stop-txt"; });
+  assert.strictEqual(firstStops[0].textContent, "Fort Mill SC 29715");
+  assert.strictEqual(firstStops[1].textContent, "800 West Trade St, Charlotte NC 28255");
+  rows[0]._listeners[0]();
+  assert.strictEqual(rows[0].disabled, true);
+  assert.ok(rows[0].querySelectorAll("span").some(function (s) { return s.className === "jumpin-spin dark"; }));
+  const styleText = win.document.head.children.map(function (c) { return c.textContent || ""; }).join("\n");
+  assert.ok(styleText.indexOf(".route-stop-from::after") !== -1);
+  assert.ok(styleText.indexOf("overflow-wrap:anywhere") !== -1);
+  assert.ok(styleText.indexOf("#jumpin-root.app-screen #jumpin-mid.post-card{flex:0 0 auto;width:calc(100% - 48px);max-width:640px") !== -1);
+  view.destroy();
+});
+
 function fakeWindow() {
   const listeners = {};
   function node(tag) {
