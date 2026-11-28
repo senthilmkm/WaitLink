@@ -425,6 +425,17 @@
         isDefault: !groupMeta.groupId || groupMeta.groupId === "default"
       };
     }
+    function openPostScreen() {
+      const kept = state.rides || [];
+      postRole = "";
+      pickedWhen = "";
+      repeatMode = "once";
+      repeatWeekdays = [];
+      repeatWeeks = 2;
+      repeatSkips = [];
+      state = ui.reduce(state, { type: "post" });
+      state.rides = kept;
+    }
     let boardQuery = "";
     let boardDateFilter = "all";
     let boardPage = 1;
@@ -2259,11 +2270,7 @@
                 boardPage = 1;
                 draw();
               } else {
-                const kept = state.rides || [];
-                postRole = "";
-                pickedWhen = "";
-                state = ui.reduce(state, { type: "post" });
-                state.rides = kept;
+                openPostScreen();
                 draw();
               }
             });
@@ -2986,15 +2993,7 @@
         button.appendChild(doc.createTextNode(label));
         on(button, "click", function () {
           if (label === "Post a ride") {
-            const kept = state.rides || [];
-            postRole = "";
-            pickedWhen = "";
-            repeatMode = "once";
-            repeatWeekdays = [];
-            repeatWeeks = 2;
-            repeatSkips = [];
-            state = ui.reduce(state, { type: "post" });
-            state.rides = kept;
+            openPostScreen();
           }
           else if (label === "🚗 I can drive") {
             state = Object.assign(ui.reduce(state, { type: "claim-open" }), { claimDraft: null });
@@ -3185,11 +3184,7 @@
         postTab.appendChild(el(doc, "span", "ico", "➕"));
         postTab.appendChild(el(doc, "span", "", "Post Ride"));
         on(postTab, "click", function () {
-          const kept = state.rides || [];
-          postRole = "";
-          pickedWhen = "";
-          state = ui.reduce(state, { type: "post" });
-          state.rides = kept;
+          openPostScreen();
           draw();
         });
         mbar.appendChild(ridesTab);
