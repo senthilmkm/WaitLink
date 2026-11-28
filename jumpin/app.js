@@ -185,11 +185,17 @@
       "#jumpin-mid .cost-tag{padding:2px 8px;border-radius:999px;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;font-weight:700;font-size:12px}",
       "#jumpin-mid .trip-cnt-tag{padding:2px 7px;border-radius:999px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:11px;font-weight:700;white-space:nowrap}",
       "#jumpin-mid .series-tag{padding:2px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:11px;font-weight:700;white-space:nowrap}",
-      "#jumpin-mid .repeat-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}",
-      "#jumpin-mid .repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:0 0 12px}",
-      "#jumpin-mid .repeat-day-btn{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:700;cursor:pointer}",
-      "#jumpin-mid .repeat-day-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
-      "#jumpin-mid .repeat-preview{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}",
+      "#jumpin-mid .repeat-seg,#jumpin-mid .repeat-wks-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;background:#f1f5f9;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;margin:0 0 14px}",
+      "#jumpin-mid .repeat-wks-seg{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 12px}",
+      "#jumpin-mid .repeat-seg-btn{min-height:38px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--text-muted,#475569);font-size:14px;font-weight:700;cursor:pointer;transition:background-color .15s,color .15s,box-shadow .15s}",
+      "#jumpin-mid .repeat-seg-btn.active{background:#fff;color:var(--primary,#0891b2);box-shadow:0 1px 4px rgba(15,23,42,.1)}",
+      "#jumpin-mid .repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));justify-items:center;gap:6px;margin:0 0 14px}",
+      "#jumpin-mid .repeat-day-btn{width:40px;height:40px;min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:999px;background:#fff;color:var(--text-main,#090d16);font-size:13px;font-weight:700;cursor:pointer;display:grid;place-items:center}",
+      "#jumpin-mid .repeat-day-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff;box-shadow:0 2px 6px rgba(8,145,178,.22)}",
+      "@media (max-width:420px){#jumpin-mid .repeat-day-btn{width:36px;height:36px;min-height:36px;font-size:12.5px}}",
+      "#jumpin-mid .repeat-preview-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:0 0 14px}",
+      "#jumpin-mid .repeat-preview-box .hint,#jumpin-mid .repeat-preview-box .error{margin:0 0 8px}",
+      "#jumpin-mid .repeat-preview{display:flex;flex-wrap:wrap;gap:6px;margin:0}",
       "#jumpin-mid .repeat-date-chip{min-height:34px;padding:4px 10px;border-radius:999px;border:1px solid #a5f3fc;background:#ecfeff;color:#0e7490;font-size:12.5px;font-weight:700;cursor:pointer}",
       "#jumpin-mid .repeat-date-chip.skipped{border-color:#cbd5e1;background:#f1f5f9;color:#64748b;text-decoration:line-through}",
       "#jumpin-mid .mini-av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:rgba(8,145,178,.14);color:#0e7490;font-size:12px;font-weight:700;flex-shrink:0}",
@@ -306,7 +312,11 @@
       "#jumpin-root .action-row.row-split button{width:100%;min-width:0;margin:0;justify-content:center;text-align:center}",
       "#jumpin-ptr{display:flex;align-items:center;justify-content:center;overflow:hidden;height:0;opacity:0;font-size:12.5px;font-weight:700;color:var(--primary,#0891b2);transition:height .15s,opacity .15s}",
       "#jumpin-root .chip-btn:not(.active):hover{background:rgba(8,145,178,.08);border-color:var(--primary,#0891b2)}",
-      "#jumpin-root .board-search{width:100%;max-width:340px;min-height:40px;margin:0;padding:0 14px;font-size:15px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16)}",
+      "#jumpin-mid .board-search-wrap{position:relative;flex:0 1 320px;width:100%;max-width:340px}",
+      "#jumpin-root .board-search{width:100%;max-width:none;min-height:40px;margin:0;padding:0 44px 0 14px;font-size:16px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);color:var(--text-main,#090d16);-webkit-appearance:none;appearance:none}",
+      "#jumpin-root .board-search::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}",
+      "#jumpin-mid .board-search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:28px;height:28px;min-height:28px;margin:0;padding:0;border:0;border-radius:999px;background:#cbd5e1;color:#0f172a;font-size:13px;font-weight:700;cursor:pointer;display:grid;place-items:center}",
+      "#jumpin-mid .board-search-clear:active{transform:translateY(-50%) scale(0.95)}",
       "#jumpin-mid .board-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin:0 0 14px}",
       "#jumpin-mid .filter-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}",
       "#jumpin-mid .filter-chip{flex:0 0 auto;min-height:36px;padding:6px 10px;border-radius:999px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--text-muted,#1e293b);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
@@ -315,7 +325,7 @@
       "#jumpin-mid .pager-btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border-color,#cbd5e1);background:var(--bg-card,#fff);color:var(--primary,#0891b2);font-size:14px;font-weight:700;cursor:pointer}",
       "#jumpin-mid .pager-btn:disabled{opacity:.45;cursor:not-allowed;color:var(--text-muted,#64748b)}",
       "#jumpin-mid .pager-info{font-size:14px;font-weight:600;color:var(--text-muted,#475569);padding:0 6px;white-space:nowrap}",
-      "@media (max-width:700px){#jumpin-mid .board-tools{flex-wrap:nowrap;gap:8px;margin:0 0 10px}#jumpin-root .board-search{flex:0 1 138px;min-width:108px;max-width:150px;min-height:34px;padding:4px 10px;font-size:13px}#jumpin-mid .filter-row{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:0}#jumpin-mid .filter-chip{min-height:34px;padding:4px 8px;font-size:12px}#jumpin-mid .filter-row::-webkit-scrollbar{display:none}}",
+      "@media (max-width:700px){#jumpin-mid .board-tools{flex-direction:column;align-items:stretch;gap:8px;margin:0 0 12px}#jumpin-mid .board-search-wrap{order:-1;flex:none;width:100%;max-width:none}#jumpin-root .board-search{min-width:0;min-height:40px;padding:6px 44px 6px 12px;font-size:16px}#jumpin-mid .filter-row{width:100%;flex-wrap:wrap;gap:6px}#jumpin-mid .filter-chip{min-height:34px;padding:4px 10px;font-size:12.5px}}",
       "@media (max-width:519px){#jumpin-mid .pager-edge{display:none}}",
       "#jumpin-root .recovery-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color,#e2e8f0)}",
       "#jumpin-root .section-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#475569);margin:14px 0 6px}",
@@ -353,7 +363,7 @@
       "body.jumpin-ios #jumpin-top{background:rgba(249,249,249,.86);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,.2);box-shadow:none}",
       "body.jumpin-ios #jumpin-mid .hero{background:#ffffff;border:0.5px solid rgba(60,60,67,.16);border-top:0.5px solid rgba(60,60,67,.16);border-radius:16px;box-shadow:none}",
       "body.jumpin-ios #jumpin-mid h1{font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",sans-serif;letter-spacing:-.025em}",
-      "body.jumpin-ios #jumpin-mid .filter-row{background:#e5e5ea;padding:2px;border-radius:10px;gap:1px}",
+      "body.jumpin-ios #jumpin-mid .filter-row{background:#e5e5ea;padding:3px;border-radius:10px;gap:2px}",
       "body.jumpin-ios #jumpin-mid .filter-chip{border:0;background:transparent;border-radius:8px;min-height:32px;padding:4px 8px;color:#1c1c1e;box-shadow:none}",
       "body.jumpin-ios #jumpin-mid .filter-chip.active{background:#ffffff;color:#0891b2;box-shadow:0 1px 4px rgba(0,0,0,.12)}",
       "body.jumpin-ios #jumpin-root .board-search{background:#e5e5ea;border:0;border-radius:10px;min-height:36px}",
@@ -2208,10 +2218,12 @@
           pager.textContent = "";
           const q = boardQuery.trim().toLowerCase();
           const nowMs = Date.now();
-          const shown = visibleRides.filter(function (ride) {
-            if (!matchesDateFilter(ride, boardDateFilter, nowMs)) return false;
+          function matchesQuery(ride) {
             if (!q) return true;
-            return [ride.from, ride.to, ride.driverName, ride.requesterName, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
+            return [ride.from, ride.to, ride.driverName, ride.requesterName, ride.vehicle, ride.note, shortTripId(ride.rideId || ride.id)].join(" ").toLowerCase().indexOf(q) !== -1;
+          }
+          const shown = visibleRides.filter(function (ride) {
+            return matchesDateFilter(ride, boardDateFilter, nowMs) && matchesQuery(ride);
           });
           if (!shown.length) {
             if ((groupMeta.status && groupMeta.status !== "active") || groupMeta.enabled === false) return;
@@ -2226,9 +2238,10 @@
             }
             const empty = el(doc, "div", "empty");
             const filtered = !!(q || boardDateFilter !== "all");
+            const hiddenByDate = !!(q && boardDateFilter !== "all" && visibleRides.some(matchesQuery));
             empty.appendChild(el(doc, "div", "empty-icon", filtered ? "🔍" : "🚗"));
             empty.appendChild(el(doc, "p", "route", filtered ? "No matching rides" : "No rides yet"));
-            empty.appendChild(el(doc, "p", "muted", filtered ? "Try another date or clear the filter." : "Post one trip and it will show up here."));
+            empty.appendChild(el(doc, "p", "muted", hiddenByDate ? "No matches in this filter — tap \"Show all rides\" to see all dates." : (filtered ? "Try another date or clear the filter." : "Post one trip and it will show up here.")));
             const emptyBtn = el(doc, "button", "textish", filtered ? "Show all rides" : "Offer a ride");
             emptyBtn.style.marginTop = "12px";
             on(emptyBtn, "click", function () {
@@ -2366,13 +2379,37 @@
           });
           tools.appendChild(filterRow);
           if (rides.length >= 5) {
+            const searchWrap = el(doc, "div", "board-search-wrap");
             const search = el(doc, "input", "board-search");
             search.type = "search";
             search.placeholder = "Search route or city…";
             search.value = boardQuery;
             search.setAttribute("aria-label", "Search rides");
-            on(search, "input", function () { boardQuery = search.value || ""; boardPage = 1; paintBoard(); });
-            tools.appendChild(search);
+            const clearBtn = el(doc, "button", "board-search-clear", "✕");
+            clearBtn.type = "button";
+            clearBtn.setAttribute("aria-label", "Clear search");
+            function syncClearBtn() { clearBtn.style.display = (search.value || "") ? "grid" : "none"; }
+            function handleSearchInput() {
+              boardQuery = search.value || "";
+              boardPage = 1;
+              syncClearBtn();
+              paintBoard();
+            }
+            on(search, "input", handleSearchInput);
+            on(search, "search", handleSearchInput);
+            on(search, "change", handleSearchInput);
+            on(clearBtn, "click", function () {
+              boardQuery = "";
+              search.value = "";
+              boardPage = 1;
+              syncClearBtn();
+              paintBoard();
+              if (search.focus) search.focus();
+            });
+            syncClearBtn();
+            searchWrap.appendChild(search);
+            searchWrap.appendChild(clearBtn);
+            tools.appendChild(searchWrap);
           }
           wrap.appendChild(tools);
         }
@@ -2578,7 +2615,7 @@
           secSched.appendChild(el(doc, "label", "lbl", "Repeat"));
           const repSeg = el(doc, "div", "repeat-seg");
           [["once", "One-time"], ["weekly", "Weekly"]].forEach(function (opt) {
-            const rb = el(doc, "button", "seat-pill" + (repeatMode === opt[0] ? " active" : ""), opt[1]);
+            const rb = el(doc, "button", "repeat-seg-btn" + (repeatMode === opt[0] ? " active" : ""), opt[1]);
             rb.type = "button";
             on(rb, "click", function () {
               savePostDraft();
@@ -2600,7 +2637,7 @@
             secSched.appendChild(el(doc, "label", "lbl", "Days of week"));
             const daysGrid = el(doc, "div", "repeat-days");
             const dayLabels = [["S", "Sunday"], ["M", "Monday"], ["T", "Tuesday"], ["W", "Wednesday"], ["T", "Thursday"], ["F", "Friday"], ["S", "Saturday"]];
-            const previewHost = el(doc, "div");
+            const previewHost = el(doc, "div", "repeat-preview-box");
             function paintRepeatPreview() {
               previewHost.innerHTML = "";
               const built = core.buildRecurringDates({
@@ -2613,6 +2650,7 @@
                 horizonDays: groupHorizonDays(),
                 nowMs: Date.now()
               });
+              previewHost.appendChild(el(doc, "p", built.error ? "error" : "hint", built.error || ("Posting " + built.included.length + (built.included.length === 1 ? " ride" : " rides") + " · Tap any day to skip")));
               const chipsWrap = el(doc, "div", "repeat-preview");
               built.dates.forEach(function (item) {
                 const lbl = shortDateChip(item.date);
@@ -2626,7 +2664,6 @@
                 chipsWrap.appendChild(chip);
               });
               previewHost.appendChild(chipsWrap);
-              previewHost.appendChild(el(doc, "p", built.error ? "error" : "hint", built.error || ("Posting " + built.included.length + (built.included.length === 1 ? " ride" : " rides") + " · Tap any day to skip")));
             }
             dayLabels.forEach(function (dl, idx) {
               const db = el(doc, "button", "repeat-day-btn" + (repeatWeekdays.indexOf(idx) !== -1 ? " active" : ""), dl[0]);
@@ -2642,13 +2679,13 @@
             });
             secSched.appendChild(daysGrid);
             secSched.appendChild(el(doc, "label", "lbl", "For how long"));
-            const wksRow = el(doc, "div", "chip-row");
+            const wksRow = el(doc, "div", "repeat-wks-seg");
             [2, 4, 6].forEach(function (w) {
-              const wb = el(doc, "button", "chip-btn" + (repeatWeeks === w ? " active" : ""), w + " wks");
+              const wb = el(doc, "button", "repeat-seg-btn" + (repeatWeeks === w ? " active" : ""), w + " wks");
               wb.type = "button";
               on(wb, "click", function () {
                 repeatWeeks = w;
-                wksRow.querySelectorAll("button").forEach(function (b) { b.className = "chip-btn" + (b.textContent === (w + " wks") ? " active" : ""); });
+                wksRow.querySelectorAll("button").forEach(function (b) { b.className = "repeat-seg-btn" + (b.textContent === (w + " wks") ? " active" : ""); });
                 paintRepeatPreview();
               });
               wksRow.appendChild(wb);
@@ -2660,10 +2697,19 @@
           }
         }
         const maxSeats = groupMaxSeats();
-        secSched.appendChild(el(doc, "label", "lbl", postRole === "rider" ? "Seats needed" : "Seats"));
-        buildSeatPills(doc, secSched, "seats", maxSeats, Math.min(maxSeats, Number((state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3))));
-        if (postRole !== "rider") {
-          secSched.appendChild(el(doc, "label", "lbl", "Estimated duration"));
+        const seatDefault = Math.min(maxSeats, Number((state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3)));
+        if (postRole === "rider") {
+          secSched.appendChild(el(doc, "label", "lbl", "Seats needed"));
+          buildSeatStepper(doc, secSched, "seats", 1, maxSeats, seatDefault, function (n) { return n === 1 ? "1 seat" : n + " seats"; });
+        } else {
+          const capPair = el(doc, "div", "form-pair");
+          const seatsCell = el(doc, "div");
+          seatsCell.appendChild(el(doc, "label", "lbl", "Seats"));
+          buildSeatStepper(doc, seatsCell, "seats", 1, maxSeats, seatDefault, function (n) { return n === 1 ? "1 seat" : n + " seats"; });
+          if (seatsCell.lastChild) seatsCell.lastChild.style.marginBottom = "0";
+          capPair.appendChild(seatsCell);
+          const durCell = el(doc, "div");
+          durCell.appendChild(el(doc, "label", "lbl", "Estimated duration"));
           const dur = el(doc, "input");
           dur.type = "hidden";
           dur.name = "durationMinutes";
@@ -2680,35 +2726,23 @@
           const plusDur = el(doc, "button", "dur-btn", "+");
           plusDur.type = "button";
           plusDur.setAttribute("aria-label", "Increase duration by 30 minutes");
-          const durBtns = [];
           function syncDur(next) {
             durMins = Math.max(30, Math.min(900, next));
             dur.value = String(durMins);
             durReadout.textContent = core.formatDuration(durMins);
             minusDur.disabled = durMins <= 30;
             plusDur.disabled = durMins >= 900;
-            durBtns.forEach(function (pair) {
-              pair[1].className = "chip-btn" + (durMins === pair[0] ? " active" : "");
-            });
           }
           on(minusDur, "click", function () { syncDur(durMins - 30); });
           on(plusDur, "click", function () { syncDur(durMins + 30); });
           stepper.appendChild(minusDur);
           stepper.appendChild(durReadout);
           stepper.appendChild(plusDur);
-          secSched.appendChild(dur);
-          secSched.appendChild(stepper);
-          const durChips = el(doc, "div", "chip-row");
-          durChips.style.marginBottom = "0";
-          [["30m", 30], ["1h", 60], ["2h", 120], ["3h", 180]].forEach(function (spec) {
-            const dc = el(doc, "button", "chip-btn", spec[0]);
-            dc.type = "button";
-            on(dc, "click", function () { syncDur(spec[1]); });
-            durBtns.push([spec[1], dc]);
-            durChips.appendChild(dc);
-          });
+          durCell.appendChild(dur);
+          durCell.appendChild(stepper);
           syncDur(durMins);
-          secSched.appendChild(durChips);
+          capPair.appendChild(durCell);
+          secSched.appendChild(capPair);
         }
         mid.appendChild(secSched);
         const secDriver = el(doc, "section", "post-section");

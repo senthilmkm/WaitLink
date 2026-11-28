@@ -568,8 +568,9 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   swapBtn._listeners[0]();
   assert.strictEqual(fromIn.value, "Work");
   assert.strictEqual(toIn.value, "Home");
-  const seat5 = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className.indexOf("seat-pill") !== -1 && b.textContent === "5"; })[0];
-  seat5._listeners[0]();
+  const incSeatsBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase seats"; });
+  incSeatsBtn._listeners[0]();
+  incSeatsBtn._listeners[0]();
   assert.strictEqual(seatsIn.value, "5");
   mounted.root.children[0].children[0]._listeners[0]();
   assert.strictEqual(ui.buttonLabel(mounted.getState()), "Post a ride");
@@ -1412,11 +1413,26 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   filterChips[2]._listeners[0](); // Tomorrow
   filterChips[3]._listeners[0](); // This week
   const latestTools = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board-tools"; });
-  const searchInp = latestTools.children[1];
+  const searchInp = latestTools.querySelectorAll("input").find(function (c) { return c.className === "board-search"; });
+  const clearSearchBtn = latestTools.querySelectorAll("button").find(function (c) { return c.className === "board-search-clear"; });
+  searchInp.value = "NoSuchRoute";
+  searchInp._listeners[0]();
+  assert.strictEqual(clearSearchBtn.style.display, "grid");
+  clearSearchBtn._listeners[0]();
+  assert.strictEqual(searchInp.value, "");
+  assert.strictEqual(clearSearchBtn.style.display, "none");
   searchInp.value = "NoSuchRoute";
   searchInp._listeners[0]();
   const emptyBox = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children[0];
   emptyBox.children.find(function (c) { return c.textContent === "Show all rides"; })._listeners[0]();
+  // Searching a matching route while a narrower date filter hides it shows contextual hint
+  const tmrwChip = addMount.root.children[1].children[0].querySelectorAll("button").find(function (b) { return b.textContent.indexOf("Tomorrow") === 0; });
+  tmrwChip._listeners[0]();
+  const searchAfterTmrw = addMount.root.children[1].children[0].querySelectorAll("input").find(function (c) { return c.className === "board-search"; });
+  searchAfterTmrw.value = "City14";
+  searchAfterTmrw._listeners[0]();
+  const dateHiddenMsg = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children[0].children.find(function (c) { return c.className === "muted"; }).textContent;
+  assert.ok(dateHiddenMsg.indexOf("see all dates") !== -1);
   view.destroy();
 });
 
@@ -2222,16 +2238,20 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(mounted.root.children[2].querySelectorAll("button").length, 0);
   noticeCb({ platformEnabled: false, iosThemeEnabled: false, needARideEnabled: false, maintenanceMessage: "Upgrading servers until 10 PM." });
   assert.ok(mounted.root.children[1].querySelectorAll("p").some(function (p) { return p.textContent === "Upgrading servers until 10 PM."; }));
-  // groupMeta.maxSeats caps seat pills for both Driver and Rider (1-6)
+  // groupMeta.maxSeats caps seat stepper for both Driver and Rider (1-6)
   noticeCb({ platformEnabled: true, iosThemeEnabled: false, needARideEnabled: true, maintenanceMessage: "" });
   groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 6, contactEmail: "" });
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
   mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[1]._listeners[0]();
-  assert.ok(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.className && b.className.indexOf("seat-pill") !== -1 && b.textContent === "6"; }));
+  const inc6 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase seats"; });
+  for (let i = 0; i < 6; i++) inc6._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (x) { return x.name === "seats"; }).value, "6");
   groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true, maxSeats: 4, contactEmail: "" });
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
   mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[1]._listeners[0]();
-  assert.strictEqual(mounted.root.children[1].querySelectorAll("button").some(function (b) { return b.className && b.className.indexOf("seat-pill") !== -1 && b.textContent === "5"; }), false);
+  const inc4 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase seats"; });
+  for (let i = 0; i < 6; i++) inc4._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (x) { return x.name === "seats"; }).value, "4");
   const reqMax6Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 6 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
   assert.strictEqual((await service.postRideRequest(reqMax6Db, postInput({ seats: 6 }), NOW)).ok, true);
   const reqMax4Db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxSeats: 4 }), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
@@ -2257,14 +2277,14 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   const todayBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Today"; });
   if (todayBtn && todayBtn._listeners && todayBtn._listeners[0]) todayBtn._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("role-card") !== -1; })[0]._listeners[0]();
-  const dur30 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "30m"; });
-  const dur1h = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "1h"; });
-  assert.ok(dur30.className.indexOf("active") !== -1);
-  dur1h._listeners[0]();
-  assert.ok(dur1h.className.indexOf("active") !== -1);
-  assert.strictEqual(dur30.className.indexOf("active"), -1);
-  dur30._listeners[0]();
-  assert.ok(dur30.className.indexOf("active") !== -1);
+  const incDur = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase duration by 30 minutes"; });
+  const decDur = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Decrease duration by 30 minutes"; });
+  assert.strictEqual(decDur.disabled, true);
+  incDur._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (x) { return x.name === "durationMinutes"; }).value, "60");
+  assert.strictEqual(decDur.disabled, false);
+  decDur._listeners[0]();
+  assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (x) { return x.name === "durationMinutes"; }).value, "30");
   // "In 30m" chip stays active across re-renders (e.g. opening extras)
   const in30 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
   in30._listeners[0]();
