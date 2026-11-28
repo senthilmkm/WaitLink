@@ -2496,6 +2496,9 @@
               const tmp = postInputs.from.value;
               postInputs.from.value = postInputs.to.value;
               postInputs.to.value = tmp;
+              const tmpPh = postInputs.from.placeholder;
+              postInputs.from.placeholder = postInputs.to.placeholder;
+              postInputs.to.placeholder = tmpPh;
             });
             toHead.appendChild(swapBtn);
             host.appendChild(toHead);

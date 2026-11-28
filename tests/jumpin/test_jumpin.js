@@ -568,6 +568,8 @@ it("covers date edges, button labels, recovery, retention, and the admin gate", 
   swapBtn._listeners[0]();
   assert.strictEqual(fromIn.value, "Work");
   assert.strictEqual(toIn.value, "Home");
+  assert.strictEqual(fromIn.placeholder, "Office");
+  assert.strictEqual(toIn.placeholder, "Library");
   const incSeatsBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase seats"; });
   incSeatsBtn._listeners[0]();
   incSeatsBtn._listeners[0]();
