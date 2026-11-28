@@ -1201,12 +1201,13 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   clickPost(mounted);
   await new Promise(function (resolve) { setTimeout(resolve, 0); });
   assert.strictEqual(mounted.getState().mode, "posted");
-  const cardText = mounted.root.children[1].children[0].children.map(function (child) {
+  const cardEl = mounted.root.children[1].children[0];
+  const cardText = cardEl.children.map(function (child) {
     if (child.textContent || child.value) return child.textContent || child.value;
     return (child.children || []).map(function (c) { return c.textContent || c.value || ""; }).join(" ");
-  }).join(" ");
+  }).join(" ") + " " + cardEl.querySelectorAll("div").map(function (d) { return d.textContent || ""; }).join(" ");
   assert.ok(cardText.indexOf("Trip posted.") !== -1);
-  assert.ok(cardText.indexOf("Library → Office") !== -1);
+  assert.ok(cardText.indexOf("Library") !== -1 && cardText.indexOf("Office") !== -1);
   assert.ok(cardText.indexOf("ride_live") !== -1);
   assert.strictEqual(mounted.root.style.height, "auto");
 
@@ -2346,6 +2347,19 @@ it("renders stacked route cards on board with spinner on tap and desktop 640px p
   assert.ok(styleText.indexOf(".route-stop-from::after") !== -1);
   assert.ok(styleText.indexOf("overflow-wrap:anywhere") !== -1);
   assert.ok(styleText.indexOf("#jumpin-root.app-screen #jumpin-mid.post-card{flex:0 0 auto;width:calc(100% - 48px);max-width:640px") !== -1);
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "ride",
+    status: "open",
+    ride: { rideId: "r_offer", kind: "offer", from: "Fort Mill SC 29715", to: "800 West Trade St, Charlotte NC 28255", when: "Mon 8:00 AM", seatsLeft: 3, driverName: "Senthil", durationMinutes: 60 }
+  }));
+  assert.ok(mounted.root.children[1].querySelectorAll("div").some(function (d) { return d.className === "route-stack route-stack-lg"; }));
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "reserved",
+    route: "Fort Mill SC 29715 → 800 West Trade St, Charlotte NC 28255",
+    when: "Mon 8:00 AM",
+    seatsText: "1 seat reserved"
+  }));
+  assert.ok(mounted.root.children[1].querySelectorAll("div").some(function (d) { return d.className === "route-stack route-stack-lg"; }));
   view.destroy();
 });
 
