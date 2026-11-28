@@ -3479,8 +3479,8 @@
           holdTimer = setTimeout(function () {
             held = true;
             stepFn();
-            repeatTimer = setInterval(stepFn, 260);
-          }, 400);
+            repeatTimer = setInterval(stepFn, 330);
+          }, 420);
         });
         on(b, "pointerup", stopHold);
         on(b, "pointercancel", stopHold);
