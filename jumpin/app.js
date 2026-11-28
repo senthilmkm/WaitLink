@@ -1076,6 +1076,7 @@
       const maxSeats = groupMaxSeats();
       sheet.appendChild(el(doc, "label", "lbl", "Seats"));
       buildSeatStepper(doc, sheet, "seats", 1, maxSeats, Math.min(maxSeats, Number(draft.seats || 3)), function (v) { return v === 1 ? "1 seat" : v + " seats"; });
+      addField("Car / Color, optional", "vehicle", "text", draft.vehicle || loadProfile().vehicle, "e.g. Silver Honda CR-V");
       addField("Pickup note, optional", "note", "text", draft.note, "e.g. Meet by North entrance");
       addField("Ride cost per seat (optional, $)", "rideCost", "number", draft.rideCost, "0");
       if (state.error && !state.field) sheet.appendChild(el(doc, "p", "error", state.error));
