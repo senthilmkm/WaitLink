@@ -1,22 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>JumpIn — Community Carpool</title>
-  <meta name="description" content="Private neighborhood &amp; community carpool boards. Post a ride, request a ride when you need a driver, reserve a seat, and coordinate via SMS. Zero app fees.">
+  <meta name="description"
+    content="Private neighborhood &amp; community carpool boards. Post a ride, request a ride when you need a driver, reserve a seat, and coordinate via SMS. Zero app fees.">
   <link rel="canonical" href="https://waitlink.app/jumpin">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="JumpIn">
   <meta property="og:title" content="JumpIn — Community Carpool">
-  <meta property="og:description" content="Post a ride, request a ride (Need a Ride), or reserve a seat on your neighborhood carpool board. Zero app fees, instant SMS updates.">
+  <meta property="og:description"
+    content="Post a ride, request a ride (Need a Ride), or reserve a seat on your neighborhood carpool board. Zero app fees, instant SMS updates.">
   <meta property="og:url" content="https://waitlink.app/jumpin">
   <meta property="og:image" content="https://waitlink.app/assets/jumpin-icon-512.png?v=2">
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="JumpIn — Community Carpool">
-  <meta name="twitter:description" content="Post a ride, request a ride (Need a Ride), or reserve a seat on your neighborhood carpool board. Zero app fees, instant SMS updates.">
+  <meta name="twitter:description"
+    content="Post a ride, request a ride (Need a Ride), or reserve a seat on your neighborhood carpool board. Zero app fees, instant SMS updates.">
   <meta name="twitter:image" content="https://waitlink.app/assets/jumpin-icon-512.png?v=2">
   <meta name="theme-color" content="#0891b2">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,17 +31,39 @@
   <link rel="icon" type="image/png" sizes="512x512" href="assets/jumpin-icon-512.png?v=2">
   <link rel="apple-touch-icon" href="assets/jumpin-icon-192.png?v=2">
   <style>
-    body.jumpin-on{display:block;margin:0;min-height:100dvh;background:#f1f5f9;color:#090d16;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif}
-    #jumpin-root{display:flex;flex-direction:column;min-height:100dvh;background:#f1f5f9;color:#090d16}
-    .jumpin-boot{display:grid;place-items:center;min-height:100dvh;padding:24px;text-align:center}
+    body.jumpin-on {
+      display: block;
+      margin: 0;
+      min-height: 100dvh;
+      background: #f1f5f9;
+      color: #090d16;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif
+    }
+
+    #jumpin-root {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      background: #f1f5f9;
+      color: #090d16
+    }
+
+    .jumpin-boot {
+      display: grid;
+      place-items: center;
+      min-height: 100dvh;
+      padding: 24px;
+      text-align: center
+    }
   </style>
   <script defer src="/firebase-app-compat.js"></script>
   <script defer src="/firebase-firestore-compat.js"></script>
   <script defer src="/jumpin/core.js?v=20261127b"></script>
   <script defer src="/jumpin/ui-state.js?v=20261127b"></script>
   <script defer src="/jumpin/cloud.js?v=20261127b"></script>
-  <script defer src="/jumpin/app.js?v=20261128c"></script>
+  <script defer src="/jumpin/app.js?v=20261128d"></script>
 </head>
+
 <body class="jumpin-on">
   <div id="jumpin-root">
     <div class="jumpin-boot">
@@ -48,4 +74,5 @@
     </div>
   </div>
 </body>
+
 </html>

@@ -125,6 +125,12 @@
       "#jumpin-mid .hero-org a{color:var(--primary,#0891b2);font-weight:700;text-decoration:underline;text-underline-offset:2px}",
       "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer;box-shadow:0 6px 18px rgba(8,145,178,.24)}",
       "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
+      "#jumpin-mid .board-group-hdr{grid-column:1 / -1;display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569}",
+      "#jumpin-mid .board-group-hdr:first-child{margin-top:0}",
+      "#jumpin-mid .board-group-cnt{padding:1px 7px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:11px;font-weight:700}",
+      "#jumpin-root .hero-invite-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;min-height:30px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(15,23,42,.04)}",
+      "#jumpin-root .hero-invite-pill:hover{border-color:var(--primary,#0891b2);background:#ecfeff}",
+      "#jumpin-sheet .invite-qr{display:block;width:168px;height:168px;margin:8px auto 14px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
       "@media (min-width:1040px){#jumpin-mid .board{grid-template-columns:repeat(3,minmax(0,1fr))}}",
       "#jumpin-mid .empty{grid-column:1 / -1;padding:32px 24px;text-align:center;background:var(--bg-card,#fff);border:1px dashed #cbd5e1;border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,.03)}",
@@ -497,6 +503,57 @@
       stack.appendChild(fromStop);
       stack.appendChild(toStop);
       return stack;
+    }
+
+    function shareUrl(title, text, url) {
+      if (win.navigator && win.navigator.share) {
+        win.navigator.share({ title: title, text: text, url: url }).catch(function () { });
+        return;
+      }
+      const clip = win.navigator && win.navigator.clipboard;
+      if (clip && clip.writeText) clip.writeText(text + " " + url);
+      showToast("Invite copied!");
+    }
+
+    function inviteSheet(doc) {
+      const origin = win.location && win.location.origin ? win.location.origin : "https://waitlink.app";
+      const gSlug = groupMeta.groupId && groupMeta.groupId !== "default" ? "?group=" + encodeURIComponent(groupMeta.groupId) : "";
+      const inviteUrl = origin + "/jumpin" + gSlug;
+      const gName = groupMeta.name || "JumpIn";
+      const sheet = el(doc, "div");
+      sheet.id = "jumpin-sheet";
+      sheet.appendChild(el(doc, "p", "", "Invite neighbors to " + gName));
+      sheet.appendChild(el(doc, "p", "muted", "Scan this QR code or share the link to join the carpool board."));
+      const qr = el(doc, "img", "invite-qr");
+      qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(inviteUrl);
+      qr.alt = "QR code for " + gName;
+      sheet.appendChild(qr);
+      const row = el(doc, "div", "link-row link-row-inline");
+      const inp = el(doc, "input");
+      inp.readOnly = true;
+      inp.value = inviteUrl;
+      row.appendChild(inp);
+      const copyBtn = el(doc, "button", "link-copy", "📋 Copy");
+      copyBtn.type = "button";
+      on(copyBtn, "click", function () {
+        const clip = win.navigator && win.navigator.clipboard;
+        if (clip && clip.writeText) clip.writeText(inviteUrl);
+        copyBtn.textContent = "✓ Copied";
+        showToast("Link copied!");
+      });
+      row.appendChild(copyBtn);
+      sheet.appendChild(row);
+      const shareBtn = el(doc, "button", "confirm-primary", "📤 Share invite");
+      shareBtn.type = "button";
+      on(shareBtn, "click", function () {
+        shareUrl("Join " + gName + " on JumpIn", "Join our " + gName + " carpool board:", inviteUrl);
+      });
+      sheet.appendChild(shareBtn);
+      const doneBtn = el(doc, "button", "textish", "Close");
+      doneBtn.type = "button";
+      on(doneBtn, "click", function () { inviteModal = false; draw(); });
+      sheet.appendChild(doneBtn);
+      return sheet;
     }
 
     function spinText(doc, btn, spinning, busyText, idleText, dark) {
@@ -1145,6 +1202,7 @@
 
     let deferredInstall = null;
     let installModal = false;
+    let inviteModal = false;
     let infoView = "";
     let prevMode = "";
     let prevSheetOpen = false;
@@ -1585,13 +1643,13 @@
       if (ride.kind === "request" && current.status === "open") {
         if (current.role === "requester") {
           secTop.appendChild(el(doc, "p", "muted", "Waiting for a driver — share this link so a driver can offer a ride."));
-          const shareUrl = current.link || (cloud && cloud.publicRideUrl && ride.rideId ? cloud.publicRideUrl(ride.rideId) : "");
-          if (shareUrl) {
+          const reqShareUrl = current.link || (cloud && cloud.publicRideUrl && ride.rideId ? cloud.publicRideUrl(ride.rideId) : "");
+          if (reqShareUrl) {
             const linkRow = el(doc, "div", "link-row link-row-inline");
             linkRow.style.marginTop = "8px";
             const linkIn = el(doc, "input");
             linkIn.readOnly = true;
-            linkIn.value = shareUrl;
+            linkIn.value = reqShareUrl;
             linkRow.appendChild(linkIn);
             const copyIcon = el(doc, "button", "link-copy", "📋");
             copyIcon.type = "button";
@@ -1599,7 +1657,7 @@
             copyIcon.title = "Copy link";
             on(copyIcon, "click", function () {
               const clip = win.navigator && win.navigator.clipboard;
-              if (clip && clip.writeText) clip.writeText(shareUrl);
+              if (clip && clip.writeText) clip.writeText(reqShareUrl);
               copyIcon.textContent = "✓ Copied";
               showToast("Copied!");
               if (win.setTimeout) {
@@ -1654,6 +1712,18 @@
           topActions.appendChild(mPax);
         }
         secTop.appendChild(topActions);
+      }
+      if (current.status === "open" && current.link) {
+        const shareRideRow = el(doc, "div", "action-row");
+        const shareRideBtn = el(doc, "button", "textish", ride.kind === "request" ? "📤 Share request" : "📤 Share ride");
+        shareRideBtn.type = "button";
+        on(shareRideBtn, "click", function () {
+          const prefix = ride.kind === "request" ? "🙋 Ride needed: " : "🚗 Ride: ";
+          const msg = prefix + (ride.from || "") + " → " + (ride.to || "") + (current.when ? " · " + current.when : "");
+          shareUrl("JumpIn Ride", msg, current.link);
+        });
+        shareRideRow.appendChild(shareRideBtn);
+        secTop.appendChild(shareRideRow);
       }
       card.appendChild(secTop);
       const secPeople = el(doc, "div", "ride-sec");
@@ -1929,6 +1999,8 @@
       const isPlatformPaused = platformNotice.platformEnabled === false;
       const isFormOpen = !isPlatformPaused && (state.mode === "post" || !!(state.mode === "ride" && (state.reserveOpen || state.editOpen || state.recovery)));
       rootNode.className = (isPlatformPaused || state.mode === "board") ? "portal" : ("app-screen" + (isFormOpen ? " form-open" : ""));
+      if (state.mode === "ride" && state.ride) doc.title = (state.ride.from || "") + " → " + (state.ride.to || "") + " · JumpIn";
+      else doc.title = "JumpIn — Community Carpool";
       const top = el(doc, "header");
       top.id = "jumpin-top";
       if (isPlatformPaused) {
@@ -1992,6 +2064,10 @@
         const badges = el(doc, "div", "hero-badges");
         badges.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
+        const inviteBtn = el(doc, "button", "hero-invite-pill", "Invite");
+        inviteBtn.type = "button";
+        on(inviteBtn, "click", function () { inviteModal = true; draw(); });
+        badges.appendChild(inviteBtn);
         copy.appendChild(badges);
         copy.appendChild(el(doc, "h1", "", "Find a seat. Offer a ride."));
         copy.appendChild(el(doc, "p", "muted", platformNotice.needARideEnabled ? "Post or request a ride. Reserve seats. No app fees." : "Post a trip. Reserve your seats. No app fees."));
@@ -2098,7 +2174,34 @@
           if (boardPage > totalPages) boardPage = totalPages;
           const start = (boardPage - 1) * PAGE_SIZE;
           const pageItems = shown.slice(start, start + PAGE_SIZE);
+          const useDayGroups = boardDateFilter !== "today" && boardDateFilter !== "tomorrow";
+          const todayKey = useDayGroups ? core.formatDateInput(Date.now(), "America/New_York") : "";
+          const tomorrowKey = useDayGroups ? core.formatDateInput(Date.now() + core.DAY_MS, "America/New_York") : "";
+          function dayBucket(item) {
+            const dk = core.formatDateInput(item.departAt || Date.now(), "America/New_York");
+            if (dk === todayKey) return "Today";
+            if (dk === tomorrowKey) return "Tomorrow";
+            return "Upcoming";
+          }
+          const bucketCounts = {};
+          if (useDayGroups) {
+            pageItems.forEach(function (r) {
+              const b = dayBucket(r);
+              bucketCounts[b] = (bucketCounts[b] || 0) + 1;
+            });
+          }
+          let lastBucket = "";
           pageItems.forEach(function (ride) {
+            if (useDayGroups) {
+              const b = dayBucket(ride);
+              if (b !== lastBucket) {
+                lastBucket = b;
+                const hdr = el(doc, "div", "board-group-hdr");
+                hdr.appendChild(el(doc, "span", "", b));
+                hdr.appendChild(el(doc, "span", "board-group-cnt", String(bucketCounts[b])));
+                list.appendChild(hdr);
+              }
+            }
             const myRole = cloud && cloud.roleFor ? cloud.roleFor(ride) : "";
             const isReq = ride.kind === "request";
             const row = el(doc, "button", "row" + (isReq ? " role-rider" : (myRole ? " role-" + myRole : "")));
@@ -2533,6 +2636,13 @@
             }
           });
           linkRow.appendChild(copyBtn);
+          const sharePostBtn = el(doc, "button", "link-copy", "📤 Share");
+          sharePostBtn.type = "button";
+          on(sharePostBtn, "click", function () {
+            const msg = (isReqPosted ? "🙋 Ride needed: " : "🚗 Ride: ") + (state.route || "") + (state.when ? " · " + state.when : "");
+            shareUrl("JumpIn Ride", msg, state.link);
+          });
+          linkRow.appendChild(sharePostBtn);
           card.appendChild(linkRow);
           card.appendChild(el(doc, "p", "hint", isReqPosted ? "Share this link with drivers so someone can offer a ride. Use your texted link if opening from another app." : "Share this link with riders. Use your texted link if opening from another app."));
         }
@@ -2865,6 +2975,7 @@
       else if ((state.driverSheet === "passengers" || state.driverSheet === "passengers-add") && state.role === "driver") activeSheet = managePassengersSheet(doc);
       else if (memberModal) activeSheet = memberSheet(doc);
       else if (installModal) activeSheet = installSheet(doc);
+      else if (inviteModal) activeSheet = inviteSheet(doc);
       else if (infoView) activeSheet = infoSheet(doc);
       if (activeSheet) {
         if (!prevSheetOpen) activeSheet.className = (activeSheet.className ? activeSheet.className + " " : "") + "anim-in";
@@ -3224,7 +3335,7 @@
     let ptrPull = 0;
     on(rootNode, "touchstart", function (e) {
       const topY = win.scrollY || (doc.documentElement && doc.documentElement.scrollTop) || 0;
-      const modalOpen = !!(state.sheet || state.waitlistOpen || state.claimOpen || state.editOpen || state.driverSheet || memberModal || installModal || infoView);
+      const modalOpen = !!(state.sheet || state.waitlistOpen || state.claimOpen || state.editOpen || state.driverSheet || memberModal || installModal || inviteModal || infoView);
       ptrY = state.mode === "board" && topY <= 0 && !modalOpen && e && e.touches && e.touches[0] ? e.touches[0].clientY : 0;
       ptrPull = 0;
     });

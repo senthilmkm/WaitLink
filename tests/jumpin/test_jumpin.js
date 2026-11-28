@@ -1380,7 +1380,7 @@ it("shows the confirmation screen after a saved post and the field error on a ba
       { rideId: "r_full", from: "E", to: "F", seatsLeft: 0, when: "Soon" }
     ]
   }));
-  const pills = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children.map(function (row) {
+  const pills = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; }).children.filter(function (row) { return row.tag === "button"; }).map(function (row) {
     return row.children[0].children[1].children.map(function (p) { return p.textContent; });
   });
   assert.deepStrictEqual(pills, [["Your trip", "Open"], ["Seat booked", "Last seat"], ["Full"]]);
@@ -1401,10 +1401,10 @@ it("shows the confirmation screen after a saved post and the field error on a ba
   const boardNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board"; });
   const pagerNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "pager"; });
   boardNode.scrollIntoView = function () { };
-  assert.strictEqual(boardNode.children.length, 12);
+  assert.strictEqual(boardNode.children.filter(function (c) { return c.tag === "button"; }).length, 12);
   assert.ok(pagerNode.children.some(function (c) { return c.textContent === "Page 1 of 2"; }));
   pagerNode.children.find(function (c) { return c.textContent === "Next ›"; })._listeners[0]();
-  assert.strictEqual(boardNode.children.length, 3);
+  assert.strictEqual(boardNode.children.filter(function (c) { return c.tag === "button"; }).length, 3);
   assert.ok(pagerNode.children.some(function (c) { return c.textContent === "Page 2 of 2"; }));
   const toolsNode = addMount.root.children[1].children[0].children.find(function (c) { return c.className === "board-tools"; });
   const filterChips = toolsNode.children[0].children;
@@ -2360,6 +2360,74 @@ it("renders stacked route cards on board with spinner on tap and desktop 640px p
     seatsText: "1 seat reserved"
   }));
   assert.ok(mounted.root.children[1].querySelectorAll("div").some(function (d) { return d.className === "route-stack route-stack-lg"; }));
+  view.destroy();
+});
+
+it("groups board by Today/Tomorrow/Upcoming, opens Invite QR sheet, and shares rides via navigator.share or clipboard", async function () {
+  const win = fakeWindow();
+  let sharedPayload = null;
+  let copiedText = "";
+  win.navigator.clipboard = { writeText: function (t) { copiedText = t; } };
+  win.location = { origin: "https://waitlink.app" };
+  let groupCb = null;
+  win.JumpInCloud = {
+    groupId: "oak",
+    watchGroup: function (cb) { groupCb = cb; return function () { }; },
+    watchBoard: function () { return function () { }; },
+    watchRide: function () { return function () { }; },
+    roleFor: function () { return ""; },
+    publicRideUrl: function (id) { return "https://waitlink.app/jumpin?ride=" + id; }
+  };
+  const mounted = view.mount(win);
+  if (groupCb) groupCb({ groupId: "oak", name: "Oak Hills", status: "active", enabled: true });
+  const now = Date.now();
+  mounted.setState(Object.assign(ui.blank(), {
+    rides: [
+      { rideId: "r_today", kind: "offer", from: "A", to: "B", departAt: now + 3600000, when: "Today", seatsLeft: 2, driverName: "D1" },
+      { rideId: "r_tmrw", kind: "offer", from: "C", to: "D", departAt: now + core.DAY_MS, when: "Tomorrow", seatsLeft: 2, driverName: "D2" },
+      { rideId: "r_later", kind: "request", from: "E", to: "F", departAt: now + 3 * core.DAY_MS, when: "Later", seatsRequested: 1, requesterName: "R1" }
+    ]
+  }));
+  const hdrs = mounted.root.children[1].querySelectorAll("div").filter(function (d) { return d.className === "board-group-hdr"; });
+  assert.strictEqual(hdrs.length, 3);
+  assert.strictEqual(hdrs[0].children[0].textContent, "Today");
+  assert.strictEqual(hdrs[1].children[0].textContent, "Tomorrow");
+  assert.strictEqual(hdrs[2].children[0].textContent, "Upcoming");
+
+  const inviteBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className === "hero-invite-pill"; });
+  assert.ok(inviteBtn);
+  inviteBtn._listeners[0]();
+  const sheet = mounted.root.children.find(function (c) { return c.id === "jumpin-sheet"; });
+  assert.ok(sheet);
+  assert.ok(sheet.querySelectorAll("img").some(function (img) { return img.className === "invite-qr" && img.src.indexOf("oak") !== -1; }));
+  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "📋 Copy"; })._listeners[0]();
+  assert.ok(copiedText.indexOf("oak") !== -1);
+  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share invite"; })._listeners[0]();
+  assert.ok(copiedText.indexOf("Oak Hills") !== -1);
+  sheet.querySelectorAll("button").find(function (b) { return b.textContent === "Close"; })._listeners[0]();
+
+  // Test navigator.share branch on Ride Details & Posted Confirmation
+  win.navigator.share = function (payload) { sharedPayload = payload; return Promise.resolve(); };
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "ride",
+    status: "open",
+    link: "https://waitlink.app/jumpin?ride=r_today",
+    when: "Today",
+    ride: { rideId: "r_today", kind: "offer", from: "A", to: "B", when: "Today", seatsLeft: 2, driverName: "D1" }
+  }));
+  assert.strictEqual(win.document.title, "A → B · JumpIn");
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share ride"; })._listeners[0]();
+  assert.strictEqual(sharedPayload.url, "https://waitlink.app/jumpin?ride=r_today");
+
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "posted",
+    status: "open",
+    route: "A → B",
+    when: "Today",
+    link: "https://waitlink.app/jumpin?ride=r_today"
+  }));
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share"; })._listeners[0]();
+  assert.strictEqual(sharedPayload.url, "https://waitlink.app/jumpin?ride=r_today");
   view.destroy();
 });
 
