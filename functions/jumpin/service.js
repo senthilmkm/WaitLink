@@ -133,6 +133,7 @@ async function groupAccessError(tx, p) {
 async function loadPlatformConfig(tx, now) {
   const stored = await tx.get("carpool_platform/config") || {};
   const cap = Number.isInteger(Number(stored.platformDailySmsCap)) ? Math.max(0, Number(stored.platformDailySmsCap)) : 2000;
+  const maxGroups = Number.isInteger(Number(stored.maxGroupsPerAccount)) ? Math.max(1, Math.min(20, Number(stored.maxGroupsPerAccount))) : 1;
   const budget = core.smsBudget({ dailySmsCap: cap, dailySmsDay: stored.dailySmsDay, dailySmsSent: stored.dailySmsSent }, now);
   const supportNote = core.collapse(core.stripTags(stored.platformSupportNote || "")).slice(0, 80) || PLATFORM_SUPPORT_NOTE;
   const maintenanceMessage = core.collapse(core.stripTags(stored.maintenanceMessage || "")).slice(0, 200);
@@ -154,6 +155,7 @@ async function loadPlatformConfig(tx, now) {
     superAdminEmails: core.cleanAdminEmails(stored.superAdminEmails, true, SUPERADMIN_EMAIL),
     platformAdminPhone: parsedPhone.ok ? parsedPhone.e164 : PLATFORM_ADMIN_PHONE,
     platformDailySmsCap: cap,
+    maxGroupsPerAccount: maxGroups,
     dailySmsDay: budget.day,
     dailySmsSent: budget.sent,
     completeTripsEnabled: stored.completeTripsEnabled !== false,
@@ -1819,8 +1821,8 @@ function createGroup(db, email, input, now) {
       if (groups.some(function (g) { return g.createdBy === caller && g.status === "pending"; })) {
         return { ok: false, error: "You already have a group waiting for approval." };
       }
-      if (groups.filter(function (g) { return g.createdBy === caller; }).length >= 3) {
-        return { ok: false, error: "Group limit reached (max 3 per account)." };
+      if (groups.filter(function (g) { return g.createdBy === caller; }).length >= platform.maxGroupsPerAccount) {
+        return { ok: false, error: "Group limit reached (max " + platform.maxGroupsPerAccount + " per account)." };
       }
     }
     if (await tx.get(p.groupMeta) || groups.some(function (g) { return g.groupId === gid; })) {
@@ -1987,6 +1989,14 @@ function savePlatformConfig(db, email, input, now) {
     const prev = await loadPlatformConfig(tx, clock);
     if (!isSuperAdminEmail(email, prev)) return { ok: false, error: "This page is not available." };
     const nextCap = body.platformDailySmsCap != null ? Math.max(0, Math.min(10000, Math.round(Number(body.platformDailySmsCap) || 0))) : prev.platformDailySmsCap;
+    let nextMaxGroups = prev.maxGroupsPerAccount;
+    if (body.maxGroupsPerAccount !== undefined && body.maxGroupsPerAccount !== null) {
+      const parsedMaxGroups = Number(body.maxGroupsPerAccount);
+      if (!Number.isInteger(parsedMaxGroups) || parsedMaxGroups < 1 || parsedMaxGroups > 20) {
+        return { ok: false, error: "Max groups per email must be a whole number between 1 and 20." };
+      }
+      nextMaxGroups = parsedMaxGroups;
+    }
     const nextEnabled = body.platformEnabled !== undefined ? body.platformEnabled !== false : prev.platformEnabled;
     const nextIos = body.iosThemeEnabled !== undefined ? body.iosThemeEnabled === true : prev.iosThemeEnabled;
     const nextBroadcastSms = body.broadcastSmsEnabled !== undefined ? body.broadcastSmsEnabled !== false : prev.broadcastSmsEnabled;
@@ -2026,6 +2036,7 @@ function savePlatformConfig(db, email, input, now) {
       superAdminEmails: nextSuperAdmins,
       platformAdminPhone: nextAdminPhone,
       platformDailySmsCap: nextCap,
+      maxGroupsPerAccount: nextMaxGroups,
       dailySmsDay: prev.dailySmsDay,
       dailySmsSent: prev.dailySmsSent,
       completeTripsEnabled: nextCompleteEnabled,

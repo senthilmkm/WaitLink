@@ -716,6 +716,7 @@
         if (groupsData.isSuperAdmin && groupsData.platform) {
           const pEn = page.getElementById("jumpin-plat-enabled");
           const pCap = page.getElementById("jumpin-plat-cap");
+          const pMaxGroups = page.getElementById("jumpin-plat-max-groups");
           const pSuper = page.getElementById("jumpin-plat-super-emails");
           const pEmail = page.getElementById("jumpin-plat-email");
           const pPhone = page.getElementById("jumpin-plat-phone");
@@ -730,6 +731,7 @@
           const fNeedRide = page.getElementById("jumpin-feat-need-ride");
           if (pEn) pEn.value = groupsData.platform.platformEnabled === false ? "no" : "yes";
           if (pCap) pCap.value = String(groupsData.platform.platformDailySmsCap != null ? groupsData.platform.platformDailySmsCap : 2000);
+          if (pMaxGroups) pMaxGroups.value = String(groupsData.platform.maxGroupsPerAccount != null ? groupsData.platform.maxGroupsPerAccount : 1);
           if (pSuper) pSuper.value = (groupsData.platform.superAdminEmails || []).join(", ");
           if (pEmail) pEmail.value = groupsData.platform.platformAdminEmail || "";
           if (pPhone) pPhone.value = (groupsData.platform.platformAdminPhone || "").replace(/^\+1/, "");
@@ -1338,6 +1340,7 @@
       if (platSave && api && api.savePlatformConfig) platSave.addEventListener("click", function () {
         const pEn = page.getElementById("jumpin-plat-enabled");
         const pCap = page.getElementById("jumpin-plat-cap");
+        const pMaxGroups = page.getElementById("jumpin-plat-max-groups");
         const pSuper = page.getElementById("jumpin-plat-super-emails");
         const pEmail = page.getElementById("jumpin-plat-email");
         const pPhone = page.getElementById("jumpin-plat-phone");
@@ -1351,6 +1354,7 @@
           return api.savePlatformConfig({
             platformEnabled: !pEn || pEn.value !== "no",
             platformDailySmsCap: pCap ? Number(pCap.value || 0) : 2000,
+            maxGroupsPerAccount: pMaxGroups ? (pMaxGroups.value.trim() === "" ? 0 : Number(pMaxGroups.value)) : undefined,
             platformAdminEmail: pEmail ? pEmail.value : "",
             superAdminEmails: pSuper ? pSuper.value : undefined,
             platformAdminPhone: pPhone ? pPhone.value : "",

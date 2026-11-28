@@ -1009,6 +1009,11 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
   await service.completeDue(db, NOW + 6 * core.HOUR_MS);
   await service.retainTrips(db, NOW + 10 * core.DAY_MS);
 
+  assert.strictEqual((await service.createGroup(db, "org@example.com", { name: "B2", groupId: "bal-two", contactPhone: "5552345678" }, NOW)).error, "Group limit reached (max 1 per account).");
+  assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { maxGroupsPerAccount: 0 }, NOW)).ok, false);
+  assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { maxGroupsPerAccount: 21 }, NOW)).ok, false);
+  assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { maxGroupsPerAccount: 1.5 }, NOW)).ok, false);
+  assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { maxGroupsPerAccount: 3 }, NOW)).platform.maxGroupsPerAccount, 3);
   await service.createGroup(db, "org@example.com", { name: "B2", groupId: "bal-two", contactPhone: "5552345678" }, NOW);
   await service.reviewGroup(db, service.SUPERADMIN_EMAIL, { groupId: "bal-two", decision: "approve" }, NOW);
   await service.createGroup(db, "org@example.com", { name: "B3", groupId: "bal-three", contactPhone: "5552345678" }, NOW);
@@ -1050,12 +1055,14 @@ it("isolates multi-neighborhood groups, enforces anti-spam caps, and scopes SMS 
     platformEnabled: false,
     iosThemeEnabled: true,
     platformDailySmsCap: 1500,
+    maxGroupsPerAccount: 2,
     platformAdminEmail: service.SUPERADMIN_EMAIL,
     platformAdminPhone: "9802531359",
     platformSupportNote: "Venmo:@jumpin-help",
     maintenanceMessage: "Scheduled maintenance tonight"
   }, { token: { email: service.SUPERADMIN_EMAIL } }, NOW);
   assert.strictEqual(platSaved.ok, true);
+  assert.strictEqual(platSaved.platform.maxGroupsPerAccount, 2);
   assert.strictEqual(platSaved.platform.iosThemeEnabled, true);
   assert.strictEqual(platSaved.platform.platformAdminPhone, "+19802531359");
   assert.strictEqual((await service.savePlatformConfig(db, service.SUPERADMIN_EMAIL, { platformAdminPhone: "bad" }, NOW)).ok, false);
