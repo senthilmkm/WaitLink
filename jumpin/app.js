@@ -123,12 +123,12 @@
       "#jumpin-mid h1{margin:0 0 8px;font-family:var(--font-family-heading,Outfit,Inter,sans-serif);font-size:36px;line-height:1.15;letter-spacing:-0.03em}",
       "#jumpin-mid .hero-org{margin:10px 0 0;font-size:13px;color:#475569}",
       "#jumpin-mid .hero-org a{color:var(--primary,#0891b2);font-weight:700;text-decoration:underline;text-underline-offset:2px}",
-      "#jumpin-mid .hero button{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer;box-shadow:0 6px 18px rgba(8,145,178,.24)}",
+      "#jumpin-mid .hero button.cta{width:auto;min-width:200px;flex:0 0 auto;padding:0 24px;cursor:pointer;box-shadow:0 6px 18px rgba(8,145,178,.24)}",
       "#jumpin-mid .board{display:grid;grid-template-columns:1fr;gap:14px}",
       "#jumpin-mid .board-group-hdr{grid-column:1 / -1;display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569}",
       "#jumpin-mid .board-group-hdr:first-child{margin-top:0}",
       "#jumpin-mid .board-group-cnt{padding:1px 7px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:11px;font-weight:700}",
-      "#jumpin-root .hero-invite-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;min-height:30px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(15,23,42,.04)}",
+      "#jumpin-root .hero-invite-pill{display:inline-flex;align-items:center;gap:4px;width:auto;min-width:0;min-height:28px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:var(--primary-dark,#0e7490);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:border-color .15s,background-color .15s}",
       "#jumpin-root .hero-invite-pill:hover{border-color:var(--primary,#0891b2);background:#ecfeff}",
       "#jumpin-sheet .invite-qr{display:block;width:168px;height:168px;margin:8px auto 14px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}",
       "@media (min-width:740px){#jumpin-mid .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}",
@@ -144,8 +144,8 @@
       "#jumpin-root.app-screen #jumpin-bottom{position:sticky;bottom:0;margin-top:auto;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--border-color,#cbd5e1)}",
       "#jumpin-root.app-screen.form-open #jumpin-bottom,#jumpin-root.app-screen:has(#jumpin-mid input:focus,#jumpin-mid select:focus) #jumpin-bottom{position:static;margin-top:0;padding:8px 16px calc(96px + env(safe-area-inset-bottom));background:transparent;border-top:0;backdrop-filter:none;-webkit-backdrop-filter:none}",
       "@media (min-width:701px){#jumpin-root.app-screen #jumpin-mid{padding:36px 24px 20px}#jumpin-root.app-screen #jumpin-mid.post-card{flex:0 0 auto;width:calc(100% - 48px);max-width:640px;margin:32px auto 12px;padding:28px 32px;background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:var(--radius-lg,20px);box-shadow:0 10px 28px rgba(15,23,42,.06)}#jumpin-root.app-screen #jumpin-bottom{position:static;margin-top:auto;padding:8px 24px 32px;background:transparent;border-top:0}#jumpin-root.app-screen.form-open #jumpin-bottom{margin-top:0}#jumpin-root.app-screen #jumpin-bottom button{max-width:640px}}",
-      "#jumpin-mid .hero button,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .15s,filter .15s}",
-      "#jumpin-mid .hero button:hover,#jumpin-bottom button:hover{filter:brightness(1.05)}",
+      "#jumpin-mid .hero button.cta,#jumpin-bottom button{min-height:52px;border:0;border-radius:var(--radius-md,14px);background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .15s,filter .15s}",
+      "#jumpin-mid .hero button.cta:hover,#jumpin-bottom button:hover{filter:brightness(1.05)}",
       "#jumpin-root.app-screen #jumpin-bottom button{display:block;width:100%;max-width:460px;margin:0 auto}",
       "#jumpin-bottom button:disabled,#jumpin-root .textish:disabled{opacity:.55;cursor:not-allowed}",
       "body.jumpin-android #jumpin-bottom button,body.jumpin-android #jumpin-mid .hero button{border-radius:var(--radius-lg,20px)}",
@@ -2064,7 +2064,7 @@
         const badges = el(doc, "div", "hero-badges");
         badges.appendChild(el(doc, "span", "hero-eyebrow", "Community Carpool"));
         badges.appendChild(el(doc, "span", "hero-group-pill", "📍 " + (groupMeta.name || "Its-OK")));
-        const inviteBtn = el(doc, "button", "hero-invite-pill", "Invite");
+        const inviteBtn = el(doc, "button", "hero-invite-pill", "↗ Invite");
         inviteBtn.type = "button";
         on(inviteBtn, "click", function () { inviteModal = true; draw(); });
         badges.appendChild(inviteBtn);
