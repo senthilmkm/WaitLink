@@ -1954,7 +1954,7 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   mMinusBtn._listeners[0]();
   // Hold-to-repeat on pointerdown -> pointerup -> suppressed click
   hPlusBtn._listeners[1]();
-  await new Promise(function (r) { setTimeout(r, 480); });
+  await new Promise(function (r) { setTimeout(r, 520); });
   hPlusBtn._listeners[2]();
   hPlusBtn._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "AM"; })._listeners[0]();
