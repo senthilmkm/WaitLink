@@ -2116,7 +2116,8 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "from"; }).value = "Lib";
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "to"; }).value = "Off";
   // Opening "+ Add price or pickup note" preserves typed From/To
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add car, price, or note"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add chip-in or pickup note"; })._listeners[0]();
+  assert.ok(!mounted.root.children[1].querySelectorAll("input").some(function (i) { return i.name === "vehicle" && i.type !== "hidden"; }));
   assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "from"; }).value, "Lib");
   assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "to"; }).value, "Off");
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "Sam";

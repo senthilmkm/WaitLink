@@ -2740,15 +2740,17 @@
           if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
           secDriver.appendChild(rideCost);
           if (state.error && state.field === "rideCost") secDriver.appendChild(el(doc, "p", "error", state.error));
-          secDriver.appendChild(el(doc, "label", "lbl", "Car / Color, optional"));
-          const veh = el(doc, "input");
-          veh.name = "vehicle";
-          veh.type = "text";
-          veh.maxLength = 40;
-          veh.placeholder = "e.g. Silver Honda CR-V";
-          veh.value = state.draft && state.draft.vehicle != null ? state.draft.vehicle : (saved.vehicle || "");
-          secDriver.appendChild(veh);
-          if (state.error && state.field === "vehicle") secDriver.appendChild(el(doc, "p", "error", state.error));
+          if (postRole !== "rider") {
+            secDriver.appendChild(el(doc, "label", "lbl", "Car / Color, optional"));
+            const veh = el(doc, "input");
+            veh.name = "vehicle";
+            veh.type = "text";
+            veh.maxLength = 40;
+            veh.placeholder = "e.g. Silver Honda CR-V";
+            veh.value = state.draft && state.draft.vehicle != null ? state.draft.vehicle : (saved.vehicle || "");
+            secDriver.appendChild(veh);
+            if (state.error && state.field === "vehicle") secDriver.appendChild(el(doc, "p", "error", state.error));
+          }
           secDriver.appendChild(el(doc, "label", "lbl", "Note, optional"));
           const note = el(doc, "input");
           note.name = "note";
@@ -2757,12 +2759,12 @@
           if (state.draft && state.draft.note) note.value = state.draft.note;
           secDriver.appendChild(note);
         } else {
-          const exBtn = el(doc, "button", "chip-btn", "+ Add car, price, or note");
+          const exBtn = el(doc, "button", "chip-btn", postRole === "rider" ? "+ Add chip-in or pickup note" : "+ Add car, price, or note");
           exBtn.type = "button";
           exBtn.style.marginBottom = "8px";
           on(exBtn, "click", function () { savePostDraft(); extrasOpen = true; draw(); });
           secDriver.appendChild(exBtn);
-          [["rideCost", ""], ["note", ""], ["vehicle", saved.vehicle || ""]].forEach(function (pair) {
+          [["rideCost", ""], ["note", ""], ["vehicle", postRole === "rider" ? "" : (saved.vehicle || "")]].forEach(function (pair) {
             const hi = el(doc, "input");
             hi.type = "hidden";
             hi.name = pair[0];
@@ -2978,7 +2980,7 @@
                   state.rides = state.rides || [];
                   openMemberModal(result);
                 } else {
-                  saveProfile(values.name, values.phone, values.vehicle);
+                  saveProfile(values.name, values.phone, isReqPost ? undefined : values.vehicle);
                   saveRecentRoute(values.from, values.to);
                   extrasOpen = false;
                   driverEditOpen = false;
