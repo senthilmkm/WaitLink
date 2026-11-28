@@ -465,6 +465,15 @@
       return n === 1 ? "1 seat left" : n + " seats left";
     }
 
+    function shortDateChip(ymd) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd));
+      if (!m) return ymd;
+      const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+      const wds = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const mos = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return wds[dt.getUTCDay()] + ", " + mos[dt.getUTCMonth()] + " " + dt.getUTCDate();
+    }
+
     function whenOf(ride) {
       if (!ride || !ride.departAt) return "";
       try { return core.formatWhen(ride.departAt, ride.timeZone || "UTC"); } catch (err) { return ""; }
@@ -2551,12 +2560,14 @@
             if (postInputs.date && postInputs.date._syncDt) postInputs.date._syncDt();
             if (postInputs.time && postInputs.time._syncDt) postInputs.time._syncDt();
             syncWhenChips();
+            refreshRepeatPreview();
           });
           whenBtns.push([spec[0], chip]);
           whenChips.appendChild(chip);
         });
-        if (postInputs.date) on(postInputs.date, "change", function () { pickedWhen = ""; syncWhenChips(); });
-        if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); });
+        let refreshRepeatPreview = function () { };
+        if (postInputs.date) on(postInputs.date, "change", function () { pickedWhen = ""; syncWhenChips(); refreshRepeatPreview(); });
+        if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); refreshRepeatPreview(); });
         syncWhenChips();
         secSched.appendChild(whenChips);
         if (postRole !== "rider") {
@@ -2596,7 +2607,7 @@
               });
               const chipsWrap = el(doc, "div", "repeat-preview");
               built.dates.forEach(function (item) {
-                const lbl = item.date.slice(5);
+                const lbl = shortDateChip(item.date);
                 const chip = el(doc, "button", "repeat-date-chip" + (item.skipped ? " skipped" : ""), (item.skipped ? "✕ " : "✓ ") + lbl);
                 chip.type = "button";
                 on(chip, "click", function () {
@@ -2635,6 +2646,7 @@
               wksRow.appendChild(wb);
             });
             secSched.appendChild(wksRow);
+            refreshRepeatPreview = paintRepeatPreview;
             paintRepeatPreview();
             secSched.appendChild(previewHost);
           }
@@ -2773,7 +2785,7 @@
           card.appendChild(postedRoute);
         }
         if (state.seriesCount > 1 && state.seriesDates && state.seriesDates.length) {
-          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.join(", ")));
+          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.map(shortDateChip).join(" · ")));
         }
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
@@ -2848,7 +2860,7 @@
           card.appendChild(postedRoute);
         }
         if (state.seriesCount > 1 && state.seriesDates && state.seriesDates.length) {
-          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.join(", ")));
+          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.map(shortDateChip).join(" · ")));
         }
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));

@@ -1437,6 +1437,7 @@ async function completeDueGroup(tx, p, now, texts, platform) {
   const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
   const rides = arr(index.rides);
   const due = [];
+  const phoneMap = {};
   for (let i = 0; i < rides.length; i++) {
     const row = rides[i];
     const ride = await tx.get(p.ridePrivate(row.rideId));
@@ -1450,34 +1451,32 @@ async function completeDueGroup(tx, p, now, texts, platform) {
         if (res && res.status === "active" && res.phoneE164) {
           if (riderPhones.indexOf(res.phoneE164) === -1) riderPhones.push(res.phoneE164);
           if (ride.status === "open") {
-            const rPhone = await tx.get(p.phone(res.phoneE164)) || { activeReservations: 0 };
-            rPhone.activeReservations = Math.max(0, core.activeReservations(rPhone) - 1);
-            tx.set(p.phone(res.phoneE164), rPhone);
+            if (!phoneMap[res.phoneE164]) phoneMap[res.phoneE164] = await tx.get(p.phone(res.phoneE164)) || { activeReservations: 0 };
+            phoneMap[res.phoneE164].activeReservations = Math.max(0, core.activeReservations(phoneMap[res.phoneE164]) - 1);
           }
         }
       }
       const hasRiders = ride.status === "open" && riderPhones.length > 0;
-      const drvPhone = hasRiders && ride.driverPhoneE164 ? (await tx.get(p.phone(ride.driverPhoneE164)) || { activeReservations: 0 }) : null;
+      if (hasRiders && ride.driverPhoneE164 && !phoneMap[ride.driverPhoneE164]) {
+        phoneMap[ride.driverPhoneE164] = await tx.get(p.phone(ride.driverPhoneE164)) || { activeReservations: 0 };
+      }
       const phones = [];
       if (hasRiders && !ride.thankYouSentAt && config.enabled && config.postRideThankYouSms && config.supportNote) {
         if (ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.push(ride.driverPhoneE164);
         riderPhones.forEach(function (ph) { if (phones.indexOf(ph) === -1) phones.push(ph); });
       }
-      due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders, drvPhone: drvPhone });
+      due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders });
     }
   }
   let groupSent = 0;
-  const drvUpdates = {};
   due.forEach(function (item) {
     if (item.hasRiders) {
       item.ride.status = "completed";
       item.ride.completedAt = now;
       item.row.status = "completed";
-      if (item.drvPhone && item.ride.driverPhoneE164) {
-        const docRef = drvUpdates[item.ride.driverPhoneE164] || item.drvPhone;
-        docRef.completedTrips = (Number(docRef.completedTrips) || 0) + 1;
-        docRef.updatedAt = now;
-        drvUpdates[item.ride.driverPhoneE164] = docRef;
+      if (item.ride.driverPhoneE164 && phoneMap[item.ride.driverPhoneE164]) {
+        phoneMap[item.ride.driverPhoneE164].completedTrips = (Number(phoneMap[item.ride.driverPhoneE164].completedTrips) || 0) + 1;
+        phoneMap[item.ride.driverPhoneE164].updatedAt = now;
       }
     } else {
       item.ride.status = "cancelled";
@@ -1508,8 +1507,8 @@ async function completeDueGroup(tx, p, now, texts, platform) {
     }
     tx.set(p.ridePrivate(item.ride.rideId), item.ride);
   });
-  Object.keys(drvUpdates).forEach(function (ph) {
-    tx.set(p.phone(ph), drvUpdates[ph]);
+  Object.keys(phoneMap).forEach(function (ph) {
+    tx.set(p.phone(ph), phoneMap[ph]);
   });
   if (groupSent) saveConfig(tx, config, p, platform);
   if (due.length) tx.set(p.broadcastIndex, index);
