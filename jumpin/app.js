@@ -521,6 +521,27 @@
       showToast("Invite copied!");
     }
 
+    const COPY_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+    function makeCopyBtn(doc, url) {
+      const btn = el(doc, "button", "link-copy");
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Copy link");
+      btn.title = "Copy link";
+      btn.innerHTML = COPY_SVG;
+      on(btn, "click", function () {
+        const clip = win.navigator && win.navigator.clipboard;
+        if (clip && clip.writeText) clip.writeText(url);
+        btn.textContent = "✓";
+        showToast("Link copied!");
+        if (win.setTimeout) {
+          const tid = win.setTimeout(function () { btn.innerHTML = COPY_SVG; }, 2000);
+          cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
+        }
+      });
+      return btn;
+    }
+
     function inviteSheet(doc) {
       const origin = win.location && win.location.origin ? win.location.origin : "https://waitlink.app";
       const gSlug = groupMeta.groupId && groupMeta.groupId !== "default" ? "?group=" + encodeURIComponent(groupMeta.groupId) : "";
@@ -539,18 +560,7 @@
       inp.readOnly = true;
       inp.value = inviteUrl;
       row.appendChild(inp);
-      const copyBtn = el(doc, "button", "link-copy");
-      copyBtn.type = "button";
-      copyBtn.setAttribute("aria-label", "Copy link");
-      copyBtn.title = "Copy link";
-      copyBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-      on(copyBtn, "click", function () {
-        const clip = win.navigator && win.navigator.clipboard;
-        if (clip && clip.writeText) clip.writeText(inviteUrl);
-        copyBtn.textContent = "✓";
-        showToast("Link copied!");
-      });
-      row.appendChild(copyBtn);
+      row.appendChild(makeCopyBtn(doc, inviteUrl));
       sheet.appendChild(row);
       const actRow = el(doc, "div", "action-row");
       const shareBtn = el(doc, "button", "confirm-primary", "📤 Share invite");
@@ -1662,21 +1672,7 @@
             linkIn.readOnly = true;
             linkIn.value = reqShareUrl;
             linkRow.appendChild(linkIn);
-            const copyIcon = el(doc, "button", "link-copy", "📋");
-            copyIcon.type = "button";
-            copyIcon.setAttribute("aria-label", "Copy link");
-            copyIcon.title = "Copy link";
-            on(copyIcon, "click", function () {
-              const clip = win.navigator && win.navigator.clipboard;
-              if (clip && clip.writeText) clip.writeText(reqShareUrl);
-              copyIcon.textContent = "✓ Copied";
-              showToast("Copied!");
-              if (win.setTimeout) {
-                const tid = win.setTimeout(function () { copyIcon.textContent = "📋"; }, 2000);
-                cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
-              }
-            });
-            linkRow.appendChild(copyIcon);
+            linkRow.appendChild(makeCopyBtn(doc, reqShareUrl));
             secTop.appendChild(linkRow);
           }
           const reqRow = el(doc, "div", "action-row");
@@ -2628,25 +2624,12 @@
         if (state.link) {
           const shareLbl = el(doc, "p", "section-lbl link-box-sep", isReqPosted ? "Share request link" : "Share trip link");
           card.appendChild(shareLbl);
-          const linkRow = el(doc, "div", "link-row");
+          const linkRow = el(doc, "div", "link-row link-row-inline");
           const link = el(doc, "input");
           link.readOnly = true;
           link.value = state.link;
           linkRow.appendChild(link);
-          const copyBtn = el(doc, "button", "link-copy", "📋 Copy");
-          copyBtn.type = "button";
-          copyBtn.setAttribute("aria-label", "Copy link");
-          on(copyBtn, "click", function () {
-            const clip = win.navigator && win.navigator.clipboard;
-            if (clip && clip.writeText) clip.writeText(state.link);
-            copyBtn.textContent = "✓ Copied";
-            showToast("Link copied!");
-            if (win.setTimeout) {
-              const tid = win.setTimeout(function () { copyBtn.textContent = "📋 Copy"; }, 2000);
-              cleanups.push(function () { if (win.clearTimeout) win.clearTimeout(tid); });
-            }
-          });
-          linkRow.appendChild(copyBtn);
+          linkRow.appendChild(makeCopyBtn(doc, state.link));
           const sharePostBtn = el(doc, "button", "link-copy", "📤 Share");
           sharePostBtn.type = "button";
           on(sharePostBtn, "click", function () {

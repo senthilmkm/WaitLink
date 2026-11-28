@@ -2175,10 +2175,10 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   assert.strictEqual(mockCloud.seatSecretFor(reqCardRide), "sec_req1");
   mounted.setState(Object.assign(ui.reduce(ui.blank(), { type: "ride", ride: reqCardRide, role: "requester" }), { ride: reqCardRide, when: "Tomorrow", link: "https://waitlink.app/jumpin?view=ride&ride=ride_req1" }));
   assert.strictEqual(mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Posted this request? Text me a manage link"; }), undefined);
-  const reqCopyBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📋"; });
+  const reqCopyBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className === "link-copy"; });
   assert.ok(reqCopyBtn);
   reqCopyBtn._listeners[0]();
-  assert.strictEqual(reqCopyBtn.textContent, "✓ Copied");
+  assert.strictEqual(reqCopyBtn.textContent, "✓");
   assert.strictEqual(mounted.root.children[2].children[0].children[0].textContent, "Share on WhatsApp");
   const origCancelReq = mockCloud.cancelRideRequest;
   mockCloud.cancelRideRequest = function () { return Promise.resolve({ ok: false, error: "That manage link is not valid." }); };
