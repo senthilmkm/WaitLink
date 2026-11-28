@@ -2505,8 +2505,11 @@
         });
         mid.appendChild(secRoute);
         const secSched = el(doc, "section", "post-section");
+        const isWeeklyView = postRole !== "rider" && repeatMode === "weekly";
         const dtPair = el(doc, "div", "form-pair");
+        if (isWeeklyView) dtPair.style.gridTemplateColumns = "1fr";
         const dateCol = el(doc, "div");
+        if (isWeeklyView) dateCol.style.display = "none";
         const timeCol = el(doc, "div");
         const dtDrawerHost = el(doc, "div");
         buildPostField(["date", "Date", "date", "", dtDrawerHost], dateCol);
@@ -2516,6 +2519,7 @@
         secSched.appendChild(dtPair);
         secSched.appendChild(dtDrawerHost);
         const whenChips = el(doc, "div", "chip-row");
+        if (isWeeklyView) whenChips.style.display = "none";
         const whenBtns = [];
         function syncWhenChips() {
           const zone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";

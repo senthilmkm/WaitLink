@@ -2624,6 +2624,9 @@ it("creates and cancels Weekly Recurring Rides with tap-to-skip, horizon clamp, 
   mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
   const weeklyBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Weekly"; });
   weeklyBtn._listeners[0]();
+  const schedPair = mounted.root.children[1].querySelectorAll("div").find(function (d) { return d.className === "form-pair"; });
+  assert.strictEqual(schedPair.children[0].style.display, "none");
+  assert.strictEqual(schedPair.style.gridTemplateColumns, "1fr");
   const dayBtns = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("repeat-day-btn") !== -1; });
   assert.strictEqual(dayBtns.length, 7);
   dayBtns[3]._listeners[0](); // Add Wednesday
