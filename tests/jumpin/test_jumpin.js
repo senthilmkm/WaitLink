@@ -2418,16 +2418,6 @@ it("groups board by Today/Tomorrow/Upcoming, opens Invite QR sheet, and shares r
   assert.strictEqual(win.document.title, "A → B · JumpIn");
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share ride"; })._listeners[0]();
   assert.strictEqual(sharedPayload.url, "https://waitlink.app/jumpin?ride=r_today");
-
-  mounted.setState(Object.assign(ui.blank(), {
-    mode: "posted",
-    status: "open",
-    route: "A → B",
-    when: "Today",
-    link: "https://waitlink.app/jumpin?ride=r_today"
-  }));
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share"; })._listeners[0]();
-  assert.strictEqual(sharedPayload.url, "https://waitlink.app/jumpin?ride=r_today");
   view.destroy();
 });
 

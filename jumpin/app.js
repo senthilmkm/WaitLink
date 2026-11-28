@@ -2665,13 +2665,6 @@
           link.value = state.link;
           linkRow.appendChild(link);
           linkRow.appendChild(makeCopyBtn(doc, state.link));
-          const sharePostBtn = el(doc, "button", "link-copy", "📤 Share");
-          sharePostBtn.type = "button";
-          on(sharePostBtn, "click", function () {
-            const msg = (isReqPosted ? "🙋 Ride needed: " : "🚗 Ride: ") + (state.route || "") + (state.when ? " · " + state.when : "");
-            shareUrl("JumpIn Ride", msg, state.link);
-          });
-          linkRow.appendChild(sharePostBtn);
           card.appendChild(linkRow);
           card.appendChild(el(doc, "p", "hint", isReqPosted ? "Share this link with drivers so someone can offer a ride. Use your texted link if opening from another app." : "Share this link with riders. Use your texted link if opening from another app."));
         }
