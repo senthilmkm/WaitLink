@@ -306,13 +306,12 @@
       "#jumpin-root .dt-wheel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}",
       "#jumpin-root .dt-col-wrap{min-width:0}",
       "#jumpin-root .dt-col-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;text-align:center;margin:0 0 4px}",
-      "#jumpin-root .dt-col{display:flex;flex-direction:column;gap:2px;max-height:156px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px;background:#f8fafc;border-radius:10px}",
-      "#jumpin-root .dt-col::-webkit-scrollbar{display:none}",
+      "#jumpin-root .dt-wheel .dur-stepper{margin:0;gap:4px}",
+      "#jumpin-root .dt-wheel .dur-btn{min-width:36px;min-height:38px;padding:0 8px;font-size:16px}",
+      "#jumpin-root .dt-wheel .dur-val{min-width:0;min-height:38px;padding:0 4px;font-size:16px}",
+      "#jumpin-root .dt-hint{font-size:11.5px;color:#64748b;text-align:center;margin:6px 0 0}",
       "#jumpin-root .dt-opt{min-height:34px;margin:0;padding:4px 8px;border:1px solid var(--border-color,#e2e8f0);border-radius:9px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:600;cursor:pointer;text-align:center}",
       "#jumpin-root .dt-opt.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
-      "#jumpin-root .dt-wheel .dt-opt{min-height:36px;border:0;background:transparent;border-radius:8px;font-size:15px}",
-      "#jumpin-root .dt-wheel .dt-opt:not(.active):hover{background:rgba(8,145,178,.08)}",
-      "#jumpin-root .dt-wheel .dt-opt.active{background:var(--primary,#0891b2);color:#fff;box-shadow:0 1px 4px rgba(8,145,178,.22)}",
       "#jumpin-root .dt-ap-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;margin:8px 0 0;background:#f1f5f9;border:1px solid var(--border-color,#e2e8f0);border-radius:10px}",
       "#jumpin-root .dt-ap-seg .dt-opt{min-height:34px;border:0;background:transparent;border-radius:7px;color:#475569;font-size:13.5px;font-weight:700}",
       "#jumpin-root .dt-ap-seg .dt-opt.active{background:#fff;color:var(--primary,#0891b2);box-shadow:0 1px 4px rgba(15,23,42,.1)}",
@@ -3406,24 +3405,41 @@
       const wheel = el(doc, "div", "dt-wheel");
       const hWrap = el(doc, "div", "dt-col-wrap");
       hWrap.appendChild(el(doc, "div", "dt-col-hdr", "Hour"));
-      const hCol = el(doc, "div", "dt-col");
-      hWrap.appendChild(hCol);
+      const hStep = el(doc, "div", "dur-stepper");
+      const hMinus = el(doc, "button", "dur-btn", "−");
+      hMinus.type = "button";
+      hMinus.setAttribute("aria-label", "Decrease hour");
+      const hReadout = el(doc, "div", "dur-val");
+      const hPlus = el(doc, "button", "dur-btn", "+");
+      hPlus.type = "button";
+      hPlus.setAttribute("aria-label", "Increase hour");
+      hStep.appendChild(hMinus);
+      hStep.appendChild(hReadout);
+      hStep.appendChild(hPlus);
+      hWrap.appendChild(hStep);
       const mWrap = el(doc, "div", "dt-col-wrap");
       mWrap.appendChild(el(doc, "div", "dt-col-hdr", "Min"));
-      const mCol = el(doc, "div", "dt-col");
-      mWrap.appendChild(mCol);
+      const mStep = el(doc, "div", "dur-stepper");
+      const mMinus = el(doc, "button", "dur-btn", "−");
+      mMinus.type = "button";
+      mMinus.setAttribute("aria-label", "Decrease minutes");
+      const mReadout = el(doc, "div", "dur-val");
+      const mPlus = el(doc, "button", "dur-btn", "+");
+      mPlus.type = "button";
+      mPlus.setAttribute("aria-label", "Increase minutes");
+      mStep.appendChild(mMinus);
+      mStep.appendChild(mReadout);
+      mStep.appendChild(mPlus);
+      mWrap.appendChild(mStep);
       const apCol = el(doc, "div", "dt-ap-seg");
       let curH24 = 9;
       let curMin = "00";
       let curAp = "AM";
       let curH12 = 9;
-      let pickedH = false;
-      let pickedM = false;
-      let pickedAp = false;
-      const hBtns = [];
-      const mBtns = [];
       const apBtns = [];
+      const stopTimers = [];
       function closeDrawer() {
+        stopTimers.forEach(function (fn) { fn(); });
         drawer.style.display = "none";
         btn.className = "dt-pill" + (invalid ? " input-invalid" : "");
       }
@@ -3432,7 +3448,6 @@
         input.value = String(h24).padStart(2, "0") + ":" + curMin;
         sync();
         if (onPick) onPick();
-        if (pickedH && pickedM && pickedAp) closeDrawer();
       }
       function sync() {
         const parts = String(input.value || "09:00").split(":");
@@ -3441,32 +3456,53 @@
         curAp = curH24 >= 12 ? "PM" : "AM";
         curH12 = curH24 % 12 || 12;
         btn.textContent = formatTimePill(input.value);
-        hBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curH12 ? " active" : ""); });
-        mBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curMin ? " active" : ""); });
+        hReadout.textContent = String(curH12);
+        mReadout.textContent = curMin;
         apBtns.forEach(function (pair) { pair[1].className = "dt-opt" + (pair[0] === curAp ? " active" : ""); });
       }
-      for (let h = 1; h <= 12; h++) {
-        (function (val) {
-          const b = el(doc, "button", "dt-opt", String(val));
-          b.type = "button";
-          on(b, "click", function () { curH12 = val; pickedH = true; commit(); });
-          hBtns.push([val, b]);
-          hCol.appendChild(b);
-        })(h);
+      function bindHoldStep(b, stepFn) {
+        let holdTimer = 0;
+        let repeatTimer = 0;
+        let held = false;
+        function stopHold() {
+          if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; }
+          if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = 0; }
+        }
+        stopTimers.push(stopHold);
+        on(b, "click", function () {
+          if (held) { held = false; return; }
+          stepFn();
+        });
+        on(b, "pointerdown", function () {
+          stopHold();
+          held = false;
+          holdTimer = setTimeout(function () {
+            held = true;
+            stepFn();
+            repeatTimer = setInterval(stepFn, 110);
+          }, 350);
+        });
+        on(b, "pointerup", stopHold);
+        on(b, "pointercancel", stopHold);
+        on(b, "pointerleave", stopHold);
       }
-      for (let m = 0; m < 60; m += 5) {
-        (function (val) {
-          const b = el(doc, "button", "dt-opt", val);
-          b.type = "button";
-          on(b, "click", function () { curMin = val; pickedM = true; commit(); });
-          mBtns.push([val, b]);
-          mCol.appendChild(b);
-        })(String(m).padStart(2, "0"));
+      function stepHour(delta) {
+        curH12 = ((curH12 - 1 + delta + 12) % 12) + 1;
+        commit();
       }
+      function stepMin(delta) {
+        const base = Math.floor((Number(curMin) || 0) / 5) * 5;
+        curMin = String((base + delta + 60) % 60).padStart(2, "0");
+        commit();
+      }
+      bindHoldStep(hMinus, function () { stepHour(-1); });
+      bindHoldStep(hPlus, function () { stepHour(1); });
+      bindHoldStep(mMinus, function () { stepMin(-5); });
+      bindHoldStep(mPlus, function () { stepMin(5); });
       ["AM", "PM"].forEach(function (ap) {
         const b = el(doc, "button", "dt-opt", ap);
         b.type = "button";
-        on(b, "click", function () { curAp = ap; pickedAp = true; commit(); });
+        on(b, "click", function () { curAp = ap; commit(); });
         apBtns.push([ap, b]);
         apCol.appendChild(b);
       });
@@ -3474,6 +3510,7 @@
       wheel.appendChild(mWrap);
       drawer.appendChild(wheel);
       drawer.appendChild(apCol);
+      drawer.appendChild(el(doc, "p", "dt-hint", "Tap or hold − / + to adjust"));
       const doneBtn = el(doc, "button", "dt-done", "Done");
       doneBtn.type = "button";
       on(doneBtn, "click", closeDrawer);
@@ -3483,7 +3520,6 @@
       on(btn, "click", function () {
         const open = drawer.style.display !== "none";
         closeSiblingDrawers(drawerHost, drawer);
-        if (!open) { pickedH = false; pickedM = false; pickedAp = false; }
         drawer.style.display = open ? "none" : "block";
         btn.className = "dt-pill" + (open ? "" : " open") + (invalid ? " input-invalid" : "");
       });

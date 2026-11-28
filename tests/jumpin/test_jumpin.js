@@ -1944,8 +1944,19 @@ it("edits a trip atomically, enforces booked seat floor, sends delta SMS, and up
   dtPills[1]._listeners[0]();
   dtPills[1]._listeners[0]();
   dtPills[1]._listeners[0]();
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "12"; })._listeners[0]();
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "30"; })._listeners[0]();
+  const hPlusBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase hour"; });
+  const hMinusBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Decrease hour"; });
+  const mPlusBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Increase minutes"; });
+  const mMinusBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.attrs && b.attrs["aria-label"] === "Decrease minutes"; });
+  hPlusBtn._listeners[0]();
+  hMinusBtn._listeners[0]();
+  mPlusBtn._listeners[0]();
+  mMinusBtn._listeners[0]();
+  // Hold-to-repeat on pointerdown -> pointerup -> suppressed click
+  hPlusBtn._listeners[1]();
+  await new Promise(function (r) { setTimeout(r, 480); });
+  hPlusBtn._listeners[2]();
+  hPlusBtn._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "AM"; })._listeners[0]();
   dtPills[1]._listeners[0]();
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.className.indexOf("dt-opt") !== -1 && b.textContent === "PM"; })._listeners[0]();
