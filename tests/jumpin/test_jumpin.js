@@ -2502,6 +2502,10 @@ it("creates and cancels Weekly Recurring Rides with tap-to-skip, horizon clamp, 
   });
   assert.strictEqual(built.dates.length, 6);
   assert.strictEqual(built.included.length, 5);
+  const fourWks = core.buildRecurringDates({ startDate: "2026-11-30", time: "08:00", timeZone: "America/New_York", weekdays: [1, 3], weeks: 4, horizonDays: 30, nowMs: nowRec });
+  assert.strictEqual(fourWks.included.length, 8);
+  const sixWks = core.buildRecurringDates({ startDate: "2026-11-30", time: "08:00", timeZone: "America/New_York", weekdays: [1], weeks: 6, horizonDays: 45, nowMs: nowRec });
+  assert.strictEqual(sixWks.included.length, 6);
   assert.ok(core.buildRecurringDates({
     startDate: "2026-11-30",
     time: "08:00",

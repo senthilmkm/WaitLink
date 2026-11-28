@@ -2583,9 +2583,13 @@
             on(rb, "click", function () {
               savePostDraft();
               repeatMode = opt[0];
-              if (repeatMode === "weekly" && !repeatWeekdays.length && postInputs.date && postInputs.date.value) {
-                const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(postInputs.date.value);
-                if (m) repeatWeekdays = [new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()];
+              if (repeatMode === "weekly") {
+                const tp = core.partsInZone(Date.now(), (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC");
+                const todayYmd = tp.year + "-" + String(tp.month).padStart(2, "0") + "-" + String(tp.day).padStart(2, "0");
+                if (state.draft) state.draft.date = todayYmd;
+                if (!repeatWeekdays.length) {
+                  repeatWeekdays = [new Date(Date.UTC(tp.year, tp.month - 1, tp.day)).getUTCDay()];
+                }
               }
               draw();
             });
