@@ -1,7 +1,7 @@
 # JumpIn — Recurring Rides Technical Design
 
-**Status:** Proposed  
-**Target Files:** `jumpin/core.js`, `jumpin/service.js`, `jumpin/handlers.js`, `jumpin/cloud.js`, `jumpin/ui-state.js`, `jumpin/app.js`, `functions/carpool.js`, `functions/jumpin/*`, `tests/jumpin/*`  
+**Status:** Ready for Implementation (Updated for v2026.11)  
+**Target Files:** `jumpin/core.js`, `jumpin/service.js`, `jumpin/handlers.js`, `jumpin/cloud.js`, `jumpin/ui-state.js`, `jumpin/app.js`, `functions/index.js`, `functions/jumpin/*`, `firebase.json`, `tests/jumpin/*`  
 **Owner:** WaitLink / JumpIn Engineering
 
 ---
@@ -14,12 +14,14 @@ Drivers who commute or run regular neighborhood/school carpools (e.g., Mon–Fri
 - **Tap-to-skip flexibility:** Drivers can preview every generated date and tap any specific date chip (e.g., a holiday or appointment day) to skip it before posting.
 - **Independent ride lifecycle:** Each non-skipped occurrence is stored as a standard `rides/{rideId}` document linked by a shared `seriesId`, so riders reserve, waitlist, message, or cancel *per day*, and drivers can edit or cancel *one* day without breaking the rest of the series.
 - **Strict SMS cost control:** Posting a recurring series sends **1 single-segment SMS** to the driver (never $N$ separate confirmation texts).
-- **Zero regressions:** Existing `carpoolPostRide`, `carpoolEditRide`, `carpoolCancelTrip`, `carpoolCompleteTrips`, `carpoolRetainTrips`, and all 22 JumpIn tests + 11 master suites remain 100% compatible.
+- **Zero regressions:** Existing `carpoolPostRide`, `carpoolEditRide`, `carpoolCancelTrip`, `carpoolCompleteTrips`, `carpoolRetainTrips`, and all 26 JumpIn tests + 11 master suites remain 100% compatible.
+- **Mobile-first & Desktop-compatible UI:** Touch-friendly `40px+` pill targets on all phone sizes (`320px+` iOS/Android, zero horizontal overflow) and clean layout inside the `640px` desktop `.post-card`.
 
 ### Non-Goals (Phase 1)
 - Complex RRULE patterns (bi-weekly, monthly-by-nth-weekday, custom intervals).
 - Bulk-editing all future rides in a series at once (drivers edit individual rides; series-wide **Cancel upcoming** is supported).
-- Infinite/open-ended recurring series (capped to protect board readability and Firestore/SMS quotas).
+- Recurring mode inside **Post return trip** (`returnTripSheet` stays 1-day-at-a-time carrying `vehicle`, `rideCost`, and `note` so the mobile modal stays compact and uncluttered).
+- Infinite/open-ended recurring series (capped to `config.horizonDays` and max `6` weeks / `18` rides).
 
 ---
 
@@ -35,16 +37,17 @@ Inside `secSched` (Schedule section), directly below the `whenChips` (`Today`, `
      - **`Weekly`**
 
 2. **Recurring Panel (Visible only when `Weekly` is selected):**
-   - **Days of week (`repeat-days`):** 7 circular/rounded pill buttons:
-     `Sun` `Mon` `Tue` `Wed` `Thu` `Fri` `Sat` (or compact `S M T W T F S` with `aria-label` full names).
+   - **Days of week (`repeat-days`):** 7-column CSS grid (`grid-template-columns: repeat(7, minmax(0, 1fr))`, `gap: 6px`) with `min-height: 40px` pill buttons:
+     `S` `M` `T` `W` `T` `F` `S` (with full `aria-label` weekday names) on `< 420px` and `Sun`–`Sat` on wider screens so it never overflows `320px` phones.
      - Pre-selects the weekday of the currently chosen `Date`.
      - If the driver changes the start `Date` while `Weekly` is active, automatically ensure that start date's weekday is selected (unless manually deselected).
-   - **Duration (`repeat-weeks`):** Compact pill row:
+   - **Duration (`repeat-weeks`):** Compact pill row (`flex-wrap: wrap`):
      - `2 wks` (default when `Weekly` is tapped)
      - `4 wks`
-     - `6 wks` (hard cap: **6 weeks**, max **18 rides** per submission)
+     - `6 wks` (hard cap: **6 weeks**, max **18 rides** per submission, and dates beyond `config.horizonDays` are automatically excluded so group horizon settings are always respected).
    - **Preview & Tap-to-Skip Chips (`repeat-preview`):**
-     - Dynamically generated list of dates matching `(startDate, selectedWeekdays, weeks)` at the chosen `time` in `timeZone`.
+     - Responsive wrapping flex/grid of tappable chips (`min-height: 36px`, `min-width: 0`).
+     - Dynamically generated list of dates matching `(startDate, selectedWeekdays, weeks, horizonDays)` at the chosen `time` in `timeZone`.
      - Each date renders as a tappable chip:
        - **Included (default):** `✓ Mon, Nov 30` (cyan tint border)
        - **Skipped (tapped):** `✕ Wed, Dec 2` (muted, strikethrough text)
@@ -62,10 +65,12 @@ Inside `secSched` (Schedule section), directly below the `whenChips` (`Today`, `
 
 ---
 
-## 3. Data Model & Firestore Schema
+## 3. Data Model & Group-Scoped Firestore Schema (`pathsFor(gid)`)
 
-### 3.1 `rides/{rideId}` Additions (Additive & Optional)
-Existing fields remain unchanged. Recurring rides add:
+All recurring documents use the existing `pathsFor(gid)` helper in `jumpin/service.js` (`p.ridePrivate(id)`, `p.ridePublic(id)`, `p.series(seriesId)` -> `carpool_private/series/{seriesId}` for `"default"` or `carpool_groups/{g}/series/{seriesId}` for named groups), and register every ride in `p.broadcastIndex` via `rememberRide`.
+
+### 3.1 `p.ridePrivate(rideId)` & `p.ridePublic(rideId)` Additions (Additive & Optional)
+Existing fields remain unchanged (including `vehicle` and `driverTripCount`). Recurring rides add:
 
 ```js
 {
@@ -138,15 +143,17 @@ const MAX_RECURRING_RIDES = 18;
 ### 5.1 New Callable: `carpoolPostRecurringRides`
 Keeping `carpoolPostRide` separate for single trips avoids touching the existing single-ride fast path.
 
-- **Export:** `exports.carpoolPostRecurringRides = guestCall("carpoolPostRecurringRides");` in `functions/carpool.js`.
-- **Handler:** `if (name === "carpoolPostRecurringRides") return service.postRecurringRides(db, body, now);` in `jumpin/handlers.js`.
+- **Export & Routing:** Export `carpoolPostRecurringRides` (and `carpoolCancelSeries`) in `functions/index.js`, and add `/api/carpoolPostRecurringRides` (and `/api/carpoolCancelSeries`) rewrites in `firebase.json`.
+- **Handler:** `if (name === "carpoolPostRecurringRides") return service.postRecurringRides(db, body, now, rng);` in `jumpin/handlers.js`.
 - **Validation & Guards (reusing existing `service.js` helpers):**
   1. Platform enabled (`platformEnabled`) & group active (`group.status === "active"`).
-  2. `core.postErrors(input)` + `core.buildRecurringDates(...)`.
-  3. Blocklist check (`blockedPhones`) & Members-Only check (`requireGroupMember`).
-  4. Anti-spam / quota check:
-     - Check daily ride post cap (`maxRidesPerDay` / existing post-rate guard).
-     - Note: A recurring series counts as **1 series post action** against SMS cap (1 SMS sent) and enforces `included.length <= MAX_RECURRING_RIDES` (18) and `openRidesByDriver` cap so a single driver cannot flood the board.
+  2. `core.postErrors(input)` (including `vehicle` and `rideCost`) + `core.buildRecurringDates(..., config.horizonDays)`.
+  3. Idempotency check (`idempotencyKey`): if a series with the same `idempotencyKey` was already created within `IDEMPOTENCY_MS`, return `{ ok: true, already: true, seriesId, rideIds, secret }` without creating duplicates.
+  4. Blocklist check (`blockedPhones`) & Members-Only check (`requireGroupMember`).
+  5. Anti-spam / quota check:
+     - Check daily ride post cap (`maxPostsPerPhonePerDay`).
+     - A recurring series counts as **1 series post action** against SMS cap (1 SMS sent) and enforces `included.length <= MAX_RECURRING_RIDES` (18) and `config.horizonDays`.
+  6. **Trust Signals:** Stamp `vehicle: fields.vehicle || ""` and `driverTripCount: Number(phone.completedTrips) || 0` on every ride in the series; each day that later completes with 1+ active riders increments `completedTrips`.
 - **Atomic Persistence (`db.runTransaction` / batch):**
   - Generate `seriesId = core.randomId("ser_")` and one shared `secret = core.randomSecret()` (or per-ride secrets + shared `seriesSecret` — **single shared `secret` stored as `editSecretHash` on all member rides + `carpoolSeries/{seriesId}`** is cleanest because 1 URL/secret works everywhere!).
   - Create each `rides/{rideId}` with `status = group.requireApproval ? "pending" : "open"`, `seriesId`, `seriesIndex`, `seriesTotal`, `editSecretHash`.

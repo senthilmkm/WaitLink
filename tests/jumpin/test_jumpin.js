@@ -2483,6 +2483,179 @@ it("tracks driver completed trip count (only with active riders) and validates/r
   view.destroy();
 });
 
+it("creates and cancels Weekly Recurring Rides with tap-to-skip, horizon clamp, idempotency, single SMS, and UI", async function () {
+  // 1. core.buildRecurringDates validation, horizon clamp, skipDates, max rides cap
+  const nowRec = core.zonedToUtc("2026-11-30", "07:00", "America/New_York"); // Monday 7 AM
+  assert.ok(core.buildRecurringDates({ startDate: "bad", time: "08:00", weekdays: [1], weeks: 2, nowMs: nowRec }).error);
+  assert.ok(core.buildRecurringDates({ startDate: "2026-11-30", time: "bad", weekdays: [1], weeks: 2, nowMs: nowRec }).error);
+  assert.ok(core.buildRecurringDates({ startDate: "2026-11-30", time: "08:00", weekdays: [], weeks: 2, nowMs: nowRec }).error);
+  const built = core.buildRecurringDates({
+    startDate: "2026-11-30",
+    time: "08:00",
+    timeZone: "America/New_York",
+    weekdays: [1, 3, 5],
+    weeks: 2,
+    skipDates: ["2026-12-02"],
+    horizonDays: 30,
+    nowMs: nowRec
+  });
+  assert.strictEqual(built.dates.length, 6);
+  assert.strictEqual(built.included.length, 5);
+  assert.ok(core.buildRecurringDates({
+    startDate: "2026-11-30",
+    time: "08:00",
+    timeZone: "America/New_York",
+    weekdays: [1],
+    weeks: 1,
+    skipDates: ["2026-11-30"],
+    horizonDays: 30,
+    nowMs: nowRec
+  }).error);
+  assert.ok(core.buildRecurringDates({
+    startDate: "2026-11-30",
+    time: "08:00",
+    timeZone: "America/New_York",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    weeks: 6,
+    horizonDays: 60,
+    nowMs: nowRec
+  }).error);
+
+  // 2. service.postRecurringRides + handlers + idempotency + 1 driver SMS + cancelSeries
+  const handlers = require("../../jumpin/handlers.js");
+  const db = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ horizonDays: 30 }) });
+  const recInput = postInput({
+    date: "2026-11-30",
+    time: "08:00",
+    timeZone: "America/New_York",
+    weekdays: [1, 3],
+    weeks: 2,
+    skipDates: ["2026-12-02"],
+    vehicle: "Silver Honda CR-V",
+    idempotencyKey: "idem_ser_1"
+  });
+  const res = await handlers.call(db, "carpoolPostRecurringRides", recInput, {}, nowRec);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.count, 3);
+  assert.strictEqual(res.outbox.length, 1);
+  assert.ok(res.outbox[0].body.length <= 160);
+  const retry = await service.postRecurringRides(db, recInput, nowRec);
+  assert.strictEqual(retry.already, true);
+  assert.deepStrictEqual(retry.rideIds, res.rideIds);
+
+  // Reserve a seat on one occurrence, then cancelSeries -> cancels all 3 and sends 1 deduplicated rider SMS
+  await service.reserveSeat(db, { rideId: res.rideIds[0], name: "Sam", phone: "5559876543", seats: 1 }, nowRec);
+  await service.reserveSeat(db, { rideId: res.rideIds[1], name: "Sam", phone: "5559876543", seats: 1 }, nowRec);
+  const cSer = await handlers.call(db, "carpoolCancelSeries", { seriesId: res.seriesId, secret: res.secret }, {}, nowRec);
+  assert.strictEqual(cSer.ok, true);
+  assert.strictEqual(cSer.cancelledCount, 3);
+  assert.strictEqual(cSer.outbox.length, 1);
+  const cSerAgain = await service.cancelSeries(db, { seriesId: res.seriesId, secret: res.secret }, nowRec);
+  assert.strictEqual(cSerAgain.already, true);
+  assert.strictEqual((await service.cancelSeries(db, { seriesId: res.seriesId, secret: "bad" }, nowRec)).ok, false);
+  assert.strictEqual((await service.cancelSeries(db, { seriesId: res.seriesId, secret: res.secret, groupId: "missing" }, nowRec)).ok, false);
+  assert.strictEqual((await service.postRecurringRides(db, {}, nowRec)).ok, false);
+  assert.strictEqual((await service.postRecurringRides(db, Object.assign({}, recInput, { groupId: "missing" }), nowRec)).ok, false);
+  const pendDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ requireRideApproval: true, horizonDays: 30, maxSeats: 4 }) });
+  assert.strictEqual((await service.postRecurringRides(pendDb, Object.assign({}, recInput, { idempotencyKey: "", seats: 5 }), nowRec)).field, "seats");
+  assert.strictEqual((await service.postRecurringRides(pendDb, Object.assign({}, recInput, { idempotencyKey: "", weekdays: [] }), nowRec)).field, "date");
+  const pendRes = await service.postRecurringRides(pendDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec);
+  assert.strictEqual(pendRes.status, "pending");
+  assert.strictEqual(pendRes.outbox.length, 1);
+
+  // Named-group recurring isolation
+  const oakDb = service.createMemoryDb({
+    "carpool_groups/oak": { groupId: "oak", name: "Oak", status: "active" },
+    "carpool_groups/oak/private/config": enabledConfig({ horizonDays: 30 })
+  });
+  const oakRec = await service.postRecurringRides(oakDb, Object.assign({}, recInput, { groupId: "oak", idempotencyKey: "" }), nowRec);
+  assert.strictEqual(oakRec.ok, true);
+  assert.strictEqual((await service.cancelSeries(oakDb, { groupId: "oak", seriesId: oakRec.seriesId, secret: oakRec.secret }, nowRec)).ok, true);
+
+  // Additional branch coverage: platform paused, group disabled, blocked phone, SMS cap 0
+  const pausedDb = service.createMemoryDb({ "carpool_platform/config": { platformEnabled: false }, "settings/carpool_config": enabledConfig() });
+  assert.strictEqual((await service.postRecurringRides(pausedDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).ok, false);
+  const disDb = service.createMemoryDb({ "settings/carpool_config": Object.assign(enabledConfig(), { enabled: false }) });
+  assert.strictEqual((await service.postRecurringRides(disDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).ok, false);
+  const blkDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 0, horizonDays: 30 }) });
+  await service.setPosting(blkDb, service.SUPERADMIN_EMAIL, { phone: recInput.phone, blocked: true }, nowRec);
+  assert.strictEqual((await service.postRecurringRides(blkDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).ok, false);
+  const zeroSmsDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ dailySmsCap: 0, horizonDays: 30 }) });
+  const zRes = await service.postRecurringRides(zeroSmsDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec);
+  assert.strictEqual(zRes.ok, true);
+  assert.strictEqual(zRes.textSent, false);
+  await service.cancelTrip(zeroSmsDb, { rideId: zRes.rideIds[0], secret: zRes.secret }, nowRec);
+  assert.strictEqual((await service.cancelSeries(zeroSmsDb, { seriesId: zRes.seriesId, secret: zRes.secret }, nowRec)).cancelledCount, 2);
+  // membersOnly denial & daily post cap on postRecurringRides
+  const memDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ membersOnly: true, horizonDays: 30 }) });
+  assert.strictEqual((await service.postRecurringRides(memDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).memberDenied, true);
+  const capPostDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig({ maxPostsPerPhonePerDay: 1, horizonDays: 30 }) });
+  assert.strictEqual((await service.postRecurringRides(capPostDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).ok, true);
+  assert.strictEqual((await service.postRecurringRides(capPostDb, Object.assign({}, recInput, { idempotencyKey: "" }), nowRec)).ok, false);
+
+  // 3. UI: Repeat Weekly toggle, weekday pills, duration pills, tap-to-skip, submit, board badge, and Manage trip Cancel series
+  const win = fakeWindow();
+  win.Intl = { DateTimeFormat: function () { return { resolvedOptions: function () { return { timeZone: "America/New_York" }; } }; } };
+  let postedRec = null;
+  let cancelledSeries = null;
+  win.JumpInCloud = {
+    watchBoard: function () { return function () { }; },
+    watchRide: function () { return function () { }; },
+    roleFor: function () { return ""; },
+    tripSecret: function () { return "sek"; },
+    publicRideUrl: function (id) { return "https://waitlink.app/jumpin?ride=" + id; },
+    postRecurringRides: function (vals) {
+      postedRec = vals;
+      return Promise.resolve({ ok: true, seriesId: "ser_1", rideIds: ["r1", "r2"], secret: "sek", count: 2, dates: ["2026-11-30", "2026-12-02"], status: "open", textSent: true });
+    },
+    cancelSeries: function (sid, sec) {
+      cancelledSeries = { sid: sid, sec: sec };
+      return Promise.resolve({ ok: true, cancelledCount: 2 });
+    }
+  };
+  const mounted = view.mount(win);
+  mounted.setState(Object.assign(ui.blank(), {
+    rides: [{ rideId: "r1", kind: "offer", from: "A", to: "B", when: "Mon", seatsLeft: 2, driverName: "Ali", seriesId: "ser_1" }]
+  }));
+  assert.ok(mounted.root.children[1].querySelectorAll("span").some(function (s) { return s.className === "series-tag"; }));
+
+  // Open Post a ride -> switch to Weekly -> toggle weekday & duration & skip chip -> submit
+  mounted.setState(ui.reduce(ui.blank(), { type: "post" }));
+  const weeklyBtn = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "Weekly"; });
+  weeklyBtn._listeners[0]();
+  const dayBtns = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("repeat-day-btn") !== -1; });
+  assert.strictEqual(dayBtns.length, 7);
+  dayBtns[3]._listeners[0](); // Add Wednesday
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "4 wks"; })._listeners[0]();
+  const skipChips = mounted.root.children[1].querySelectorAll("button").filter(function (b) { return b.className && b.className.indexOf("repeat-date-chip") !== -1; });
+  assert.ok(skipChips.length >= 2);
+  skipChips[0]._listeners[0](); // Skip first
+  skipChips[0]._listeners[0](); // Unskip first
+
+  const recVals = { name: "Ali", phone: "5552345678", from: "North", to: "South" };
+  mounted.root.children[1].querySelectorAll("input").forEach(function (inp) { if (recVals[inp.name]) inp.value = recVals[inp.name]; });
+  mounted.root.children[2].querySelectorAll("button")[0]._listeners[0]();
+  await new Promise(function (r) { setTimeout(r, 0); });
+  assert.ok(postedRec);
+  assert.strictEqual(mounted.getState().mode, "posted");
+  assert.strictEqual(mounted.getState().seriesCount, 2);
+
+  // Manage trip sheet -> Cancel all upcoming in series
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "ride",
+    role: "driver",
+    status: "open",
+    driverSheet: "trip",
+    ride: { rideId: "r1", kind: "offer", from: "North", to: "South", departAt: Date.now() + 86400000, seatsLeft: 2, seriesId: "ser_1" }
+  }));
+  const serCancelBtn = mounted.root.querySelectorAll("button").find(function (b) { return b.textContent === "✕ Cancel all upcoming in series"; });
+  assert.ok(serCancelBtn);
+  serCancelBtn._listeners[0]();
+  await new Promise(function (r) { setTimeout(r, 0); });
+  assert.strictEqual(cancelledSeries.sid, "ser_1");
+  view.destroy();
+});
+
 function fakeWindow() {
   const listeners = {};
   function node(tag) {

@@ -8,6 +8,8 @@ function call(db, name, data, auth, now) {
   const email = auth && auth.token && auth.token.email;
   const body = data || {};
   if (name === "carpoolPostRide") return service.postRide(db, body, now);
+  if (name === "carpoolPostRecurringRides") return service.postRecurringRides(db, body, now);
+  if (name === "carpoolCancelSeries") return service.cancelSeries(db, body, now);
   if (name === "carpoolPostRideRequest") return service.postRideRequest(db, body, now);
   if (name === "carpoolClaimRideRequest") return service.claimRideRequest(db, body, now);
   if (name === "carpoolCancelRideRequest") return service.cancelRideRequest(db, body, now);

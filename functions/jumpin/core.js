@@ -346,6 +346,42 @@
     return { value: { date: String(fields.date), time: String(fields.time), seats: seats, note: note.value, vehicle: vehicle.value } };
   }
 
+  const MAX_RECURRING_WEEKS = 6;
+  const MAX_RECURRING_RIDES = 18;
+
+  function buildRecurringDates(params) {
+    const p = params || {};
+    const startMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(p.startDate || "").trim());
+    if (!startMatch) return { dates: [], included: [], error: "Choose a valid start date." };
+    const timeMatch = /^(\d{2}):(\d{2})$/.exec(String(p.time || "").trim());
+    if (!timeMatch) return { dates: [], included: [], error: "Choose a valid time." };
+    const weekdays = Array.isArray(p.weekdays) ? p.weekdays.map(Number).filter(function (w) { return Number.isInteger(w) && w >= 0 && w <= 6; }) : [];
+    if (!weekdays.length) return { dates: [], included: [], error: "Select at least one day of the week." };
+    const weeks = Math.max(1, Math.min(MAX_RECURRING_WEEKS, Number(p.weeks) || 2));
+    const horizon = Math.max(1, Number(p.horizonDays) || 30);
+    const nowMs = p.nowMs || Date.now();
+    const maxEndMs = nowMs + horizon * DAY_MS;
+    const skipSet = {};
+    (Array.isArray(p.skipDates) ? p.skipDates : []).forEach(function (d) { skipSet[String(d)] = true; });
+    const sy = Number(startMatch[1]);
+    const sm = Number(startMatch[2]) - 1;
+    const sd = Number(startMatch[3]);
+    const dates = [];
+    for (let d = 0; d < weeks * 7; d++) {
+      const dt = new Date(Date.UTC(sy, sm, sd + d));
+      const ymd = dt.getUTCFullYear() + "-" + String(dt.getUTCMonth() + 1).padStart(2, "0") + "-" + String(dt.getUTCDate()).padStart(2, "0");
+      const wd = dt.getUTCDay();
+      if (weekdays.indexOf(wd) === -1) continue;
+      const departAt = zonedToUtc(ymd, p.time, p.timeZone || "UTC");
+      if (departAt < nowMs + 30 * 60000 || departAt > maxEndMs) continue;
+      dates.push({ date: ymd, departAt: departAt, weekday: wd, skipped: !!skipSet[ymd] });
+    }
+    const included = dates.filter(function (item) { return !item.skipped; });
+    if (!included.length) return { dates: dates, included: [], error: "Keep at least 1 ride date." };
+    if (included.length > MAX_RECURRING_RIDES) return { dates: dates, included: included, error: "You can post up to " + MAX_RECURRING_RIDES + " rides at a time." };
+    return { dates: dates, included: included };
+  }
+
   function partsInZone(utcMs, timeZone) {
     const fmt = new Intl.DateTimeFormat("en-US", {
       timeZone: timeZone,
@@ -494,6 +530,10 @@
       note: ride.note,
       vehicle: ride.vehicle || "",
       driverTripCount: Number(ride.driverTripCount) || 0,
+      seriesId: ride.seriesId || "",
+      seriesIndex: Number(ride.seriesIndex) || 0,
+      seriesTotal: Number(ride.seriesTotal) || 0,
+      seriesDays: Array.isArray(ride.seriesDays) ? ride.seriesDays : [],
       driverName: ride.driverName,
       requesterName: ride.requesterName || "",
       requesterReservationId: ride.requesterReservationId || "",
@@ -552,6 +592,9 @@
   return {
     DAY_MS: DAY_MS,
     IDEMPOTENCY_MS: IDEMPOTENCY_MS,
+    MAX_RECURRING_WEEKS: MAX_RECURRING_WEEKS,
+    MAX_RECURRING_RIDES: MAX_RECURRING_RIDES,
+    buildRecurringDates: buildRecurringDates,
     normalizeGroupId: normalizeGroupId,
     groupSlugError: groupSlugError,
     stripTags: stripTags,

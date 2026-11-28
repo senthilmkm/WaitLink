@@ -104,6 +104,8 @@ function staffCall(name) {
 }
 
 exports.carpoolPostRide = guestCall("carpoolPostRide");
+exports.carpoolPostRecurringRides = guestCall("carpoolPostRecurringRides");
+exports.carpoolCancelSeries = guestCall("carpoolCancelSeries");
 exports.carpoolPostRideRequest = guestCall("carpoolPostRideRequest");
 exports.carpoolClaimRideRequest = guestCall("carpoolClaimRideRequest");
 exports.carpoolCancelRideRequest = guestCall("carpoolCancelRideRequest");

@@ -292,6 +292,15 @@
           return result;
         });
       },
+      postRecurringRides: function (values) {
+        return call("carpoolPostRecurringRides", Object.assign({}, values, { idempotencyKey: once("post") })).then(function (result) {
+          if (result && result.ok && result.secret && Array.isArray(result.rideIds)) {
+            result.rideIds.forEach(function (id) { saveTrip(storage, id, result.secret); });
+            keys.post = "";
+          }
+          return result;
+        });
+      },
       postRideRequest: function (values) {
         return call("carpoolPostRideRequest", Object.assign({}, values, { idempotencyKey: once("post") })).then(function (result) {
           if (result && result.ok && result.secret && result.reservationId) {
@@ -346,6 +355,9 @@
       },
       cancelTrip: function (rideId, secret) {
         return call("carpoolCancelTrip", { rideId: rideId, secret: secret });
+      },
+      cancelSeries: function (seriesId, secret) {
+        return call("carpoolCancelSeries", { seriesId: seriesId, secret: secret });
       },
       editRide: function (rideId, secret, fields) {
         return call("carpoolEditRide", Object.assign({ rideId: rideId, secret: secret }, fields));

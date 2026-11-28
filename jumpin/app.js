@@ -184,6 +184,14 @@
       "#jumpin-mid .foot-right{display:inline-flex;align-items:center;gap:8px;font-weight:600;margin-left:auto}",
       "#jumpin-mid .cost-tag{padding:2px 8px;border-radius:999px;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;font-weight:700;font-size:12px}",
       "#jumpin-mid .trip-cnt-tag{padding:2px 7px;border-radius:999px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:11px;font-weight:700;white-space:nowrap}",
+      "#jumpin-mid .series-tag{padding:2px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:11px;font-weight:700;white-space:nowrap}",
+      "#jumpin-mid .repeat-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}",
+      "#jumpin-mid .repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:0 0 12px}",
+      "#jumpin-mid .repeat-day-btn{min-height:40px;padding:0;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .repeat-day-btn.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
+      "#jumpin-mid .repeat-preview{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}",
+      "#jumpin-mid .repeat-date-chip{min-height:34px;padding:4px 10px;border-radius:999px;border:1px solid #a5f3fc;background:#ecfeff;color:#0e7490;font-size:12.5px;font-weight:700;cursor:pointer}",
+      "#jumpin-mid .repeat-date-chip.skipped{border-color:#cbd5e1;background:#f1f5f9;color:#64748b;text-decoration:line-through}",
       "#jumpin-mid .mini-av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:rgba(8,145,178,.14);color:#0e7490;font-size:12px;font-weight:700;flex-shrink:0}",
       "#jumpin-mid .info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 14px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px}",
       "#jumpin-mid .info-tile{min-width:0}",
@@ -896,6 +904,32 @@
         on(cancelBtn, "click", function () { state = ui.reduce(state, { type: "cancel-ask", role: "driver" }); draw(); });
         menu.appendChild(cancelBtn);
       }
+      if (ride.seriesId && cloud && cloud.cancelSeries && (state.status === "open" || state.status === "pending")) {
+        const serBtn = el(doc, "button", "sheet-item danger");
+        serBtn.type = "button";
+        spinText(doc, serBtn, state.busy && state.busyAction === "cancel-series", "Cancelling…", "✕ Cancel all upcoming in series", true);
+        on(serBtn, "click", function () {
+          state.busy = true;
+          state.busyAction = "cancel-series";
+          draw();
+          cloud.cancelSeries(ride.seriesId, cloud.tripSecret(ride.rideId)).then(function (res) {
+            state.busy = false;
+            state.busyAction = "";
+            if (res && res.ok === false) state = ui.reduce(state, { type: "fail", error: res.error });
+            else {
+              state = ui.reduce(state, { type: "board" });
+              showToast("Upcoming series trips cancelled.");
+            }
+            draw();
+          }, function () {
+            state.busy = false;
+            state.busyAction = "";
+            state = ui.reduce(state, { type: "fail", error: "Could not cancel series." });
+            draw();
+          });
+        });
+        menu.appendChild(serBtn);
+      }
       sheet.appendChild(menu);
       const closeBtn = el(doc, "button", "textish", "Close");
       closeBtn.type = "button";
@@ -1243,6 +1277,10 @@
     let prevSheetOpen = false;
     let postRole = "";
     let pickedWhen = "";
+    let repeatMode = "once";
+    let repeatWeekdays = [];
+    let repeatWeeks = 2;
+    let repeatSkips = [];
 
     function claimRequestSheet(doc) {
       const sheet = el(doc, "section");
@@ -2261,6 +2299,7 @@
             dWrap.appendChild(el(doc, "span", "mini-av", dName.charAt(0).toUpperCase()));
             dWrap.appendChild(el(doc, "span", "", dName));
             if (!isReq && Number(ride.driverTripCount) > 0) dWrap.appendChild(el(doc, "span", "trip-cnt-tag", "✓ " + ride.driverTripCount + (ride.driverTripCount === 1 ? " trip" : " trips")));
+            if (!isReq && ride.seriesId) dWrap.appendChild(el(doc, "span", "series-tag", "🔁 Weekly"));
             foot.appendChild(dWrap);
             const right = el(doc, "span", "foot-right");
             const reqSeats = Number(ride.seatsRequested) || 1;
@@ -2520,6 +2559,86 @@
         if (postInputs.time) on(postInputs.time, "change", function () { pickedWhen = ""; syncWhenChips(); });
         syncWhenChips();
         secSched.appendChild(whenChips);
+        if (postRole !== "rider") {
+          secSched.appendChild(el(doc, "label", "lbl", "Repeat"));
+          const repSeg = el(doc, "div", "repeat-seg");
+          [["once", "One-time"], ["weekly", "Weekly"]].forEach(function (opt) {
+            const rb = el(doc, "button", "seat-pill" + (repeatMode === opt[0] ? " active" : ""), opt[1]);
+            rb.type = "button";
+            on(rb, "click", function () {
+              savePostDraft();
+              repeatMode = opt[0];
+              if (repeatMode === "weekly" && !repeatWeekdays.length && postInputs.date && postInputs.date.value) {
+                const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(postInputs.date.value);
+                if (m) repeatWeekdays = [new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()];
+              }
+              draw();
+            });
+            repSeg.appendChild(rb);
+          });
+          secSched.appendChild(repSeg);
+          if (repeatMode === "weekly") {
+            secSched.appendChild(el(doc, "label", "lbl", "Days of week"));
+            const daysGrid = el(doc, "div", "repeat-days");
+            const dayLabels = [["S", "Sunday"], ["M", "Monday"], ["T", "Tuesday"], ["W", "Wednesday"], ["T", "Thursday"], ["F", "Friday"], ["S", "Saturday"]];
+            const previewHost = el(doc, "div");
+            function paintRepeatPreview() {
+              previewHost.innerHTML = "";
+              const built = core.buildRecurringDates({
+                startDate: postInputs.date ? postInputs.date.value : "",
+                time: postInputs.time ? postInputs.time.value : "",
+                timeZone: (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC",
+                weekdays: repeatWeekdays,
+                weeks: repeatWeeks,
+                skipDates: repeatSkips,
+                horizonDays: groupHorizonDays(),
+                nowMs: Date.now()
+              });
+              const chipsWrap = el(doc, "div", "repeat-preview");
+              built.dates.forEach(function (item) {
+                const lbl = item.date.slice(5);
+                const chip = el(doc, "button", "repeat-date-chip" + (item.skipped ? " skipped" : ""), (item.skipped ? "✕ " : "✓ ") + lbl);
+                chip.type = "button";
+                on(chip, "click", function () {
+                  if (repeatSkips.indexOf(item.date) !== -1) repeatSkips = repeatSkips.filter(function (d) { return d !== item.date; });
+                  else repeatSkips = repeatSkips.concat([item.date]);
+                  paintRepeatPreview();
+                });
+                chipsWrap.appendChild(chip);
+              });
+              previewHost.appendChild(chipsWrap);
+              previewHost.appendChild(el(doc, "p", built.error ? "error" : "hint", built.error || ("Posting " + built.included.length + (built.included.length === 1 ? " ride" : " rides") + " · Tap any day to skip")));
+            }
+            dayLabels.forEach(function (dl, idx) {
+              const db = el(doc, "button", "repeat-day-btn" + (repeatWeekdays.indexOf(idx) !== -1 ? " active" : ""), dl[0]);
+              db.type = "button";
+              db.setAttribute("aria-label", dl[1]);
+              on(db, "click", function () {
+                if (repeatWeekdays.indexOf(idx) !== -1) repeatWeekdays = repeatWeekdays.filter(function (w) { return w !== idx; });
+                else repeatWeekdays = repeatWeekdays.concat([idx]);
+                db.className = "repeat-day-btn" + (repeatWeekdays.indexOf(idx) !== -1 ? " active" : "");
+                paintRepeatPreview();
+              });
+              daysGrid.appendChild(db);
+            });
+            secSched.appendChild(daysGrid);
+            secSched.appendChild(el(doc, "label", "lbl", "For how long"));
+            const wksRow = el(doc, "div", "chip-row");
+            [2, 4, 6].forEach(function (w) {
+              const wb = el(doc, "button", "chip-btn" + (repeatWeeks === w ? " active" : ""), w + " wks");
+              wb.type = "button";
+              on(wb, "click", function () {
+                repeatWeeks = w;
+                wksRow.querySelectorAll("button").forEach(function (b) { b.className = "chip-btn" + (b.textContent === (w + " wks") ? " active" : ""); });
+                paintRepeatPreview();
+              });
+              wksRow.appendChild(wb);
+            });
+            secSched.appendChild(wksRow);
+            paintRepeatPreview();
+            secSched.appendChild(previewHost);
+          }
+        }
         const maxSeats = groupMaxSeats();
         secSched.appendChild(el(doc, "label", "lbl", postRole === "rider" ? "Seats needed" : "Seats"));
         buildSeatPills(doc, secSched, "seats", maxSeats, Math.min(maxSeats, Number((state.draft && state.draft.seats) || (postRole === "rider" ? 1 : 3))));
@@ -2653,6 +2772,9 @@
           postedRoute.className = "route-stack route-stack-lg";
           card.appendChild(postedRoute);
         }
+        if (state.seriesCount > 1 && state.seriesDates && state.seriesDates.length) {
+          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.join(", ")));
+        }
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
         const tripCode = shortTripId(state.rideId || (state.ride && state.ride.rideId));
@@ -2724,6 +2846,9 @@
           const postedRoute = buildRouteStack(doc, postedParts[0], postedParts[1]);
           postedRoute.className = "route-stack route-stack-lg";
           card.appendChild(postedRoute);
+        }
+        if (state.seriesCount > 1 && state.seriesDates && state.seriesDates.length) {
+          card.appendChild(el(doc, "p", "muted", "Dates: " + state.seriesDates.join(", ")));
         }
         if (state.when) card.appendChild(el(doc, "p", "muted", state.when));
         if (state.seatsText) card.appendChild(el(doc, "p", "muted", state.seatsText));
@@ -2797,6 +2922,10 @@
             const kept = state.rides || [];
             postRole = "";
             pickedWhen = "";
+            repeatMode = "once";
+            repeatWeekdays = [];
+            repeatWeeks = 2;
+            repeatSkips = [];
             state = ui.reduce(state, { type: "post" });
             state.rides = kept;
           }
@@ -2809,19 +2938,27 @@
             mid.querySelectorAll("input, select").forEach(function (input) { values[input.name] = input.value; });
             if (!values.seats) values.seats = isReqPost ? 1 : Math.min(groupMaxSeats(), 3);
             values.timeZone = (win.Intl && win.Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+            const isWeekly = !isReqPost && repeatMode === "weekly";
             const errors = isReqPost ? core.requestErrors(values) : core.postErrors(values);
-            const when = errors.error ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), groupHorizonDays());
+            const recCheck = isWeekly ? core.buildRecurringDates({ startDate: values.date, time: values.time, timeZone: values.timeZone, weekdays: repeatWeekdays, weeks: repeatWeeks, skipDates: repeatSkips, horizonDays: groupHorizonDays(), nowMs: Date.now() }) : null;
+            const when = errors.error || isWeekly ? null : core.departureError(values.date, values.time, values.timeZone, Date.now(), groupHorizonDays());
             if (errors.error) {
               state = ui.reduce(state, { type: "fail", field: errors.field, error: errors.error });
               state.draft = values;
-            } else if (when.error) {
+            } else if (recCheck && recCheck.error) {
+              state = ui.reduce(state, { type: "fail", field: "date", error: recCheck.error });
+              state.draft = values;
+            } else if (when && when.error) {
               state = ui.reduce(state, { type: "fail", field: "time", error: when.error });
               state.draft = values;
             } else if (cloud) {
               state.busy = true;
               state.draft = values;
               draw();
-              Promise.resolve().then(function () { return isReqPost ? cloud.postRideRequest(values) : cloud.postRide(values); }).then(function (result) {
+              const postCall = isReqPost
+                ? cloud.postRideRequest(values)
+                : (isWeekly ? cloud.postRecurringRides(Object.assign({}, values, { weekdays: repeatWeekdays, weeks: repeatWeeks, skipDates: repeatSkips })) : cloud.postRide(values));
+              Promise.resolve().then(function () { return postCall; }).then(function (result) {
                 state.busy = false;
                 if (!result || result.ok === false) {
                   state = ui.reduce(state, { type: "fail", field: result && result.field, error: (result && result.error) || "Could not post. Check the connection and try again." });
@@ -2834,7 +2971,11 @@
                   extrasOpen = false;
                   driverEditOpen = false;
                   postRole = "driver";
-                  state = postedFromServer(state, result, values, when.departAt);
+                  repeatMode = "once";
+                  repeatWeekdays = [];
+                  repeatSkips = [];
+                  const firstDepart = isWeekly && recCheck && recCheck.included[0] ? recCheck.included[0].departAt : when.departAt;
+                  state = postedFromServer(state, result, values, firstDepart);
                 }
                 draw();
               }, function () {
@@ -3041,18 +3182,23 @@
       const kept = current.rides || [];
       const isReq = result.kind === "request";
       const reqSeats = Number(values.seats || 1);
-      return Object.assign(ui.reduce(current, { type: "notice", notice: isReq ? "Ride request posted." : (result.status === "pending" ? "Waiting for approval." : "Trip posted.") }), {
+      const firstId = result.rideId || (Array.isArray(result.rideIds) && result.rideIds[0]) || "";
+      const seriesCount = Number(result.count) || 0;
+      const postedNotice = isReq ? "Ride request posted." : (seriesCount > 1 ? (result.status === "pending" ? seriesCount + " rides submitted." : seriesCount + " rides posted.") : (result.status === "pending" ? "Waiting for approval." : "Trip posted."));
+      return Object.assign(ui.reduce(current, { type: "notice", notice: postedNotice }), {
         mode: "posted",
         role: isReq ? "requester" : "driver",
         status: result.status || "open",
         route: values.from + " → " + values.to,
         when: when,
+        seriesCount: seriesCount,
+        seriesDates: Array.isArray(result.dates) ? result.dates : [],
         seatsText: isReq ? (reqSeats === 1 ? "1 seat needed" : reqSeats + " seats needed") : seatsLabel(Number(values.seats || 3)),
-        link: result.status === "pending" || !result.rideId || !cloud || !cloud.publicRideUrl ? "" : cloud.publicRideUrl(result.rideId),
-        rideId: result.rideId,
+        link: result.status === "pending" || !firstId || !cloud || !cloud.publicRideUrl ? "" : cloud.publicRideUrl(firstId),
+        rideId: firstId,
         ride: isReq
-          ? { rideId: result.rideId, kind: "request", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: reqSeats, seatsRequested: reqSeats, rideCost: Number(values.rideCost) || 0, note: values.note || "", requesterName: values.name || "", requesterReservationId: result.reservationId || "" }
-          : { rideId: result.rideId, kind: "offer", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: Number(values.seats || 3), rideCost: Number(values.rideCost) || 0, note: values.note || "", driverName: values.name || "" },
+          ? { rideId: firstId, kind: "request", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: reqSeats, seatsRequested: reqSeats, rideCost: Number(values.rideCost) || 0, note: values.note || "", requesterName: values.name || "", requesterReservationId: result.reservationId || "" }
+          : { rideId: firstId, kind: "offer", from: values.from, to: values.to, departAt: departAt, status: result.status || "open", seatsLeft: Number(values.seats || 3), rideCost: Number(values.rideCost) || 0, note: values.note || "", driverName: values.name || "" },
         rides: kept,
         smsNote: result.textSent === false ? (result.error || (isReq ? "Request posted on this browser. Text could not be sent right now." : "Trip posted on this browser. Text could not be sent right now.")) : ""
       });

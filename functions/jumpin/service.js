@@ -99,7 +99,8 @@ function pathsFor(gid) {
       ridePrivate: function (id) { return "carpool_private/rides/" + id; },
       ridePublic: function (id) { return "carpool_public/rides/" + id; },
       reservation: function (rideId, e164) { return "carpool_private/reservations/" + rideId + "_" + core.phoneHash16(e164); },
-      limit: function (key) { return "carpool_private/limits/" + key; }
+      limit: function (key) { return "carpool_private/limits/" + key; },
+      series: function (id) { return "carpool_private/series/" + id; }
     };
   }
   const base = "carpool_groups/" + g;
@@ -117,7 +118,8 @@ function pathsFor(gid) {
     ridePrivate: function (id) { return base + "/rides/" + id; },
     ridePublic: function (id) { return base + "/public_rides/" + id; },
     reservation: function (rideId, e164) { return base + "/reservations/" + rideId + "_" + core.phoneHash16(e164); },
-    limit: function (key) { return base + "/limits/" + key; }
+    limit: function (key) { return base + "/limits/" + key; },
+    series: function (id) { return base + "/series/" + id; }
   };
 }
 
@@ -2414,12 +2416,263 @@ function cancelRideRequest(db, input, now) {
   });
 }
 
+function postRecurringRides(db, input, now, rng) {
+  const checked = core.postErrors(input || {});
+  if (checked.error) return Promise.resolve({ ok: false, field: checked.field, error: checked.error });
+  const fields = checked.value;
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, clock);
+    if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
+    const config = await loadConfig(tx, clock, p);
+    if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const idemKey = input && input.idempotencyKey ? String(input.idempotencyKey) : "";
+    if (idemKey) {
+      const existing = await tx.get(p.limit("series_" + idemKey));
+      if (existing && existing.expiresAt > clock) {
+        return { ok: true, already: true, seriesId: existing.seriesId, rideIds: existing.rideIds, secret: existing.secret, status: existing.status, count: existing.rideIds.length, dates: existing.dates || [], texts: [] };
+      }
+    }
+    const built = core.buildRecurringDates({
+      startDate: fields.date,
+      time: fields.time,
+      timeZone: input.timeZone || "UTC",
+      weekdays: input && input.weekdays,
+      weeks: input && input.weeks,
+      skipDates: input && input.skipDates,
+      horizonDays: config.horizonDays,
+      nowMs: clock
+    });
+    if (built.error) return { ok: false, field: "date", error: built.error };
+    if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
+    if (await tx.get(p.block(core.phoneHash16(fields.phone)))) return { ok: false, error: "You can't post a ride right now." };
+    const notMember = await memberError(tx, config, fields.phone, p);
+    if (notMember) return { ok: false, field: "phone", error: notMember, memberDenied: true, contactEmail: config.contactEmail };
+    const phone = await tx.get(p.phone(fields.phone)) || { postsDay: core.utcDay(clock), postsToday: 0, activeReservations: 0 };
+    const today = core.postsToday(phone, clock);
+    if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You already posted " + config.maxPostsPerPhonePerDay + " trips today." };
+    const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+    const audienceId = core.phoneHash16(fields.phone);
+    const audienceKey = p.audience(audienceId);
+    const existingAud = await tx.get(audienceKey);
+    const seriesId = core.randomId("ser_", rng);
+    const secret = core.randomSecret(rng);
+    const tokenHash = core.hashSecret(secret);
+    const status = config.requireRideApproval ? "pending" : "open";
+    const seriesDays = Array.isArray(input && input.weekdays) ? input.weekdays.map(Number) : [];
+    const rideIds = [];
+    const dates = [];
+    const indexRides = arr(index.rides);
+    const driverTripCount = Number(phone.completedTrips) || 0;
+    built.included.forEach(function (occ, idx) {
+      const rideId = core.randomId("ride_", rng);
+      rideIds.push(rideId);
+      dates.push(occ.date);
+      const ride = {
+        rideId: rideId,
+        status: status,
+        driverName: fields.name,
+        driverPhoneE164: fields.phone,
+        driverTokenHash: tokenHash,
+        tokenIssuedAt: clock,
+        from: fields.from,
+        to: fields.to,
+        departAt: occ.departAt,
+        durationMinutes: fields.durationMinutes,
+        timeZone: input.timeZone || "UTC",
+        seatsTotal: fields.seats,
+        seatsLeft: fields.seats,
+        rideCost: fields.rideCost || 0,
+        note: fields.note,
+        vehicle: fields.vehicle || "",
+        driverTripCount: driverTripCount,
+        seriesId: seriesId,
+        seriesIndex: idx + 1,
+        seriesTotal: built.included.length,
+        seriesDays: seriesDays,
+        smsSent: idx === 0 ? 1 : 0,
+        activeReservationDocIds: [],
+        createdAt: clock,
+        cancelledAt: null,
+        completedAt: null
+      };
+      const pub = core.publicRide(ride, [], [core.systemMessage("Trip posted.", clock, 1)]);
+      pub.updatedAt = clock;
+      tx.set(p.ridePrivate(rideId), ride);
+      tx.set(p.ridePublic(rideId), pub);
+      indexRides.push({
+        rideId: rideId,
+        kind: "offer",
+        status: status,
+        departAt: occ.departAt,
+        driverName: fields.name,
+        phoneLast4: core.last4(fields.phone),
+        driverPhoneE164: fields.phone,
+        requesterName: "",
+        requesterPhoneE164: "",
+        seatsRequested: 0,
+        from: fields.from,
+        to: fields.to,
+        note: fields.note,
+        seatsLeft: fields.seats,
+        seatsTotal: fields.seats,
+        timeZone: input.timeZone || "UTC",
+        riders: []
+      });
+    });
+    tx.set(p.series(seriesId), {
+      seriesId: seriesId,
+      groupId: p.groupId,
+      driverPhoneHash: audienceId,
+      driverTokenHash: tokenHash,
+      rideIds: rideIds,
+      dates: dates,
+      from: fields.from,
+      to: fields.to,
+      time: fields.time,
+      timeZone: input.timeZone || "UTC",
+      createdAt: clock,
+      status: "active"
+    });
+    tx.set(p.broadcastIndex, { rides: indexRides, audience: arr(index.audience) });
+    tx.set(audienceKey, {
+      id: audienceId,
+      phoneE164: fields.phone,
+      name: fields.name || (existingAud && existingAud.name) || "",
+      role: "driver",
+      smsOptOut: existingAud ? existingAud.smsOptOut === true : false,
+      updatedAt: clock
+    });
+    const sent = canSendBoth(config, platform, clock);
+    if (sent) {
+      bumpSms(config, platform);
+      const routeTag = shortRoute(fields.from, fields.to);
+      const firstId = rideIds[0];
+      const body = status === "pending"
+        ? "JumpIn pending " + built.included.length + " rides (" + routeTag + "): " + manageUrl("trip", firstId, secret, firstId, p.groupId)
+        : "JumpIn posted " + built.included.length + " rides (" + routeTag + "): " + manageUrl("trip", firstId, secret, firstId, p.groupId);
+      queueText(texts, fields.phone, body, "CARPOOL_DRIVER_LINK");
+    }
+    phone.postsDay = core.utcDay(clock);
+    phone.postsToday = today + 1;
+    phone.updatedAt = clock;
+    tx.set(p.phone(fields.phone), phone);
+    if (idemKey) {
+      tx.set(p.limit("series_" + idemKey), {
+        seriesId: seriesId,
+        rideIds: rideIds,
+        dates: dates,
+        secret: secret,
+        status: status,
+        expiresAt: clock + core.IDEMPOTENCY_MS
+      });
+    }
+    saveConfig(tx, config, p, sent ? platform : null);
+    return {
+      ok: true,
+      seriesId: seriesId,
+      rideIds: rideIds,
+      secret: secret,
+      status: status,
+      count: built.included.length,
+      dates: dates,
+      textSent: sent,
+      texts: texts,
+      error: sent ? "" : "Trips posted on this browser. Text could not be sent right now."
+    };
+  }).then(function (result) {
+    return withOutbox(result, result.texts, gidOf(input));
+  });
+}
+
+function cancelSeries(db, input, now) {
+  const clock = now || Date.now();
+  return db.runTransaction(async function (tx) {
+    const p = pathsFor(gidOf(input));
+    const gErr = await groupAccessError(tx, p);
+    if (gErr) return { ok: false, error: gErr };
+    const texts = freshTexts();
+    const platform = await loadPlatformConfig(tx, clock);
+    const config = await loadConfig(tx, clock, p);
+    const series = await tx.get(p.series(input && input.seriesId));
+    if (!series || !assertSecret(input && input.secret, series.driverTokenHash)) return { ok: false, error: GENERIC_LINK };
+    if (series.status === "cancelled") return { ok: true, already: true, cancelledCount: 0, texts: [] };
+    const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
+    const rideIds = arr(series.rideIds);
+    const targets = [];
+    const riderPhones = {};
+    const phoneDocs = {};
+    for (let i = 0; i < rideIds.length; i++) {
+      const ride = await tx.get(p.ridePrivate(rideIds[i]));
+      if (!ride || (ride.status !== "open" && ride.status !== "pending") || ride.departAt <= clock) continue;
+      const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
+      const keys = arr(ride.activeReservationDocIds);
+      const activeRes = [];
+      for (let k = 0; k < keys.length; k++) {
+        const res = await tx.get(keys[k]);
+        if (!res || res.status !== "active") continue;
+        activeRes.push({ key: keys[k], doc: res });
+        if (res.phoneE164) {
+          riderPhones[res.phoneE164] = true;
+          if (!phoneDocs[res.phoneE164]) phoneDocs[res.phoneE164] = await tx.get(p.phone(res.phoneE164)) || { activeReservations: 0 };
+        }
+      }
+      targets.push({ ride: ride, pub: pub, activeRes: activeRes });
+    }
+    const cancelledMap = {};
+    targets.forEach(function (t) {
+      cancelledMap[t.ride.rideId] = true;
+      t.ride.status = "cancelled";
+      t.ride.cancelledAt = clock;
+      t.ride.seatsLeft = 0;
+      t.ride.updatedAt = clock;
+      t.pub.status = "cancelled";
+      t.pub.seatsLeft = 0;
+      t.pub.updatedAt = clock;
+      t.pub.messages = arr(t.pub.messages).concat([core.systemMessage("Trip cancelled.", clock, arr(t.pub.messages).length + 1)]);
+      t.activeRes.forEach(function (r) {
+        r.doc.status = "cancelled";
+        r.doc.cancelledAt = clock;
+        tx.set(r.key, r.doc);
+        if (r.doc.phoneE164 && phoneDocs[r.doc.phoneE164]) {
+          phoneDocs[r.doc.phoneE164].activeReservations = Math.max(0, core.activeReservations(phoneDocs[r.doc.phoneE164]) - 1);
+        }
+      });
+      tx.set(p.ridePrivate(t.ride.rideId), t.ride);
+      tx.set(p.ridePublic(t.ride.rideId), t.pub);
+    });
+    Object.keys(phoneDocs).forEach(function (ph) { tx.set(p.phone(ph), phoneDocs[ph]); });
+    Object.keys(riderPhones).forEach(function (ph) {
+      if (canSendBoth(config, platform, clock)) {
+        bumpSms(config, platform);
+        queueText(texts, ph, "JumpIn series cancelled (" + shortRoute(series.from, series.to) + ").", "CARPOOL_TRIP_CANCELLED");
+      }
+    });
+    const idxRides = arr(index.rides);
+    idxRides.forEach(function (row) { if (cancelledMap[row.rideId]) { row.status = "cancelled"; row.seatsLeft = 0; row.riders = []; } });
+    tx.set(p.broadcastIndex, { rides: idxRides, audience: arr(index.audience) });
+    series.status = "cancelled";
+    series.cancelledAt = clock;
+    tx.set(p.series(series.seriesId), series);
+    if (texts.length) saveConfig(tx, config, p, platform);
+    return { ok: true, cancelledCount: targets.length, texts: texts };
+  }).then(function (result) {
+    return withOutbox(result, result.texts, gidOf(input));
+  });
+}
+
 module.exports = {
   SUPERADMIN_EMAIL: SUPERADMIN_EMAIL,
   PLATFORM_SUPPORT_NOTE: PLATFORM_SUPPORT_NOTE,
   GENERIC_LINK: GENERIC_LINK,
   createMemoryDb: createMemoryDb,
   postRide: postRide,
+  postRecurringRides: postRecurringRides,
+  cancelSeries: cancelSeries,
   postRideRequest: postRideRequest,
   claimRideRequest: claimRideRequest,
   cancelRideRequest: cancelRideRequest,

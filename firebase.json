@@ -91,6 +91,14 @@
         "function": { "functionId": "carpoolPostRide", "region": "us-central1" }
       },
       {
+        "source": "/api/carpoolPostRecurringRides",
+        "function": { "functionId": "carpoolPostRecurringRides", "region": "us-central1" }
+      },
+      {
+        "source": "/api/carpoolCancelSeries",
+        "function": { "functionId": "carpoolCancelSeries", "region": "us-central1" }
+      },
+      {
         "source": "/api/carpoolPostRideRequest",
         "function": { "functionId": "carpoolPostRideRequest", "region": "us-central1" }
       },
