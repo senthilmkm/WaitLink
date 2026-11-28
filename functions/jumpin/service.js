@@ -323,6 +323,13 @@ function postRide(db, input, now, rng) {
     if (!platform.platformEnabled) return { ok: false, error: platform.maintenanceMessage || "JumpIn is temporarily paused for maintenance." };
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const idemKey = input && input.idempotencyKey ? String(input.idempotencyKey) : "";
+    if (idemKey) {
+      const existingIdem = await tx.get(p.limit("post_" + idemKey));
+      if (existingIdem && existingIdem.expiresAt > now) {
+        return { ok: true, already: true, rideId: existingIdem.rideId, secret: existingIdem.secret, status: existingIdem.status, textSent: false, texts: [] };
+      }
+    }
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
@@ -381,6 +388,9 @@ function postRide(db, input, now, rng) {
     tx.set(p.ridePrivate(rideId), ride);
     tx.set(p.ridePublic(rideId), pub);
     tx.set(p.phone(fields.phone), phone);
+    if (idemKey) {
+      tx.set(p.limit("post_" + idemKey), { rideId: rideId, secret: secret, status: status, expiresAt: now + core.IDEMPOTENCY_MS });
+    }
     await touchAudience(tx, fields.phone, fields.name, "driver", now, p);
     await rememberRide(tx, ride, [], p);
     saveConfig(tx, config, p, sent ? platform : null);
@@ -2211,6 +2221,13 @@ function postRideRequest(db, input, now, rng) {
     if (!platform.needARideEnabled) return { ok: false, error: "Need a Ride is currently disabled." };
     const config = await loadConfig(tx, now, p);
     if (!config.enabled) return { ok: false, error: "JumpIn is not open yet." };
+    const idemKey = input && input.idempotencyKey ? String(input.idempotencyKey) : "";
+    if (idemKey) {
+      const existingIdem = await tx.get(p.limit("req_" + idemKey));
+      if (existingIdem && existingIdem.expiresAt > now) {
+        return { ok: true, already: true, rideId: existingIdem.rideId, reservationId: existingIdem.reservationId, secret: existingIdem.secret, status: existingIdem.status, kind: "request", textSent: false, texts: [] };
+      }
+    }
     const depart = core.departureError(fields.date, fields.time, input.timeZone, now, config.horizonDays);
     if (depart.error) return { ok: false, field: "time", error: depart.error };
     if (fields.seats > config.maxSeats) return { ok: false, field: "seats", error: "Choose seats from 1 to " + config.maxSeats + "." };
@@ -2272,6 +2289,9 @@ function postRideRequest(db, input, now, rng) {
     tx.set(p.ridePrivate(rideId), ride);
     tx.set(p.ridePublic(rideId), pub);
     tx.set(p.phone(fields.phone), phone);
+    if (idemKey) {
+      tx.set(p.limit("req_" + idemKey), { rideId: rideId, reservationId: reservationId, secret: secret, status: status, expiresAt: now + core.IDEMPOTENCY_MS });
+    }
     await touchAudience(tx, fields.phone, fields.name, "rider", now, p);
     await rememberRide(tx, ride, [], p);
     saveConfig(tx, config, p, sent ? platform : null);
@@ -2455,9 +2475,6 @@ function postRecurringRides(db, input, now, rng) {
     const today = core.postsToday(phone, clock);
     if (today >= config.maxPostsPerPhonePerDay) return { ok: false, error: "You already posted " + config.maxPostsPerPhonePerDay + " trips today." };
     const index = await tx.get(p.broadcastIndex) || { rides: [], audience: [] };
-    const audienceId = core.phoneHash16(fields.phone);
-    const audienceKey = p.audience(audienceId);
-    const existingAud = await tx.get(audienceKey);
     const seriesId = core.randomId("ser_", rng);
     const secret = core.randomSecret(rng);
     const tokenHash = core.hashSecret(secret);
@@ -2526,7 +2543,7 @@ function postRecurringRides(db, input, now, rng) {
     tx.set(p.series(seriesId), {
       seriesId: seriesId,
       groupId: p.groupId,
-      driverPhoneHash: audienceId,
+      driverPhoneHash: core.phoneHash16(fields.phone),
       driverTokenHash: tokenHash,
       rideIds: rideIds,
       dates: dates,
@@ -2538,14 +2555,7 @@ function postRecurringRides(db, input, now, rng) {
       status: "active"
     });
     tx.set(p.broadcastIndex, { rides: indexRides, audience: arr(index.audience) });
-    tx.set(audienceKey, {
-      id: audienceId,
-      phoneE164: fields.phone,
-      name: fields.name || (existingAud && existingAud.name) || "",
-      role: "driver",
-      smsOptOut: existingAud ? existingAud.smsOptOut === true : false,
-      updatedAt: clock
-    });
+    await touchAudience(tx, fields.phone, fields.name, "driver", clock, p);
     const sent = canSendBoth(config, platform, clock);
     if (sent) {
       bumpSms(config, platform);

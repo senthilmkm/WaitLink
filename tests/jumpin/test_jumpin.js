@@ -2325,7 +2325,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   // claimRideRequest idempotencyKey returns already: true with same secret
   const clIdem = await service.claimRideRequest(claim2Db, { rideId: rq2.rideId, name: "Drv1", phone: "5552220002", seats: 4, idempotencyKey: "idem_claim_1" }, NOW);
   assert.strictEqual(clIdem.ok, false);
-  const rqIdem = await service.postRideRequest(claim2Db, postInput({ seats: 1, phone: "5551110099", name: "ReqIdem" }), NOW);
+  const rqIdem = await service.postRideRequest(claim2Db, postInput({ seats: 1, phone: "5551110099", name: "ReqIdem", idempotencyKey: "idem_req_claim" }), NOW);
   const clFirst = await service.claimRideRequest(claim2Db, { rideId: rqIdem.rideId, name: "DrvIdem", phone: "5552220099", seats: 3, idempotencyKey: "idem_claim_2" }, NOW);
   const clRetry = await service.claimRideRequest(claim2Db, { rideId: rqIdem.rideId, name: "DrvIdem", phone: "5552220099", seats: 3, idempotencyKey: "idem_claim_2" }, NOW);
   assert.strictEqual(clRetry.ok, true);
@@ -2336,7 +2336,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   const pPurge = await service.postRide(purgeDb, postInput(), NOW);
   await service.reserveSeat(purgeDb, { rideId: pPurge.rideId, name: "Sam", phone: "5557770001", seats: 1 }, NOW);
   await service.purgeData(purgeDb, service.SUPERADMIN_EMAIL, { scope: "trips", confirm: true }, NOW);
-  const pPurge2 = await service.postRide(purgeDb, postInput(), NOW);
+  const pPurge2 = await service.postRide(purgeDb, postInput({ idempotencyKey: "purge_2" }), NOW);
   assert.strictEqual((await service.reserveSeat(purgeDb, { rideId: pPurge2.rideId, name: "Sam", phone: "5557770001", seats: 1 }, NOW)).ok, true);
   // Outbox includes groupId for named-group Twilio 21610 opt-out routing
   assert.strictEqual(pPurge2.outbox[0].groupId, "default");
@@ -2580,6 +2580,18 @@ it("creates and cancels Weekly Recurring Rides with tap-to-skip, horizon clamp, 
   const retry = await service.postRecurringRides(db, recInput, nowRec);
   assert.strictEqual(retry.already, true);
   assert.deepStrictEqual(retry.rideIds, res.rideIds);
+  // Recurring driver is added to broadcastIndex.audience via touchAudience
+  assert.ok(db.snapshot()["carpool_private/broadcast_index"].audience.some(function (a) { return a.phoneE164 === "+15552345678"; }));
+  // postRide and postRideRequest idempotency deduplication
+  const idemPost1 = await service.postRide(db, postInput({ date: "2026-11-30", idempotencyKey: "idem_post_1" }), nowRec);
+  const idemPost2 = await service.postRide(db, postInput({ date: "2026-11-30", idempotencyKey: "idem_post_1" }), nowRec);
+  assert.strictEqual(idemPost2.already, true);
+  assert.strictEqual(idemPost2.rideId, idemPost1.rideId);
+  const idemReqDb = service.createMemoryDb({ "settings/carpool_config": enabledConfig(), "carpool_platform/config": { platformEnabled: true, needARideEnabled: true } });
+  const idemReq1 = await service.postRideRequest(idemReqDb, postInput({ date: "2026-11-30", idempotencyKey: "idem_req_1" }), nowRec);
+  const idemReq2 = await service.postRideRequest(idemReqDb, postInput({ date: "2026-11-30", idempotencyKey: "idem_req_1" }), nowRec);
+  assert.strictEqual(idemReq2.already, true);
+  assert.strictEqual(idemReq2.rideId, idemReq1.rideId);
 
   // Reserve a seat on one occurrence, then cancelSeries -> cancels all 3 and sends 1 deduplicated rider SMS
   await service.reserveSeat(db, { rideId: res.rideIds[0], name: "Sam", phone: "5559876543", seats: 1 }, nowRec);
