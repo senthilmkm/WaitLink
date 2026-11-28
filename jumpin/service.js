@@ -352,6 +352,8 @@ function postRide(db, input, now, rng) {
       seatsLeft: fields.seats,
       rideCost: fields.rideCost || 0,
       note: fields.note,
+      vehicle: fields.vehicle || "",
+      driverTripCount: Number(phone.completedTrips) || 0,
       smsSent: 0,
       activeReservationDocIds: [],
       createdAt: now,
@@ -805,6 +807,7 @@ function completeTrip(db, input, now) {
       }
     }
     if (!activeRiderCount) return { ok: false, error: "No active passengers remain on this trip. Use Cancel trip instead." };
+    const drvPhone = ride.driverPhoneE164 ? (await tx.get(p.phone(ride.driverPhoneE164)) || { activeReservations: 0 }) : null;
     for (let k = 0; k < activeResDocs.length; k++) {
       const rDoc = activeResDocs[k];
       if (rDoc.phoneE164) {
@@ -833,6 +836,11 @@ function completeTrip(db, input, now) {
       tx.set(p.ridePublic(ride.rideId), pub);
     }
     tx.set(p.ridePrivate(ride.rideId), ride);
+    if (drvPhone) {
+      drvPhone.completedTrips = (Number(drvPhone.completedTrips) || 0) + 1;
+      drvPhone.updatedAt = now;
+      tx.set(p.phone(ride.driverPhoneE164), drvPhone);
+    }
     const rides = arr(index.rides);
     rides.forEach(function (row) {
       if (row.rideId === ride.rideId) row.status = "completed";
@@ -880,8 +888,9 @@ function editRide(db, input, now) {
     const timeChanged = depart.departAt !== ride.departAt;
     const seatsChanged = fields.seats !== ride.seatsTotal;
     const noteChanged = fields.note !== (ride.note || "");
+    const vehicleChanged = fields.vehicle !== (ride.vehicle || "");
     const pub = await tx.get(p.ridePublic(ride.rideId)) || core.publicRide(ride, [], []);
-    if (!timeChanged && !seatsChanged && !noteChanged) return { ok: true, unchanged: true, ride: pub };
+    if (!timeChanged && !seatsChanged && !noteChanged && !vehicleChanged) return { ok: true, unchanged: true, ride: pub };
     const edits = Number(ride.editCount) || 0;
     if ((timeChanged || noteChanged) && edits >= 15) return { ok: false, error: "This trip reached the maximum number of edits (15)." };
     const changes = [];
@@ -896,16 +905,19 @@ function editRide(db, input, now) {
       changes.push(fields.note ? "note updated" : "note cleared");
       smsParts.push(fields.note ? "Note: " + fields.note.slice(0, 60) : "Note cleared");
     }
+    if (vehicleChanged) changes.push(fields.vehicle ? "car -> " + fields.vehicle : "car cleared");
     ride.departAt = depart.departAt;
     ride.seatsTotal = fields.seats;
     ride.seatsLeft = fields.seats - bookedSeats;
     ride.note = fields.note;
+    ride.vehicle = fields.vehicle;
     if (timeChanged || noteChanged) ride.editCount = edits + 1;
     ride.updatedAt = now;
     pub.departAt = ride.departAt;
     pub.seatsTotal = ride.seatsTotal;
     pub.seatsLeft = ride.seatsLeft;
     pub.note = ride.note;
+    pub.vehicle = ride.vehicle;
     pub.messages = arr(pub.messages).concat([core.systemMessage("Trip updated: " + changes.join(", ") + ".", now, arr(pub.messages).length + 1)]);
     pub.updatedAt = now;
     if (smsParts.length && activeRiders.length) {
@@ -1443,20 +1455,28 @@ async function completeDueGroup(tx, p, now, texts, platform) {
         }
       }
       const hasRiders = ride.status === "open" && riderPhones.length > 0;
+      const drvPhone = hasRiders && ride.driverPhoneE164 ? (await tx.get(p.phone(ride.driverPhoneE164)) || { activeReservations: 0 }) : null;
       const phones = [];
       if (hasRiders && !ride.thankYouSentAt && config.enabled && config.postRideThankYouSms && config.supportNote) {
         if (ride.driverPhoneE164 && phones.indexOf(ride.driverPhoneE164) === -1) phones.push(ride.driverPhoneE164);
         riderPhones.forEach(function (ph) { if (phones.indexOf(ph) === -1) phones.push(ph); });
       }
-      due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders });
+      due.push({ row: row, ride: ride, pub: pub, phones: phones, hasRiders: hasRiders, drvPhone: drvPhone });
     }
   }
   let groupSent = 0;
+  const drvUpdates = {};
   due.forEach(function (item) {
     if (item.hasRiders) {
       item.ride.status = "completed";
       item.ride.completedAt = now;
       item.row.status = "completed";
+      if (item.drvPhone && item.ride.driverPhoneE164) {
+        const docRef = drvUpdates[item.ride.driverPhoneE164] || item.drvPhone;
+        docRef.completedTrips = (Number(docRef.completedTrips) || 0) + 1;
+        docRef.updatedAt = now;
+        drvUpdates[item.ride.driverPhoneE164] = docRef;
+      }
     } else {
       item.ride.status = "cancelled";
       item.ride.cancelledAt = now;
@@ -1485,6 +1505,9 @@ async function completeDueGroup(tx, p, now, texts, platform) {
       tx.set(p.ridePublic(item.ride.rideId), item.pub);
     }
     tx.set(p.ridePrivate(item.ride.rideId), item.ride);
+  });
+  Object.keys(drvUpdates).forEach(function (ph) {
+    tx.set(p.phone(ph), drvUpdates[ph]);
   });
   if (groupSent) saveConfig(tx, config, p, platform);
   if (due.length) tx.set(p.broadcastIndex, index);
@@ -2310,12 +2333,15 @@ function claimRideRequest(db, input, now, rng) {
       createdAt: now,
       updatedAt: now
     };
+    const drvPhone = await tx.get(p.phone(fields.phone)) || {};
     ride.kind = "offer";
     ride.claimedFromRequest = true;
     ride.claimedAt = now;
     ride.driverName = fields.name;
     ride.driverPhoneE164 = fields.phone;
     ride.driverPhoneHash = core.phoneHash16(fields.phone);
+    ride.driverTripCount = Number(drvPhone.completedTrips) || 0;
+    ride.vehicle = fields.vehicle || "";
     ride.driverTokenHash = core.hashSecret(driverSecret);
     ride.claimIdempotencyKey = (input && input.idempotencyKey) || "";
     ride.claimIdempotencySecret = driverSecret;

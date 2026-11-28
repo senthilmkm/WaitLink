@@ -2116,7 +2116,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "from"; }).value = "Lib";
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "to"; }).value = "Off";
   // Opening "+ Add price or pickup note" preserves typed From/To
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add price or pickup note"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add car, price, or note"; })._listeners[0]();
   assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "from"; }).value, "Lib");
   assert.strictEqual(mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "to"; }).value, "Off");
   mounted.root.children[1].querySelectorAll("input").find(function (i) { return i.name === "name"; }).value = "Sam";
@@ -2268,7 +2268,7 @@ it("Need a Ride (Rider Requests): feature flag gating, request/claim/cancel flow
   const in30 = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
   in30._listeners[0]();
   assert.ok(in30.className.indexOf("active") !== -1);
-  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add price or pickup note"; })._listeners[0]();
+  mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "+ Add car, price, or note"; })._listeners[0]();
   const in30After = mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "In 30m"; });
   assert.ok(in30After.className.indexOf("active") !== -1);
   // Info sheet ("?") renders About JumpIn, How It Works, support banner, and WaitLink link
@@ -2428,6 +2428,68 @@ it("groups board by Today/Tomorrow/Upcoming, opens Invite QR sheet, and shares r
   }));
   mounted.root.children[1].querySelectorAll("button").find(function (b) { return b.textContent === "📤 Share"; })._listeners[0]();
   assert.strictEqual(sharedPayload.url, "https://waitlink.app/jumpin?ride=r_today");
+  view.destroy();
+});
+
+it("tracks driver completed trip count (only with active riders) and validates/renders Car Info across post, edit, claim, board, and ride details", async function () {
+  // 1. core validation for vehicle (> 40 chars rejected, HTML stripped)
+  const longVeh = "12345678901234567890123456789012345678901";
+  assert.strictEqual(core.postErrors({ name: "Ali", phone: "5552345678", from: "North", to: "South", date: "2026-11-30", time: "08:00", seats: 2, vehicle: longVeh }).field, "vehicle");
+  assert.strictEqual(core.claimErrors({ name: "Ali", phone: "5552345678", seats: 2, vehicle: longVeh }, 1).field, "vehicle");
+  assert.strictEqual(core.editErrors({ date: "2026-11-30", time: "08:00", seats: 2, vehicle: longVeh }).field, "vehicle");
+
+  // 2. Backend: postRide stores vehicle, completeTrip increments driverTripCount, subsequent postRide & claimRideRequest carry driverTripCount
+  const db = service.createMemoryDb({ "settings/carpool_config": enabledConfig(), "carpool_platform/config": { needARideEnabled: true } });
+  const r1 = await service.postRide(db, postInput({ vehicle: "<b>Silver Honda CR-V</b>" }), NOW);
+  assert.strictEqual(r1.ok, true);
+  assert.strictEqual(db.snapshot()["carpool_public/rides/" + r1.rideId].vehicle, "Silver Honda CR-V");
+  assert.strictEqual(db.snapshot()["carpool_public/rides/" + r1.rideId].driverTripCount, 0);
+
+  // Edit vehicle only
+  const ed = await service.editRide(db, { rideId: r1.rideId, secret: r1.secret, date: postInput().date, time: postInput().time, seats: 3, vehicle: "Blue Toyota Sienna" }, NOW);
+  assert.strictEqual(ed.ok, true);
+  assert.strictEqual(ed.ride.vehicle, "Blue Toyota Sienna");
+
+  // Reserve a seat and complete trip -> completedTrips becomes 1
+  await service.reserveSeat(db, { rideId: r1.rideId, name: "Sam", phone: "5559876543", seats: 1 }, NOW);
+  const comp = await service.completeTrip(db, { rideId: r1.rideId, secret: r1.secret }, NOW + 2 * core.DAY_MS);
+  assert.strictEqual(comp.ok, true);
+
+  // Next post by same driver picks up driverTripCount === 1
+  const r2 = await service.postRide(db, postInput({ date: core.formatDateInput(NOW + 4 * core.DAY_MS, "America/New_York"), time: "09:00", vehicle: "Blue Toyota Sienna" }), NOW + 2 * core.DAY_MS);
+  assert.strictEqual(r2.ok, true);
+  assert.strictEqual(db.snapshot()["carpool_public/rides/" + r2.rideId].driverTripCount, 1);
+
+  // Scheduled completeDue with 0 riders does NOT increment completedTrips; with 1+ riders DOES increment
+  const rEmpty = await service.postRide(db, postInput({ date: core.formatDateInput(NOW + 5 * core.DAY_MS, "America/New_York"), time: "09:00" }), NOW + 2 * core.DAY_MS);
+  await service.reserveSeat(db, { rideId: r2.rideId, name: "Sam", phone: "5559876543", seats: 1 }, NOW + 2 * core.DAY_MS);
+  await service.completeDue(db, NOW + 7 * core.DAY_MS);
+  const r3 = await service.postRide(db, postInput({ date: core.formatDateInput(NOW + 8 * core.DAY_MS, "America/New_York"), time: "09:00" }), NOW + 7 * core.DAY_MS);
+  assert.strictEqual(db.snapshot()["carpool_public/rides/" + r3.rideId].driverTripCount, 2);
+
+  // Claiming a ride request also carries driverTripCount === 2 and vehicle
+  const rq = await service.postRideRequest(db, postInput({ phone: "5551112222", name: "Req", seats: 1, date: core.formatDateInput(NOW + 9 * core.DAY_MS, "America/New_York") }), NOW + 7 * core.DAY_MS);
+  const cl = await service.claimRideRequest(db, { rideId: rq.rideId, name: "Driver", phone: postInput().phone, seats: 3, vehicle: "White Tesla Y" }, NOW + 7 * core.DAY_MS);
+  assert.strictEqual(cl.ok, true);
+  assert.strictEqual(cl.ride.driverTripCount, 2);
+  assert.strictEqual(cl.ride.vehicle, "White Tesla Y");
+
+  // 3. UI: renders trip-cnt-tag on board & ride details, and Vehicle tile in info-grid
+  const win = fakeWindow();
+  win.JumpInCloud = { watchBoard: function () { return function () { }; }, watchRide: function () { return function () { }; }, roleFor: function () { return ""; }, publicRideUrl: function (id) { return "https://waitlink.app/jumpin?ride=" + id; } };
+  const mounted = view.mount(win);
+  mounted.setState(Object.assign(ui.blank(), {
+    rides: [{ rideId: "r_v", kind: "offer", from: "A", to: "B", when: "Soon", seatsLeft: 2, driverName: "Driver", vehicle: "White Tesla Y", driverTripCount: 2 }]
+  }));
+  assert.ok(mounted.root.children[1].querySelectorAll("span").some(function (s) { return s.className === "trip-cnt-tag" && s.textContent === "✓ 2 trips"; }));
+  mounted.setState(Object.assign(ui.blank(), {
+    mode: "ride",
+    status: "open",
+    ride: { rideId: "r_v", kind: "offer", from: "A", to: "B", when: "Soon", seatsLeft: 2, driverName: "Driver", vehicle: "White Tesla Y", driverTripCount: 1 }
+  }));
+  const tiles = mounted.root.children[1].querySelectorAll("div").filter(function (d) { return d.className === "info-tile"; });
+  assert.ok(tiles.some(function (t) { return t.children[0].textContent === "Vehicle" && t.children[1].textContent === "White Tesla Y"; }));
+  assert.ok(mounted.root.children[1].querySelectorAll("span").some(function (s) { return s.className === "trip-cnt-tag" && s.textContent === "✓ 1 trip"; }));
   view.destroy();
 });
 

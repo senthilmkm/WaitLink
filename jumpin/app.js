@@ -183,6 +183,7 @@
       "#jumpin-mid .foot-driver{display:inline-flex;align-items:center;gap:7px;font-weight:600;min-width:0}",
       "#jumpin-mid .foot-right{display:inline-flex;align-items:center;gap:8px;font-weight:600;margin-left:auto}",
       "#jumpin-mid .cost-tag{padding:2px 8px;border-radius:999px;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;font-weight:700;font-size:12px}",
+      "#jumpin-mid .trip-cnt-tag{padding:2px 7px;border-radius:999px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:11px;font-weight:700;white-space:nowrap}",
       "#jumpin-mid .mini-av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:rgba(8,145,178,.14);color:#0e7490;font-size:12px;font-weight:700;flex-shrink:0}",
       "#jumpin-mid .info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 14px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px}",
       "#jumpin-mid .info-tile{min-width:0}",
@@ -404,19 +405,21 @@
     const PAGE_SIZE = 12;
 
     function loadProfile() {
-      if (!secrets || !secrets.getItem) return { name: "", phone: "" };
+      if (!secrets || !secrets.getItem) return { name: "", phone: "", vehicle: "" };
       try {
         const raw = JSON.parse(secrets.getItem("waitlink_jumpin_profile") || "{}");
-        return { name: String(raw.name || ""), phone: String(raw.phone || "") };
+        return { name: String(raw.name || ""), phone: String(raw.phone || ""), vehicle: String(raw.vehicle || "") };
       } catch (err) {
-        return { name: "", phone: "" };
+        return { name: "", phone: "", vehicle: "" };
       }
     }
 
-    function saveProfile(name, phone) {
+    function saveProfile(name, phone, vehicle) {
       if (!secrets || !secrets.setItem || !name || !phone) return;
       try {
-        secrets.setItem("waitlink_jumpin_profile", JSON.stringify({ name: name, phone: phone }));
+        const prev = loadProfile();
+        const nextVeh = vehicle !== undefined ? String(vehicle || "") : prev.vehicle;
+        secrets.setItem("waitlink_jumpin_profile", JSON.stringify({ name: name, phone: phone, vehicle: nextVeh }));
       } catch (err) { /* ignore storage quota errors */ }
     }
 
@@ -770,6 +773,16 @@
         sheet.appendChild(el(doc, "p", "hint", (bookedSeats === 1 ? "1 seat already reserved" : bookedSeats + " seats already reserved") + " · max " + maxSeats + " total."));
       }
       if (state.error && state.field === "seats") sheet.appendChild(el(doc, "p", "error", state.error));
+      sheet.appendChild(el(doc, "label", "lbl", "Car / Color, optional"));
+      const vehIn = el(doc, "input");
+      vehIn.name = "vehicle";
+      vehIn.type = "text";
+      vehIn.maxLength = 40;
+      vehIn.placeholder = "e.g. Silver Honda CR-V";
+      vehIn.value = draft.vehicle != null ? draft.vehicle : (ride.vehicle || "");
+      if (state.error && state.field === "vehicle") vehIn.className = "input-invalid";
+      sheet.appendChild(vehIn);
+      if (state.error && state.field === "vehicle") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
       const noteIn = el(doc, "input");
       noteIn.name = "note";
@@ -1097,7 +1110,7 @@
               state.draft = values;
               openMemberModal(result);
             } else {
-              saveProfile(values.name, values.phone);
+              saveProfile(values.name, values.phone, values.vehicle);
               saveRecentRoute(values.from, values.to);
               state = postedFromServer(state, result, values, when.departAt);
             }
@@ -1300,6 +1313,16 @@
       durStep.appendChild(plusD);
       sheet.appendChild(durIn);
       sheet.appendChild(durStep);
+      sheet.appendChild(el(doc, "label", "lbl", "Car / Color, optional"));
+      const vehIn = el(doc, "input");
+      vehIn.name = "vehicle";
+      vehIn.type = "text";
+      vehIn.maxLength = 40;
+      vehIn.placeholder = "e.g. Silver Honda CR-V";
+      vehIn.value = draft.vehicle != null ? draft.vehicle : (saved.vehicle || "");
+      if (state.error && state.field === "vehicle") vehIn.className = "input-invalid";
+      sheet.appendChild(vehIn);
+      if (state.error && state.field === "vehicle") sheet.appendChild(el(doc, "p", "error", state.error));
       sheet.appendChild(el(doc, "label", "lbl", "Pickup note, optional"));
       const noteIn = el(doc, "input");
       noteIn.name = "note";
@@ -1345,7 +1368,7 @@
             state.claimDraft = values;
             openMemberModal(result);
           } else {
-            saveProfile(values.name, values.phone);
+            saveProfile(values.name, values.phone, values.vehicle);
             const updatedRide = Object.assign({}, state.ride, result.ride || {});
             state = Object.assign(ui.reduce(state, { type: "ride", ride: updatedRide, role: "driver" }), {
               ride: updatedRide,
@@ -1652,6 +1675,7 @@
       if (ride.rideCost > 0) addTile(ride.kind === "request" ? "Willing to chip in" : "Ride cost", core.formatCost(ride.rideCost) + " / seat (direct)");
       const tripCode = shortTripId(ride.rideId);
       if (tripCode) addTile("Trip ID", tripCode);
+      if (ride.vehicle) addTile("Vehicle", ride.vehicle);
       if (ride.note) addTile("Pickup / Note", ride.note);
       secTop.appendChild(grid);
       if (current.status === "pending") secTop.appendChild(el(doc, "p", "route", "Waiting for approval."));
@@ -1738,6 +1762,7 @@
         const dRow = el(doc, "div", "rider-row");
         dRow.appendChild(el(doc, "span", "mini-av", ride.driverName.charAt(0).toUpperCase()));
         dRow.appendChild(el(doc, "span", "", ride.driverName));
+        if (Number(ride.driverTripCount) > 0) dRow.appendChild(el(doc, "span", "trip-cnt-tag", "✓ " + ride.driverTripCount + (ride.driverTripCount === 1 ? " trip" : " trips")));
         dRow.appendChild(el(doc, "span", "driver-tag", "Driver"));
         secPeople.appendChild(dRow);
       }
@@ -2234,6 +2259,7 @@
             const dWrap = el(doc, "span", "foot-driver");
             dWrap.appendChild(el(doc, "span", "mini-av", dName.charAt(0).toUpperCase()));
             dWrap.appendChild(el(doc, "span", "", dName));
+            if (!isReq && Number(ride.driverTripCount) > 0) dWrap.appendChild(el(doc, "span", "trip-cnt-tag", "✓ " + ride.driverTripCount + (ride.driverTripCount === 1 ? " trip" : " trips")));
             foot.appendChild(dWrap);
             const right = el(doc, "span", "foot-right");
             const reqSeats = Number(ride.seatsRequested) || 1;
@@ -2582,6 +2608,15 @@
           if (state.draft && state.draft.rideCost) rideCost.value = state.draft.rideCost;
           secDriver.appendChild(rideCost);
           if (state.error && state.field === "rideCost") secDriver.appendChild(el(doc, "p", "error", state.error));
+          secDriver.appendChild(el(doc, "label", "lbl", "Car / Color, optional"));
+          const veh = el(doc, "input");
+          veh.name = "vehicle";
+          veh.type = "text";
+          veh.maxLength = 40;
+          veh.placeholder = "e.g. Silver Honda CR-V";
+          veh.value = state.draft && state.draft.vehicle != null ? state.draft.vehicle : (saved.vehicle || "");
+          secDriver.appendChild(veh);
+          if (state.error && state.field === "vehicle") secDriver.appendChild(el(doc, "p", "error", state.error));
           secDriver.appendChild(el(doc, "label", "lbl", "Note, optional"));
           const note = el(doc, "input");
           note.name = "note";
@@ -2590,12 +2625,12 @@
           if (state.draft && state.draft.note) note.value = state.draft.note;
           secDriver.appendChild(note);
         } else {
-          const exBtn = el(doc, "button", "chip-btn", "+ Add price or pickup note");
+          const exBtn = el(doc, "button", "chip-btn", "+ Add car, price, or note");
           exBtn.type = "button";
           exBtn.style.marginBottom = "8px";
           on(exBtn, "click", function () { savePostDraft(); extrasOpen = true; draw(); });
           secDriver.appendChild(exBtn);
-          [["rideCost", ""], ["note", ""]].forEach(function (pair) {
+          [["rideCost", ""], ["note", ""], ["vehicle", saved.vehicle || ""]].forEach(function (pair) {
             const hi = el(doc, "input");
             hi.type = "hidden";
             hi.name = pair[0];
@@ -2800,7 +2835,7 @@
                   state.rides = state.rides || [];
                   openMemberModal(result);
                 } else {
-                  saveProfile(values.name, values.phone);
+                  saveProfile(values.name, values.phone, values.vehicle);
                   saveRecentRoute(values.from, values.to);
                   extrasOpen = false;
                   driverEditOpen = false;

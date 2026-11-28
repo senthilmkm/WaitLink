@@ -266,6 +266,12 @@
     return { value: text };
   }
 
+  function vehicleValue(raw) {
+    const text = collapse(stripTags(raw));
+    if (text.length > 40) return { error: "Keep car info at 40 characters or less." };
+    return { value: text };
+  }
+
   function postErrors(fields) {
     const name = nameError(fields.name, "Enter your name.");
     if (name.error) return { field: "name", error: name.error };
@@ -279,6 +285,8 @@
     if (!fields.time) return { field: "time", error: "Choose a time." };
     const note = noteValue(fields.note);
     if (note.error) return { field: "note", error: note.error };
+    const vehicle = vehicleValue(fields.vehicle);
+    if (vehicle.error) return { field: "vehicle", error: vehicle.error };
     const seats = Number(fields.seats);
     if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
     const rawDuration = fields.durationMinutes;
@@ -291,7 +299,7 @@
     if (!Number.isFinite(rideCost) || rideCost < 0 || rideCost > 500) {
       return { field: "rideCost", error: "Enter a dollar amount from 0 to 500." };
     }
-    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, seats: seats, durationMinutes: durationMinutes, rideCost: rideCost } };
+    return { value: { name: name.value, phone: phone.e164, from: from.value, to: to.value, date: String(fields.date), time: String(fields.time), note: note.value, vehicle: vehicle.value, seats: seats, durationMinutes: durationMinutes, rideCost: rideCost } };
   }
 
   function reserveErrors(fields) {
@@ -321,7 +329,9 @@
     const rawDur = fields.durationMinutes;
     const dur = rawDur == null || rawDur === "" ? 60 : Number(rawDur);
     const durationMinutes = Number.isInteger(dur) && dur >= 15 && dur <= 900 ? dur : 60;
-    return { value: { name: res.value.name, phone: res.value.phone, seats: res.value.seats, note: res.value.dropoff, durationMinutes: durationMinutes } };
+    const vehicle = vehicleValue(fields.vehicle);
+    if (vehicle.error) return { field: "vehicle", error: vehicle.error };
+    return { value: { name: res.value.name, phone: res.value.phone, seats: res.value.seats, note: res.value.dropoff, vehicle: vehicle.value, durationMinutes: durationMinutes } };
   }
 
   function editErrors(fields) {
@@ -331,7 +341,9 @@
     if (!Number.isInteger(seats) || seats < 1 || seats > 6) return { field: "seats", error: "Choose seats from 1 to 6." };
     const note = noteValue(fields.note);
     if (note.error) return { field: "note", error: note.error };
-    return { value: { date: String(fields.date), time: String(fields.time), seats: seats, note: note.value } };
+    const vehicle = vehicleValue(fields.vehicle);
+    if (vehicle.error) return { field: "vehicle", error: vehicle.error };
+    return { value: { date: String(fields.date), time: String(fields.time), seats: seats, note: note.value, vehicle: vehicle.value } };
   }
 
   function partsInZone(utcMs, timeZone) {
@@ -480,6 +492,8 @@
       seatsRequested: Number(ride.seatsRequested) || 0,
       rideCost: Number(ride.rideCost) || 0,
       note: ride.note,
+      vehicle: ride.vehicle || "",
+      driverTripCount: Number(ride.driverTripCount) || 0,
       driverName: ride.driverName,
       requesterName: ride.requesterName || "",
       requesterReservationId: ride.requesterReservationId || "",
