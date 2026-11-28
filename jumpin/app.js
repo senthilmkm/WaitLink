@@ -303,10 +303,19 @@
       "#jumpin-root .dt-pill.input-invalid{border-color:#dc2626 !important;background:#fef2f2 !important}",
       "#jumpin-root .dt-drawer{margin:0 0 12px;padding:8px;border:1px solid var(--border-color,#cbd5e1);border-radius:12px;background:var(--bg-card,#fff);box-shadow:0 6px 18px rgba(15,23,42,.08)}",
       "#jumpin-root .dt-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch}",
-      "#jumpin-root .dt-wheel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}",
-      "#jumpin-root .dt-col{display:flex;flex-direction:column;gap:4px;max-height:152px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px}",
+      "#jumpin-root .dt-wheel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}",
+      "#jumpin-root .dt-col-wrap{min-width:0}",
+      "#jumpin-root .dt-col-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;text-align:center;margin:0 0 4px}",
+      "#jumpin-root .dt-col{display:flex;flex-direction:column;gap:2px;max-height:156px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px;background:#f8fafc;border-radius:10px}",
+      "#jumpin-root .dt-col::-webkit-scrollbar{display:none}",
       "#jumpin-root .dt-opt{min-height:34px;margin:0;padding:4px 8px;border:1px solid var(--border-color,#e2e8f0);border-radius:9px;background:var(--bg-input,#f8fafc);color:var(--text-main,#090d16);font-size:13px;font-weight:600;cursor:pointer;text-align:center}",
       "#jumpin-root .dt-opt.active{background:var(--primary,#0891b2);border-color:var(--primary,#0891b2);color:#fff}",
+      "#jumpin-root .dt-wheel .dt-opt{min-height:36px;border:0;background:transparent;border-radius:8px;font-size:15px}",
+      "#jumpin-root .dt-wheel .dt-opt:not(.active):hover{background:rgba(8,145,178,.08)}",
+      "#jumpin-root .dt-wheel .dt-opt.active{background:var(--primary,#0891b2);color:#fff;box-shadow:0 1px 4px rgba(8,145,178,.22)}",
+      "#jumpin-root .dt-ap-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;margin:8px 0 0;background:#f1f5f9;border:1px solid var(--border-color,#e2e8f0);border-radius:10px}",
+      "#jumpin-root .dt-ap-seg .dt-opt{min-height:34px;border:0;background:transparent;border-radius:7px;color:#475569;font-size:13.5px;font-weight:700}",
+      "#jumpin-root .dt-ap-seg .dt-opt.active{background:#fff;color:var(--primary,#0891b2);box-shadow:0 1px 4px rgba(15,23,42,.1)}",
       "#jumpin-root .dt-done{width:100%;min-height:36px;margin:8px 0 0;padding:6px 12px;border:0;border-radius:9px;background:var(--primary,#0891b2);color:#fff;font-size:13px;font-weight:700;cursor:pointer}",
       "#jumpin-root .action-row.row-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}",
       "#jumpin-root .action-row.row-split button{width:100%;min-width:0;margin:0;justify-content:center;text-align:center}",
@@ -3395,9 +3404,15 @@
       const drawer = el(doc, "div", "dt-drawer");
       drawer.style.display = "none";
       const wheel = el(doc, "div", "dt-wheel");
+      const hWrap = el(doc, "div", "dt-col-wrap");
+      hWrap.appendChild(el(doc, "div", "dt-col-hdr", "Hour"));
       const hCol = el(doc, "div", "dt-col");
+      hWrap.appendChild(hCol);
+      const mWrap = el(doc, "div", "dt-col-wrap");
+      mWrap.appendChild(el(doc, "div", "dt-col-hdr", "Min"));
       const mCol = el(doc, "div", "dt-col");
-      const apCol = el(doc, "div", "dt-col");
+      mWrap.appendChild(mCol);
+      const apCol = el(doc, "div", "dt-ap-seg");
       let curH24 = 9;
       let curMin = "00";
       let curAp = "AM";
@@ -3455,10 +3470,10 @@
         apBtns.push([ap, b]);
         apCol.appendChild(b);
       });
-      wheel.appendChild(hCol);
-      wheel.appendChild(mCol);
-      wheel.appendChild(apCol);
+      wheel.appendChild(hWrap);
+      wheel.appendChild(mWrap);
       drawer.appendChild(wheel);
+      drawer.appendChild(apCol);
       const doneBtn = el(doc, "button", "dt-done", "Done");
       doneBtn.type = "button";
       on(doneBtn, "click", closeDrawer);
